@@ -11,11 +11,26 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK</p>
-        <h1>LD Autopilot Free <span class="version">v1.4</span></h1>
+        <h1>LD Autopilot Free <span class="version">v1.5</span></h1>
         <p class="sub">Mobile-first image + prompt production manager — no paid API required.</p>
       </div>
       <button id="resetBtn" class="ghost">Reset</button>
     </header>
+
+    <section class="project-library card">
+      <div class="library-head">
+        <div>
+          <span class="audit-label">PROJECT LIBRARY</span>
+          <strong>Saved productions</strong>
+          <p class="library-sub">Keep multiple Shorts and Longform projects on this device.</p>
+        </div>
+        <div class="library-head-actions">
+          <span id="libraryCount" class="audit-pill">0 projects</span>
+          <button id="newProjectBtn" class="ghost small" type="button">New project</button>
+        </div>
+      </div>
+      <div id="projectList" class="project-list"></div>
+    </section>
 
     <section class="card setup">
       <div>
@@ -136,5 +151,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
   <script src="backup-fix.js"></script>
+  <script src="project-library.js"></script>
 </body>
 </html>
