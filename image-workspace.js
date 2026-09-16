@@ -1,153 +1,21 @@
 (()=>{
-  const stages=document.getElementById('stages');
-  const topic=document.getElementById('topic');
-  const format=document.getElementById('format');
-  const toast=document.getElementById('toast');
-  if(!stages||!topic)return;
-
-  const DB_NAME='ld-autopilot-images';
-  const STORE='stage-images';
-  let dbPromise=null;
-
-  function showToast(msg){
-    if(!toast)return;
-    toast.textContent=msg;toast.classList.add('show');
-    clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1800);
+  const stages=document.getElementById('stages'),topic=document.getElementById('topic'),format=document.getElementById('format'),toast=document.getElementById('toast');if(!stages||!topic)return;
+  const DB_NAME='ld-autopilot-images',STORE='stage-images';let dbPromise=null;
+  function showToast(msg){if(!toast)return;toast.textContent=msg;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),2200);}
+  function openDb(){if(dbPromise)return dbPromise;dbPromise=new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE);};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});return dbPromise;}
+  const keyFor=s=>`${(topic.value||'').trim()}::${format?.value||'shorts'}::${s}`;
+  async function dbOp(mode,stage,value){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,mode),store=tx.objectStore(STORE);if(mode==='readonly'){const r=store.get(keyFor(stage));r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error);}else{value===null?store.delete(keyFor(stage)):store.put(value,keyFor(stage));tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);}});}
+  function css(){if(document.getElementById('image-workspace-style'))return;const s=document.createElement('style');s.id='image-workspace-style';s.textContent=`.image-workspace{margin-top:12px;padding:12px;border:1px dashed rgba(127,127,127,.45);border-radius:12px;background:rgba(127,127,127,.06)}.image-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.image-workspace-head strong{font-size:.95rem}.image-workspace-status{font-size:.8rem;opacity:.72}.image-preview-wrap{display:none;margin:10px 0}.image-preview-wrap.has-image{display:block}.image-preview{display:block;max-width:100%;max-height:520px;margin:0 auto;border-radius:10px;object-fit:contain;background:#111}.image-workspace-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.image-file-input{display:none}.handoff-note{font-size:.78rem;opacity:.72;margin:9px 0 0;line-height:1.35}.generate-stage-image{font-weight:700}`;document.head.appendChild(s);}
+  async function copy(text,msg){if(!text?.trim()){showToast('No image prompt yet');return false;}try{await navigator.clipboard.writeText(text.trim());showToast(msg||'Copied');return true;}catch{showToast('Could not copy prompt');return false;}}
+  function preview(card,file){const wrap=card.querySelector('.image-preview-wrap'),img=card.querySelector('.image-preview'),status=card.querySelector('.image-workspace-status'),dl=card.querySelector('.download-stage-image'),rm=card.querySelector('.remove-stage-image');if(!wrap||!img)return;if(card.dataset.imageObjectUrl){URL.revokeObjectURL(card.dataset.imageObjectUrl);delete card.dataset.imageObjectUrl;}if(!file){wrap.classList.remove('has-image');img.removeAttribute('src');status.textContent='No image attached';dl.disabled=rm.disabled=true;return;}const u=URL.createObjectURL(file);card.dataset.imageObjectUrl=u;img.src=u;wrap.classList.add('has-image');status.textContent=`Image attached · ${(file.size/1048576).toFixed(1)} MB`;dl.disabled=rm.disabled=false;}
+  async function restore(card){try{preview(card,await dbOp('readonly',card.dataset.stage));}catch{}}
+  function handoffText(card){const stage=card.dataset.stage,prompt=card.querySelector('.image-prompt')?.value?.trim()||'';return `Generate this image now for my Living Disaster Book project. Return the finished image only.\n\nPROJECT: ${(topic.value||'').trim()}\nSTAGE: ${stage}\n\n${prompt}`;}
+  function decorate(card){if(card.querySelector('.image-workspace'))return;const stage=card.dataset.stage,field=card.querySelector('.image-prompt')?.closest('.field-block');if(!field)return;const box=document.createElement('div');box.className='image-workspace';box.innerHTML=`<div class="image-workspace-head"><strong>Stage Image</strong><span class="image-workspace-status">No image attached</span></div><div class="image-preview-wrap"><img class="image-preview" alt="${stage} attached image preview"></div><div class="image-workspace-actions"><button type="button" class="ghost small generate-stage-image">Generate in ChatGPT</button><button type="button" class="ghost small copy-image-handoff">Copy handoff</button><button type="button" class="ghost small upload-stage-image">Attach result</button><button type="button" class="ghost small download-stage-image" disabled>Download</button><button type="button" class="ghost small remove-stage-image" disabled>Remove</button><input class="image-file-input" type="file" accept="image/png,image/jpeg,image/webp"></div><p class="handoff-note">One tap copies the complete generation instruction, then opens ChatGPT. After generation, return here and attach the image to this stage.</p>`;field.insertAdjacentElement('afterend',box);
+    box.querySelector('.generate-stage-image').onclick=async()=>{if(await copy(handoffText(card),'Generation handoff copied — opening ChatGPT')){setTimeout(()=>window.open('https://chatgpt.com/','_blank','noopener,noreferrer'),120);}};
+    box.querySelector('.copy-image-handoff').onclick=()=>copy(handoffText(card),'Generation handoff copied');
+    const input=box.querySelector('.image-file-input');box.querySelector('.upload-stage-image').onclick=()=>input.click();input.onchange=async()=>{const file=input.files?.[0];if(!file)return;if(!/^image\/(png|jpeg|webp)$/.test(file.type)){showToast('Use PNG, JPG, or WEBP');input.value='';return;}try{await dbOp('readwrite',stage,file);preview(card,file);showToast(`${stage} image attached`);}catch{showToast('Could not save image');}input.value='';};
+    box.querySelector('.download-stage-image').onclick=async()=>{const file=await dbOp('readonly',stage);if(!file)return showToast('No image attached');const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg',safe=(topic.value||'project').trim().replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase(),a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=`${safe}-${stage.toLowerCase()}.${ext}`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);};
+    box.querySelector('.remove-stage-image').onclick=async()=>{await dbOp('readwrite',stage,null);preview(card,null);showToast(`${stage} image removed`);};restore(card);
   }
-
-  function openDb(){
-    if(dbPromise)return dbPromise;
-    dbPromise=new Promise((resolve,reject)=>{
-      const req=indexedDB.open(DB_NAME,1);
-      req.onupgradeneeded=()=>{
-        const db=req.result;
-        if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE);
-      };
-      req.onsuccess=()=>resolve(req.result);
-      req.onerror=()=>reject(req.error);
-    });
-    return dbPromise;
-  }
-
-  function keyFor(stage){
-    return `${(topic.value||'').trim()}::${format?.value||'shorts'}::${stage}`;
-  }
-
-  async function putImage(stage,file){
-    const db=await openDb();
-    return new Promise((resolve,reject)=>{
-      const tx=db.transaction(STORE,'readwrite');
-      tx.objectStore(STORE).put(file,keyFor(stage));
-      tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
-    });
-  }
-
-  async function getImage(stage){
-    const db=await openDb();
-    return new Promise((resolve,reject)=>{
-      const tx=db.transaction(STORE,'readonly');
-      const req=tx.objectStore(STORE).get(keyFor(stage));
-      req.onsuccess=()=>resolve(req.result||null); req.onerror=()=>reject(req.error);
-    });
-  }
-
-  async function removeImage(stage){
-    const db=await openDb();
-    return new Promise((resolve,reject)=>{
-      const tx=db.transaction(STORE,'readwrite');
-      tx.objectStore(STORE).delete(keyFor(stage));
-      tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error);
-    });
-  }
-
-  function injectCss(){
-    if(document.getElementById('image-workspace-style'))return;
-    const style=document.createElement('style');
-    style.id='image-workspace-style';
-    style.textContent=`
-      .image-workspace{margin-top:12px;padding:12px;border:1px dashed rgba(127,127,127,.45);border-radius:12px;background:rgba(127,127,127,.06)}
-      .image-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-      .image-workspace-head strong{font-size:.95rem}.image-workspace-status{font-size:.8rem;opacity:.72}
-      .image-preview-wrap{display:none;margin:10px 0}.image-preview-wrap.has-image{display:block}
-      .image-preview{display:block;max-width:100%;max-height:520px;margin:0 auto;border-radius:10px;object-fit:contain;background:#111}
-      .image-workspace-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-      .image-file-input{display:none}
-    `;
-    document.head.appendChild(style);
-  }
-
-  async function copyPrompt(card){
-    const text=card.querySelector('.image-prompt')?.value?.trim();
-    if(!text){showToast('No image prompt yet');return false;}
-    try{await navigator.clipboard.writeText(text);showToast('Image prompt copied');return true;}
-    catch{showToast('Could not copy prompt');return false;}
-  }
-
-  function setPreview(card,file){
-    const wrap=card.querySelector('.image-preview-wrap');
-    const img=card.querySelector('.image-preview');
-    const status=card.querySelector('.image-workspace-status');
-    const download=card.querySelector('.download-stage-image');
-    const remove=card.querySelector('.remove-stage-image');
-    if(!wrap||!img||!status)return;
-    if(card.dataset.imageObjectUrl){URL.revokeObjectURL(card.dataset.imageObjectUrl);delete card.dataset.imageObjectUrl;}
-    if(!file){wrap.classList.remove('has-image');img.removeAttribute('src');status.textContent='No image attached';if(download)download.disabled=true;if(remove)remove.disabled=true;return;}
-    const url=URL.createObjectURL(file);card.dataset.imageObjectUrl=url;img.src=url;wrap.classList.add('has-image');
-    const mb=(file.size/1024/1024).toFixed(1);status.textContent=`Image attached · ${mb} MB`;
-    if(download)download.disabled=false;if(remove)remove.disabled=false;
-  }
-
-  async function restoreCard(card){
-    try{setPreview(card,await getImage(card.dataset.stage));}catch{}
-  }
-
-  function decorateCard(card){
-    if(card.querySelector('.image-workspace'))return;
-    const stage=card.dataset.stage;
-    const body=card.querySelector('.stage-body');
-    const imageField=card.querySelector('.image-prompt')?.closest('.field-block');
-    if(!body||!imageField)return;
-
-    const box=document.createElement('div');
-    box.className='image-workspace';
-    box.innerHTML=`
-      <div class="image-workspace-head"><strong>Stage Image</strong><span class="image-workspace-status">No image attached</span></div>
-      <div class="image-preview-wrap"><img class="image-preview" alt="${stage} attached image preview"></div>
-      <div class="image-workspace-actions">
-        <button type="button" class="ghost small generate-stage-image">Copy + Open ChatGPT</button>
-        <button type="button" class="ghost small upload-stage-image">Attach image</button>
-        <button type="button" class="ghost small download-stage-image" disabled>Download image</button>
-        <button type="button" class="ghost small remove-stage-image" disabled>Remove</button>
-        <input class="image-file-input" type="file" accept="image/png,image/jpeg,image/webp">
-      </div>`;
-    imageField.insertAdjacentElement('afterend',box);
-
-    box.querySelector('.generate-stage-image').addEventListener('click',async()=>{
-      if(await copyPrompt(card)) window.open('https://chatgpt.com/','_blank','noopener,noreferrer');
-    });
-    const input=box.querySelector('.image-file-input');
-    box.querySelector('.upload-stage-image').addEventListener('click',()=>input.click());
-    input.addEventListener('change',async()=>{
-      const file=input.files?.[0];if(!file)return;
-      if(!/^image\/(png|jpeg|webp)$/.test(file.type)){showToast('Use PNG, JPG, or WEBP');input.value='';return;}
-      try{await putImage(stage,file);setPreview(card,file);showToast(`${stage} image attached`);}catch{showToast('Could not save image');}
-      input.value='';
-    });
-    box.querySelector('.download-stage-image').addEventListener('click',async()=>{
-      const file=await getImage(stage);if(!file){showToast('No image attached');return;}
-      const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';
-      const safe=(topic.value||'project').trim().replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
-      const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=`${safe}-${stage.toLowerCase()}.${ext}`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
-    });
-    box.querySelector('.remove-stage-image').addEventListener('click',async()=>{
-      await removeImage(stage);setPreview(card,null);showToast(`${stage} image removed`);
-    });
-    restoreCard(card);
-  }
-
-  function decorateAll(){[...stages.querySelectorAll('.stage-card')].forEach(decorateCard);}
-  injectCss();decorateAll();
-  new MutationObserver(ms=>{if(ms.some(m=>m.type==='childList'))setTimeout(decorateAll,0);}).observe(stages,{childList:true,subtree:false});
-  document.addEventListener('click',e=>{if(e.target.closest('#buildBtn,.project-open-btn,.project-card'))setTimeout(decorateAll,80);},true);
-  window.addEventListener('load',()=>setTimeout(decorateAll,150));
+  const all=()=>stages.querySelectorAll('.stage-card').forEach(decorate);css();all();new MutationObserver(ms=>{if(ms.some(m=>m.type==='childList'))setTimeout(all,0);}).observe(stages,{childList:true,subtree:false});document.addEventListener('click',e=>{if(e.target.closest('#buildBtn,.project-open-btn,.project-card'))setTimeout(all,80);},true);window.addEventListener('load',()=>setTimeout(all,150));
 })();
