@@ -22,7 +22,7 @@
         P11:'FOREGROUND: water containers, blankets and relief supplies. MIDGROUND: adult survivors and responders around canvas shelters or simple treatment areas. BACKGROUND: damaged city structures. Keep the relief camp organized, period-correct and non-modern.',
         P12:'FOREGROUND: blocked road, broken rail or damaged utility details. MIDGROUND: ruined housing and industrial facilities. BACKGROUND: broader factory and transport network damage. Focus on economic/infrastructure consequences, not another rescue close-up.',
         P13:'FOREGROUND: brick clearing, hand tools and construction materials. MIDGROUND: adult workers rebuilding roads, homes or factories. BACKGROUND: repaired and still-damaged Tangshan structures together. Use restrained hopeful daylight and period-correct machinery.',
-        P14:'FOREGROUND: calm adult residents or preparedness-related civic detail. MIDGROUND: rebuilt Tangshan streets and stronger structures appropriate to the recovery era. BACKGROUND: stable city skyline. Reflect recovery and seismic preparedness; no futuristic technology.'
+        P14:'RECOVERY ERA LOCK: this is a post-1976 legacy and rebuilding scene, not the immediate earthquake moment. FOREGROUND: calm adult residents or historically plausible preparedness-related civic detail. MIDGROUND: rebuilt Tangshan streets and stronger recovery-era structures that visually communicate safer reconstruction. BACKGROUND: a stable recovering city skyline. Reflect rebuilding, lessons learned and seismic preparedness. Do not show active earthquake destruction, fresh rubble, the pre-dawn 1976 disaster moment, futuristic technology, glossy present-day architecture, contemporary neon rescue gear or unsupported modern vehicles.'
       }
     },
     {
