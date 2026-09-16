@@ -111,7 +111,10 @@
     return {topic:t,type,year,place,era:year?`${year} historical setting`:'verified historical setting',known:false,facts:{},stages:{}};
   }
 
-  function contextLock(ctx){
+  function contextLock(ctx,stage=''){
+    if(ctx.known&&/1976\s+tangshan\s+earthquake/i.test(ctx.topic||'')&&stage==='P14'){
+      return 'HISTORICAL CONTEXT LOCK: depict Tangshan, China during the post-1976 rebuilding and recovery period, not the immediate pre-dawn earthquake scene and not a present-day glossy city. Use historically believable recovery-era architecture, streets, vehicles, utilities, clothing, tools, signs, building materials and preparedness infrastructure. Show stronger rebuilt structures and seismic-preparedness elements only where plausible for the recovery era. Avoid futuristic technology, contemporary neon emergency gear, present-day vehicles or unsupported modern details.';
+    }
     const when=ctx.year?` in ${ctx.year}`:'';
     let factLine='';
     if(ctx.known&&ctx.facts){
@@ -138,6 +141,13 @@
     return out;
   }
 
+  function periodLine(ctx,stage){
+    if(ctx.known&&/1976\s+tangshan\s+earthquake/i.test(ctx.topic||'')&&stage==='P14'){
+      return 'Preserve a historically believable post-1976 Tangshan rebuilding and recovery-era setting; this is a legacy scene, not the immediate 1976 pre-dawn disaster moment. Do not introduce futuristic or clearly present-day architecture, vehicles, clothing, electronics, signage or infrastructure.';
+    }
+    return `Preserve historical period details for ${ctx.place}${ctx.year?` in ${ctx.year}`:''}; do not introduce modern architecture, vehicles, clothing, electronics, signage or infrastructure.`;
+  }
+
   function enhanceCard(card,ctx){
     const stage=card.dataset.stage;
     const narration=card.querySelector('.narration');
@@ -154,7 +164,7 @@
 
     if(image){
       let value=image.value.replace(/HISTORICAL CONTEXT LOCK:[\s\S]*?(?=(?:Adult characters only|No embedded text|No photorealism|Illustration only|$))/i,'').trim();
-      if(value&&!/HISTORICAL CONTEXT LOCK:/i.test(value)) value=`${value} ${contextLock(ctx)}`;
+      if(value&&!/HISTORICAL CONTEXT LOCK:/i.test(value)) value=`${value} ${contextLock(ctx,stage)}`;
       if(value!==image.value){
         image.value=value;
         image.dispatchEvent(new Event('input',{bubbles:true}));
@@ -163,8 +173,8 @@
 
     if(flow&&stage!=='ENDING'&&stage!=='THUMBNAIL'&&flow.value){
       let value=flow.value;
-      value=value.replace(/Preserve historical period details for [\s\S]*?infrastructure\./i,'').replace(/\s{2,}/g,' ').trim();
-      const period=`Preserve historical period details for ${ctx.place}${ctx.year?` in ${ctx.year}`:''}; do not introduce modern architecture, vehicles, clothing, electronics, signage or infrastructure.`;
+      value=value.replace(/Preserve historical period details for [\s\S]*?infrastructure\./i,'').replace(/Preserve a historically believable post-1976 Tangshan rebuilding and recovery-era setting;[\s\S]*?infrastructure\./i,'').replace(/\s{2,}/g,' ').trim();
+      const period=periodLine(ctx,stage);
       value=value.replace('Use the supplied illustration as the absolute visual reference.',`Use the supplied illustration as the absolute visual reference. ${period}`);
       if(value!==flow.value){
         flow.value=value;
