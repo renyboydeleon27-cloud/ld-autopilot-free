@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LD Autopilot Free</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LIVING DISASTER BOOK</p>
+        <h1>LD Autopilot Free</h1>
+        <p class="sub">Image + prompt production manager — no paid API required.</p>
+      </div>
+      <button id="resetBtn" class="ghost">Reset demo</button>
+    </header>
+
+    <section class="card setup">
+      <div>
+        <label for="topic">Disaster topic</label>
+        <input id="topic" placeholder="Example: 1906 San Francisco Earthquake" />
+      </div>
+      <div>
+        <label for="format">Format</label>
+        <select id="format">
+          <option value="shorts">Shorts — 9:16</option>
+          <option value="longform">Longform — 16:9</option>
+        </select>
+      </div>
+      <button id="buildBtn" class="primary">Create production</button>
+    </section>
+
+    <section class="summary-grid">
+      <article class="stat"><span>Stages</span><strong id="stageCount">0</strong></article>
+      <article class="stat"><span>Complete</span><strong id="doneCount">0</strong></article>
+      <article class="stat"><span>Progress</span><strong id="progressText">0%</strong></article>
+      <article class="stat"><span>Mode</span><strong id="modeText">—</strong></article>
+    </section>
+
+    <section class="card rules">
+      <h2>Locked visual rules</h2>
+      <p>Adult characters only · serious colored historical graphic-novel/anime · hand-inked linework · cel-painted textures · no photorealistic humans · no live action · no 3D CGI people.</p>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">PRODUCTION PIPELINE</p>
+          <h2 id="projectTitle">No production yet</h2>
+        </div>
+      </div>
+      <div id="stages" class="stage-grid"></div>
+    </section>
+  </main>
+
+  <template id="stageTemplate">
+    <article class="stage-card">
+      <div class="stage-top">
+        <div>
+          <span class="badge stage-name"></span>
+          <h3 class="stage-title"></h3>
+        </div>
+        <label class="check"><input type="checkbox" class="done-toggle" /> Done</label>
+      </div>
+      <label>Narration</label>
+      <textarea class="narration" rows="3" placeholder="~8 second narration segment"></textarea>
+      <label>Image prompt</label>
+      <textarea class="image-prompt" rows="5"></textarea>
+      <div class="flow-wrap">
+        <label>Flow animation prompt</label>
+        <textarea class="flow-prompt" rows="7"></textarea>
+      </div>
+      <p class="stage-note"></p>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
