@@ -11,7 +11,7 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK</p>
-        <h1>LD Autopilot Free <span class="version">v1.2</span></h1>
+        <h1>LD Autopilot Free <span class="version">v1.3</span></h1>
         <p class="sub">Mobile-first image + prompt production manager — no paid API required.</p>
       </div>
       <button id="resetBtn" class="ghost">Reset</button>
@@ -44,9 +44,25 @@
       <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
     </section>
 
+    <section id="auditCard" class="audit-card card hidden">
+      <div class="audit-head">
+        <div>
+          <span class="audit-label">PRODUCTION AUDIT</span>
+          <strong id="auditStatus">Waiting for production</strong>
+        </div>
+        <span id="requiredStatus" class="audit-pill">0 ready</span>
+      </div>
+      <p id="remainingStages" class="remaining-stages">No production yet.</p>
+      <div class="audit-actions">
+        <button id="auditNextBtn" class="ghost small" type="button">Go to next incomplete</button>
+        <button id="copyAllBtn" class="ghost small" type="button">Copy all packages</button>
+        <button id="backupBtn" class="ghost small" type="button">Download backup</button>
+      </div>
+    </section>
+
     <section id="completeBanner" class="complete-banner hidden">
       <strong>Production complete — 100%</strong>
-      <span>All required stages are marked Done.</span>
+      <span>All stages have required content and are marked Done.</span>
     </section>
 
     <details class="card rules compact-card">
