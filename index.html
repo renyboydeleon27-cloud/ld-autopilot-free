@@ -11,8 +11,8 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK</p>
-        <h1>LD Autopilot Free</h1>
-        <p class="sub">Image + prompt production manager — no paid API required.</p>
+        <h1>LD Autopilot Free <span class="version">v1.1</span></h1>
+        <p class="sub">Mobile-first image + prompt production manager — no paid API required.</p>
       </div>
       <button id="resetBtn" class="ghost">Reset demo</button>
     </header>
@@ -39,18 +39,27 @@
       <article class="stat"><span>Mode</span><strong id="modeText">—</strong></article>
     </section>
 
-    <section class="card rules">
-      <h2>Locked visual rules</h2>
-      <p>Adult characters only · serious colored historical graphic-novel/anime · hand-inked linework · cel-painted textures · no photorealistic humans · no live action · no 3D CGI people.</p>
+    <section class="card rules compact-card">
+      <div>
+        <h2>Locked visual rules</h2>
+        <p>Adult characters only · serious colored historical graphic-novel/anime · hand-inked linework · cel-painted textures · no photorealistic humans · no live action · no 3D CGI people.</p>
+      </div>
     </section>
 
-    <section>
+    <section id="pipelineSection">
       <div class="section-head">
         <div>
           <p class="eyebrow">PRODUCTION PIPELINE</p>
           <h2 id="projectTitle">No production yet</h2>
         </div>
       </div>
+
+      <div id="stageNav" class="stage-nav hidden">
+        <label for="jumpStage">Jump to stage</label>
+        <select id="jumpStage"></select>
+        <button id="nextIncompleteBtn" class="ghost small">Next incomplete</button>
+      </div>
+
       <div id="stages" class="stage-grid"></div>
     </section>
   </main>
@@ -61,21 +70,39 @@
         <div>
           <span class="badge stage-name"></span>
           <h3 class="stage-title"></h3>
+          <p class="stage-status">Not ready</p>
         </div>
-        <label class="check"><input type="checkbox" class="done-toggle" /> Done</label>
+        <div class="stage-actions-top">
+          <label class="check"><input type="checkbox" class="done-toggle" /> Done</label>
+          <button class="ghost small collapse-btn" type="button">Open</button>
+        </div>
       </div>
-      <label>Narration</label>
-      <textarea class="narration" rows="3" placeholder="~8 second narration segment"></textarea>
-      <label>Image prompt</label>
-      <textarea class="image-prompt" rows="5"></textarea>
-      <div class="flow-wrap">
-        <label>Flow animation prompt</label>
-        <textarea class="flow-prompt" rows="7"></textarea>
+
+      <div class="stage-body hidden">
+        <div class="field-block narration-wrap">
+          <div class="field-head"><label>Narration</label><button type="button" class="copy-btn" data-copy="narration">Copy</button></div>
+          <textarea class="narration" rows="3" placeholder="~8 second narration segment"></textarea>
+        </div>
+
+        <div class="field-block">
+          <div class="field-head"><label>Image prompt</label><button type="button" class="copy-btn" data-copy="imagePrompt">Copy</button></div>
+          <textarea class="image-prompt" rows="5"></textarea>
+        </div>
+
+        <div class="flow-wrap field-block">
+          <div class="field-head"><label>Flow animation prompt</label><button type="button" class="copy-btn" data-copy="flowPrompt">Copy</button></div>
+          <textarea class="flow-prompt" rows="7"></textarea>
+        </div>
+
+        <div class="stage-footer">
+          <p class="stage-note"></p>
+          <button type="button" class="ghost small next-stage-btn">Next stage</button>
+        </div>
       </div>
-      <p class="stage-note"></p>
     </article>
   </template>
 
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
 </body>
 </html>
