@@ -1,0 +1,113 @@
+(()=>{
+  const CORE_KEY='ld-autopilot-free-v1';
+  const LIB_KEY='ld-autopilot-free-project-library-v1';
+  const ACTIVE_KEY='ld-autopilot-free-active-project';
+  const listEl=document.getElementById('projectList');
+  const countEl=document.getElementById('libraryCount');
+  const newBtn=document.getElementById('newProjectBtn');
+  const buildBtn=document.getElementById('buildBtn');
+  const resetBtn=document.getElementById('resetBtn');
+  const backupFileInput=document.getElementById('backupFileInput');
+  if(!listEl||!countEl||!newBtn)return;
+
+  function readLibrary(){
+    try{return JSON.parse(localStorage.getItem(LIB_KEY)||'{"projects":[]}');}
+    catch{return {projects:[]};}
+  }
+  function writeLibrary(lib){localStorage.setItem(LIB_KEY,JSON.stringify(lib));}
+  function activeId(){return localStorage.getItem(ACTIVE_KEY)||'';}
+  function setActive(id){if(id)localStorage.setItem(ACTIVE_KEY,id);else localStorage.removeItem(ACTIVE_KEY);}
+  function uid(){return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;}
+  function readCore(){
+    try{return JSON.parse(localStorage.getItem(CORE_KEY)||'null');}
+    catch{return null;}
+  }
+  function validState(state){return !!(state&&state.topic&&state.stages&&typeof state.stages==='object');}
+  function projectStats(state){
+    const expected=state?.format==='longform'?31:17;
+    const items=state?.stages?Object.values(state.stages):[];
+    const done=items.filter(x=>x&&x.done).length;
+    return {done,total:expected,percent:expected?Math.round(done/expected*100):0};
+  }
+  function displayName(p){return p.name||p.state?.topic||'Untitled project';}
+  function formatLabel(state){return state?.format==='longform'?'Longform 16:9':'Shorts 9:16';}
+  function prettyTime(iso){
+    if(!iso)return 'Saved locally';
+    const d=new Date(iso);if(Number.isNaN(d.getTime()))return 'Saved locally';
+    return d.toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  function render(){
+    const lib=readLibrary();const current=activeId();
+    countEl.textContent=`${lib.projects.length} project${lib.projects.length===1?'':'s'}`;
+    listEl.innerHTML='';
+    if(!lib.projects.length){
+      const empty=document.createElement('p');empty.className='library-empty';empty.textContent='No saved projects yet. Create a production to add your first project.';listEl.appendChild(empty);return;
+    }
+    [...lib.projects].sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).forEach(p=>{
+      const stats=projectStats(p.state);
+      const card=document.createElement('article');card.className=`project-item${p.id===current?' active-project':''}`;
+      card.innerHTML=`<div class="project-main"><div class="project-title-row"><strong></strong><span class="project-mode"></span></div><div class="project-meta"><span>${stats.done}/${stats.total} complete</span><span>${stats.percent}%</span><span>${prettyTime(p.updatedAt)}</span></div><div class="mini-track"><div style="width:${stats.percent}%"></div></div></div><div class="project-actions"><button type="button" class="ghost small open-project">${p.id===current?'Current':'Open'}</button><button type="button" class="ghost small rename-project">Rename</button><button type="button" class="ghost small delete-project">Delete</button></div>`;
+      card.querySelector('.project-title-row strong').textContent=displayName(p);
+      card.querySelector('.project-mode').textContent=formatLabel(p.state);
+      card.querySelector('.open-project').addEventListener('click',()=>openProject(p.id));
+      card.querySelector('.rename-project').addEventListener('click',()=>renameProject(p.id));
+      card.querySelector('.delete-project').addEventListener('click',()=>deleteProject(p.id));
+      listEl.appendChild(card);
+    });
+  }
+  function syncCurrent(forceNew=false){
+    const state=readCore();if(!validState(state))return;
+    const lib=readLibrary();let id=forceNew?'':activeId();
+    let p=id?lib.projects.find(x=>x.id===id):null;
+    if(!p){id=uid();p={id,name:state.topic,state,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};lib.projects.push(p);setActive(id);}
+    else{p.state=state;p.updatedAt=new Date().toISOString();if(!p.name)p.name=state.topic;}
+    writeLibrary(lib);render();
+  }
+  function migrateLegacy(){
+    const core=readCore();const lib=readLibrary();
+    if(!lib.projects.length&&validState(core)){
+      const id=uid();lib.projects.push({id,name:core.topic,state:core,createdAt:core.updatedAt||new Date().toISOString(),updatedAt:core.updatedAt||new Date().toISOString()});writeLibrary(lib);setActive(id);
+    }else if(lib.projects.length&&!activeId()){
+      const match=validState(core)?lib.projects.find(p=>p.state?.topic===core.topic&&p.state?.format===core.format):null;
+      if(match)setActive(match.id);
+    }
+  }
+  function openProject(id){
+    const p=readLibrary().projects.find(x=>x.id===id);if(!p)return;
+    localStorage.setItem(CORE_KEY,JSON.stringify(p.state));setActive(id);location.reload();
+  }
+  function renameProject(id){
+    const lib=readLibrary();const p=lib.projects.find(x=>x.id===id);if(!p)return;
+    const next=prompt('Project name',displayName(p));if(next===null)return;
+    const clean=next.trim();if(!clean)return;
+    p.name=clean;p.updatedAt=new Date().toISOString();writeLibrary(lib);render();
+  }
+  function deleteProject(id){
+    const lib=readLibrary();const p=lib.projects.find(x=>x.id===id);if(!p)return;
+    if(!confirm(`Delete “${displayName(p)}” from this device?`))return;
+    lib.projects=lib.projects.filter(x=>x.id!==id);writeLibrary(lib);
+    if(activeId()===id){setActive('');localStorage.removeItem(CORE_KEY);location.reload();return;}
+    render();
+  }
+  function startNew(){
+    syncCurrent();setActive('');localStorage.removeItem(CORE_KEY);location.reload();
+  }
+
+  let timer;
+  function scheduleSync(){clearTimeout(timer);timer=setTimeout(()=>syncCurrent(),120);}
+  document.addEventListener('input',e=>{if(e.target.matches('textarea,.done-toggle'))scheduleSync();});
+  document.addEventListener('change',e=>{if(e.target.matches('textarea,.done-toggle'))scheduleSync();});
+  document.addEventListener('click',e=>{if(e.target.closest('.done-toggle,.copy-btn,.collapse-btn,.next-stage-btn'))setTimeout(scheduleSync,0);});
+
+  buildBtn?.addEventListener('click',()=>{
+    const core=readCore();const current=activeId();const topic=document.getElementById('topic')?.value.trim();const format=document.getElementById('format')?.value;
+    if(current&&core&&(core.topic!==topic||core.format!==format))setActive('');
+    setTimeout(()=>syncCurrent(),80);
+  },true);
+  backupFileInput?.addEventListener('change',()=>{setActive('');setTimeout(()=>syncCurrent(true),700);},true);
+  resetBtn?.addEventListener('click',()=>{syncCurrent();setActive('');setTimeout(render,50);},true);
+  newBtn.addEventListener('click',startNew);
+
+  migrateLegacy();render();
+  setTimeout(()=>syncCurrent(),200);
+})();
