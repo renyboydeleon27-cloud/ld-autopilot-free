@@ -37,6 +37,23 @@
     return d.toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   }
   function deepClone(obj){return JSON.parse(JSON.stringify(obj));}
+  function replaceLiteral(text,from,to){
+    if(typeof text!=='string'||!from||from===to)return text;
+    return text.split(from).join(to);
+  }
+  function syncTitleInsideState(state,oldTitle,newTitle){
+    if(!state||typeof state!=='object')return state;
+    state.topic=newTitle;
+    state.version='1.9';
+    state.updatedAt=new Date().toISOString();
+    Object.values(state.stages||{}).forEach(stage=>{
+      if(!stage||typeof stage!=='object')return;
+      ['narration','imagePrompt','flowPrompt'].forEach(key=>{
+        if(typeof stage[key]==='string')stage[key]=replaceLiteral(stage[key],oldTitle,newTitle);
+      });
+    });
+    return state;
+  }
   function render(){
     const lib=readLibrary();const current=activeId();
     countEl.textContent=`${lib.projects.length} project${lib.projects.length===1?'':'s'}`;
@@ -86,14 +103,26 @@
     copy.id=uid();
     copy.name=`${displayName(source)} Copy`;
     copy.createdAt=now;copy.updatedAt=now;
-    if(copy.state){copy.state.updatedAt=now;copy.state.version='1.6';}
+    if(copy.state){copy.state.updatedAt=now;copy.state.version='1.9';}
     lib.projects.push(copy);writeLibrary(lib);render();
   }
   function renameProject(id){
     const lib=readLibrary();const p=lib.projects.find(x=>x.id===id);if(!p)return;
-    const next=prompt('Project name',displayName(p));if(next===null)return;
-    const clean=next.trim();if(!clean)return;
-    p.name=clean;p.updatedAt=new Date().toISOString();writeLibrary(lib);render();
+    const oldDisplay=displayName(p);
+    const oldTopic=(p.state?.topic||oldDisplay).trim();
+    const next=prompt('Project name',oldDisplay);if(next===null)return;
+    const clean=next.trim();if(!clean||clean===oldDisplay)return;
+    const now=new Date().toISOString();
+    p.name=clean;
+    if(p.state)syncTitleInsideState(p.state,oldTopic,clean);
+    p.updatedAt=now;
+    writeLibrary(lib);
+    if(activeId()===id&&p.state){
+      localStorage.setItem(CORE_KEY,JSON.stringify(p.state));
+      location.reload();
+      return;
+    }
+    render();
   }
   function deleteProject(id){
     const lib=readLibrary();const p=lib.projects.find(x=>x.id===id);if(!p)return;
