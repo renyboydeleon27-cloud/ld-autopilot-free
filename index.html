@@ -11,16 +11,16 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK</p>
-        <h1>LD Autopilot Free <span class="version">v1.1</span></h1>
+        <h1>LD Autopilot Free <span class="version">v1.2</span></h1>
         <p class="sub">Mobile-first image + prompt production manager — no paid API required.</p>
       </div>
-      <button id="resetBtn" class="ghost">Reset demo</button>
+      <button id="resetBtn" class="ghost">Reset</button>
     </header>
 
     <section class="card setup">
       <div>
         <label for="topic">Disaster topic</label>
-        <input id="topic" placeholder="Example: 1906 San Francisco Earthquake" />
+        <input id="topic" placeholder="Example: 2004 Indian Ocean Tsunami" />
       </div>
       <div>
         <label for="format">Format</label>
@@ -39,12 +39,20 @@
       <article class="stat"><span>Mode</span><strong id="modeText">—</strong></article>
     </section>
 
-    <section class="card rules compact-card">
-      <div>
-        <h2>Locked visual rules</h2>
-        <p>Adult characters only · serious colored historical graphic-novel/anime · hand-inked linework · cel-painted textures · no photorealistic humans · no live action · no 3D CGI people.</p>
-      </div>
+    <section class="progress-card card">
+      <div class="progress-meta"><span id="progressLabel">No production yet</span><span id="saveStatus">Saved locally</span></div>
+      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
     </section>
+
+    <section id="completeBanner" class="complete-banner hidden">
+      <strong>Production complete — 100%</strong>
+      <span>All required stages are marked Done.</span>
+    </section>
+
+    <details class="card rules compact-card">
+      <summary>Locked visual rules</summary>
+      <p>Adult characters only · serious colored historical graphic-novel/anime · hand-inked linework · cel-painted textures · no photorealistic humans · no live action · no 3D CGI people.</p>
+    </details>
 
     <section id="pipelineSection">
       <div class="section-head">
@@ -55,9 +63,9 @@
       </div>
 
       <div id="stageNav" class="stage-nav hidden">
-        <label for="jumpStage">Jump to stage</label>
-        <select id="jumpStage"></select>
+        <select id="jumpStage" aria-label="Jump to stage"></select>
         <button id="nextIncompleteBtn" class="ghost small">Next incomplete</button>
+        <button id="collapseAllBtn" class="ghost small">Collapse all</button>
       </div>
 
       <div id="stages" class="stage-grid"></div>
@@ -70,6 +78,7 @@
         <div>
           <span class="badge stage-name"></span>
           <h3 class="stage-title"></h3>
+          <p class="scene-role"></p>
           <p class="stage-status">Not ready</p>
         </div>
         <div class="stage-actions-top">
@@ -92,6 +101,10 @@
         <div class="flow-wrap field-block">
           <div class="field-head"><label>Flow animation prompt</label><button type="button" class="copy-btn" data-copy="flowPrompt">Copy</button></div>
           <textarea class="flow-prompt" rows="7"></textarea>
+        </div>
+
+        <div class="stage-package-actions">
+          <button type="button" class="ghost small copy-package-btn">Copy stage package</button>
         </div>
 
         <div class="stage-footer">
