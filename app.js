@@ -24,6 +24,8 @@ const remainingStages=document.getElementById('remainingStages');
 const auditNextBtn=document.getElementById('auditNextBtn');
 const copyAllBtn=document.getElementById('copyAllBtn');
 const backupBtn=document.getElementById('backupBtn');
+const importBackupBtn=document.getElementById('importBackupBtn');
+const backupFileInput=document.getElementById('backupFileInput');
 
 const STORE_KEY='ld-autopilot-free-v1';
 
@@ -89,7 +91,7 @@ function refreshCard(card){
   else if(ready){status.textContent='Ready to mark done';card.classList.add('ready');card.classList.remove('complete');}
   else{status.textContent='Needs required fields';card.classList.remove('ready','complete');}
 }
-function showToast(text){toast.textContent=text;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1500);}
+function showToast(text){toast.textContent=text;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1800);}
 async function copyText(text){try{await navigator.clipboard.writeText(text);showToast('Copied');}catch{showToast('Copy failed');}}
 function scrollToCard(card){if(!card)return;const body=card.querySelector('.stage-body');body.classList.remove('hidden');card.querySelector('.collapse-btn').textContent='Close';card.scrollIntoView({behavior:'smooth',block:'start'});}
 function updateJumpMenu(){jumpStage.innerHTML='';[...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{const opt=document.createElement('option');opt.value=card.dataset.stage;opt.textContent=`${card.dataset.stage} — ${card.querySelector('.stage-title').textContent}`;jumpStage.appendChild(opt);});stageNav.classList.toggle('hidden',!jumpStage.options.length);}
@@ -153,7 +155,7 @@ function buildProduction(seed){
 function collectState(){
   const stages={};
   [...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{stages[card.dataset.stage]={narration:card.querySelector('.narration').value,imagePrompt:card.querySelector('.image-prompt').value,flowPrompt:card.querySelector('.flow-prompt').value,done:card.querySelector('.done-toggle').checked};});
-  return {version:'1.3',topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,stages,updatedAt:new Date().toISOString()};
+  return {version:'1.4',topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,stages,updatedAt:new Date().toISOString()};
 }
 function updateAudit(cards){
   if(!cards.length){auditCard.classList.add('hidden');return;}
@@ -193,6 +195,43 @@ function downloadBackup(){
   const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`${safe||'living-disaster'}-backup.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);showToast('Backup downloaded');
 }
+function validateBackup(state){
+  if(!state||typeof state!=='object') throw new Error('Invalid backup file');
+  if(!['shorts','longform'].includes(state.format)) throw new Error('Unknown production format');
+  if(typeof state.topic!=='string'||!state.topic.trim()) throw new Error('Backup has no disaster topic');
+  if(!state.stages||typeof state.stages!=='object') throw new Error('Backup has no stage data');
+  const expected=state.format==='shorts'?shortsStages():longformStages();
+  const present=Object.keys(state.stages);
+  const unknown=present.filter(name=>!expected.includes(name));
+  if(unknown.length) throw new Error(`Unknown stages: ${unknown.join(', ')}`);
+  expected.forEach(name=>{
+    const item=state.stages[name];
+    if(!item||typeof item!=='object') throw new Error(`Missing stage: ${name}`);
+    ['narration','imagePrompt','flowPrompt'].forEach(key=>{
+      if(item[key]!==undefined&&typeof item[key]!=='string') throw new Error(`Invalid ${key} in ${name}`);
+    });
+    if(item.done!==undefined&&typeof item.done!=='boolean') throw new Error(`Invalid Done status in ${name}`);
+  });
+  return true;
+}
+async function importBackupFile(file){
+  if(!file)return;
+  try{
+    const text=await file.text();
+    const state=JSON.parse(text);
+    validateBackup(state);
+    localStorage.setItem(STORE_KEY,JSON.stringify(state));
+    topicEl.value=state.topic;
+    formatEl.value=state.format;
+    buildProduction(state);
+    showToast('Backup restored');
+  }catch(err){
+    console.error(err);
+    showToast(`Import failed: ${err.message||'invalid file'}`);
+  }finally{
+    backupFileInput.value='';
+  }
+}
 
 buildBtn.addEventListener('click',()=>buildProduction());
 resetBtn.addEventListener('click',()=>{localStorage.removeItem(STORE_KEY);stagesEl.innerHTML='';projectTitle.textContent='No production yet';stageCount.textContent='0';doneCount.textContent='0';progressText.textContent='0%';modeText.textContent='—';progressBar.style.width='0%';progressLabel.textContent='No production yet';completeBanner.classList.add('hidden');auditCard.classList.add('hidden');topicEl.value='';formatEl.value='shorts';stageNav.classList.add('hidden');});
@@ -201,5 +240,7 @@ nextIncompleteBtn.addEventListener('click',nextIncomplete);
 auditNextBtn.addEventListener('click',nextIncomplete);
 copyAllBtn.addEventListener('click',copyAllPackages);
 backupBtn.addEventListener('click',downloadBackup);
+importBackupBtn.addEventListener('click',()=>backupFileInput.click());
+backupFileInput.addEventListener('change',()=>importBackupFile(backupFileInput.files?.[0]));
 collapseAllBtn.addEventListener('click',()=>{[...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{card.querySelector('.stage-body').classList.add('hidden');card.querySelector('.collapse-btn').textContent='Open';});});
 load();
