@@ -11,7 +11,7 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK</p>
-        <h1>LD Autopilot Free <span class="version">v1.6</span></h1>
+        <h1>LD Autopilot Free <span class="version">v1.7</span></h1>
         <p class="sub">Mobile-first image + prompt production manager — no paid API required.</p>
       </div>
       <button id="resetBtn" class="ghost">Reset</button>
@@ -70,6 +70,7 @@
       <p id="remainingStages" class="remaining-stages">No production yet.</p>
       <div class="audit-actions">
         <button id="auditNextBtn" class="ghost small" type="button">Go to next incomplete</button>
+        <button id="generateAllBtn" class="ghost small" type="button">Generate all templates</button>
         <button id="copyAllBtn" class="ghost small" type="button">Copy all packages</button>
         <button id="backupBtn" class="ghost small" type="button">Download backup</button>
         <button id="importBackupBtn" class="ghost small" type="button">Import backup</button>
@@ -137,6 +138,7 @@
         </div>
 
         <div class="stage-package-actions">
+          <button type="button" class="ghost small generate-template-btn">Generate template</button>
           <button type="button" class="ghost small copy-package-btn">Copy stage package</button>
         </div>
 
@@ -152,5 +154,6 @@
   <script src="app.js"></script>
   <script src="backup-fix.js"></script>
   <script src="project-library.js"></script>
+  <script src="automation-assist.js"></script>
 </body>
 </html>
