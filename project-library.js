@@ -36,6 +36,7 @@
     const d=new Date(iso);if(Number.isNaN(d.getTime()))return 'Saved locally';
     return d.toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   }
+  function deepClone(obj){return JSON.parse(JSON.stringify(obj));}
   function render(){
     const lib=readLibrary();const current=activeId();
     countEl.textContent=`${lib.projects.length} project${lib.projects.length===1?'':'s'}`;
@@ -46,10 +47,11 @@
     [...lib.projects].sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0)).forEach(p=>{
       const stats=projectStats(p.state);
       const card=document.createElement('article');card.className=`project-item${p.id===current?' active-project':''}`;
-      card.innerHTML=`<div class="project-main"><div class="project-title-row"><strong></strong><span class="project-mode"></span></div><div class="project-meta"><span>${stats.done}/${stats.total} complete</span><span>${stats.percent}%</span><span>${prettyTime(p.updatedAt)}</span></div><div class="mini-track"><div style="width:${stats.percent}%"></div></div></div><div class="project-actions"><button type="button" class="ghost small open-project">${p.id===current?'Current':'Open'}</button><button type="button" class="ghost small rename-project">Rename</button><button type="button" class="ghost small delete-project">Delete</button></div>`;
+      card.innerHTML=`<div class="project-main"><div class="project-title-row"><strong></strong><span class="project-mode"></span></div><div class="project-meta"><span>${stats.done}/${stats.total} complete</span><span>${stats.percent}%</span><span>${prettyTime(p.updatedAt)}</span></div><div class="mini-track"><div style="width:${stats.percent}%"></div></div></div><div class="project-actions"><button type="button" class="ghost small open-project">${p.id===current?'Current':'Open'}</button><button type="button" class="ghost small duplicate-project">Duplicate</button><button type="button" class="ghost small rename-project">Rename</button><button type="button" class="ghost small delete-project">Delete</button></div>`;
       card.querySelector('.project-title-row strong').textContent=displayName(p);
       card.querySelector('.project-mode').textContent=formatLabel(p.state);
       card.querySelector('.open-project').addEventListener('click',()=>openProject(p.id));
+      card.querySelector('.duplicate-project').addEventListener('click',()=>duplicateProject(p.id));
       card.querySelector('.rename-project').addEventListener('click',()=>renameProject(p.id));
       card.querySelector('.delete-project').addEventListener('click',()=>deleteProject(p.id));
       listEl.appendChild(card);
@@ -76,6 +78,17 @@
     const p=readLibrary().projects.find(x=>x.id===id);if(!p)return;
     localStorage.setItem(CORE_KEY,JSON.stringify(p.state));setActive(id);location.reload();
   }
+  function duplicateProject(id){
+    syncCurrent();
+    const lib=readLibrary();const source=lib.projects.find(x=>x.id===id);if(!source)return;
+    const copy=deepClone(source);
+    const now=new Date().toISOString();
+    copy.id=uid();
+    copy.name=`${displayName(source)} Copy`;
+    copy.createdAt=now;copy.updatedAt=now;
+    if(copy.state){copy.state.updatedAt=now;copy.state.version='1.6';}
+    lib.projects.push(copy);writeLibrary(lib);render();
+  }
   function renameProject(id){
     const lib=readLibrary();const p=lib.projects.find(x=>x.id===id);if(!p)return;
     const next=prompt('Project name',displayName(p));if(next===null)return;
@@ -90,7 +103,10 @@
     render();
   }
   function startNew(){
-    syncCurrent();setActive('');localStorage.removeItem(CORE_KEY);location.reload();
+    syncCurrent();
+    const ok=confirm('Start a new blank project? Your current project is already saved in Project Library.');
+    if(!ok)return;
+    setActive('');localStorage.removeItem(CORE_KEY);location.reload();
   }
 
   let timer;
