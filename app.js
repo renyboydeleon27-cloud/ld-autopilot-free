@@ -17,6 +17,13 @@ const progressBar=document.getElementById('progressBar');
 const progressLabel=document.getElementById('progressLabel');
 const completeBanner=document.getElementById('completeBanner');
 const toast=document.getElementById('toast');
+const auditCard=document.getElementById('auditCard');
+const auditStatus=document.getElementById('auditStatus');
+const requiredStatus=document.getElementById('requiredStatus');
+const remainingStages=document.getElementById('remainingStages');
+const auditNextBtn=document.getElementById('auditNextBtn');
+const copyAllBtn=document.getElementById('copyAllBtn');
+const backupBtn=document.getElementById('backupBtn');
 
 const STORE_KEY='ld-autopilot-free-v1';
 
@@ -76,7 +83,8 @@ function refreshCard(card){
   const ready=requiredReady(card);
   const done=card.querySelector('.done-toggle');
   const status=card.querySelector('.stage-status');
-  done.disabled=!ready && !done.checked;
+  if(done.checked&&!ready) done.checked=false;
+  done.disabled=!ready;
   if(done.checked){status.textContent='Complete';card.classList.add('complete');card.classList.remove('ready');}
   else if(ready){status.textContent='Ready to mark done';card.classList.add('ready');card.classList.remove('complete');}
   else{status.textContent='Needs required fields';card.classList.remove('ready','complete');}
@@ -85,6 +93,17 @@ function showToast(text){toast.textContent=text;toast.classList.add('show');clea
 async function copyText(text){try{await navigator.clipboard.writeText(text);showToast('Copied');}catch{showToast('Copy failed');}}
 function scrollToCard(card){if(!card)return;const body=card.querySelector('.stage-body');body.classList.remove('hidden');card.querySelector('.collapse-btn').textContent='Close';card.scrollIntoView({behavior:'smooth',block:'start'});}
 function updateJumpMenu(){jumpStage.innerHTML='';[...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{const opt=document.createElement('option');opt.value=card.dataset.stage;opt.textContent=`${card.dataset.stage} — ${card.querySelector('.stage-title').textContent}`;jumpStage.appendChild(opt);});stageNav.classList.toggle('hidden',!jumpStage.options.length);}
+function stagePackage(card){
+  const name=card.dataset.stage;
+  const narration=card.querySelector('.narration').value;
+  const imagePrompt=card.querySelector('.image-prompt').value;
+  const flowPrompt=card.querySelector('.flow-prompt').value;
+  const parts=[`${name} — ${stageTitle(name)}`,`Scene role: ${sceneRole(name,formatEl.value)}`];
+  if(name!=='ENDING'&&name!=='THUMBNAIL') parts.push(`Narration:\n${narration||'[empty]'}`);
+  parts.push(`Image prompt:\n${imagePrompt}`);
+  if(name!=='ENDING'&&name!=='THUMBNAIL') parts.push(`Flow prompt:\n${flowPrompt}`);
+  return parts.join('\n\n');
+}
 
 function buildProduction(seed){
   const topic=(seed?.topic||topicEl.value.trim()||'Untitled Disaster');
@@ -121,13 +140,7 @@ function buildProduction(seed){
     done.addEventListener('change',()=>{refreshCard(node);saveCurrent();});
     collapseBtn.addEventListener('click',()=>{const closed=body.classList.toggle('hidden');collapseBtn.textContent=closed?'Open':'Close';});
     node.querySelectorAll('.copy-btn').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.copy;const field=key==='narration'?narration:key==='imagePrompt'?imagePrompt:flowPrompt;copyText(field.value);}));
-    node.querySelector('.copy-package-btn').addEventListener('click',()=>{
-      const parts=[`${name} — ${stageTitle(name)}`,`Scene role: ${sceneRole(name,format)}`];
-      if(name!=='ENDING'&&name!=='THUMBNAIL') parts.push(`Narration:\n${narration.value||'[empty]'}`);
-      parts.push(`Image prompt:\n${imagePrompt.value}`);
-      if(name!=='ENDING'&&name!=='THUMBNAIL') parts.push(`Flow prompt:\n${flowPrompt.value}`);
-      copyText(parts.join('\n\n'));
-    });
+    node.querySelector('.copy-package-btn').addEventListener('click',()=>copyText(stagePackage(node)));
     node.querySelector('.next-stage-btn').addEventListener('click',()=>scrollToCard(node.nextElementSibling));
     refreshCard(node);stagesEl.appendChild(node);
   });
@@ -140,22 +153,53 @@ function buildProduction(seed){
 function collectState(){
   const stages={};
   [...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{stages[card.dataset.stage]={narration:card.querySelector('.narration').value,imagePrompt:card.querySelector('.image-prompt').value,flowPrompt:card.querySelector('.flow-prompt').value,done:card.querySelector('.done-toggle').checked};});
-  return {topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,stages};
+  return {version:'1.3',topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,stages,updatedAt:new Date().toISOString()};
+}
+function updateAudit(cards){
+  if(!cards.length){auditCard.classList.add('hidden');return;}
+  auditCard.classList.remove('hidden');
+  const ready=cards.filter(requiredReady);
+  const incomplete=cards.filter(c=>!c.querySelector('.done-toggle').checked);
+  const missingRequired=cards.filter(c=>!requiredReady(c));
+  requiredStatus.textContent=`${ready.length}/${cards.length} ready`;
+  if(!incomplete.length){
+    auditStatus.textContent='Audit passed';
+    remainingStages.textContent='No remaining stages. All required fields are present and every stage is marked Done.';
+  }else{
+    auditStatus.textContent=`${incomplete.length} stage${incomplete.length===1?'':'s'} remaining`;
+    const names=incomplete.map(c=>c.dataset.stage).join(', ');
+    const missing=missingRequired.map(c=>c.dataset.stage);
+    remainingStages.textContent=`Remaining: ${names}.${missing.length?` Missing required content: ${missing.join(', ')}.`:''}`;
+  }
 }
 function updateStats(){
   const cards=[...stagesEl.querySelectorAll('.stage-card')];
-  const done=cards.filter(c=>c.querySelector('.done-toggle').checked).length;
+  cards.forEach(refreshCard);
+  const done=cards.filter(c=>c.querySelector('.done-toggle').checked&&requiredReady(c)).length;
   const percent=cards.length?Math.round(done/cards.length*100):0;
   doneCount.textContent=done;progressText.textContent=`${percent}%`;progressBar.style.width=`${percent}%`;
   progressLabel.textContent=cards.length?`${done} of ${cards.length} stages complete`:'No production yet';
   completeBanner.classList.toggle('hidden',!cards.length||done!==cards.length);
+  updateAudit(cards);
 }
 function saveCurrent(){updateStats();localStorage.setItem(STORE_KEY,JSON.stringify(collectState()));}
 function load(){const raw=localStorage.getItem(STORE_KEY);if(!raw)return;try{const state=JSON.parse(raw);topicEl.value=state.topic||'';formatEl.value=state.format||'shorts';buildProduction(state);}catch(e){console.warn(e)}}
+function nextIncomplete(){const card=[...stagesEl.querySelectorAll('.stage-card')].find(c=>!c.querySelector('.done-toggle').checked);scrollToCard(card);if(!card)showToast('All stages complete');}
+function copyAllPackages(){const cards=[...stagesEl.querySelectorAll('.stage-card')];if(!cards.length)return showToast('No production yet');const header=`LIVING DISASTER BOOK\n${projectTitle.textContent}\n${modeText.textContent}\n`;copyText(`${header}\n\n${cards.map(stagePackage).join('\n\n====================\n\n')}`);}
+function downloadBackup(){
+  const state=collectState();
+  if(!Object.keys(state.stages).length)return showToast('No production yet');
+  const safe=(state.topic||'living-disaster').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`${safe||'living-disaster'}-backup.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);showToast('Backup downloaded');
+}
 
 buildBtn.addEventListener('click',()=>buildProduction());
-resetBtn.addEventListener('click',()=>{localStorage.removeItem(STORE_KEY);stagesEl.innerHTML='';projectTitle.textContent='No production yet';stageCount.textContent='0';doneCount.textContent='0';progressText.textContent='0%';modeText.textContent='—';progressBar.style.width='0%';progressLabel.textContent='No production yet';completeBanner.classList.add('hidden');topicEl.value='';formatEl.value='shorts';stageNav.classList.add('hidden');});
+resetBtn.addEventListener('click',()=>{localStorage.removeItem(STORE_KEY);stagesEl.innerHTML='';projectTitle.textContent='No production yet';stageCount.textContent='0';doneCount.textContent='0';progressText.textContent='0%';modeText.textContent='—';progressBar.style.width='0%';progressLabel.textContent='No production yet';completeBanner.classList.add('hidden');auditCard.classList.add('hidden');topicEl.value='';formatEl.value='shorts';stageNav.classList.add('hidden');});
 jumpStage.addEventListener('change',()=>scrollToCard(stagesEl.querySelector(`[data-stage="${jumpStage.value}"]`)));
-nextIncompleteBtn.addEventListener('click',()=>{const card=[...stagesEl.querySelectorAll('.stage-card')].find(c=>!c.querySelector('.done-toggle').checked);scrollToCard(card);});
+nextIncompleteBtn.addEventListener('click',nextIncomplete);
+auditNextBtn.addEventListener('click',nextIncomplete);
+copyAllBtn.addEventListener('click',copyAllPackages);
+backupBtn.addEventListener('click',downloadBackup);
 collapseAllBtn.addEventListener('click',()=>{[...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{card.querySelector('.stage-body').classList.add('hidden');card.querySelector('.collapse-btn').textContent='Open';});});
 load();
