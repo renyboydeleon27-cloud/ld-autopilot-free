@@ -12,13 +12,13 @@
         HOOK:{fact:'At about 3:42 a.m. on July 28, 1976, Tangshan was asleep. Seconds later, a devastating earthquake tore through the industrial city.',visual:'Pre-dawn Tangshan moments before the quake: dark industrial skyline, low apartment blocks, factory chimneys, rail lines, dim street lamps, quiet roads and adult residents indoors or barely visible; tense calm before sudden destruction.'},
         P1:{fact:'Before dawn on July 28, 1976, Tangshan was an industrial city of factories, railways, apartment blocks, homes and sleeping residents.',visual:'Ordinary pre-dawn Tangshan in 1976 with brick apartment blocks, factory buildings, rail infrastructure, bicycles and period-correct streets; peaceful daily-life composition before the earthquake, adults only.'},
         P2:{fact:'Beneath Tangshan, tectonic stress had built along the fault system until the crust could no longer hold the strain.',visual:'Scientific underground cutaway beneath Tangshan showing compressed rock layers and a stressed fault zone below the city, with the surface city visible above for geographic context; no labels or text.'},
-        P3:{fact:'At about 3:42 a.m. on July 28, 1976, a powerful earthquake of about magnitude 7.5 ruptured beneath the Tangshan region.',visual:'The rupture begins beneath Tangshan: fractured rock layers shifting along the fault while the city surface above starts to shake; show strong geological force without fantasy shockwaves.'},
+        P3:{role:'Trigger · earthquake begins · first violent shaking',fact:'At about 3:42 a.m. on July 28, 1976, a powerful earthquake of about magnitude 7.5 ruptured beneath the Tangshan region.',visual:'Exact onset of the earthquake, not the full aftermath. Pre-dawn Tangshan above a scientifically grounded fault rupture: fractured rock layers shift below while the intact city surface begins its first violent shaking. Show brick apartment blocks, factory structures, rail infrastructure, utility poles and period-correct streets beginning to vibrate; small masonry cracks, swaying fixtures and dust starting to fall, but avoid widespread collapse yet. Adults only if visible, reacting by waking, bracing or turning. Strong geological force, documentary realism, no fantasy shockwave, no giant surface fissure, no post-disaster rubble field.'},
         P4:{fact:'Violent shaking struck with almost no warning, throwing residents awake as walls cracked and buildings began to fail.',visual:'Interior and street-level view of Tangshan at the first seconds of violent shaking: lamps swinging, furniture shifting, plaster cracking, brick walls flexing and adult residents waking or bracing.'},
         P5:{fact:'Across Tangshan, apartment blocks, homes, factories and public buildings collapsed under the intense shaking.',visual:'Dense Tangshan neighborhood during peak structural failure: brick apartment blocks, homes and factory structures collapsing into dust and rubble, adult figures at safe readable scale, no gore.'},
         P6:{fact:'Railways buckled, roads cracked, utilities failed and industrial facilities were heavily damaged across the city.',visual:'Industrial Tangshan infrastructure damage: buckled rail tracks, cracked roads, fallen utility poles, damaged factory structures, dust haze and broken transport links.'},
         P7:{fact:'When daylight arrived, survivors found entire neighborhoods buried beneath brick, concrete, steel and dust.',visual:'Early morning aftermath across Tangshan: broad field of collapsed brick housing and apartment blocks, dust-filled light, twisted steel and adult survivors surveying ruined neighborhoods.'},
         P8:{fact:'Strong aftershocks and widespread infrastructure failure deepened the crisis beyond the first collapsed districts.',visual:'Wider city crisis after the main shock: damaged districts stretching into the distance, unstable buildings, cracked roads, failed utilities, dust plumes and adults moving carefully through debris.'},
-        P9:{fact:'Using bare hands and simple tools, civilians, workers and soldiers searched unstable ruins for trapped survivors.',visual:'Rescue scene in Tangshan rubble: adult civilians, workers and soldiers using bare hands, shovels and simple tools to search collapsed brick and concrete structures; respectful documentary framing.'},
+        P9:{role:'Aftermath · rescue · human response',fact:'Using bare hands and simple tools, civilians, workers and soldiers searched unstable ruins for trapped survivors.',visual:'Focused Tangshan rescue scene after the main shock. Foreground: adult civilians and workers kneel and dig carefully through collapsed brick masonry using bare hands, shovels, pry bars and buckets. Midground: era-appropriate soldiers assist beside an improvised stretcher and carefully pass debris by hand. Background: damaged 1976 worker housing and industrial buildings remain unstable beneath suspended dust haze. Emphasize organized human rescue, exhaustion and urgency rather than fresh destruction. No modern rescue gear, hydraulic equipment, neon safety clothing, modern helmets, contemporary ambulances, bodies or gore.'},
         P10:{fact:'The official death toll exceeded 242,000, while more than 160,000 people were seriously injured in the disaster.',visual:'Solemn large-scale aftermath showing overwhelmed rescue and relief activity among collapsed neighborhoods, temporary treatment areas and adult survivors; communicate human scale without bodies or gore.'},
         P11:{fact:'Survivors gathered in temporary shelters as food, water, medical care and emergency supplies became urgent needs.',visual:'Temporary relief area in 1976 Tangshan with canvas shelters, water containers, medical stations, supply stacks and adult survivors waiting or receiving aid, ruined city visible in the background.'},
         P12:{fact:'Factories, railways, housing, roads and public services lay heavily damaged, disrupting Tangshan’s industrial life.',visual:'Wide infrastructure aftermath: damaged factories, broken rail lines, ruined housing, blocked roads and disabled public utilities shown in one layered industrial-city composition.'},
@@ -65,7 +65,13 @@
     if(!item||stage==='ENDING'||stage==='THUMBNAIL')return false;
     const narration=card.querySelector('.narration');
     const image=card.querySelector('.image-prompt');
+    const roleEl=card.querySelector('.scene-role');
     let changed=false;
+
+    if(item.role&&roleEl&&roleEl.textContent.trim()!==item.role){
+      roleEl.textContent=item.role;
+      changed=true;
+    }
 
     if(narration&&narration.value.trim()!==item.fact){
       narration.value=item.fact;
@@ -75,6 +81,11 @@
 
     if(image){
       let next=image.value;
+      if(item.role){
+        const sceneRolePattern=/Scene role:[\s\S]*?(?=\s+Visual beat:)/i;
+        if(sceneRolePattern.test(next)) next=next.replace(sceneRolePattern,`Scene role: ${item.role}.`);
+      }
+
       const beatPattern=/Visual beat:[\s\S]*?(?=\s+Show one historically)/i;
       if(beatPattern.test(next)) next=next.replace(beatPattern,`Visual beat: ${item.fact}`);
       else if(!/Visual beat:/i.test(next)){
