@@ -14,11 +14,13 @@
     const card=stages.querySelector('.stage-card[data-stage="HOOK"]');
     const prompt=card?.querySelector('.image-prompt');
     if(!prompt)return false;
+    const role=card.querySelector('.scene-role');
+    if(role) role.textContent='ACTIVE DISASTER · HUMAN SURVIVAL · peak-danger opening';
     let base=prompt.value.trim();
     if(base.includes(MARKER))return false;
     base=base.replace(/Curiosity-first disaster reveal[^.]*\.?/gi,'Immediate active-disaster human-survival hook.');
     prompt.value=`${base}\n\n${RULE}`.trim();
-    prompt.dataset.hookSurvivalLock='v3.7';
+    prompt.dataset.hookSurvivalLock='v3.8.2';
     fire(prompt);
     return true;
   }
