@@ -22,18 +22,26 @@
     if(!stage||stage==='ENDING'||stage==='THUMBNAIL')return false;
     const narration=card.querySelector('.narration');
     const imagePrompt=card.querySelector('.image-prompt');
+    const sceneRole=card.querySelector('.scene-role')?.textContent?.trim();
     if(!narration||!imagePrompt)return false;
 
     const beat=narration.value.trim();
-    if(!beat)return false;
-
     let next=imagePrompt.value;
-    const beatPattern=/Visual beat:[\s\S]*?(?=\s+Show one historically)/i;
-    if(beatPattern.test(next)){
-      next=next.replace(beatPattern,`Visual beat: ${beat}`);
-    }else if(!/Visual beat:/i.test(next)){
-      const anchor=/Scene role:[^.]+\./i;
-      if(anchor.test(next)) next=next.replace(anchor,m=>`${m} Visual beat: ${beat}.`);
+
+    // Keep the saved/generated Image Prompt role aligned with the current card role.
+    if(sceneRole){
+      const rolePattern=/Scene role:[^.]+\./i;
+      if(rolePattern.test(next)) next=next.replace(rolePattern,`Scene role: ${sceneRole}.`);
+    }
+
+    if(beat){
+      const beatPattern=/Visual beat:[\s\S]*?(?=\s+Show one historically)/i;
+      if(beatPattern.test(next)){
+        next=next.replace(beatPattern,`Visual beat: ${beat}`);
+      }else if(!/Visual beat:/i.test(next)){
+        const anchor=/Scene role:[^.]+\./i;
+        if(anchor.test(next)) next=next.replace(anchor,m=>`${m} Visual beat: ${beat}.`);
+      }
     }
 
     if(next===imagePrompt.value)return false;
@@ -56,10 +64,10 @@
     if(!btn)return;
     const card=btn.closest('.stage-card');
     setTimeout(()=>{
-      if(syncCard(card))showToast('Image prompt synced to narration');
+      if(syncCard(card))showToast('Image prompt synced to stage role and narration');
     },50);
   });
 
-  // Also repair currently loaded projects without changing narration or Done state.
+  // Repair currently loaded projects once, without changing narration or Done state.
   setTimeout(()=>syncAll(false),150);
 })();
