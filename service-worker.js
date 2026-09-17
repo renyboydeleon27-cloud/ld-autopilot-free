@@ -1,8 +1,9 @@
-const CACHE_NAME='ld-auto-pwa-v1';
+const CACHE_NAME='ld-auto-pwa-v4-1';
 const APP_SHELL=[
   './',
   './index.html',
-  './styles.css?v=2.7',
+  './styles.css?v=4.1',
+  './v4-ui-continuity.css?v=4.1',
   './app.js?v=2.7',
   './final-audit-fix.js?v=2.8',
   './backup-fix.js?v=2.7',
@@ -18,29 +19,18 @@ const APP_SHELL=[
   './cyclone-visual-packs.js?v=3.3.1',
   './image-workspace.js?v=3.6',
   './hook-survival-lock.js?v=3.7',
+  './master-system-v4.js?v=4.1',
+  './continuity-check-v4.js?v=4.1',
   './manifest.webmanifest',
   './app-icon.svg'
 ];
-
-self.addEventListener('install',event=>{
-  self.skipWaiting();
-  event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)));
-});
-
-self.addEventListener('activate',event=>{
-  event.waitUntil(
-    caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key))))
-      .then(()=>self.clients.claim())
-  );
-});
-
+self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)))});
+self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',event=>{
-  if(event.request.method!=='GET')return;
-  event.respondWith(
-    caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{
-      const copy=response.clone();
-      caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));
-      return response;
-    }).catch(()=>caches.match('./index.html')))
-  );
+ if(event.request.method!=='GET')return;
+ const req=event.request;
+ if(req.mode==='navigate'){
+   event.respondWith(fetch(req).then(res=>{const copy=res.clone();caches.open(CACHE_NAME).then(c=>c.put('./index.html',copy));return res}).catch(()=>caches.match('./index.html')));return;
+ }
+ event.respondWith(fetch(req).then(res=>{const copy=res.clone();caches.open(CACHE_NAME).then(c=>c.put(req,copy));return res}).catch(()=>caches.match(req)));
 });
