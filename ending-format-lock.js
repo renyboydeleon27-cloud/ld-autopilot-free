@@ -41,19 +41,22 @@
     const next=buildPrompt(topic,format);
     if(prompt.value===next)return false;
     prompt.value=next;
-    prompt.dataset.endingFormatLock='v1';
+    prompt.dataset.endingFormatLock='v1.1';
     fire(prompt);
     return true;
   }
 
-  document.getElementById('buildBtn')?.addEventListener('click',()=>setTimeout(apply,120));
-  document.getElementById('generateAllBtn')?.addEventListener('click',()=>setTimeout(apply,120));
+  function enforceSoon(){[0,120,320,700].forEach(ms=>setTimeout(apply,ms));}
+
+  window.ldApplyEndingFormatLock=apply;
+  document.getElementById('buildBtn')?.addEventListener('click',enforceSoon);
+  document.getElementById('generateAllBtn')?.addEventListener('click',enforceSoon);
   document.addEventListener('click',e=>{
     const btn=e.target.closest('.generate-template-btn');
     if(!btn)return;
     const card=btn.closest('.stage-card');
-    if(card?.dataset?.stage==='ENDING')setTimeout(apply,80);
+    if(card?.dataset?.stage==='ENDING')enforceSoon();
   });
-  window.addEventListener('load',()=>setTimeout(apply,350));
-  setTimeout(apply,180);
+  window.addEventListener('load',()=>setTimeout(apply,450));
+  setTimeout(apply,220);
 })();
