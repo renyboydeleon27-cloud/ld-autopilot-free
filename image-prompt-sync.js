@@ -17,9 +17,23 @@
     el.dispatchEvent(new Event('change',{bubbles:true}));
   }
 
+  function syncEnding(card){
+    const imagePrompt=card?.querySelector('.image-prompt');
+    if(!imagePrompt)return false;
+    let next=imagePrompt.value;
+    const oldBlock=/Include Living Disaster Book branding, chapter title, disaster name\/year, THANK YOU FOR WATCHING, LIKE \/ SHARE \/ SUBSCRIBE, reflective cinematic mood\./i;
+    if(!oldBlock.test(next))return false;
+    next=next.replace(oldBlock,'Include clean Living Disaster Book branding and the exact closing text: “Thank you for watching. Like, share, and subscribe for more stories from the Living Disaster Book.” Use a reflective cinematic final mood and keep all text centered, highly legible, and mobile-safe.');
+    if(next===imagePrompt.value)return false;
+    imagePrompt.value=next;
+    fireInput(imagePrompt);
+    return true;
+  }
+
   function syncCard(card){
     const stage=card?.dataset?.stage;
-    if(!stage||stage==='ENDING'||stage==='THUMBNAIL')return false;
+    if(!stage||stage==='THUMBNAIL')return false;
+    if(stage==='ENDING')return syncEnding(card);
     const narration=card.querySelector('.narration');
     const imagePrompt=card.querySelector('.image-prompt');
     const sceneRole=card.querySelector('.scene-role')?.textContent?.trim();
