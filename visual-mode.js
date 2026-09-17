@@ -55,6 +55,13 @@
       .replace(/Real human · 1980s archival documentary look/gi,'Real human · era-aware documentary look')
       .replace(/\s{2,}/g,' ').trim();
   }
+  function injectEraNearStart(text){
+    const lock=eraLock().text;
+    const s=stripEra(text);
+    const first=/^([\s\S]*?\.)\s*/.exec(s);
+    if(!first)return `${lock} ${s}`.trim();
+    return `${first[1]} ${lock} ${s.slice(first[0].length)}`.replace(/\s{2,}/g,' ').trim();
+  }
 
   function showToast(text){if(!toast)return;toast.textContent=text;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1800);}
   function fire(el){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
@@ -67,7 +74,7 @@
     s=s.replace(/Illustration only\./gi,'Live-action historical still only.');
     s=s.replace(/No embedded text\. No photorealism, no live action, no 3D CGI, no glossy render, no chibi, no gore\./gi,`No embedded text. ${REAL_NEG}`);
     if(!/Cinematic historical live-action realism/i.test(s))s+=` ${BASE_REAL_STYLE}. ${REAL_NEG}`;
-    s+=` ${eraLock().text}`;
+    s=injectEraNearStart(s);
     return s.replace(/\s{2,}/g,' ').trim();
   }
 
@@ -89,8 +96,12 @@
     s=s.replace(/as one continuous historical live-action archival documentary shot/gi,'as one continuous historical live-action documentary shot');
     s=s.replace(/Use the supplied illustration as the absolute visual reference\./gi,'Use the supplied live-action historical frame as the absolute visual reference.');
     s=s.replace(/Preserve the exact historical graphic-novel\/anime linework, cel-painted textures, anatomy, architecture, terrain, objects, perspective, palette and lighting\./gi,'Preserve the exact adult identities, facial features, anatomy, period clothing, architecture, terrain, objects, perspective and lighting.');
+    s=s.replace(/supported by the supplied illustration/gi,'supported by the supplied live-action historical frame');
+    s=s.replace(/supported by this illustration/gi,'supported by this live-action historical frame');
+    s=s.replace(/the supplied illustration/gi,'the supplied live-action historical frame');
+    s=s.replace(/supplied illustration/gi,'supplied live-action historical frame');
     s=s.replace(/photoreal drift, live-action transformation, 3D CGI/gi,'anime or illustration drift, 3D CGI, plastic skin, artificial glossy rendering');
-    s+=` ${eraLock().text}`;
+    s=injectEraNearStart(s);
     return s.replace(/\s{2,}/g,' ').trim();
   }
 
@@ -100,6 +111,10 @@
     s=s.replace(/as one continuous historical live-action (?:archival )?documentary shot/gi,'as one continuous cinematic 2D shot');
     s=s.replace(/Use the supplied live-action historical frame as the absolute visual reference\./gi,'Use the supplied illustration as the absolute visual reference.');
     s=s.replace(/Preserve the exact adult identities, facial features, anatomy, period clothing, architecture, terrain, objects, perspective and lighting\./gi,'Preserve the exact historical graphic-novel/anime linework, cel-painted textures, anatomy, architecture, terrain, objects, perspective, palette and lighting.');
+    s=s.replace(/supported by the supplied live-action historical frame/gi,'supported by the supplied illustration');
+    s=s.replace(/supported by this live-action historical frame/gi,'supported by this illustration');
+    s=s.replace(/the supplied live-action historical frame/gi,'the supplied illustration');
+    s=s.replace(/supplied live-action historical frame/gi,'supplied illustration');
     s=s.replace(/anime or illustration drift, 3D CGI, plastic skin, artificial glossy rendering/gi,'photoreal drift, live-action transformation, 3D CGI');
     return s.replace(/\s{2,}/g,' ').trim();
   }
@@ -111,7 +126,7 @@
     let changed=false;
     if(img){const next=real?toRealImage(img.value):toAnimeImage(img.value);if(next!==img.value){img.value=next;fire(img);changed=true;}}
     if(flow&&card.dataset.stage!=='ENDING'&&card.dataset.stage!=='THUMBNAIL'){const next=real?toRealFlow(flow.value):toAnimeFlow(flow.value);if(next!==flow.value){flow.value=next;fire(flow);changed=true;}}
-    if(notify&&changed)showToast(real?'Real Human era look applied':'Historical Anime mode applied');
+    if(notify&&changed)showToast(real?'Real Human era lock fixed':'Historical Anime mode applied');
   }
 
   function updateHint(){
