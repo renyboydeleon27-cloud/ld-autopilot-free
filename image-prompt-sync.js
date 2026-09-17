@@ -28,16 +28,15 @@
     const beat=narration.value.trim();
     let next=imagePrompt.value;
 
-    // Keep the saved/generated Image Prompt role aligned with the current card role.
     if(sceneRole){
       const rolePattern=/Scene role:[^.]+\./i;
       if(rolePattern.test(next)) next=next.replace(rolePattern,`Scene role: ${sceneRole}.`);
     }
 
     if(beat){
-      const beatPattern=/Visual beat:[\s\S]*?(?=\s+Show one historically)/i;
+      const beatPattern=/Visual beat:[\s\S]*?(?=\s+(?:Serious colored|Show one historically|HOOK SURVIVAL LOCK|Adult characters only|No embedded text))/i;
       if(beatPattern.test(next)){
-        next=next.replace(beatPattern,`Visual beat: ${beat}`);
+        next=next.replace(beatPattern,`Visual beat: ${beat}.`);
       }else if(!/Visual beat:/i.test(next)){
         const anchor=/Scene role:[^.]+\./i;
         if(anchor.test(next)) next=next.replace(anchor,m=>`${m} Visual beat: ${beat}.`);
@@ -56,7 +55,6 @@
     if(showMessage&&changed)showToast(`Synced ${changed} image prompt${changed===1?'':'s'}`);
   }
 
-  // Run after the existing template generators finish writing narration/prompts.
   generateAllBtn?.addEventListener('click',()=>setTimeout(()=>syncAll(true),50));
 
   document.addEventListener('click',e=>{
@@ -68,6 +66,11 @@
     },50);
   });
 
-  // Repair currently loaded projects once, without changing narration or Done state.
+  document.addEventListener('input',e=>{
+    if(!e.target.matches('.narration'))return;
+    const card=e.target.closest('.stage-card');
+    if(card) setTimeout(()=>syncCard(card),0);
+  });
+
   setTimeout(()=>syncAll(false),150);
 })();
