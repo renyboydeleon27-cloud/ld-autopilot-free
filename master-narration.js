@@ -16,7 +16,9 @@
 
   function compiled(withLabels=false){
     const rows=getNarration();
-    return rows.map(x=>withLabels?`${x.stage}\n${x.narration}`:x.narration).join('\n\n');
+    const body=rows.map(x=>withLabels?`${x.stage}\n${x.narration}`:x.narration).join('\n\n');
+    const outro="Which living disaster should we uncover next? Thank you for watching. Like, share, and subscribe for more stories from Living Disaster Book.";
+    return body ? body+'\n\n'+(withLabels?'OUTRO\n':'')+outro : outro;
   }
 
   async function copy(text){
