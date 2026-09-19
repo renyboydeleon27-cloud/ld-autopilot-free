@@ -76,13 +76,35 @@
     });
   }
   let switchingProject=false;
+  function sameProjectIdentity(project,state){
+    if(!project||!state)return false;
+    const pt=(project.state?.topic||project.name||'').trim();
+    const st=(state.topic||'').trim();
+    return !!pt&&!!st&&pt===st&&project.state?.format===state.format;
+  }
   function syncCurrent(forceNew=false){
     if(switchingProject)return;
     const state=readCore();if(!validState(state))return;
     const lib=readLibrary();let id=forceNew?'':activeId();
     let p=id?lib.projects.find(x=>x.id===id):null;
-    if(!p){id=uid();p={id,name:state.topic,state,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};lib.projects.push(p);setActive(id);}
-    else{p.state=state;p.updatedAt=new Date().toISOString();if(!p.name)p.name=state.topic;}
+
+    // Never overwrite one saved project with another topic's live pipeline.
+    if(p&&!sameProjectIdentity(p,state)){
+      const match=lib.projects.find(x=>x.id!==p.id&&sameProjectIdentity(x,state));
+      if(match){p=match;id=match.id;setActive(id);}
+      else{p=null;id='';}
+    }
+
+    if(!p){
+      id=uid();
+      p={id,name:state.topic,state:deepClone(state),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+      lib.projects.push(p);
+      setActive(id);
+    }else{
+      p.state=deepClone(state);
+      p.updatedAt=new Date().toISOString();
+      if(!p.name)p.name=state.topic;
+    }
     writeLibrary(lib);render();
   }
   function migrateLegacy(){
@@ -95,10 +117,37 @@
     }
   }
   function openProject(id){
-    const p=readLibrary().projects.find(x=>x.id===id);if(!p||!validState(p.state))return;
+    const lib=readLibrary();
+    const p=lib.projects.find(x=>x.id===id);if(!p)return;
     clearTimeout(timer);
     switchingProject=true;
     localStorage.removeItem(NEW_PROJECT_KEY);
+
+    const savedTopic=(p.state?.topic||'').trim();
+    const cardTopic=(p.name||'').trim();
+    const stats=projectStats(p.state);
+    const clearlyCorrupted=!!cardTopic&&!!savedTopic&&cardTopic!==savedTopic&&stats.done===0&&!/\sCopy$/i.test(cardTopic);
+
+    if(clearlyCorrupted&&window.LDCore?.loadProductionState){
+      // Previous sync bug could leave the card name correct while its internal state belonged to another topic.
+      // For untouched 0%-complete projects, safely rebuild from the visible project title.
+      const repaired={version:'2.0',topic:cardTopic,format:p.state?.format||'shorts',stages:{},updatedAt:new Date().toISOString()};
+      localStorage.setItem(CORE_KEY,JSON.stringify(repaired));
+      setActive(id);
+      window.LDCore.loadProductionState(repaired);
+      const fresh=readCore();
+      if(validState(fresh)){
+        p.state=deepClone(fresh);
+        p.name=fresh.topic;
+        p.updatedAt=new Date().toISOString();
+        writeLibrary(lib);
+      }
+      render();
+      setTimeout(()=>{switchingProject=false;render();},0);
+      return;
+    }
+
+    if(!validState(p.state)){switchingProject=false;return;}
     localStorage.setItem(CORE_KEY,JSON.stringify(p.state));
     setActive(id);
     if(window.LDCore?.loadProductionState){
