@@ -96,7 +96,7 @@ window.addEventListener('load',schedule);
 document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format'))schedule();});
 var te=document.getElementById('topic');if(te)te.addEventListener('input',function(){setTimeout(schedule,180);});
 document.addEventListener('click',function(e){if(e.target.closest('#buildBtn,.project-list button,.collapse-btn,#jumpStage'))schedule();});
-var stages=document.getElementById('stages');if(stages)new MutationObserver(schedule).observe(stages,{childList:true,subtree:true});
+var stages=document.getElementById('stages');if(stages)new MutationObserver(schedule).observe(stages,{childList:true});
 window.LDHookChoiceSystem={render:render,choices:choices,useHook:useHook};
 schedule();
 })();
