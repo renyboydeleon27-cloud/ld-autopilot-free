@@ -2,6 +2,7 @@
   const CORE_KEY='ld-autopilot-free-v1';
   const LIB_KEY='ld-autopilot-free-project-library-v1';
   const ACTIVE_KEY='ld-autopilot-free-active-project';
+  const NEW_PROJECT_KEY='ld-autopilot-free-new-project-pending';
   const listEl=document.getElementById('projectList');
   const countEl=document.getElementById('libraryCount');
   const newBtn=document.getElementById('newProjectBtn');
@@ -135,7 +136,18 @@
     syncCurrent();
     const ok=confirm('Start a new blank project? Your current project is already saved in Project Library.');
     if(!ok)return;
-    setActive('');localStorage.removeItem(CORE_KEY);location.reload();
+    localStorage.setItem(NEW_PROJECT_KEY,'1');
+    setActive('');
+    localStorage.removeItem(CORE_KEY);
+    location.reload();
+  }
+  function consumeNewProjectStart(){
+    const fresh=localStorage.getItem(NEW_PROJECT_KEY)==='1';
+    if(!fresh)return false;
+    localStorage.removeItem(NEW_PROJECT_KEY);
+    setActive('');
+    localStorage.removeItem(CORE_KEY);
+    return true;
   }
 
   let timer;
@@ -153,6 +165,8 @@
   resetBtn?.addEventListener('click',()=>{syncCurrent();setActive('');setTimeout(render,50);},true);
   newBtn.addEventListener('click',startNew);
 
-  migrateLegacy();render();
-  setTimeout(()=>syncCurrent(),200);
+  const freshNewProject=consumeNewProjectStart();
+  if(!freshNewProject)migrateLegacy();
+  render();
+  if(!freshNewProject)setTimeout(()=>syncCurrent(),200);
 })();
