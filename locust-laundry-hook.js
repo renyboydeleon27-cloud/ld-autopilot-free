@@ -11,6 +11,7 @@ function isTarget(){
     && localStorage.getItem('ld-auto-visual-mode-v1')==='real';
 }
 function refresh(){
+  if(window.LD_HOOK_CHOICES_ENABLED){document.getElementById('locustLaundryHook')?.remove();return;}
   const card=[...document.querySelectorAll('.stage-card')].find(c=>c.dataset.stage==='HOOK');
   const old=document.getElementById('locustLaundryHook');
   if(!isTarget()||!card){old?.remove();return;}
