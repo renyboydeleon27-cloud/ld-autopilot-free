@@ -75,7 +75,9 @@
       listEl.appendChild(card);
     });
   }
+  let switchingProject=false;
   function syncCurrent(forceNew=false){
+    if(switchingProject)return;
     const state=readCore();if(!validState(state))return;
     const lib=readLibrary();let id=forceNew?'':activeId();
     let p=id?lib.projects.find(x=>x.id===id):null;
@@ -93,8 +95,20 @@
     }
   }
   function openProject(id){
-    const p=readLibrary().projects.find(x=>x.id===id);if(!p)return;
-    localStorage.setItem(CORE_KEY,JSON.stringify(p.state));setActive(id);location.reload();
+    const p=readLibrary().projects.find(x=>x.id===id);if(!p||!validState(p.state))return;
+    clearTimeout(timer);
+    switchingProject=true;
+    localStorage.removeItem(NEW_PROJECT_KEY);
+    localStorage.setItem(CORE_KEY,JSON.stringify(p.state));
+    setActive(id);
+    if(window.LDCore?.loadProductionState){
+      window.LDCore.loadProductionState(deepClone(p.state));
+      render();
+      setTimeout(()=>{switchingProject=false;render();},0);
+    }else{
+      switchingProject=false;
+      location.reload();
+    }
   }
   function duplicateProject(id){
     syncCurrent();
@@ -198,6 +212,11 @@
     }
     setTimeout(()=>syncCurrent(),80);
   },true);
+  window.addEventListener('ld:production-built',()=>{
+    if(switchingProject)return;
+    clearTimeout(timer);
+    syncCurrent();
+  });
   backupFileInput?.addEventListener('change',()=>{setActive('');setTimeout(()=>syncCurrent(true),700);},true);
   resetBtn?.addEventListener('click',()=>{syncCurrent();setActive('');setTimeout(render,50);},true);
   newBtn.addEventListener('click',startNew);
