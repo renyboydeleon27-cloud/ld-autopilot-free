@@ -133,13 +133,43 @@
     render();
   }
   function startNew(){
+    clearTimeout(timer);
     syncCurrent();
-    const ok=confirm('Start a new blank project? Your current project is already saved in Project Library.');
-    if(!ok)return;
+
+    // Enter a true blank new-project session without relying on reload/confirm.
     localStorage.setItem(NEW_PROJECT_KEY,'1');
     setActive('');
     localStorage.removeItem(CORE_KEY);
-    location.reload();
+
+    const topic=document.getElementById('topic');
+    const format=document.getElementById('format');
+    const stages=document.getElementById('stages');
+    const projectTitle=document.getElementById('projectTitle');
+    const stageCount=document.getElementById('stageCount');
+    const doneCount=document.getElementById('doneCount');
+    const progressText=document.getElementById('progressText');
+    const modeText=document.getElementById('modeText');
+    const progressBar=document.getElementById('progressBar');
+    const progressLabel=document.getElementById('progressLabel');
+    const completeBanner=document.getElementById('completeBanner');
+    const auditCard=document.getElementById('auditCard');
+    const stageNav=document.getElementById('stageNav');
+
+    if(topic){topic.value='';topic.focus();}
+    if(format)format.value='shorts';
+    if(stages)stages.innerHTML='';
+    if(projectTitle)projectTitle.textContent='No production yet';
+    if(stageCount)stageCount.textContent='0';
+    if(doneCount)doneCount.textContent='0';
+    if(progressText)progressText.textContent='0%';
+    if(modeText)modeText.textContent='—';
+    if(progressBar)progressBar.style.width='0%';
+    if(progressLabel)progressLabel.textContent='No production yet';
+    completeBanner?.classList.add('hidden');
+    auditCard?.classList.add('hidden');
+    stageNav?.classList.add('hidden');
+
+    render();
   }
   function consumeNewProjectStart(){
     const fresh=localStorage.getItem(NEW_PROJECT_KEY)==='1';
@@ -157,8 +187,15 @@
   document.addEventListener('click',e=>{if(e.target.closest('.done-toggle,.copy-btn,.collapse-btn,.next-stage-btn'))setTimeout(scheduleSync,0);});
 
   buildBtn?.addEventListener('click',()=>{
-    const core=readCore();const current=activeId();const topic=document.getElementById('topic')?.value.trim();const format=document.getElementById('format')?.value;
-    if(current&&core&&(core.topic!==topic||core.format!==format))setActive('');
+    const pendingNew=localStorage.getItem(NEW_PROJECT_KEY)==='1';
+    if(pendingNew){
+      localStorage.removeItem(NEW_PROJECT_KEY);
+      setActive('');
+      localStorage.removeItem(CORE_KEY);
+    }else{
+      const core=readCore();const current=activeId();const topic=document.getElementById('topic')?.value.trim();const format=document.getElementById('format')?.value;
+      if(current&&core&&(core.topic!==topic||core.format!==format))setActive('');
+    }
     setTimeout(()=>syncCurrent(),80);
   },true);
   backupFileInput?.addEventListener('change',()=>{setActive('');setTimeout(()=>syncCurrent(true),700);},true);
