@@ -3,7 +3,7 @@
 window.LD_HOOK_CHOICES_ENABLED=true;
 var MODE_KEY='ld-auto-visual-mode-v1', ACTIVE_KEY='ld-auto-active-hook-v1';
 
-function topic(){return (document.getElementById('projectTitle')&&document.getElementById('projectTitle').textContent||document.getElementById('topic')&&document.getElementById('topic').value||'').trim();}
+function topic(){var input=document.getElementById('topic');var typed=(input&&input.value||'').trim();if(typed)return typed;var title=(document.getElementById('projectTitle')&&document.getElementById('projectTitle').textContent||'').trim();return title==='No production yet'?'':title;}
 function format(){return /Longform/i.test(document.getElementById('modeText')&&document.getElementById('modeText').textContent||'')?'longform':'shorts';}
 function mode(){return localStorage.getItem(MODE_KEY)==='real'?'real':'anime';}
 function card(){return Array.from(document.querySelectorAll('.stage-card')).find(function(c){return c.dataset.stage==='HOOK';});}
@@ -33,7 +33,10 @@ function earthquakeInk(){
   return p+'\n\nALTERNATIVE-SPECIFIC LOCK: Preserve one ink container only. No duplicate container, teleportation or impossible motion.';
 }
 function locustRecommended(){
-  return window.LDLocustLaundryHook&&window.LDLocustLaundryHook.prompt?window.LDLocustLaundryHook.prompt():basePrompt()+'LOCUST HOOK: peaceful laundry → daylight weakens → adult turns → swarm arrives → six seconds of forward camera travel through the invasion.';
+  var t=topic();
+  var exactApproved=/\bdesert\s+locust\b/i.test(t)&&/\b2020\b/.test(t);
+  if(exactApproved&&window.LDLocustLaundryHook&&window.LDLocustLaundryHook.prompt)return window.LDLocustLaundryHook.prompt();
+  return basePrompt()+'LOCUST HOOK: peaceful rural activity → daylight subtly changes → adult notices the approaching swarm → the swarm arrives → six seconds of forward camera travel through the invasion. Adapt location, season, crops, clothing and environment to the exact selected locust event. Do not substitute East Africa 2020 unless that is the selected topic.';
 }
 function locustField(){
   return basePrompt()+'LOCUST FIELD SHADOW REVEAL — FOR TESTING\n\n0.0–1.5s: ONE adult calmly inspects crop leaves in a rural farming area appropriate to the selected locust event. Natural daylight, no visible swarm.\n\n1.5–3.5s: A broad moving shadow crosses the crops although there are no storm clouds. Daylight weakens only slightly. A distant insect-wing rustle rises. The adult pauses, looks across the field, then upward.\n\n3.5–4.0s: A naturally layered locust swarm becomes visible above the crops and advances toward camera. The dimming is caused by insects partially screening sunlight, never by weather, smoke or eclipse.\n\n4.0–10.0s: Six uninterrupted seconds of FORWARD-ONLY camera travel into the field. Swarm density increases through more insects entering from the field, not cloning or sudden spawning. Most insects remain small or medium-small; use background, midground and occasional foreground passes. Show a few believable leaf landings with local plant response.\n\nCAMERA LOCK: forward only, steady pace, fixed focal length, natural parallax; no backward movement, pull-back, zoom-out, orbit, static observer shot, cut or transition. End while still advancing.\n\nLOCUST REALISM: rapid independently phased wingbeats, varied headings, natural depth and occlusion. No giant insects, birdlike flapping, rigid hovering, cloned poses, confetti, ash, dust or flat swarm overlay.\n\nAUDIO: quiet rural ambience → distant wing rustle → dense layered insect-wing sound and brief nonverbal adult reaction. No music or voice-over.\n\nNEGATIVE: no storm clouds, eclipse, sudden nighttime, structural collapse, fire, explosion, flood, duplicated humans, children, gore, morphing, text, captions, logos or watermark.';
@@ -94,7 +97,14 @@ function render(){
 var queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(function(){setTimeout(function(){queued=false;render();},120);});}
 window.addEventListener('load',schedule);
 document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format'))schedule();});
-var te=document.getElementById('topic');if(te)te.addEventListener('input',function(){setTimeout(schedule,180);});
+var te=document.getElementById('topic');if(te)te.addEventListener('input',function(){
+  try{
+    var x=JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null');
+    var now=topic();
+    if(x&&x.topic!==now)localStorage.removeItem(ACTIVE_KEY);
+  }catch(e){localStorage.removeItem(ACTIVE_KEY);}
+  setTimeout(schedule,60);
+});
 document.addEventListener('click',function(e){if(e.target.closest('#buildBtn,.project-list button,.collapse-btn,#jumpStage'))schedule();});
 var stages=document.getElementById('stages');if(stages)new MutationObserver(schedule).observe(stages,{childList:true});
 window.LDHookChoiceSystem={render:render,choices:choices,useHook:useHook};
