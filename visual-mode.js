@@ -145,5 +145,6 @@
   topicEl?.addEventListener('input',()=>{updateHint();if(select.value==='real')setTimeout(()=>{guard=true;applyAll(false);guard=false;},80);});
   document.addEventListener('input',e=>{if(guard||!e.target.matches('.image-prompt,.flow-prompt'))return;const card=e.target.closest('.stage-card');if(!card)return;setTimeout(()=>{guard=true;applyCard(card,false);guard=false;},0);});
   document.addEventListener('click',e=>{if(!e.target.closest('.generate-template-btn,#generateAllBtn,#buildBtn'))return;setTimeout(()=>{guard=true;applyAll(false);guard=false;},120);});
+  window.addEventListener('ld:production-built',()=>setTimeout(()=>{guard=true;applyAll(false);guard=false;},60));
   setTimeout(()=>applyAll(false),250);
 })();
