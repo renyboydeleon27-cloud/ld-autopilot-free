@@ -222,6 +222,7 @@ The finished HOOK must unmistakably belong to ${t}, preserve the correct era and
 }
 
 function apply(){
+  if(window.LD_HOOK_CHOICES_ENABLED)return false;
   if(!isTarget())return false;
   const card=hook(); if(!card)return false;
   const t=topic()||'selected earthquake';
