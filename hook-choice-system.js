@@ -1,6 +1,7 @@
 /* LD AUTO v3.17 — Top 3 Hook Choice System. All-family defaults and approved topic overrides. */
 (function(){'use strict';
 window.LD_HOOK_CHOICES_ENABLED=true;
+var HOOK_POLICY_VERSION='3.20.4-monochrome-hook-v1';
 var MODE_KEY='ld-auto-visual-mode-v1', ACTIVE_KEY='ld-auto-active-hook-v1';
 
 function topic(){var input=document.getElementById('topic');var typed=(input&&input.value||'').trim();if(typed)return typed;var title=(document.getElementById('projectTitle')&&document.getElementById('projectTitle').textContent||'').trim();return title==='No production yet'?'':title;}
@@ -13,8 +14,19 @@ function esc(s){return String(s||'').replace(/[&<>"']/g,function(m){if(m==='&')r
 function overrideKey(){return 'ld-auto-hook-family:'+topic().toLowerCase();}
 function context(){return {topic:topic(),format:format(),mode:mode(),family:localStorage.getItem(overrideKey())||''};}
 function choices(){var list=window.LDHookFamilyLibrary?window.LDHookFamilyLibrary.choices(context()):[];if(window.LDVideoModes)list.forEach(function(c){c.prompt=window.LDVideoModes.withLock(c.prompt);});return list;}
-function getActive(){try{var x=JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null');return x&&x.topic===topic()&&x.format===format()&&x.mode===mode()&&x.family===context().family?x.id:null;}catch(e){return null;}}
-function setActive(id){localStorage.setItem(ACTIVE_KEY,JSON.stringify({topic:topic(),format:format(),mode:mode(),family:context().family,id:id,updatedAt:new Date().toISOString()}));}
+function getActiveRecord(){try{return JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null');}catch(e){return null;}}
+function matchesCurrent(x){return !!(x&&x.topic===topic()&&x.format===format()&&x.mode===mode()&&x.family===context().family);}
+function getActive(){var x=getActiveRecord();return matchesCurrent(x)?x.id:null;}
+function setActive(id){localStorage.setItem(ACTIVE_KEY,JSON.stringify({topic:topic(),format:format(),mode:mode(),family:context().family,id:id,policyVersion:HOOK_POLICY_VERSION,updatedAt:new Date().toISOString()}));}
+function refreshStaleActive(list){
+  var x=getActiveRecord();if(!matchesCurrent(x)||!x.id||x.policyVersion===HOOK_POLICY_VERSION)return false;
+  var c=list.find(function(item){return item.id===x.id;});if(!c)return false;
+  var h=card(),flow=h&&h.querySelector('.flow-prompt');if(!flow)return false;
+  flow.value=c.prompt;fire(flow);setActive(c.id);
+  var note=h.querySelector('.stage-note');if(note)note.textContent='Active HOOK refreshed to current era/capture policy · '+c.title;
+  toast('Active HOOK prompt refreshed');
+  return true;
+}
 function useHook(c){
   var h=card();if(!h)return;
   var img=h.querySelector('.image-prompt'), flow=h.querySelector('.flow-prompt');
@@ -36,6 +48,7 @@ function render(){
   var root=document.getElementById('hookChoiceSystem');
   if(!root){root=document.createElement('section');root.id='hookChoiceSystem';root.className='hook-choice-system';var body=h.querySelector('.stage-body');if(body)body.prepend(root);}
   var list=choices();
+  if(list.length)refreshStaleActive(list);
   if(!list.length){root.innerHTML='<div class="hook-choice-head"><h3>Top 3 HOOK Choices</h3><p>Curated hook library</p></div><div class="hook-choice-empty">No curated Top 3 hook set for <strong>'+esc(topic())+'</strong> yet. The existing HOOK remains unchanged until this disaster family is tested.</div>';return;}
   var active=getActive();
   root.innerHTML='<div class="hook-choice-head"><h3>Top 3 HOOK Choices</h3><p>'+esc(topic())+' · '+(format()==='longform'?'16:9':'9:16')+' · '+(mode()==='real'?'Real Human':'Historical Anime')+'</p></div><div class="hook-choice-grid"></div>';
