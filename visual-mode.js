@@ -45,6 +45,7 @@
     const yearText=year?`The historical setting remains exactly ${year}. `:'';
     return {year,era,text:`ERA-AWARE CAPTURE LOCK: ${yearText}${era.look} The capture treatment affects only the camera/recording appearance; clothing, architecture, streets, vehicles, utilities, tools, signs, technology and infrastructure must remain accurate to the event year and location. END ERA LOCK.`};
   }
+  window.LDEraCapture={detectYear:detectYear,eraForYear:eraForYear};
   function stripEra(text){return String(text||'').replace(/\s*ERA-AWARE CAPTURE LOCK:[\s\S]*?END ERA LOCK\.?/gi,'').replace(/\s{2,}/g,' ').trim();}
   function stripLegacy80s(text){
     return String(text||'')
@@ -148,3 +149,4 @@
   window.addEventListener('ld:production-built',()=>setTimeout(()=>{guard=true;applyAll(false);guard=false;},60));
   setTimeout(()=>applyAll(false),250);
 })();
+

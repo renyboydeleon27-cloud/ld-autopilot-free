@@ -12,7 +12,7 @@ function toast(msg){var t=document.getElementById('toast');if(!t)return;t.textCo
 function esc(s){return String(s||'').replace(/[&<>"']/g,function(m){if(m==='&')return '&amp;';if(m==='<')return '&lt;';if(m==='>')return '&gt;';if(m==='"')return '&quot;';return '&#39;';});}
 function overrideKey(){return 'ld-auto-hook-family:'+topic().toLowerCase();}
 function context(){return {topic:topic(),format:format(),mode:mode(),family:localStorage.getItem(overrideKey())||''};}
-function choices(){return window.LDHookFamilyLibrary?window.LDHookFamilyLibrary.choices(context()):[];}
+function choices(){var list=window.LDHookFamilyLibrary?window.LDHookFamilyLibrary.choices(context()):[];if(window.LDVideoModes)list.forEach(function(c){c.prompt=window.LDVideoModes.withLock(c.prompt);});return list;}
 function getActive(){try{var x=JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null');return x&&x.topic===topic()&&x.format===format()&&x.mode===mode()&&x.family===context().family?x.id:null;}catch(e){return null;}}
 function setActive(id){localStorage.setItem(ACTIVE_KEY,JSON.stringify({topic:topic(),format:format(),mode:mode(),family:context().family,id:id,updatedAt:new Date().toISOString()}));}
 function useHook(c){
@@ -59,7 +59,7 @@ function render(){
 }
 var queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(function(){setTimeout(function(){queued=false;render();},120);});}
 window.addEventListener('load',schedule);
-document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format'))schedule();});
+document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format,.video-year,.video-location,.video-details'))schedule();});
 var te=document.getElementById('topic');if(te)te.addEventListener('input',function(){
   try{
     var x=JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null');
@@ -73,3 +73,4 @@ var stages=document.getElementById('stages');if(stages)new MutationObserver(sche
 window.LDHookChoiceSystem={render:render,choices:choices,useHook:useHook};
 schedule();
 })();
+
