@@ -44,8 +44,16 @@ function choices(ctx){var family=Object.prototype.hasOwnProperty.call(data,ctx.f
    result.concept='Tense historical interior → shutter failure → powerful transition → escalating archival cyclone and storm-surge survival montage.';
    result.why='Tested and approved for Cyclone Mahina 1899: authentic black-and-white archival capture, strong transition rhythm, human-survival tension and cyclone-specific storm-surge physics.';
  }
+ if(family==='cyclone'&&i===1&&mahina&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDCycloneMahinaHook&&window.LDCycloneMahinaHook.alternative2){
+   result.prompt=window.LDCycloneMahinaHook.alternative2();
+   result.status='APPROVED';
+   result.source='Topic-specific';
+   result.title='Balcony Eye Transition Hook';
+   result.concept='Peaceful balcony morning → elderly man reading newspaper → subtle wind warning → camera pushes into the eye → pupil transition → full Cyclone Mahina impact.';
+   result.why='Tested and approved for Cyclone Mahina 1899: peaceful-to-chaos contrast, distinctive eye transition, authentic archival black-and-white treatment and strong cyclone survival reveal.';
+ }
  return result;
  });
 }
-window.LDHookFamilyLibrary={version:'3.20.5',detect:detect,choices:choices,families:Object.keys(data).map(function(k){return {id:k,label:data[k][0]};})};
+window.LDHookFamilyLibrary={version:'3.20.6',detect:detect,choices:choices,families:Object.keys(data).map(function(k){return {id:k,label:data[k][0]};})};
 })();
