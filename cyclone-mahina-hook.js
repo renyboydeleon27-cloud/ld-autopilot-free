@@ -298,10 +298,225 @@ TENSE HISTORICAL INTERIOR
 STATUS: APPROVED — tested Cyclone Mahina 1899 HOOK reference.`;
 }
 
+function alternative2(){
+return `VIDEO PROMPT — EXACTLY 10 SECONDS
+
+CYCLONE MAHINA — QUEENSLAND, AUSTRALIA — 1899
+
+ALTERNATIVE 2 — BALCONY EYE TRANSITION HOOK
+
+CINEMATIC TWIST CYCLONE HOOK. PHOTOREALISTIC LIVE-ACTION HISTORICAL DISASTER FILM.
+
+STRICT HISTORICAL ARCHIVAL CAPTURE LOCK:
+This must NOT look like a modern video simply converted to black and white. Create the footage as a historical recreation with an authentic early-film / archival newsreel aesthetic.
+
+Render the ENTIRE 10-second video in TRUE BLACK-AND-WHITE GRAYSCALE ONLY from first frame to final frame.
+
+ZERO COLOR.
+ZERO SEPIA.
+ZERO TINT.
+ZERO SELECTIVE COLOR.
+ZERO COLORIZATION.
+
+Use soft optical detail, organic film grain, slight gate weave, restrained exposure flicker, subtle image instability, modest historical contrast and historically plausible motion cadence.
+
+Avoid modern cinematic sharpness, glossy digital cleanliness, HDR contrast, modern blockbuster lighting, modern stabilization, VHS styling, or the feeling of contemporary footage with a black-and-white filter.
+
+CORE RHYTHM:
+PEACEFUL BALCONY MORNING → ELDERLY MAN READING NEWSPAPER → SUBTLE WARNING → CAMERA PUSHES INTO THE EYE → PUPIL TRANSITION → FULL IMPACT CYCLONE DISASTER.
+
+0.0–2.5s — PEACEFUL NORMAL LIFE
+
+A calm historical morning in Queensland, Australia, 1899.
+
+On the balcony or veranda of a modest period-appropriate timber house, ONE elderly man sits peacefully reading a newspaper.
+
+He is relaxed and unaware of the coming disaster.
+
+Show a believable late-19th-century balcony setting:
+simple wooden chair,
+timber railings,
+light morning air,
+quiet everyday life.
+
+The newspaper is readable as a physical object but must contain NO visible modern text overlays for the viewer.
+
+Camera begins in a medium shot.
+The mood is calm, ordinary, and peaceful.
+
+No obvious disaster yet.
+
+2.5–3.5s — SUBTLE WARNING
+
+A faint shift in the atmosphere begins.
+
+A slight wind touches the newspaper.
+The edges of the paper flutter subtly.
+The elderly man pauses very slightly.
+He senses something unusual.
+
+Do NOT start full disaster yet.
+Keep the warning restrained and cinematic.
+
+3.5–5.0s — EYE PUSH-IN TRANSITION
+
+The man lowers the paper slightly or looks up.
+
+Camera moves closer toward his face.
+
+Push into a tight close-up of ONE eye.
+
+The eye must remain realistic and human.
+
+As the camera pushes closer, the pupil and reflected light become the transition point.
+
+The camera continues moving directly INTO the pupil.
+
+IMPORTANT:
+This must NOT feel like fantasy or sci-fi.
+Do NOT show magical visual effects.
+Do NOT create a surreal eyeball tunnel.
+
+Instead, use the eye as a cinematic transition device:
+the dark pupil fills the frame,
+subtle reflection of storm danger may appear in the eye,
+then the frame transitions naturally into the disaster impact.
+
+5.0–10.0s — FULL IMPACT CYCLONE DISASTER
+
+As the camera emerges from the pupil transition, the viewer is immediately inside the active disaster.
+
+Reveal a violent Cyclone Mahina impact scene in Queensland, Australia, 1899.
+
+The camera must KEEP MOVING FORWARD for the rest of the clip.
+
+DO NOT STOP.
+DO NOT BECOME A STATIC WIDE SHOT.
+DO NOT PULL BACK.
+
+The viewer must feel that the calm eye transition has carried them directly into catastrophe.
+
+Show:
+wind-driven rain,
+violent cyclone winds,
+storm-driven spray,
+adults struggling to survive,
+timber damage,
+roofing and debris moving through the scene,
+coastal flooding or storm-surge water moving inland,
+historically believable 1899 structures under severe storm stress.
+
+The destruction must intensify as the camera advances.
+
+5.0–6.5s:
+Initial impact reveal.
+The camera enters a storm-battered coastal settlement.
+Adults struggle against strong wind.
+Rain lashes across the frame.
+Debris begins moving.
+
+6.5–8.0s:
+KEEP MOVING FORWARD.
+Wind and water intensify.
+A timber structure or roofing section begins failing.
+Storm-surge water pushes through low ground.
+Adults try to stay upright or retreat.
+
+8.0–10.0s:
+KEEP PUSHING DEEPER INTO THE DISASTER.
+More debris passes close to camera.
+Water and wind continue intensifying.
+The settlement appears increasingly overwhelmed.
+Finish while the camera is STILL MOVING FORWARD through peak cyclone chaos.
+
+STORM-SURGE PHYSICS LOCK:
+This is CYCLONE STORM SURGE, NOT A TSUNAMI.
+Do NOT create a giant vertical wall of water.
+Show powerful wind-driven coastal flooding moving inland across low terrain.
+Water direction, debris flow, spray direction, and wind direction must remain physically believable and consistent.
+
+DESTRUCTION LOGIC:
+The camera does NOT cause destruction.
+The cyclone is already destabilizing the settlement.
+Damage must come from existing structures, wind pressure, and storm surge.
+No random explosions.
+No spontaneous buildings.
+No earthquake effects.
+No tornado funnel unless historically justified.
+
+CAMERA FEEL:
+Begin calm and observational.
+Then become intimate and focused during the eye push-in.
+Then become aggressive and relentless after the transition.
+Strong sense of depth.
+Smooth but forceful push into the eye.
+After the transition, strong forward motion through the disaster.
+
+AUDIO:
+0.0–2.5s:
+Quiet balcony ambience.
+Soft morning atmosphere.
+Light page movement.
+
+2.5–3.5s:
+Faint rising wind.
+Subtle paper flutter.
+Quiet tension.
+
+3.5–5.0s:
+Sound narrows and tightens during the push into the eye.
+A low atmospheric swell of wind pressure builds.
+
+5.0–10.0s:
+Violent cyclone roar.
+Heavy rain.
+Wind-driven spray.
+Storm-surge water.
+Timber cracking.
+Roofing debris impacts.
+Adult nonverbal reactions.
+
+NO MUSIC.
+NO VOICEOVER.
+
+NEGATIVE LOCK:
+No color of any kind.
+No sepia.
+No tinted monochrome.
+No magical eye portal.
+No surreal fantasy visuals.
+No sci-fi tunnel effect.
+No morphing face.
+No distorted anatomy.
+No duplicated people.
+No children.
+No gore.
+No text.
+No captions.
+No logos.
+No static observer shot after the impact reveal.
+
+FINAL VISUAL FORMULA:
+PEACEFUL BALCONY
+→ ELDERLY MAN READING NEWSPAPER
+→ SUBTLE WIND WARNING
+→ CAMERA PUSHES INTO THE EYE
+→ PUPIL FILLS THE FRAME
+→ NATURAL TRANSITION
+→ FULL CYCLONE IMPACT
+→ CAMERA CHARGES FORWARD
+→ WIND + RAIN + DEBRIS + STORM SURGE
+→ ADULTS STRUGGLE
+→ CUT DURING PEAK CHAOS.
+
+STATUS: APPROVED — Cyclone Mahina 1899 HOOK Alternative 2.`;
+}
+
 window.LDCycloneMahinaHook={
-  version:'3.20.5',
+  version:'3.20.6',
   topic:'Cyclone Mahina — Queensland, Australia — 1899',
   status:'APPROVED',
-  prompt:prompt
+  prompt:prompt,
+  alternative2:alternative2
 };
 })();
