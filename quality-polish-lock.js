@@ -12,7 +12,7 @@ function polish(){
  document.querySelectorAll('.stage-card').forEach(card=>{
   const stage=(card.dataset.stage||card.querySelector('.stage-name')?.textContent||'').trim().toUpperCase();
   if(stage==='ENDING'||stage==='THUMBNAIL')return;
-  appendOnce(card.querySelector('.narration'),QUALITY.narration,'DOCUMENTARY NARRATION POLISH LOCK:');
+  // Narration is spoken text. Authoring instructions must never be appended here.
   appendOnce(card.querySelector('.flow-prompt'),QUALITY.flow,'QUALITY POLISH LOCK:');
  });
 }
