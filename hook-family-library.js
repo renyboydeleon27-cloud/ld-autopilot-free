@@ -35,8 +35,17 @@ function choices(ctx){var family=Object.prototype.hasOwnProperty.call(data,ctx.f
  var canonical=/^desert locust(?: crisis)?\s*(?:[—–-]\s*)?\(?2020\)?$/i.test((ctx.topic||'').trim());
  if(family==='insect'&&i===0&&canonical&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDLocustLaundryHook&&window.LDLocustLaundryHook.prompt){result.prompt=window.LDLocustLaundryHook.prompt();result.status='APPROVED';result.source='Topic-specific';result.concept='Peaceful laundry → subtle dimming → adult turns → swarm arrives → six seconds of forward travel.';}
  if(family==='earthquake'&&i===0&&/^great kant[oō] earthquake\s*\(?1923\)?$/i.test((ctx.topic||'').trim())&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDEarthquakeTwistHookV315&&window.LDEarthquakeTwistHookV315.prompt){result.prompt=window.LDEarthquakeTwistHookV315.prompt();result.status='APPROVED';result.source='Topic-specific';}
+ var mahina=/\bcyclone\s+mahina\b/i.test(ctx.topic||'')&&/\b1899\b/.test(ctx.topic||'');
+ if(family==='cyclone'&&i===0&&mahina&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDCycloneMahinaHook&&window.LDCycloneMahinaHook.prompt){
+   result.prompt=window.LDCycloneMahinaHook.prompt();
+   result.status='APPROVED';
+   result.source='Topic-specific';
+   result.title='Mahina Archival Shutter-to-Surge';
+   result.concept='Tense historical interior → shutter failure → powerful transition → escalating archival cyclone and storm-surge survival montage.';
+   result.why='Tested and approved for Cyclone Mahina 1899: authentic black-and-white archival capture, strong transition rhythm, human-survival tension and cyclone-specific storm-surge physics.';
+ }
  return result;
  });
 }
-window.LDHookFamilyLibrary={version:'3.20.2',detect:detect,choices:choices,families:Object.keys(data).map(function(k){return {id:k,label:data[k][0]};})};
+window.LDHookFamilyLibrary={version:'3.20.5',detect:detect,choices:choices,families:Object.keys(data).map(function(k){return {id:k,label:data[k][0]};})};
 })();
