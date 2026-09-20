@@ -56,8 +56,10 @@
       .replace(/Real human · 1980s archival documentary look/gi,'Real human · era-aware documentary look')
       .replace(/\s{2,}/g,' ').trim();
   }
-  function injectEraNearStart(text){
-    const lock=eraLock().text;
+  function injectEraNearStart(text,thumbnail=false){
+    let lock=eraLock().text;
+    if(thumbnail)lock=lock.replace(/STRICT MONOCHROME LOCK:[\s\S]*?BLACK-AND-WHITE continuity has higher priority than any generic natural-color instruction\./,
+      'THUMBNAIL SCENE MONOCHROME LOCK: historical scenery and human subjects remain true black-and-white grayscale, with soft early-film optical detail, organic grain and modest contrast. No sepia, tinting or colorized scenery. Approved graphic overlays only: WHITE headline, YELLOW hook strip and RED curiosity badge. These overlays are exempt from scene monochrome; this exception applies only to the thumbnail.');
     const s=stripEra(text);
     const first=/^([\s\S]*?\.)\s*/.exec(s);
     if(!first)return `${lock} ${s}`.trim();
@@ -67,7 +69,7 @@
   function showToast(text){if(!toast)return;toast.textContent=text;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1800);}
   function fire(el){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
 
-  function toRealImage(text){
+  function toRealImage(text,thumbnail=false){
     let s=stripLegacy80s(stripEra(text));
     s=s.replace(/Create (the Living Disaster Book ENDING|a high-impact YouTube thumbnail|(?:HOOK|P\d+|S\d+)) illustration/gi,'Create $1 live-action historical frame');
     s=s.replace(/Serious colored historical graphic-novel\/anime style, detailed 2D anime linework, hand-inked outlines, cel-painted textures and shadows, grounded adult proportions/gi,BASE_REAL_STYLE);
@@ -75,7 +77,7 @@
     s=s.replace(/Illustration only\./gi,'Live-action historical still only.');
     s=s.replace(/No embedded text\. No photorealism, no live action, no 3D CGI, no glossy render, no chibi, no gore\./gi,`No embedded text. ${REAL_NEG}`);
     if(!/Cinematic historical live-action realism/i.test(s))s+=` ${BASE_REAL_STYLE}. ${REAL_NEG}`;
-    s=injectEraNearStart(s);
+    s=injectEraNearStart(s,thumbnail);
     return s.replace(/\s{2,}/g,' ').trim();
   }
 
@@ -125,7 +127,7 @@
     const img=card.querySelector('.image-prompt');
     const flow=card.querySelector('.flow-prompt');
     let changed=false;
-    if(img){const next=real?toRealImage(img.value):toAnimeImage(img.value);if(next!==img.value){img.value=next;fire(img);changed=true;}}
+    if(img){let next=real?toRealImage(img.value,card.dataset.stage==='THUMBNAIL'):toAnimeImage(img.value);if(card.dataset.stage==='THUMBNAIL')next=next.replace(/No embedded text\./gi,'');if(next!==img.value){img.value=next;fire(img);changed=true;}}
     if(flow&&card.dataset.stage!=='ENDING'&&card.dataset.stage!=='THUMBNAIL'){const next=real?toRealFlow(flow.value):toAnimeFlow(flow.value);if(next!==flow.value){flow.value=next;fire(flow);changed=true;}}
     if(notify&&changed)showToast(real?'Real Human era lock fixed':'Historical Anime mode applied');
   }
