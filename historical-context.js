@@ -148,13 +148,13 @@
     return `Preserve historical period details for ${ctx.place}${ctx.year?` in ${ctx.year}`:''}; do not introduce modern architecture, vehicles, clothing, electronics, signage or infrastructure.`;
   }
 
-  function enhanceCard(card,ctx){
+  function enhanceCard(card,ctx,preserveSaved=false){
     const stage=card.dataset.stage;
     const narration=card.querySelector('.narration');
     const image=card.querySelector('.image-prompt');
     const flow=card.querySelector('.flow-prompt');
 
-    if(narration&&stage!=='ENDING'&&stage!=='THUMBNAIL'){
+    if(narration&&stage!=='ENDING'&&stage!=='THUMBNAIL'&&!(preserveSaved&&card.dataset.textVideoPrompt)){
       const improved=improveNarration(stage,narration.value,ctx);
       if(improved!==narration.value){
         narration.value=improved;
@@ -183,11 +183,11 @@
     }
   }
 
-  function enhanceAll(){
+  function enhanceAll(preserveSaved=false){
     const t=topic();
     if(!t)return;
     const ctx=inferContext(t);
-    [...stagesEl.querySelectorAll('.stage-card')].forEach(card=>enhanceCard(card,ctx));
+    [...stagesEl.querySelectorAll('.stage-card')].forEach(card=>enhanceCard(card,ctx,preserveSaved));
     showToast(ctx.known?`Historical fact pack applied: ${ctx.place} · ${ctx.year}`:`Historical context applied: ${ctx.place}${ctx.year?` · ${ctx.year}`:''}`);
   }
 
@@ -200,6 +200,6 @@
   });
 
   setTimeout(()=>{
-    if(stagesEl.querySelector('.stage-card')&&topic())enhanceAll();
+    if(stagesEl.querySelector('.stage-card')&&topic())enhanceAll(true);
   },250);
 })();

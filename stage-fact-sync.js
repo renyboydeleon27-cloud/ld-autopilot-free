@@ -111,7 +111,7 @@
     const p=pack();
     if(!p)return;
     let n=0;
-    stagesEl.querySelectorAll('.stage-card').forEach(card=>{if(syncCard(card,p))n++;});
+    stagesEl.querySelectorAll('.stage-card').forEach(card=>{if((message||!card.dataset.textVideoPrompt)&&syncCard(card,p))n++;});
     if(message)showToast(n?`Fact + visual synced ${n} stage${n===1?'':'s'}`:'Fact pack already synced');
   }
 
