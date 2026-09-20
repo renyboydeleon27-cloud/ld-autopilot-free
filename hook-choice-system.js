@@ -1,7 +1,7 @@
 /* LD AUTO v3.17 — Top 3 Hook Choice System. All-family defaults and approved topic overrides. */
 (function(){'use strict';
 window.LD_HOOK_CHOICES_ENABLED=true;
-var HOOK_POLICY_VERSION='3.20.5-mahina-approved-v1';
+var HOOK_POLICY_VERSION='3.20.6-mahina-alt2-approved-v1';
 var MODE_KEY='ld-auto-visual-mode-v1', ACTIVE_KEY='ld-auto-active-hook-v1';
 
 function topic(){var input=document.getElementById('topic');var typed=(input&&input.value||'').trim();if(typed)return typed;var title=(document.getElementById('projectTitle')&&document.getElementById('projectTitle').textContent||'').trim();return title==='No production yet'?'':title;}
