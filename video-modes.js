@@ -1,4 +1,4 @@
-/* LD AUTO v3.20.1 — separate per-panel video prompts and shared chapter continuity. */
+/* LD AUTO v3.20.2 — separate per-panel video prompts and strict era-aware shared chapter continuity. */
 (function(){'use strict';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
@@ -11,7 +11,17 @@ function ready(){var c=continuity();return /^\d{4}$/.test(c.year)&&!!c.location.
 function lock(){var c=continuity();var look=style()==='real'&&window.LDEraCapture?window.LDEraCapture.eraForYear(Number(c.year)||null).look:'Serious colored historical 2D graphic-novel/anime; hand-inked outlines and cel-painted textures. No photorealism or live action.';
 return 'CHAPTER CONTINUITY LOCK:\nEvent: '+current()+'. Event year: '+(c.year||'UNCONFIRMED')+'. Main location: '+(c.location||'UNCONFIRMED — specify the chapter location')+'.\n'+look+'\nThe recording appearance affects only the capture treatment. Clothing, architecture, crops, terrain, transport, utilities, tools and technology must match this event and location. '+(c.details?'Shared visual details: '+c.details+'\n':'')+'Use the same chapter visual world from HOOK through P14, with distinct sublocations and camera views. P1 returns to normal life before the event; later panels follow their own historical time and narrative beat. Recovery or wider-impact panels may change date or location only when explicitly established by that panel. Never carry peak destruction into a pre-disaster scene. Keep recurring adult appearance and wardrobe consistent with the shared visual details. No invented historical facts.\nEND CHAPTER CONTINUITY LOCK.';}
 function stripLock(s){return String(s||'').replace(/\s*CHAPTER CONTINUITY LOCK:[\s\S]*?END CHAPTER CONTINUITY LOCK\./g,'').trim();}
-function withLock(prompt){return ready()?stripLock(prompt)+'\n\n'+lock():String(prompt||'');}
+function stripColorConflicts(prompt){
+ var c=continuity(),year=Number(c.year)||0,s=String(prompt||'');
+ if(style()==='real'&&year&&year<=1929){
+   s=s.replace(/Natural color and believable lighting\.?/gi,'STRICT BLACK-AND-WHITE grayscale only.')
+      .replace(/\bnatural color\b/gi,'black-and-white grayscale')
+      .replace(/\bfull color\b/gi,'black-and-white grayscale')
+      .replace(/\bcolored\b/gi,'monochrome');
+ }
+ return s;
+}
+function withLock(prompt){return ready()?stripColorConflicts(stripLock(prompt))+'\n\n'+lock():stripColorConflicts(String(prompt||''));}
 function sceneFrom(card){var existing=state(card).scene;if(existing)return existing;
 var image=card.querySelector('.image-prompt').value||'';
 image=image.replace(/ERA-AWARE CAPTURE LOCK:[\s\S]*?END ERA LOCK\.?/gi,'');
