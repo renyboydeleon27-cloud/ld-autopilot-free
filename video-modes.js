@@ -1,6 +1,6 @@
-/* LD AUTO v3.22.4 — per-panel video prompts with topic-aware HOOK DNA / era capture continuity. */
+/* LD AUTO v3.22.5 — per-panel video prompts with UNIVERSAL black-and-white approved HOOK DNA continuity. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.22.4-hook-dna-v1';
+const T2V_POLICY_VERSION='3.22.5-universal-bw-hook-dna-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -9,33 +9,20 @@ function state(card){return {mode:card.dataset.videoMode||'image',text:card.data
 function defaults(topic){var year=(topic.match(/\b(?:1\d{3}|20\d{2}|2100)\b/)||[])[0]||'';return {year:year,location:'',details:''};}
 function continuity(){return Object.assign(defaults(current()),window.ldVideoContinuity||{});}
 function ready(){var c=continuity();return /^\d{4}$/.test(c.year)&&!!c.location.trim();}
-function normalizeTopic(value){return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
-function hookDnaProfile(){
- var c=continuity(),y=Number(c.year)||0,topic=normalizeTopic(current());
- if(style()==='real'&&y===1958&&topic.includes('lituya bay')){
-   return {
-     id:'lituya-bay-1958-approved-hook',
-     forceMonochrome:true,
-     look:'APPROVED LITUYA BAY HOOK DNA: Photorealistic live-action historical disaster film in strict true black-and-white grayscale. Historical archival recreation with a believable 1950s documentary/newsreel appearance, soft optical detail, organic film grain, slight gate weave, restrained exposure flicker and natural monochrome contrast. No modern digital sharpness, no glossy modern cinematic grade, no anime and no stylized illustration. Preserve the exact 1958 Lituya Bay historical world and capture treatment established by the approved HOOK.'
-   };
- }
- return null;
-}
-function monochromeRequired(){
- var profile=hookDnaProfile();
- if(profile&&profile.forceMonochrome)return true;
- var c=continuity(),y=Number(c.year)||0;
- return style()==='real'&&y>0&&y<=1929;
+function monochromeRequired(){return style()==='real';}
+function universalHookDnaLook(){
+ if(style()!=='real')return '';
+ return 'UNIVERSAL APPROVED HOOK DNA: STRICT true black-and-white grayscale. No color. No sepia. No tint. No selective color. Photorealistic historical live-action. Archival documentary / newsreel capture. Soft optical detail. Organic film grain. Slight gate weave. Restrained exposure flicker. Preserve the same visual world as the approved HOOK for the current episode. This visual DNA is universal; event year, location, clothing, architecture, terrain, technology and disaster behavior remain specific to the current episode.';
 }
 function monochromeDirective(){
  if(!monochromeRequired())return '';
- var profile=hookDnaProfile();
- var source=profile?'APPROVED HOOK DNA OVERRIDE: Lituya Bay, Alaska, 1958 is intentionally locked to the same black-and-white archival capture treatment as the approved HOOK. ':'';
- return source+'HIGH-PRIORITY MONOCHROME FORMAT LOCK: THIS ENTIRE 10-SECOND VIDEO MUST BE TRUE BLACK-AND-WHITE GRAYSCALE FROM FRAME 1 THROUGH FRAME 240. ZERO COLOR AT ANY TIME. ZERO SEPIA. ZERO TINT. ZERO SELECTIVE COLOR. ZERO COLORIZATION. Skin, clothing, wood, sky, water, vegetation, mountains, boats, shoreline, spray, debris and every other visible element must remain grayscale. This is a hard rendering-format requirement. If any other instruction implies natural color, colored lighting, warm/cool color, or period color, IGNORE THAT CONFLICTING COLOR INSTRUCTION and keep the whole shot monochrome.';
+ return 'UNIVERSAL HIGH-PRIORITY BLACK-AND-WHITE HOOK DNA LOCK: THIS ENTIRE 10-SECOND VIDEO MUST REMAIN STRICT TRUE BLACK-AND-WHITE GRAYSCALE FROM START TO FINISH. NO COLOR. NO SEPIA. NO TINT. NO SELECTIVE COLOR. NO COLORIZATION. Skin, clothing, wood, sky, water, vegetation, fire, lightning, mountains, boats, shoreline, spray, debris and every other visible element must remain grayscale. If any inherited or default instruction implies natural color, full color, colored lighting, warm/cool color, selective color, sepia or tint, IGNORE THAT CONFLICTING COLOR INSTRUCTION and keep the whole shot strict black-and-white grayscale.';
 }
 function lock(){
- var c=continuity(),profile=hookDnaProfile();
- var look=profile?profile.look:(style()==='real'&&window.LDEraCapture?window.LDEraCapture.eraForYear(Number(c.year)||null).look:'Serious colored historical 2D graphic-novel/anime; hand-inked outlines and cel-painted textures. No photorealism or live action.');
+ var c=continuity();
+ var look=style()==='real'
+   ? universalHookDnaLook()
+   : 'Serious colored historical 2D graphic-novel/anime; hand-inked outlines and cel-painted textures. No photorealism or live action.';
  return 'CHAPTER CONTINUITY LOCK:\nEvent: '+current()+'. Event year: '+(c.year||'UNCONFIRMED')+'. Main location: '+(c.location||'UNCONFIRMED — specify the chapter location')+'.\n'+(monochromeDirective()?monochromeDirective()+'\n':'')+look+'\nThe recording appearance affects only the capture treatment. Clothing, architecture, crops, terrain, transport, utilities, tools and technology must match this event and location. '+(c.details?'Shared visual details: '+c.details+'\n':'')+'Use the same chapter visual world from HOOK through P14, with distinct sublocations and camera views. P1 returns to normal life before the event; later panels follow their own historical time and narrative beat. Recovery or wider-impact panels may change date or location only when explicitly established by that panel. Never carry peak destruction into a pre-disaster scene. Keep recurring adult appearance and wardrobe consistent with the shared visual details. No invented historical facts.\nEND CHAPTER CONTINUITY LOCK.';
 }
 function stripLock(s){return String(s||'').replace(/\s*CHAPTER CONTINUITY LOCK:[\s\S]*?END CHAPTER CONTINUITY LOCK\./g,'').trim();}
@@ -46,7 +33,10 @@ function stripColorConflicts(prompt){
       .replace(/\bnatural color\b/gi,'black-and-white grayscale')
       .replace(/\bfull color\b/gi,'black-and-white grayscale')
       .replace(/\bcolored\b/gi,'monochrome')
-      .replace(/\bcolorized\b/gi,'monochrome');
+      .replace(/\bcolorized\b/gi,'monochrome')
+      .replace(/\bsepia\b/gi,'black-and-white grayscale')
+      .replace(/\btinted\b/gi,'black-and-white grayscale')
+      .replace(/\bselective color\b/gi,'black-and-white grayscale');
  }
  return s;
 }
