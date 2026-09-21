@@ -47,7 +47,7 @@ const yt=(endpoint,params)=>request(`https://www.googleapis.com/youtube/v3/${end
 const report=params=>request('https://youtubeanalytics.googleapis.com/v2/reports',params);
 function clearResults(){
  data=null;$('ytResults').hidden=true;
- for(const id of ['ytTotals','ytVideos','ytPeriodVideos','ytDaily','ytWeekdays','ytPatterns'])$(id).replaceChildren();
+ for(const id of ['ytTotals','ytVideos','ytPeriodVideos','ytDaily','ytWeekdays','ytPatterns','ytCountries'])$(id).replaceChildren();
  if($('ytEvidence'))$('ytEvidence').value='';
  if($('ytCopyEvidence'))$('ytCopyEvidence').disabled=true;
  if($('ytEvidenceStatus'))$('ytEvidenceStatus').textContent='Sync your channel to build evidence.';
@@ -73,6 +73,11 @@ function renderTotals(){
 function plain(n,digits=1){
  if(n===null||n===undefined||Number.isNaN(Number(n)))return 'N/A';
  return Number(n).toLocaleString('en-US',{maximumFractionDigits:digits});
+}
+function countryName(code){
+ const value=String(code||'').toUpperCase();
+ if(value==='ZZ')return 'Unknown / unidentified';
+ try{return new Intl.DisplayNames(['en'],{type:'region'}).of(value)||value;}catch{return value||'Unknown';}
 }
 function evidenceSummary(){
  if(!data)return '';
@@ -131,6 +136,19 @@ function evidenceSummary(){
  lines.push(
   'Note: upload-day patterns are descriptive only. Topic, title, video age, release time and distribution can change the result.',
   '',
+  'TOP AUDIENCE COUNTRIES — SELECTED PERIOD'
+ );
+ if(data.countryError)lines.push('Country report error: '+data.countryError);
+ else if(!data.countries.length)lines.push('No country rows returned. YouTube may suppress geographic data when there is not enough reportable audience data.');
+ else{
+  const countryViews=C.sum(data.countries,'views');
+  data.countries.slice(0,20).forEach((r,i)=>lines.push(
+   (i+1)+'. '+countryName(r.country)+' ('+r.country+') | views '+plain(r.views,0)+' | share of returned country views '+(countryViews?plain((C.number(r.views)||0)/countryViews*100,1):'N/A')+'% | watch minutes '+plain(r.estimatedMinutesWatched,1)+' | avg viewed '+plain(r.averageViewPercentage,1)+'% | avg duration '+plain(r.averageViewDuration,1)+'s | subs gained '+plain(r.subscribersGained,0)
+  ));
+  lines.push('Country-share percentages use only country rows returned by YouTube; privacy thresholds or unidentified geography can make this total differ from the channel daily-view total.');
+ }
+ lines.push(
+  '',
   'TOP VIDEOS — CURRENT LIFETIME TOTALS'
  );
  lifetime.forEach((v,i)=>lines.push((i+1)+'. '+v.title+' | published '+(v.publishedAt||'').slice(0,10)+' | views '+plain(v.views,0)+' | likes '+plain(v.likes,0)+' | comments '+plain(v.comments,0)+(v.views>0&&v.likes!==null?' | likes/100 views '+plain(v.likes/v.views*100,2):'')));
@@ -186,6 +204,17 @@ function render(){
  const note=document.createElement('p');note.textContent=data.dailyError?`Daily report unavailable: ${data.dailyError}`:data.daily.length?`Latest date returned: ${data.daily.map(r=>r.day).sort().at(-1)}. Dates not returned by YouTube are omitted; do not treat unavailable dates as zero.`:'No daily analytics returned yet. New channels and uploads can take time to appear.';$('ytWeekdays').append(note);
  for(const w of weekday){const p=document.createElement('p');p.textContent=`${names[w.day]}: ${fmt(w.average)} average views per returned day (${w.count} days).`;$('ytWeekdays').append(p);}
  table('ytDaily',['Date (Pacific)','Views','Likes','Comments','Subscribers gained','Subscribers lost'],[...data.daily].sort((a,b)=>Number(b.views)-Number(a.views)).map(r=>[escape(r.day),fmt(r.views),fmt(r.likes),fmt(r.comments),fmt(r.subscribersGained),fmt(r.subscribersLost)]));
+ const countryViews=C.sum(data.countries,'views');
+ $('ytCountryNote').textContent=data.countryError?('Country report unavailable: '+data.countryError):data.countries.length?'Geography for the selected period. Percent share is based on country rows returned by YouTube and may not equal all channel views because of privacy thresholds or unidentified geography.':'No country data returned yet. YouTube may suppress geography when there is not enough reportable audience data.';
+ table('ytCountries',['Country','Views','Share','Watch min','Avg viewed %','Avg seconds','Subs gained'],data.countries.slice(0,25).map(r=>[
+  escape(countryName(r.country)+' ('+r.country+')'),
+  fmt(r.views),
+  countryViews?fmt((C.number(r.views)||0)/countryViews*100)+'%':'—',
+  fmt(r.estimatedMinutesWatched),
+  fmt(r.averageViewPercentage),
+  fmt(r.averageViewDuration),
+  fmt(r.subscribersGained)
+ ]));
  table('ytPatterns',['Pattern','Videos with period data','Period views','Average per video'],C.titlePatterns(data.videos,data.periodVideos).map(r=>[escape(r.name),fmt(r.count),fmt(r.views),fmt(r.average)]));
  renderEvidence();
 }
@@ -200,11 +229,20 @@ async function sync(){
   const params={ids:`channel==${channel.id}`,...span};
   const reports=await Promise.allSettled([
    C.videoReport(report,{...params,metrics:'views,engagedViews,likes,comments,averageViewDuration,averageViewPercentage'}),
-   report({...params,dimensions:'day',metrics:'views,likes,comments,subscribersGained,subscribersLost',sort:'day'})
+   report({...params,dimensions:'day',metrics:'views,likes,comments,subscribersGained,subscribersLost',sort:'day'}),
+   report({...params,dimensions:'country',metrics:'views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained',sort:'-estimatedMinutesWatched',maxResults:200})
   ]);
   if(job!==generation)return;
-  data={channel:fresh.items?.[0]||channel,videos,...span,syncedAt:Date.now(),periodVideos:reports[0].status==='fulfilled'?reports[0].value:[],periodError:reports[0].status==='rejected'?reports[0].reason.message:'',daily:reports[1].status==='fulfilled'?C.rows(reports[1].value):[],dailyError:reports[1].status==='rejected'?reports[1].reason.message:''};
-  render();status(data.periodError||data.dailyError?'Video totals synced. Some analytics reports are unavailable; see the details below.':'Sync complete. Reports are ready.');
+  data={
+   channel:fresh.items?.[0]||channel,videos,...span,syncedAt:Date.now(),
+   periodVideos:reports[0].status==='fulfilled'?reports[0].value:[],
+   periodError:reports[0].status==='rejected'?reports[0].reason.message:'',
+   daily:reports[1].status==='fulfilled'?C.rows(reports[1].value):[],
+   dailyError:reports[1].status==='rejected'?reports[1].reason.message:'',
+   countries:reports[2].status==='fulfilled'?C.rows(reports[2].value):[],
+   countryError:reports[2].status==='rejected'?reports[2].reason.message:''
+  };
+  render();status(data.periodError||data.dailyError||data.countryError?'Core sync finished. Some analytics reports are unavailable; see the details below.':'Sync complete. Reports are ready.');
  }catch(e){if(job===generation)status(`${e.message}${data?' Previous results remain displayed with their original sync time.':''}`,true);}finally{if(job===generation){busy=false;controls();}}
 }
 $('ytSave').addEventListener('click',async()=>{
