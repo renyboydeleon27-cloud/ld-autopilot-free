@@ -1,6 +1,6 @@
-/* LD AUTO v3.22.5 — per-panel video prompts with UNIVERSAL black-and-white approved HOOK DNA continuity. */
+/* LD AUTO v3.22.6 — universal B&W HOOK DNA + self-healing full prompt copy. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.22.5-universal-bw-hook-dna-v1';
+const T2V_POLICY_VERSION='3.22.6-universal-bw-full-copy-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -55,28 +55,55 @@ function signature(card){return JSON.stringify([T2V_POLICY_VERSION,current(),for
 function build(card){var scene=sceneFrom(card);if(!scene)throw Error('Add the panel scene description first.');if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
 var stage=card.dataset.stage;var camera=Number(stage.slice(1))%3===1?'A restrained forward tracking move with clear parallax':Number(stage.slice(1))%3===2?'A slow lateral track revealing the scene depth':'A restrained push-in toward the principal action';
 return 'VIDEO PROMPT — EXACTLY 10 SECONDS\n'+current()+' · '+stage+'\n\n'+(monochromeDirective()?monochromeDirective()+'\n\n':'')+'TEXT-TO-VIDEO. Create the entire scene from this description. No reference image is required. '+(format()==='shorts'?'Portrait 9:16.':'Landscape 16:9.')+' One continuous shot. '+(style()==='real'?'Photorealistic REAL HUMAN historical documentary recreation. No anime or illustration.':'Serious 2D historical graphic-novel/anime animation. No live action.')+'\n\n'+lock()+'\n\nPANEL SCENE:\n'+scene+'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.')+'\n\nTIMING:\n0.0–2.0s: Establish the described setting, adult positions and one clear focal action; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue that same action with coherent cause and effect, natural momentum and local environmental response.\n7.0–10.0s: Sustain the panel’s intended beat and finish on a readable composition; do not jump to the next story stage.\n\nCAMERA:\n'+camera+'. Fixed focal length, natural depth and occlusion. Never pass through solid objects. No cuts, transitions, orbit or time-lapse. This panel uses its own camera behavior; the HOOK’s six-second forward-charge rule does not automatically apply here.\n\nPHYSICS AND TIME:\nOnly the selected disaster mechanism belongs here. Calm scenes stay calm; cause/explanation scenes must not depict invisible processes as ordinary camera footage. For a scientific cutaway, make it an explicitly separate explanatory visualization consistent with the chapter palette, with no fabricated eyewitness viewpoint. Slow-onset effects are already present; no instant infection, starvation, crop death or insect reproduction. Preserve object count, human identity and plausible scale throughout the clip.\n\nAUDIO:\nNatural scene-specific ambience and SFX only. No voiceover or music.\n\nNEGATIVE:\nNo children, gore, duplicated people, distorted anatomy, morphing, giant insects, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.\n\nSTATUS: FOR TESTING — review historical details and rendered continuity before approval.';}
-function generate(card){try{pinScene(card);var text=build(card);card.dataset.textVideoPrompt=text;card.dataset.textVideoSignature=signature(card);var ta=card.querySelector('.text-video-prompt');if(ta)ta.value=text;saveCurrent();update(card);syncGlobalControl();}catch(e){showToast(e.message);}}
-function valid(card){return !!state(card).text&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
-function prompt(card){if(supports(card)&&state(card).mode==='text'){if(!valid(card))throw Error('Rebuild this Text-to-Video prompt after setting the chapter context or editing the scene.');return state(card).text;}
-return withLock(card.querySelector('.flow-prompt').value);}
+function generate(card){try{rebuildTextPrompt(card);}catch(e){showToast(e.message);}}
+function completeTextPrompt(text){
+ var s=String(text||'');
+ return s.includes('VIDEO PROMPT — EXACTLY 10 SECONDS')&&s.includes('PANEL SCENE:')&&s.includes('TIMING:')&&s.includes('CAMERA:')&&s.includes('PHYSICS AND TIME:')&&s.includes('AUDIO:')&&s.includes('NEGATIVE:');
+}
+function rebuildTextPrompt(card){
+ pinScene(card);
+ var text=build(card);
+ card.dataset.textVideoPrompt=text;
+ card.dataset.textVideoSignature=signature(card);
+ var ta=card.querySelector('.text-video-prompt');
+ if(ta)ta.value=text;
+ saveCurrent();
+ update(card);
+ syncGlobalControl();
+ return text;
+}
+function valid(card){return completeTextPrompt(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function prompt(card){
+ if(supports(card)&&state(card).mode==='text'){
+   if(!valid(card))return rebuildTextPrompt(card);
+   return state(card).text;
+ }
+ var base=card.querySelector('.flow-prompt').value;
+ if(!base.trim())throw Error('This panel has no Image-to-Video prompt yet.');
+ return withLock(base);
+}
 function update(card){if(!supports(card))return;var mode=state(card).mode;
 card.querySelector('.flow-wrap').hidden=mode==='text';
 var panel=card.querySelector('.text-video-fields');if(panel)panel.hidden=mode!=='text';
 var image=card.querySelector('.image-prompt').closest('.field-block');if(image)image.hidden=mode==='text';
 var workspace=card.querySelector('.image-workspace');if(workspace)workspace.hidden=mode==='text';
-var status=card.querySelector('.video-mode-status');var statusText=mode==='image'?'Use a starting image with the Image-to-Video prompt.':valid(card)?'Text-to-Video ready for testing · no starting image needed.':'Text-to-Video needs building or refresh. Check the shared setting and panel scene.';if(status&&status.textContent!==statusText)status.textContent=statusText;
+var status=card.querySelector('.video-mode-status');var statusText=mode==='image'?'Use a starting image with the Image-to-Video prompt.':valid(card)?'Text-to-Video ready for testing · no starting image needed.':'Text-to-Video needs building or refresh. Copy FULL Video Prompt will rebuild it automatically.';if(status&&status.textContent!==statusText)status.textContent=statusText;
+var fullBtn=card.querySelector('.copy-active-video');if(fullBtn)fullBtn.textContent=mode==='text'?'Copy FULL Text-to-Video Prompt':'Copy FULL Image-to-Video Prompt';
 var label=card.querySelector('.flow-wrap label');if(label&&label.textContent!=='Image-to-Video prompt')label.textContent='Image-to-Video prompt';}
 function decorate(card){if(!supports(card)||card.querySelector('.video-mode-controls'))return;
 // Restore the exact scene used by older saved text prompts before image helpers run.
 if(state(card).text&&!state(card).scene){try{var saved=JSON.parse(state(card).signature);if(Array.isArray(saved)&&typeof saved[4]==='string')card.dataset.videoScene=clean(saved[4]);}catch(e){}}
 
-var box=document.createElement('div');box.className='video-mode-controls';box.innerHTML='<p class="video-mode-status"></p><div class="text-video-fields"><label>Panel scene description<textarea class="video-scene" rows="4"></textarea></label><button type="button" class="ghost build-text-video">Build / refresh Text-to-Video prompt</button><label>Text-to-Video prompt<textarea class="text-video-prompt" rows="10"></textarea></label><button type="button" class="ghost copy-text-video">Copy Text-to-Video prompt</button></div>';
+var box=document.createElement('div');box.className='video-mode-controls';box.innerHTML='<p class="video-mode-status"></p><button type="button" class="ghost copy-active-video">Copy FULL Video Prompt</button><div class="text-video-fields"><label>Panel scene description<textarea class="video-scene" rows="4"></textarea></label><button type="button" class="ghost build-text-video">Build / refresh Text-to-Video prompt</button><label>Text-to-Video prompt<textarea class="text-video-prompt" rows="10"></textarea></label><button type="button" class="ghost copy-text-video">Copy FULL Text-to-Video Prompt</button></div>';
 card.querySelector('.flow-wrap').before(box);
 var scene=box.querySelector('.video-scene');scene.value=sceneFrom(card);var text=box.querySelector('.text-video-prompt');text.value=state(card).text;
 
 scene.oninput=function(){card.dataset.videoScene=scene.value;card.querySelector('.done-toggle').checked=false;update(card);saveCurrent();};
 text.oninput=function(){card.dataset.textVideoPrompt=text.value;card.querySelector('.done-toggle').checked=false;saveCurrent();};
-box.querySelector('.build-text-video').onclick=function(){generate(card);};box.querySelector('.copy-text-video').onclick=function(){try{if(!valid(card))throw Error('Build / refresh this prompt first.');copyText(state(card).text);}catch(e){showToast(e.message);}};update(card);}
+box.querySelector('.build-text-video').onclick=function(){generate(card);};
+box.querySelector('.copy-text-video').onclick=function(){try{copyText(prompt(card));}catch(e){showToast(e.message);}};
+box.querySelector('.copy-active-video').onclick=function(){try{copyText(prompt(card));}catch(e){showToast(e.message);}};
+update(card);}
 function panelCards(){return Array.from(document.querySelectorAll('.stage-card')).filter(supports);}
 function selectedMode(){var cards=panelCards();if(!cards.length)return '';var mode=state(cards[0]).mode;return cards.every(function(c){return state(c).mode===mode;})?mode:'mixed';}
 function syncGlobalControl(){var root=document.getElementById('productionVideoMethod');if(!root)return;var cards=panelCards(),mode=selectedMode();root.querySelectorAll('[data-method]').forEach(function(button){button.disabled=!cards.length;button.setAttribute('aria-pressed',String(button.dataset.method===mode));});var pending=cards.filter(function(c){return state(c).mode==='text'&&!valid(c);}).length;
