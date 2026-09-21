@@ -1,4 +1,4 @@
-# YouTube Sync — v3.21.0
+# YouTube Sync — v3.21.1
 
 Open `youtube-analytics.html` from the main LD AUTO page. This is an on-demand, browser-only integration using Google Identity Services. A Google OAuth Web client must be configured by the channel owner before real sync can work. No client secret, API key or backend is needed for the token flow used here.
 
@@ -9,7 +9,7 @@ Open `youtube-analytics.html` from the main LD AUTO page. This is an on-demand, 
 3. Configure Google Auth Platform branding and external testing audience. Add the owner account to test users.
 4. Configure `youtube.readonly` and `yt-analytics.readonly` scopes. Wider distribution may require Google's verification.
 5. Create a Web application OAuth client. Authorized JavaScript origin: `https://renyboydeleon27-cloud.github.io` (no repository path). No redirect URI for this popup token flow.
-6. Paste the public Client ID into the page, save, Connect YouTube, choose the correct account/channel, then Sync Now.
+6. The public Web OAuth Client ID is preconfigured in LD AUTO. Open YouTube Analytics, press Connect YouTube, choose the correct account/channel, then Sync Now. The Client ID field remains available for troubleshooting or replacement.
 
 ## Behavior and limits
 
