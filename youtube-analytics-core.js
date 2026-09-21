@@ -48,6 +48,23 @@ function titlePatterns(videos,reports){
  const groups=[{name:'Question titles',test:t=>t.includes('?')},{name:'Ellipsis / suspense titles',test:t=>/…|\.{3}/.test(t)},{name:'Year in title',test:t=>/\b(?:18|19|20)\d{2}\b/.test(t)}];
  return groups.map(g=>{const matches=reports.filter(r=>lookup.has(r.video)&&g.test(lookup.get(r.video).title));return {name:g.name,count:matches.length,views:sum(matches,'views'),average:matches.length?sum(matches,'views')/matches.length:null};});
 }
-const api={scopes,number,sum,rows,period,uploads,videoReport,weekdays,titlePatterns};
+function uploadWeekdays(videos,reports,timeZone){
+ const names=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+ const byVideo=new Map((reports||[]).map(r=>[r.video,r]));
+ const groups=names.map((name,day)=>({name,day,count:0,lifetimeViews:0,periodViews:0,periodVideos:0}));
+ const weekdayIndex=iso=>{
+  const d=new Date(iso);if(Number.isNaN(d.getTime()))return null;
+  if(!timeZone)return d.getUTCDay();
+  const label=new Intl.DateTimeFormat('en-US',{timeZone,weekday:'long'}).format(d);
+  const i=names.indexOf(label);return i<0?null:i;
+ };
+ for(const v of videos||[]){
+  const day=weekdayIndex(v.publishedAt);if(day===null)continue;
+  const g=groups[day];g.count++;g.lifetimeViews+=number(v.views)||0;
+  const r=byVideo.get(v.id);if(r){g.periodVideos++;g.periodViews+=number(r.views)||0;}
+ }
+ return groups.filter(g=>g.count).map(g=>({...g,lifetimeAverage:g.count?g.lifetimeViews/g.count:null,periodAverage:g.periodVideos?g.periodViews/g.periodVideos:null}));
+}
+const api={scopes,number,sum,rows,period,uploads,videoReport,weekdays,titlePatterns,uploadWeekdays};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LDYouTubeCore=api;
 })(typeof window!=='undefined'?window:this);
