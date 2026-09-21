@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const C=window.LDYouTubeCore,$=id=>document.getElementById(id),KEY='ld-youtube-client-id-v1';
+const C=window.LDYouTubeCore,$=id=>document.getElementById(id),KEY='ld-youtube-client-id-v1',DEFAULT_CLIENT_ID='620109796783-83bhta7t76ls1eepm55enrt99vjhild0.apps.googleusercontent.com';
 let token='',expires=0,client=null,channels=[],data=null,busy=false,generation=0,controller=null,libraryPromise=null;
 const fmt=n=>n===null||n===undefined?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:1});
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -116,8 +116,9 @@ $('ytChannel').addEventListener('change',()=>{clearResults();status('Channel cha
 $('ytRange').addEventListener('change',()=>{clearResults();status('Period changed. Press Sync Now to load this period.');});
 $('ytSort').addEventListener('change',renderTotals);
 $('ytOrigin').textContent=location.origin;
-try{$('ytClientId').value=localStorage.getItem(KEY)||'';}catch{}
-$('ytSetup').open=!$('ytClientId').value;
-if(validId($('ytClientId').value))prepare().then(()=>status('Setup loaded. Connect YouTube to continue.')).catch(e=>status(e.message,true));
+let savedClientId='';try{savedClientId=localStorage.getItem(KEY)||'';}catch{}
+$('ytClientId').value=savedClientId||DEFAULT_CLIENT_ID;
+$('ytSetup').open=!validId($('ytClientId').value);
+if(validId($('ytClientId').value))prepare().then(()=>status(savedClientId?'Setup loaded. Connect YouTube to continue.':'LD AUTO OAuth client ready. Press Connect YouTube to choose your channel.')).catch(e=>status(e.message,true));
 controls();
 })();
