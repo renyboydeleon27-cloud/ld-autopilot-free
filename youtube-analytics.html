@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><title>YouTube Analytics — LD AUTO</title><link rel="stylesheet" href="styles.css?v=3.8.1"><link rel="stylesheet" href="youtube-analytics.css?v=3.21.0"></head>
 <body><main class="shell analytics-shell">
-<header><a href="./index.html">← Back to production</a><p class="eyebrow">LIVING DISASTER BOOK · v3.21.0</p><h1>YouTube Analytics</h1><p class="sub">See which videos get views, which days attract viewers, and how your titles perform.</p></header>
+<header><a href="./index.html">← Back to production</a><p class="eyebrow">LIVING DISASTER BOOK · v3.21.1</p><h1>YouTube Analytics</h1><p class="sub">See which videos get views, which days attract viewers, and how your titles perform.</p></header>
 <section class="card"><h2>Connect your channel</h2><p>Read-only access to your videos and analytics. LD AUTO cannot upload, edit, or delete videos through this connection.</p>
 <details id="ytSetup"><summary>One-time Google setup</summary><ol>
 <li>Open <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">Google Cloud Console</a> and create or choose a project.</li>
 <li>Enable <strong>YouTube Data API v3</strong> and <strong>YouTube Analytics API</strong>.</li>
 <li>In <strong>Google Auth Platform</strong>, configure Branding, Audience and Data Access. For personal testing, add the Google account that owns your channel as a test user. Add the <code>youtube.readonly</code> and <code>yt-analytics.readonly</code> scopes. Broader use may require Google verification.</li>
 <li>Create a <strong>Web application OAuth client</strong>. Add this exact Authorized JavaScript origin: <code id="ytOrigin"></code>. Use only the origin, without the page path. This popup connection needs no redirect URI.</li>
-<li>Paste the <strong>Client ID</strong> below. Do not paste a client secret or API key.</li></ol>
-<label for="ytClientId">Google OAuth Client ID</label><input id="ytClientId" placeholder="123456-example.apps.googleusercontent.com" autocomplete="off" spellcheck="false"><button id="ytSave" type="button">Save setup</button><p id="ytSetupStatus" role="status"></p></details>
+<li>The LD AUTO Web OAuth Client ID is already configured. The field below is kept only for troubleshooting or replacing the client later. Never enter a client secret or API key.</li></ol>
+<label for="ytClientId">Google OAuth Client ID · configured</label><input id="ytClientId" placeholder="123456-example.apps.googleusercontent.com" autocomplete="off" spellcheck="false"><button id="ytSave" type="button">Save setup</button><p id="ytSetupStatus" role="status"></p></details>
 <div class="yt-controls"><button id="ytConnect" type="button">Connect YouTube</button><button id="ytSync" type="button" disabled>Sync Now</button><button id="ytDisconnect" type="button" disabled>Disconnect & clear data</button></div>
 <label for="ytChannel">Channel</label><select id="ytChannel" disabled><option value="">Connect to choose your channel</option></select>
 <label for="ytRange">Analytics period</label><select id="ytRange"><option value="28">Last 28 days</option><option value="7">Last 7 days</option><option value="90">Last 90 days</option></select>
