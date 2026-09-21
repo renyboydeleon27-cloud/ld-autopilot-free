@@ -1,6 +1,6 @@
-/* LD AUTO v3.22.8 — universal B&W HOOK DNA + Lituya 1958 cause-chain lock. */
+/* LD AUTO v3.22.9 — universal B&W + Lituya cause chain + reliable Done completion. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.22.8-lituya-cause-chain-v1';
+const T2V_POLICY_VERSION='3.22.9-done-fix-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -162,6 +162,20 @@ function rebuildTextPrompt(card){
  return text;
 }
 function valid(card){return completeTextPrompt(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function completionReady(card){
+ if(!supports(card))return false;
+ if(state(card).mode!=='text')return true;
+ if(!ready())return false;
+ if(!card.querySelector('.narration')?.value.trim())return false;
+ if(valid(card))return true;
+ try{return completeTextPrompt(rebuildTextPrompt(card));}catch(e){return false;}
+}
+function completionIssue(card){
+ if(!ready())return 'Set the shared event year and main location first.';
+ if(!card.querySelector('.narration')?.value.trim())return 'Add the panel narration first.';
+ if(!completeTextPrompt(state(card).text))return 'Build the FULL Text-to-Video prompt first.';
+ return 'Refresh the Text-to-Video prompt, then mark Done.';
+}
 function prompt(card){
  if(supports(card)&&state(card).mode==='text'){
    if(!valid(card))return rebuildTextPrompt(card);
@@ -211,7 +225,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,withLock:withLock,build:build,signature:signature,valid:valid,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,lituyaCause:lituyaCause};
+window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,lituyaCause:lituyaCause};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){all();saveCurrent();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
