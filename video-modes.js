@@ -1,6 +1,6 @@
-/* LD AUTO v3.22.6 — universal B&W HOOK DNA + self-healing full prompt copy. */
+/* LD AUTO v3.22.7 — universal B&W HOOK DNA + clean adaptive full prompts. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.22.6-universal-bw-full-copy-v1';
+const T2V_POLICY_VERSION='3.22.7-clean-adaptive-prompt-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -10,20 +10,19 @@ function defaults(topic){var year=(topic.match(/\b(?:1\d{3}|20\d{2}|2100)\b/)||[
 function continuity(){return Object.assign(defaults(current()),window.ldVideoContinuity||{});}
 function ready(){var c=continuity();return /^\d{4}$/.test(c.year)&&!!c.location.trim();}
 function monochromeRequired(){return style()==='real';}
-function universalHookDnaLook(){
+function universalHookDna(){
  if(style()!=='real')return '';
- return 'UNIVERSAL APPROVED HOOK DNA: STRICT true black-and-white grayscale. No color. No sepia. No tint. No selective color. Photorealistic historical live-action. Archival documentary / newsreel capture. Soft optical detail. Organic film grain. Slight gate weave. Restrained exposure flicker. Preserve the same visual world as the approved HOOK for the current episode. This visual DNA is universal; event year, location, clothing, architecture, terrain, technology and disaster behavior remain specific to the current episode.';
+ return 'UNIVERSAL APPROVED HOOK DNA:\nSTRICT true black-and-white grayscale.\nNo color.\nNo sepia.\nNo tint.\nNo selective color.\nPhotorealistic historical live-action.\nArchival documentary / newsreel capture.\nSoft optical detail.\nOrganic film grain.\nSlight gate weave.\nRestrained exposure flicker.\nSame visual world as the approved HOOK for the current episode.\nBLACK-AND-WHITE PRIORITY: The entire 10-second shot must remain true grayscale from start to finish. No colorization or color returning in skin, clothing, sky, water, vegetation, fire, lightning, debris or any other visible element. If any inherited instruction conflicts with this monochrome rule, ignore that conflicting color instruction.';
 }
-function monochromeDirective(){
- if(!monochromeRequired())return '';
- return 'UNIVERSAL HIGH-PRIORITY BLACK-AND-WHITE HOOK DNA LOCK: THIS ENTIRE 10-SECOND VIDEO MUST REMAIN STRICT TRUE BLACK-AND-WHITE GRAYSCALE FROM START TO FINISH. NO COLOR. NO SEPIA. NO TINT. NO SELECTIVE COLOR. NO COLORIZATION. Skin, clothing, wood, sky, water, vegetation, fire, lightning, mountains, boats, shoreline, spray, debris and every other visible element must remain grayscale. If any inherited or default instruction implies natural color, full color, colored lighting, warm/cool color, selective color, sepia or tint, IGNORE THAT CONFLICTING COLOR INSTRUCTION and keep the whole shot strict black-and-white grayscale.';
+function cleanLocation(value){
+ var s=String(value||'').trim();
+ s=s.replace(/\bYEAR\s*:\s*\d{4}\b/gi,'').replace(/\bLOCATION\s*:\s*/gi,'').replace(/^[\s,;:\-]+|[\s,;:\-]+$/g,'').replace(/\s{2,}/g,' ');
+ return s;
 }
 function lock(){
  var c=continuity();
- var look=style()==='real'
-   ? universalHookDnaLook()
-   : 'Serious colored historical 2D graphic-novel/anime; hand-inked outlines and cel-painted textures. No photorealism or live action.';
- return 'CHAPTER CONTINUITY LOCK:\nEvent: '+current()+'. Event year: '+(c.year||'UNCONFIRMED')+'. Main location: '+(c.location||'UNCONFIRMED — specify the chapter location')+'.\n'+(monochromeDirective()?monochromeDirective()+'\n':'')+look+'\nThe recording appearance affects only the capture treatment. Clothing, architecture, crops, terrain, transport, utilities, tools and technology must match this event and location. '+(c.details?'Shared visual details: '+c.details+'\n':'')+'Use the same chapter visual world from HOOK through P14, with distinct sublocations and camera views. P1 returns to normal life before the event; later panels follow their own historical time and narrative beat. Recovery or wider-impact panels may change date or location only when explicitly established by that panel. Never carry peak destruction into a pre-disaster scene. Keep recurring adult appearance and wardrobe consistent with the shared visual details. No invented historical facts.\nEND CHAPTER CONTINUITY LOCK.';
+ var location=cleanLocation(c.location)||'UNCONFIRMED — specify the chapter location';
+ return 'CHAPTER CONTINUITY LOCK:\nEvent: '+current()+'.\nEvent year: '+(c.year||'UNCONFIRMED')+'.\nMain location: '+location+'.\nThe universal visual DNA above controls capture style only. Clothing, architecture, crops, terrain, transport, utilities, tools and technology must match this event and location. '+(c.details?'Shared visual details: '+c.details+'\n':'')+'Use the same chapter visual world from HOOK through P14, with distinct sublocations and camera views. P1 returns to normal life before the event; later panels follow their own historical time and narrative beat. Recovery or wider-impact panels may change date or location only when explicitly established by that panel. Never carry peak destruction into a pre-disaster scene. Keep recurring adult appearance and wardrobe consistent when adults are present. No invented historical facts.\nEND CHAPTER CONTINUITY LOCK.';
 }
 function stripLock(s){return String(s||'').replace(/\s*CHAPTER CONTINUITY LOCK:[\s\S]*?END CHAPTER CONTINUITY LOCK\./g,'').trim();}
 function stripColorConflicts(prompt){
@@ -40,21 +39,68 @@ function stripColorConflicts(prompt){
  }
  return s;
 }
-function withLock(prompt){return ready()?stripColorConflicts(stripLock(prompt))+'\n\n'+lock():stripColorConflicts(String(prompt||''));}
+function withLock(prompt){
+ var base=stripColorConflicts(stripLock(prompt));
+ if(!ready())return base;
+ return base+'\n\n'+(universalHookDna()?universalHookDna()+'\n\n':'')+lock();
+}
 function sceneFrom(card){var existing=state(card).scene;if(existing)return existing;
 var image=card.querySelector('.image-prompt').value||'';
 image=image.replace(/ERA-AWARE CAPTURE LOCK:[\s\S]*?END ERA LOCK\.?/gi,'');
 // The opening scene description precedes the renderer/style locks in existing packs.
 image=image.split(/Serious colored|Cinematic historical live-action realism|COMPOSITION LOCK:|SCENE VARIETY LOCK:/i)[0];
 image=image.replace(/^Create\s+(?:the Living Disaster Book\s+)?(?:P\d+)\s+(?:illustration|live-action historical frame)\s+for\s+[^.]*\./i,'').replace(/\b(?:portrait 9:16|landscape 16:9)\.?/gi,'').trim();
-return image||card.querySelector('.narration').value.trim();}
+return cleanSceneText(image||card.querySelector('.narration').value.trim());}
+function cleanSceneText(value){
+ var s=String(value||'').trim();
+ s=s.replace(/\.\s*\.+/g,'.').replace(/\s{2,}/g,' ');
+ var m=s.match(/^Scene role:\s*[^.]+\.\s*Visual beat:\s*([\s\S]+)$/i);
+ if(m)s=m[1].trim();
+ return s.replace(/\.\s*\.$/,'.').trim();
+}
+function scientificScene(card,scene){
+ var source=(String(scene||'')+' '+String(card.querySelector('.narration')?.value||'')).toLowerCase();
+ return /scientific cutaway|documentary cutaway|geological|tectonic stress|beneath the seafloor|below the seafloor|deep beneath|plate boundary|fault beneath|underground cross-section|magma chamber|subsurface/.test(source);
+}
 function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanNarrationInstructions(value):String(value||'').trim();}
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[5]=clean(parts[5]);parts[6]=clean(parts[6]);return JSON.stringify(parts);}catch(e){return '';}}
 function pinScene(card){if(!state(card).scene)card.dataset.videoScene=clean(sceneFrom(card));}
 function signature(card){return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value)]);}
-function build(card){var scene=sceneFrom(card);if(!scene)throw Error('Add the panel scene description first.');if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
-var stage=card.dataset.stage;var camera=Number(stage.slice(1))%3===1?'A restrained forward tracking move with clear parallax':Number(stage.slice(1))%3===2?'A slow lateral track revealing the scene depth':'A restrained push-in toward the principal action';
-return 'VIDEO PROMPT — EXACTLY 10 SECONDS\n'+current()+' · '+stage+'\n\n'+(monochromeDirective()?monochromeDirective()+'\n\n':'')+'TEXT-TO-VIDEO. Create the entire scene from this description. No reference image is required. '+(format()==='shorts'?'Portrait 9:16.':'Landscape 16:9.')+' One continuous shot. '+(style()==='real'?'Photorealistic REAL HUMAN historical documentary recreation. No anime or illustration.':'Serious 2D historical graphic-novel/anime animation. No live action.')+'\n\n'+lock()+'\n\nPANEL SCENE:\n'+scene+'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.')+'\n\nTIMING:\n0.0–2.0s: Establish the described setting, adult positions and one clear focal action; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue that same action with coherent cause and effect, natural momentum and local environmental response.\n7.0–10.0s: Sustain the panel’s intended beat and finish on a readable composition; do not jump to the next story stage.\n\nCAMERA:\n'+camera+'. Fixed focal length, natural depth and occlusion. Never pass through solid objects. No cuts, transitions, orbit or time-lapse. This panel uses its own camera behavior; the HOOK’s six-second forward-charge rule does not automatically apply here.\n\nPHYSICS AND TIME:\nOnly the selected disaster mechanism belongs here. Calm scenes stay calm; cause/explanation scenes must not depict invisible processes as ordinary camera footage. For a scientific cutaway, make it an explicitly separate explanatory visualization consistent with the chapter palette, with no fabricated eyewitness viewpoint. Slow-onset effects are already present; no instant infection, starvation, crop death or insect reproduction. Preserve object count, human identity and plausible scale throughout the clip.\n\nAUDIO:\nNatural scene-specific ambience and SFX only. No voiceover or music.\n\nNEGATIVE:\nNo children, gore, duplicated people, distorted anatomy, morphing, giant insects, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.\n\nSTATUS: FOR TESTING — review historical details and rendered continuity before approval.';}
+function build(card){
+ var scene=cleanSceneText(sceneFrom(card));
+ if(!scene)throw Error('Add the panel scene description first.');
+ if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
+ var stage=card.dataset.stage;
+ var scientific=scientificScene(card,scene);
+ var camera=Number(stage.slice(1))%3===1?'A restrained forward tracking move with clear parallax':Number(stage.slice(1))%3===2?'A slow lateral track revealing the scene depth':'A restrained push-in toward the principal action';
+ var modeLine=style()==='real'
+   ? (scientific?'Photorealistic historical documentary explanatory visualization. This is a scientific cutaway, not an eyewitness human-camera scene. No anime or illustration.':'Photorealistic REAL HUMAN historical documentary recreation. No anime or illustration.')
+   : 'Serious 2D historical graphic-novel/anime animation. No live action.';
+ var timing=scientific
+   ? '0.0–2.0s: Establish the geological or scientific setting and the focal mechanism clearly; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue the same mechanism with restrained, coherent cause-and-effect motion at plausible scale.\n7.0–10.0s: Sustain the buildup or explanatory beat and end on a clear readable composition without jumping to the next story stage.'
+   : '0.0–2.0s: Establish the described setting, visible adult positions when adults are present, and one clear focal action; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue that same action with coherent cause and effect, natural momentum and local environmental response.\n7.0–10.0s: Sustain the panel’s intended beat and finish on a readable composition; do not jump to the next story stage.';
+ var physics=scientific
+   ? 'This panel is an explanatory scientific visualization. Do not depict invisible subsurface processes as ordinary eyewitness footage. Keep the mechanism grounded, restrained and physically plausible. No fantasy energy, glowing magic cracks or exaggerated sci-fi effects. Preserve plausible geological scale and cause-and-effect.'
+   : 'Only the selected disaster mechanism belongs here. Calm scenes stay calm. Slow-onset effects are already present; no instant infection, starvation, crop death or insect reproduction. Preserve object count, human identity when people are present, and plausible scale throughout the clip.';
+ var audio=scientific
+   ? 'Restrained natural documentary ambience appropriate to the mechanism, such as low underwater rumble, rock strain or deep-earth vibration when supported by the scene. No voiceover or music.'
+   : 'Natural scene-specific ambience and SFX only. No voiceover or music.';
+ var negative=scientific
+   ? 'No children, gore, human figures unless the panel specifically requires them, fantasy energy, glowing sci-fi fault lines, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.'
+   : 'No children, gore, duplicated people, distorted anatomy, morphing, giant insects, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.';
+ return 'VIDEO PROMPT — EXACTLY 10 SECONDS\n'+current()+' · '+stage+'\n\n'
+   +(universalHookDna()?universalHookDna()+'\n\n':'')
+   +'TEXT-TO-VIDEO. Create the entire scene from this description. No reference image is required. '+(format()==='shorts'?'Portrait 9:16.':'Landscape 16:9.')+' One continuous shot. '+modeLine
+   +'\n\n'+lock()
+   +'\n\nPANEL SCENE:\n'+scene
+   +'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.')
+   +'\n\nTIMING:\n'+timing
+   +'\n\nCAMERA:\n'+camera+'. Fixed focal length, natural depth and occlusion. Never pass through solid objects unnaturally. No cuts, transitions, orbit or time-lapse. This panel uses its own camera behavior; the HOOK’s forward-charge behavior does not automatically apply here.'
+   +'\n\nPHYSICS AND TIME:\n'+physics
+   +'\n\nAUDIO:\n'+audio
+   +'\n\nNEGATIVE:\n'+negative
+   +'\n\nSTATUS: FOR TESTING — review historical details and rendered continuity before approval.';
+}
 function generate(card){try{rebuildTextPrompt(card);}catch(e){showToast(e.message);}}
 function completeTextPrompt(text){
  var s=String(text||'');
