@@ -23,6 +23,7 @@
   const REAL_NEG='No anime, no illustration, no cel shading, no 3D CGI, no glossy artificial render, no beauty-filter skin, no duplicated people, no distorted anatomy, no extra fingers, no gore.';
   const ANIME_STYLE='Serious colored historical graphic-novel/anime style, detailed 2D anime linework, hand-inked outlines, cel-painted textures and shadows, grounded adult proportions';
   const ANIME_NEG='No embedded text. No photorealism, no live action, no 3D CGI, no glossy render, no chibi, no gore.';
+  const UNIVERSAL_REAL_BW_DNA='STRICT MONOCHROME LOCK: render the ENTIRE shot in true black-and-white grayscale from the first frame through the final frame. ZERO color, ZERO selective color, ZERO sepia, ZERO tinting, ZERO colorization. Photorealistic historical live-action. Archival documentary / newsreel capture. Soft optical detail. Organic film grain. Slight gate weave. Restrained exposure flicker. Preserve the same visual world as the approved HOOK for the current episode. Skin, clothing, sky, water, vegetation, fire, lightning, debris and every visible element must remain grayscale. BLACK-AND-WHITE continuity has higher priority than any generic natural-color instruction.';
 
   function currentTopic(){return (topicEl?.value||projectTitle?.textContent||'').trim();}
   function detectYear(text){
@@ -43,7 +44,7 @@
     const year=detectYear(currentTopic());
     const era=eraForYear(year);
     const yearText=year?`The historical setting remains exactly ${year}. `:'';
-    return {year,era,text:`ERA-AWARE CAPTURE LOCK: ${yearText}${era.look} The capture treatment affects only the camera/recording appearance; clothing, architecture, streets, vehicles, utilities, tools, signs, technology and infrastructure must remain accurate to the event year and location. END ERA LOCK.`};
+    return {year,era,text:`ERA-AWARE CAPTURE LOCK: ${yearText}${UNIVERSAL_REAL_BW_DNA} The capture treatment affects only the camera/recording appearance; clothing, architecture, streets, vehicles, utilities, tools, signs, technology and infrastructure must remain accurate to the event year and location. END ERA LOCK.`};
   }
   window.LDEraCapture={detectYear:detectYear,eraForYear:eraForYear};
   function stripEra(text){return String(text||'').replace(/\s*ERA-AWARE CAPTURE LOCK:[\s\S]*?END ERA LOCK\.?/gi,'').replace(/\s{2,}/g,' ').trim();}
