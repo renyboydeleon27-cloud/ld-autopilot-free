@@ -45,7 +45,13 @@ async function request(url,params){
 }
 const yt=(endpoint,params)=>request(`https://www.googleapis.com/youtube/v3/${endpoint}`,params);
 const report=params=>request('https://youtubeanalytics.googleapis.com/v2/reports',params);
-function clearResults(){data=null;$('ytResults').hidden=true;for(const id of ['ytTotals','ytVideos','ytPeriodVideos','ytDaily','ytWeekdays','ytPatterns'])$(id).replaceChildren();}
+function clearResults(){
+ data=null;$('ytResults').hidden=true;
+ for(const id of ['ytTotals','ytVideos','ytPeriodVideos','ytDaily','ytWeekdays','ytPatterns'])$(id).replaceChildren();
+ if($('ytEvidence'))$('ytEvidence').value='';
+ if($('ytCopyEvidence'))$('ytCopyEvidence').disabled=true;
+ if($('ytEvidenceStatus'))$('ytEvidenceStatus').textContent='Sync your channel to build evidence.';
+}
 async function discoverChannels(){
  const job=++generation;controller?.abort();controller=new AbortController();busy=true;clearResults();channels=[];controls();status('Reading your YouTube channels…');
  try{
@@ -64,6 +70,108 @@ function renderTotals(){
  if(!data)return;const key=$('ytSort').value;
  table('ytVideos',['Video / current title','Published','Visibility','Views','Likes','Comments','Likes / 100 views'],[...data.videos].sort((a,b)=>(b[key]??-1)-(a[key]??-1)).map(v=>[videoLink(v),escape(v.publishedAt.slice(0,10)),escape(v.visibility),fmt(v.views),fmt(v.likes),fmt(v.comments),v.views>0&&v.likes!==null?fmt(v.likes/v.views*100):'—']));
 }
+function plain(n,digits=1){
+ if(n===null||n===undefined||Number.isNaN(Number(n)))return 'N/A';
+ return Number(n).toLocaleString('en-US',{maximumFractionDigits:digits});
+}
+function evidenceSummary(){
+ if(!data)return '';
+ const names=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+ const stats=data.channel.statistics||{};
+ const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'device-local';
+ const weekday=C.weekdays(data.daily);
+ const uploads=C.uploadWeekdays(data.videos,data.periodVideos,timezone);
+ const title=C.titlePatterns(data.videos,data.periodVideos);
+ const topDates=[...data.daily].sort((a,b)=>(C.number(b.views)||0)-(C.number(a.views)||0)).slice(0,10);
+ const lifetime=[...data.videos].sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,20);
+ const lookup=new Map(data.videos.map(v=>[v.id,v]));
+ const periodTop=[...data.periodVideos].sort((a,b)=>(C.number(b.views)||0)-(C.number(a.views)||0)).slice(0,20);
+ const totalPeriodViews=C.sum(data.daily,'views');
+ const totalPeriodLikes=C.sum(data.daily,'likes');
+ const totalPeriodComments=C.sum(data.daily,'comments');
+ const gained=C.sum(data.daily,'subscribersGained'),lost=C.sum(data.daily,'subscribersLost');
+ const lines=[
+  'LD AUTO — YOUTUBE ANALYTICS EVIDENCE SUMMARY',
+  'Generated: '+new Date(data.syncedAt).toISOString(),
+  'Channel: '+(data.channel.snippet?.title||'Unknown'),
+  'Channel ID: '+(data.channel.id||'Unknown'),
+  'Selected analytics window: '+data.startDate+' to '+data.endDate+' (YouTube reporting dates use Pacific Time)',
+  'Device timezone used for upload-weekday grouping: '+timezone,
+  '',
+  'CHANNEL SNAPSHOT',
+  'Subscribers: '+(stats.hiddenSubscriberCount?'Hidden':plain(C.number(stats.subscriberCount),0)),
+  'Lifetime channel views: '+plain(C.number(stats.viewCount),0),
+  'Uploads loaded: '+plain(data.videos.length,0),
+  '',
+  'SELECTED-PERIOD TOTALS FROM DAILY REPORT',
+  'Views: '+plain(totalPeriodViews,0),
+  'Likes: '+plain(totalPeriodLikes,0),
+  'Comments: '+plain(totalPeriodComments,0),
+  'Subscribers gained: '+plain(gained,0),
+  'Subscribers lost: '+plain(lost,0),
+  'Net subscribers: '+plain(gained-lost,0),
+  '',
+  'AUDIENCE ACTIVE TIME',
+  'Exact hour-of-day / "When your viewers are on YouTube" heatmap: NOT AVAILABLE through the YouTube Analytics API used by LD AUTO.',
+  'Evidence available here is day/date activity only; do not infer exact audience-active hours from daily totals.',
+  '',
+  'VIEWER ACTIVITY BY WEEKDAY (activity date, not upload day)'
+ ];
+ if(data.dailyError)lines.push('Daily report error: '+data.dailyError);
+ else if(!weekday.length)lines.push('No daily rows returned.');
+ else weekday.forEach(w=>lines.push(names[w.day]+': avg '+plain(w.average,1)+' views per returned day; total '+plain(w.total,0)+' across '+w.count+' returned '+(w.count===1?'day':'days')));
+ lines.push('','STRONGEST ACTIVITY DATES');
+ if(!topDates.length)lines.push('No daily rows returned.');
+ else topDates.forEach((r,i)=>lines.push((i+1)+'. '+r.day+' — views '+plain(r.views,0)+', likes '+plain(r.likes,0)+', comments '+plain(r.comments,0)+', subs +'+plain(r.subscribersGained,0)+' / -'+plain(r.subscribersLost,0)));
+ lines.push('','UPLOAD-DAY PATTERN (publication weekday)');
+ if(!uploads.length)lines.push('No upload timestamps available.');
+ else [...uploads].sort((a,b)=>(b.periodAverage??-1)-(a.periodAverage??-1)).forEach(g=>lines.push(
+  g.name+': '+g.count+' uploads; lifetime views '+plain(g.lifetimeViews,0)+' total / '+plain(g.lifetimeAverage,1)+' avg per upload; selected-period views '+plain(g.periodViews,0)+' across '+g.periodVideos+' videos with returned period data / '+plain(g.periodAverage,1)+' avg'
+ ));
+ lines.push(
+  'Note: upload-day patterns are descriptive only. Topic, title, video age, release time and distribution can change the result.',
+  '',
+  'TOP VIDEOS — CURRENT LIFETIME TOTALS'
+ );
+ lifetime.forEach((v,i)=>lines.push((i+1)+'. '+v.title+' | published '+(v.publishedAt||'').slice(0,10)+' | views '+plain(v.views,0)+' | likes '+plain(v.likes,0)+' | comments '+plain(v.comments,0)+(v.views>0&&v.likes!==null?' | likes/100 views '+plain(v.likes/v.views*100,2):'')));
+ lines.push('','TOP VIDEOS — SELECTED PERIOD');
+ if(data.periodError)lines.push('Period report error: '+data.periodError);
+ else if(!periodTop.length)lines.push('No per-video period rows returned.');
+ else periodTop.forEach((r,i)=>{
+  const v=lookup.get(r.video);
+  lines.push((i+1)+'. '+(v?.title||r.video)+' | period views '+plain(r.views,0)+' | engaged views '+plain(r.engagedViews,0)+' | likes '+plain(r.likes,0)+' | comments '+plain(r.comments,0)+' | avg viewed '+plain(r.averageViewPercentage,1)+'% | avg duration '+plain(r.averageViewDuration,1)+'s');
+ });
+ lines.push('','TITLE PATTERNS');
+ title.forEach(r=>lines.push(r.name+': '+r.count+' videos with returned period data; '+plain(r.views,0)+' period views; '+plain(r.average,1)+' avg views/video'));
+ lines.push('','DAILY EVIDENCE ROWS (Pacific Time)');
+ if(data.dailyError)lines.push('Unavailable: '+data.dailyError);
+ else [...data.daily].sort((a,b)=>String(a.day).localeCompare(String(b.day))).forEach(r=>lines.push(r.day+' | views '+plain(r.views,0)+' | likes '+plain(r.likes,0)+' | comments '+plain(r.comments,0)+' | subs +'+plain(r.subscribersGained,0)+' / -'+plain(r.subscribersLost,0)));
+ lines.push(
+  '',
+  'EVIDENCE NOTES',
+  '- Daily dates are viewer activity dates, not upload dates.',
+  '- Upload weekday is calculated from each video publication timestamp in the device timezone shown above.',
+  '- Missing API rows are not assumed to be zero.',
+  '- Recent uploads have less time to accumulate views than older uploads.',
+  '- Patterns are descriptive evidence, not proof that a day, title style or topic caused performance.'
+ );
+ return lines.join('\n');
+}
+function renderEvidence(){
+ if(!$('ytEvidence'))return;
+ $('ytEvidence').value=evidenceSummary();
+ $('ytCopyEvidence').disabled=!$('ytEvidence').value;
+ $('ytEvidenceStatus').textContent='Ready to copy. Paste this summary into ChatGPT when you want an evidence-based YTS analysis.';
+}
+async function copyEvidence(){
+ const text=$('ytEvidence')?.value||'';if(!text)return;
+ try{await navigator.clipboard.writeText(text);$('ytEvidenceStatus').textContent='Copied. Paste it into ChatGPT for analysis.';}
+ catch{
+  $('ytEvidence').focus();$('ytEvidence').select();
+  const ok=document.execCommand&&document.execCommand('copy');
+  $('ytEvidenceStatus').textContent=ok?'Copied. Paste it into ChatGPT for analysis.':'Copy failed. Long-press the box and copy the text manually.';
+ }
+}
 function render(){
  $('ytResults').hidden=false;$('ytChannelTitle').textContent=data.channel.snippet.title;
  $('ytFreshness').textContent=`Last synced: ${new Date(data.syncedAt).toLocaleString()}. Requested analytics: ${data.startDate} to ${data.endDate} (Pacific Time).`;
@@ -79,6 +187,7 @@ function render(){
  for(const w of weekday){const p=document.createElement('p');p.textContent=`${names[w.day]}: ${fmt(w.average)} average views per returned day (${w.count} days).`;$('ytWeekdays').append(p);}
  table('ytDaily',['Date (Pacific)','Views','Likes','Comments','Subscribers gained','Subscribers lost'],[...data.daily].sort((a,b)=>Number(b.views)-Number(a.views)).map(r=>[escape(r.day),fmt(r.views),fmt(r.likes),fmt(r.comments),fmt(r.subscribersGained),fmt(r.subscribersLost)]));
  table('ytPatterns',['Pattern','Videos with period data','Period views','Average per video'],C.titlePatterns(data.videos,data.periodVideos).map(r=>[escape(r.name),fmt(r.count),fmt(r.views),fmt(r.average)]));
+ renderEvidence();
 }
 async function sync(){
  if(busy)return;const channel=channels.find(ch=>ch.id===$('ytChannel').value);if(!channel)return;
@@ -115,6 +224,7 @@ $('ytDisconnect').addEventListener('click',()=>{
 $('ytChannel').addEventListener('change',()=>{clearResults();status('Channel changed. Press Sync Now.');controls();});
 $('ytRange').addEventListener('change',()=>{clearResults();status('Period changed. Press Sync Now to load this period.');});
 $('ytSort').addEventListener('change',renderTotals);
+$('ytCopyEvidence')?.addEventListener('click',copyEvidence);
 $('ytOrigin').textContent=location.origin;
 let savedClientId='';try{savedClientId=localStorage.getItem(KEY)||'';}catch{}
 $('ytClientId').value=savedClientId||DEFAULT_CLIENT_ID;
