@@ -24,7 +24,28 @@
   function buildPrompt(topic,format){
     const ratio=format==='longform'?'landscape 16:9':'portrait 9:16';
     const theme=topicTheme(topic);
-    return `Create the Living Disaster Book ENDING illustration for ${topic}, ${ratio}. ${MARKER}: keep the same approved branded ending-poster composition for every episode while adapting all disaster imagery, objects, historical details and atmosphere to the CURRENT TOPIC only. This is a channel ending card and closing page, NOT a normal story panel and NOT a thumbnail. TOP: large readable “LIVING DISASTER BOOK” masthead with the subtitle “REAL EVENTS. LASTING LESSONS.” MAIN TITLE: prominently show the exact current topic “${topic}”; use only a year/date range that is already present in the topic and do not invent factual locations, casualty figures, dates or event names that were not supplied. THEME LINE: “${theme.line}”. CENTER: very large mobile-readable “THANK YOU FOR WATCHING”, followed by clear LIKE / SHARE / SUBSCRIBE call-to-action elements and the small line “MORE TRUE STORIES AWAIT”. LOWER HALF: build a dense, cinematic historical collage themed specifically to ${topic}, using ${theme.visuals}. Include layered foreground artifacts such as historically appropriate books, maps, handwritten notes, small sketch/photo-style inserts, tools, debris or personal objects where relevant; every object must belong to the current disaster and period. Add one short reflective legacy note on a notebook, paper or plaque, but keep it concise and event-appropriate. BACKGROUND: show the aftermath, recovery, memorial, rebuilding or lasting emotional impact of the current disaster with strong foreground-midground-background depth and historically believable architecture, clothing, transport, tools and terrain. STYLE: serious colored historical graphic-novel/anime illustration, detailed 2D hand-inked linework, cel-painted textures, cinematic dramatic lighting, rich poster-like finish, grounded adult proportions. Adult characters only. Keep all major text centered, highly legible and mobile-safe. STRICT NEGATIVE LOCK: no unrelated imagery from another disaster, no invented factual labels or places, no generic empty background, no plain minimalist end card, no photorealism, no live action, no 3D CGI, no glossy render, no chibi, no gore, no watermark. Illustration only; no animation prompt.`;
+    const cropRule=format==='longform'
+      ? 'LANDSCAPE SAFE LAYOUT: preserve generous top and side breathing room, keep the adult subject fully inside frame, and keep all essential text inside the central safe area so ordinary editor scaling does not crop the head or CTA.'
+      : 'APPROVED PORTRAIT ZOOM-SAFE LAYOUT: use the approved Living Disaster Book ending-card reference. Keep the top 20–22% as background/sky/scene breathing room only with NO essential text and NO head touching the upper edge. Place one adult survivor/witness/responder smaller and lower in the upper half, with the FULL HEAD around 27–32% from the top and the body comfortably inside frame. Design for Zoom/Fill use in mobile editors: the head, main CTA, topic title, location/year line and branding must remain visible under a moderate centered zoom.';
+
+    return `Create the Living Disaster Book ENDING card for ${topic}, ${ratio}. ${MARKER} — MASTER APPROVED REFERENCE: preserve the same approved ending-card composition and visual hierarchy for every episode, while rebuilding the disaster background, aftermath, environment, props, historical details and character styling for the CURRENT TOPIC only. This is a channel ending card / closing page, NOT a normal story panel and NOT a thumbnail.
+
+${cropRule}
+
+COMPOSITION LOCK: the disaster scene occupies the upper portion; one emotionally readable ADULT survivor, witness or responder appears in the upper half, looking toward or interacting naturally with the aftermath. Keep the subject smaller than a thumbnail hero so the full head remains safely inside the frame after Zoom/Fill. The CURRENT DISASTER background must be unmistakable and historically grounded: ${theme.visuals}. Use strong foreground-midground-background depth. Do not reuse unrelated scenery, props, boats, buildings, terrain or damage from another disaster.
+
+TEXT HIERARCHY — keep this order in the middle/lower safe area:
+1. very large mobile-readable “THANK YOU FOR WATCHING”
+2. clear LIKE • SHARE • SUBSCRIBE call-to-action row
+3. highlighted CURRENT TOPIC banner using the exact topic “${topic}”
+4. concise location/year line only when already present in the supplied topic; do not invent any date, place, casualty number or statistic
+5. small footer branding: “LIVING DISASTER BOOK” + “REAL EVENTS. LASTING LESSONS.” + “MORE TRUE STORIES AWAIT.”
+
+THEME LINE / LEGACY: use “${theme.line}” only when it fits cleanly without crowding. Optional foreground documentary artifacts may include historically appropriate maps, notes, photographs, tools, debris, survivor belongings or response objects relevant to ${topic}. A short reflective legacy note may appear on a notebook/paper/plaque, but it must stay concise and event-appropriate.
+
+VISUAL-MODE CONTINUITY LOCK: preserve the CURRENT PRODUCTION’S already-selected visual mode, era-aware capture treatment, monochrome/color rule and historical style. If the current production is Real Human / live-action, render cinematic historical live-action realism with real adult humans. If the current production is Historical Anime, preserve that approved illustration mode. If the episode has a strict black-and-white era/capture lock, keep the entire historical scene grayscale except any explicitly approved ending-card graphic accents. Do NOT force another episode’s style onto the current one.
+
+HISTORICAL / TRUTH LOCK: architecture, clothing, boats, vehicles, utilities, tools, signs, terrain and infrastructure must match the event year/location already supplied by the current topic/context. Adult characters only. No unrelated disaster imagery, no invented factual labels or places, no invented casualty figures, no generic empty background, no plain minimalist card, no modern objects that do not belong, no duplicated people, no distorted anatomy, no extra fingers, no gore, no watermark. Illustration only when the selected production mode is illustration; live-action only when the selected production mode is Real Human. No animation prompt.`;
   }
 
   function fire(el){
@@ -41,7 +62,7 @@
     const next=buildPrompt(topic,format);
     if(prompt.value===next)return false;
     prompt.value=next;
-    prompt.dataset.endingFormatLock='v1.1';
+    prompt.dataset.endingFormatLock='v1.2';
     fire(prompt);
     return true;
   }
