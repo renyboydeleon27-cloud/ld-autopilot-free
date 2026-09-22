@@ -1,6 +1,6 @@
-/* LD AUTO v3.22.9 — universal B&W + Lituya cause chain + reliable Done completion. */
+/* LD AUTO v3.23.0 — approved Lituya P2/P3 final Text-to-Video prompts. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.22.9-done-fix-v1';
+const T2V_POLICY_VERSION='3.23.0-lituya-p2-p3-final-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -70,16 +70,28 @@ function lituyaCause(stage){
  if(!isLituya1958())return null;
  var map={
   P2:{
+   approved:true,
+   approvedLabel:'FINAL APPROVED — LITUYA P2',
    scientific:true,
-   scene:'A restrained scientific documentary cross-section of the Fairweather Fault zone near Lituya Bay. Show rock masses under increasing tectonic stress and the beginning of fault rupture. The geology strains and shifts subtly, but nothing collapses into the sea. This panel explains the earthquake source only; no seabed cave-in, no underwater landslide, no mountain rockslide, and no tsunami yet.',
-   narrative:'Tectonic stress along the Fairweather Fault reaches a critical point, and the earthquake rupture begins.',
-   extraNegative:'No seabed cave-in, no underwater landslide, no giant underground collapse, no mountain rockslide yet, no visible tsunami, no fantasy glowing cracks.'
+   scene:'A restrained scientific documentary cutaway of the Fairweather Fault zone beneath the region near Lituya Bay. Show tectonic stress building along the fault just before and at the beginning of rupture. Massive rock layers are under extreme pressure. The strata strain, subtly deform, and begin to shift mainly in a horizontal shearing motion. The geological force must feel powerful but controlled and believable. The rock layers remain largely intact. This panel explains the hidden earthquake source only. Do not create a giant open chasm, collapsing trench, cave-in, large rock blocks falling into a void, seabed collapse, underwater landslide, mountain rockslide, or tsunami.',
+   narrative:'Tectonic stress along the Fairweather Fault reaches a critical point, and the earthquake rupture begins beneath the region near Lituya Bay.',
+   timing:'0.0–2.0s: Establish the geological setting clearly. Show layered rock under pressure in a serious documentary cutaway style. Subtle motion begins within the first half-second.\n2.0–7.0s: Show restrained fault strain and the beginning of rupture through realistic horizontal shearing, tension, and slight structural offset. Keep the motion grounded and believable.\n7.0–10.0s: Sustain the unstable buildup and finish on a clear image of mounting tectonic force and active rupture, without jumping ahead to the mountainside rockslide or tsunami.',
+   camera:'A slow lateral track revealing the geological scene depth. Fixed focal length, natural depth and occlusion. Never pass through solid objects unnaturally. No cuts, no transitions, no orbit, no time-lapse. Keep the shot serious, readable, and documentary-like.',
+   physics:'This panel is an explanatory scientific visualization. Do not depict invisible subsurface processes as ordinary eyewitness footage. Keep the mechanism restrained, physically plausible, and geologically grounded. Show primarily horizontal fault displacement. No fantasy energy, no glowing cracks, no sci-fi light effects, no exaggerated destruction, and no impossible motion.',
+   audio:'Low deep-earth rumble, restrained rock strain, subtle subsurface vibration, and natural documentary ambience only. No voiceover. No music.',
+   extraNegative:'No human figures. No seabed cave-in. No underwater landslide. No giant underground collapse. No giant open trench. No dramatic vertical pit opening. No falling rock blocks into a void. No mountain collapse yet. No visible tsunami yet. No fantasy glowing cracks. No sci-fi visuals. ABSOLUTE NO-TEXT: no labels, geological names, year, captions, titles, typography, logos, watermark, or any on-screen text.'
   },
   P3:{
+   approved:true,
+   approvedLabel:'FINAL APPROVED — LITUYA P3',
    scientific:false,
-   scene:'The earthquake reaches the Lituya Bay region. The bay shoreline, steep mountain walls, trees, loose rock and period-appropriate structures or boats shake violently under strong seismic motion. Show the earthquake itself affecting the landscape, but do not begin the major rockslide yet and do not show the megatsunami yet.',
+   scene:'The earthquake reaches the Lituya Bay region. Show a remote shoreline area near the bay with steep mountain walls in the background, dense forest, rough natural terrain, and a few period-appropriate details such as a small wooden structure, dock elements, moored boat, or simple outdoor equipment. Strong seismic shaking is already underway. Trees shudder, loose rock shifts, the ground trembles, and the environment reacts violently but realistically. If adult people are present, keep them few in number and show them reacting naturally to the shaking. This panel must clearly communicate that the earthquake is striking the region, but the catastrophic mountainside rockslide has not happened yet and the tsunami is not visible yet.',
    narrative:'Strong earthquake shaking strikes the Lituya Bay region and destabilizes the steep terrain around the head of the bay.',
-   extraNegative:'No major rockslide yet, no megatsunami yet, no seabed collapse as the tsunami source.'
+   timing:'0.0–2.0s: Establish the shoreline or bay-side setting clearly. The earthquake shaking is already active within the first half-second.\n2.0–7.0s: Sustain strong realistic seismic motion across the environment. Trees, loose rock, small structures, shoreline details, and any visible boats or equipment react naturally to the shaking.\n7.0–10.0s: Maintain the dangerous shaking and end on a clear sense that the landscape is being destabilized, without jumping ahead to the full mountainside rockslide or tsunami.',
+   camera:'A restrained handheld-feeling documentary shot or a grounded lateral/forward observational move is allowed, but keep it readable and realistic. Fixed focal behavior, natural depth and occlusion. Never pass through solid objects. No cuts, no transitions, no orbit, no time-lapse. The camera may react subtly to the shaking, but do not make it chaotic or unreadable.',
+   physics:'This panel shows the real earthquake impact on the visible environment. Keep all motion physically plausible and historically grounded. Structures, trees, rocks, shoreline, and water must respond with believable seismic behavior. Do not exaggerate into fantasy destruction. Do not show the major mountainside collapse yet. Do not show the tsunami yet.',
+   audio:'Earthquake rumble, wood creaking, rock shifting, tree movement, light shoreline water disturbance, and natural environment SFX only. No voiceover. No music.',
+   extraNegative:'No duplicated people. No distorted anatomy. No morphing. No unrelated disaster. No modern objects. No modern vehicles. No fantasy destruction. No mountain rockslide yet. No massive slope collapse yet. No visible tsunami yet. No seabed collapse as wave source. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark, or any on-screen text.'
   },
   P4:{
    scientific:false,
@@ -118,15 +130,15 @@ function build(card){
  var modeLine=style()==='real'
    ? (scientific?'Photorealistic historical documentary explanatory visualization. This is a scientific cutaway, not an eyewitness human-camera scene. No anime or illustration.':'Photorealistic REAL HUMAN historical documentary recreation. No anime or illustration.')
    : 'Serious 2D historical graphic-novel/anime animation. No live action.';
- var timing=scientific
+ var timing=lituya&&lituya.timing?lituya.timing:(scientific
    ? '0.0–2.0s: Establish the geological or scientific setting and the focal mechanism clearly; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue the same mechanism with restrained, coherent cause-and-effect motion at plausible scale.\n7.0–10.0s: Sustain the buildup or explanatory beat and end on a clear readable composition without jumping to the next story stage.'
-   : '0.0–2.0s: Establish the described setting, visible adult positions when adults are present, and one clear focal action; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue that same action with coherent cause and effect, natural momentum and local environmental response.\n7.0–10.0s: Sustain the panel’s intended beat and finish on a readable composition; do not jump to the next story stage.';
- var physics=scientific
+   : '0.0–2.0s: Establish the described setting, visible adult positions when adults are present, and one clear focal action; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue that same action with coherent cause and effect, natural momentum and local environmental response.\n7.0–10.0s: Sustain the panel’s intended beat and finish on a readable composition; do not jump to the next story stage.');
+ var physics=lituya&&lituya.physics?lituya.physics:(scientific
    ? 'This panel is an explanatory scientific visualization. Do not depict invisible subsurface processes as ordinary eyewitness footage. Keep the mechanism grounded, restrained and physically plausible. No fantasy energy, glowing magic cracks or exaggerated sci-fi effects. Preserve plausible geological scale and cause-and-effect.'
-   : 'Only the selected disaster mechanism belongs here. Calm scenes stay calm. Slow-onset effects are already present; no instant infection, starvation, crop death or insect reproduction. Preserve object count, human identity when people are present, and plausible scale throughout the clip.';
- var audio=scientific
+   : 'Only the selected disaster mechanism belongs here. Calm scenes stay calm. Slow-onset effects are already present; no instant infection, starvation, crop death or insect reproduction. Preserve object count, human identity when people are present, and plausible scale throughout the clip.');
+ var audio=lituya&&lituya.audio?lituya.audio:(scientific
    ? 'Restrained natural documentary ambience appropriate to the mechanism, such as low underwater rumble, rock strain or deep-earth vibration when supported by the scene. No voiceover or music.'
-   : 'Natural scene-specific ambience and SFX only. No voiceover or music.';
+   : 'Natural scene-specific ambience and SFX only. No voiceover or music.');
  var negative=scientific
    ? 'No children, gore, human figures unless the panel specifically requires them, fantasy energy, glowing sci-fi fault lines, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.'
    : 'No children, gore, duplicated people, distorted anatomy, morphing, giant insects, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.';
@@ -138,11 +150,11 @@ function build(card){
    +'\n\nPANEL SCENE:\n'+scene
    +'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(lituya?lituya.narrative:(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.'))
    +'\n\nTIMING:\n'+timing
-   +'\n\nCAMERA:\n'+camera+'. Fixed focal length, natural depth and occlusion. Never pass through solid objects unnaturally. No cuts, transitions, orbit or time-lapse. This panel uses its own camera behavior; the HOOK’s forward-charge behavior does not automatically apply here.'
+   +'\n\nCAMERA:\n'+(lituya&&lituya.camera?lituya.camera:(camera+'. Fixed focal length, natural depth and occlusion. Never pass through solid objects unnaturally. No cuts, transitions, orbit or time-lapse. This panel uses its own camera behavior; the HOOK’s forward-charge behavior does not automatically apply here.'))
    +'\n\nPHYSICS AND TIME:\n'+physics
    +'\n\nAUDIO:\n'+audio
    +'\n\nNEGATIVE:\n'+negative
-   +'\n\nSTATUS: FOR TESTING — review historical details and rendered continuity before approval.';
+   +'\n\nSTATUS: '+(lituya&&lituya.approved?(lituya.approvedLabel+' — locked final prompt.'):'FOR TESTING — review historical details and rendered continuity before approval.');
 }
 function generate(card){try{rebuildTextPrompt(card);}catch(e){showToast(e.message);}}
 function completeTextPrompt(text){
