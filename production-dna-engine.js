@@ -1,4 +1,4 @@
-/* LD AUTO v3.24.0 — Production DNA Engine: extract reusable technique from the last approved HOOK + P1–P14 without copying event facts. */
+/* LD AUTO v3.24.1 — Production DNA Engine bottom placement + reusable approved technique. */
 (function(){
 'use strict';
 
@@ -191,16 +191,28 @@ function optimizeFromLastApproved(){
       : 'DNA captured and applied to the current production'+(rebuilt?' · '+rebuilt+' Text-to-Video prompts refreshed':'')+'.'
   };
 }
+function placeRoot(root){
+  const thumbnail=document.querySelector('.stage-card[data-stage="THUMBNAIL"]');
+  if(thumbnail){
+    thumbnail.after(root);
+    return;
+  }
+  const pipeline=document.getElementById('pipelineSection');
+  if(pipeline){
+    pipeline.after(root);
+    return;
+  }
+  document.querySelector('main')?.appendChild(root);
+}
 function render(){
   let root=document.getElementById('productionDnaEngine');
   if(!root){
     root=document.createElement('section');
     root.id='productionDnaEngine';
     root.className='card';
-    root.style.cssText='padding:14px;margin:10px 0 14px;border:1px solid #7c3aed;';
-    const library=document.querySelector('.project-library');
-    if(library)library.after(root); else document.querySelector('.setup')?.before(root);
+    root.style.cssText='padding:14px;margin:18px 0 14px;border:1px solid #7c3aed;';
   }
+  placeRoot(root);
   const profile=activeProfile();
   root.innerHTML='<div style="display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap"><div><span class="audit-label">LD PRODUCTION DNA ENGINE</span><strong style="display:block;font-size:17px;margin-top:3px">Extract → Recreate → Polish → Validate</strong><p class="dna-summary" style="margin:6px 0 0;color:#9aa7b6;font-size:12px"></p></div><button type="button" class="primary dna-optimize">🧬 Optimize From Last Approved</button></div><p class="dna-status" style="margin:10px 0 0;font-size:12px;color:#b8c4d1"></p><p style="margin:7px 0 0;font-size:11px;color:#8fa0b2">Source must have HOOK + P1–P14 marked Done. The engine reuses cinematic technique only; current-event history, location, year, causes and measurements are never copied from the source production.</p>';
   root.querySelector('.dna-summary').textContent=summarize(profile);
@@ -225,4 +237,6 @@ window.LDProductionDNA={
 };
 render();
 window.addEventListener('ld:production-built',function(){setTimeout(render,80);});
+const stageRoot=document.getElementById('stages');
+if(stageRoot)new MutationObserver(function(){setTimeout(render,40);}).observe(stageRoot,{childList:true});
 })();
