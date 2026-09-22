@@ -1,6 +1,6 @@
-/* LD AUTO v3.23.0 — approved Lituya P2/P3 final Text-to-Video prompts. */
+/* LD AUTO v3.23.1 — approved Lituya P1-P4 final Text-to-Video prompts. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.23.0-lituya-p2-p3-final-v1';
+const T2V_POLICY_VERSION='3.23.1-lituya-p1-p4-final-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -69,6 +69,18 @@ function isLituya1958(){
 function lituyaCause(stage){
  if(!isLituya1958())return null;
  var map={
+  P1:{
+   approved:true,
+   approvedLabel:'FINAL APPROVED — LITUYA P1',
+   scientific:false,
+   scene:'Calm normal life at remote Lituya Bay, Alaska, in 1958 before any visible sign of disaster. Show the back or three-quarter back of one elderly adult man outside a modest period-appropriate wooden cabin near the bay, quietly tending or standing beside neatly arranged clay flower pots. The bay and steep mountains sit peacefully in the background. Everything is stable and ordinary: no earthquake shaking, no falling objects, no rockslide, no unusual water motion, no tsunami, no panic, and no destruction. Preserve the same elderly man, cabin, flower-pot language, remote shoreline world, and strict black-and-white archival DNA established by the approved HOOK, but return the story to calm pre-disaster life.',
+   narrative:'Life at remote Lituya Bay appears calm and ordinary before the earthquake begins.',
+   timing:'0.0–2.0s: Establish the quiet 1958 cabin-side setting, elderly man, flower pots, calm bay, and mountains. Nothing dangerous happens.\n2.0–7.0s: Sustain natural ordinary-life motion only: restrained body movement, faint clothing movement, gentle environmental motion, and calm water.\n7.0–10.0s: Hold the peaceful pre-disaster composition and end with no warning event yet, preserving a clear contrast with the coming earthquake.',
+   camera:'One restrained historical documentary shot with a very subtle slow push or stable observational framing. Keep the elderly man, cabin-side flower pots, bay, and mountains readable together. No cuts, no transitions, no orbit, no time-lapse, and no disaster-camera behavior.',
+   physics:'This is the normal-world panel. All objects remain stable and gravity behaves normally. No tremor, no falling flower pot, no cracks, no slope movement, no sudden water rise, and no invented precursor. Preserve plausible 1958 objects, clothing, terrain, and natural motion.',
+   audio:'Quiet natural bay ambience, light wind, faint water, subtle cabin-side environmental sounds only. No earthquake rumble, no voiceover, and no music.',
+   extraNegative:'No earthquake yet. No shaking. No falling flower pot. No rockslide. No tsunami. No abnormal water. No destruction. No panic. No modern objects. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark, or any on-screen text.'
+  },
   P2:{
    approved:true,
    approvedLabel:'FINAL APPROVED — LITUYA P2',
@@ -94,10 +106,16 @@ function lituyaCause(stage){
    extraNegative:'No duplicated people. No distorted anatomy. No morphing. No unrelated disaster. No modern objects. No modern vehicles. No fantasy destruction. No mountain rockslide yet. No massive slope collapse yet. No visible tsunami yet. No seabed collapse as wave source. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark, or any on-screen text.'
   },
   P4:{
+   approved:true,
+   approvedLabel:'FINAL APPROVED — LITUYA P4',
    scientific:false,
-   scene:'At the head of Lituya Bay, the steep mountainside begins to fail under the earthquake shaking. Cracks widen, loose rock breaks free, trees and surface material shift downslope, and the slope becomes visibly unstable. Build tension toward a catastrophic rockslide, but do not send the full rock mass into the water yet.',
-   narrative:'The earthquake destabilizes the steep mountainside at the head of Lituya Bay.',
-   extraNegative:'No full rockslide impact yet, no megatsunami yet, no underwater landslide as the primary cause.'
+   scene:'At the head of Lituya Bay, the steep mountainside is beginning to fail under violent earthquake shaking. Show rugged near-vertical terrain with exposed rock, broken slope surfaces, scattered vegetation, and trees clinging to the slope. Cracks widen through rock and surface material. Loose boulders, smaller rocks, soil, and trees begin shifting downslope. Parts of the slope buckle and break free, but the main catastrophic rockslide has not yet fully plunged into the water. This is the final unstable moment before the giant mountainside collapse.',
+   narrative:'The earthquake destabilizes the steep mountainside at the head of Lituya Bay, pushing the slope toward catastrophic collapse.',
+   timing:'0.0–2.0s: Establish the steep mountainside clearly. Instability is visible within the first half-second through shaking rock, widening cracks, and shifting surface material.\n2.0–7.0s: Sustain the slope-failure buildup. More fractures open, loose material slides, trees lean or break free, and the mountainside grows visibly more unstable.\n7.0–10.0s: Intensify the imminent-collapse feeling and end with the slope about to give way completely, without yet showing the full rockslide plunging into the water.',
+   camera:'A grounded observational documentary shot with a restrained lateral track or restrained push-in. Keep the mountainside readable and imposing. Fixed focal behavior, natural depth and occlusion. Never pass through solid objects. No cuts, no transitions, no orbit, no time-lapse. Subtle earthquake camera reaction is allowed, but the frame must remain readable.',
+   physics:'This panel shows real slope destabilization caused by earthquake shaking. Rocks, trees, soil, and debris must move with believable gravity and seismic cause-and-effect. Do not exaggerate into fantasy destruction. Do not show the full rockslide entering the water yet. Do not show the tsunami yet.',
+   audio:'Earthquake rumble, cracking rock, falling stones, shifting debris, snapping roots or trees under strain, dust movement, and natural mountain ambience only. No voiceover. No music.',
+   extraNegative:'No seabed collapse. No underwater landslide. No full rockslide impact into the bay yet. No visible tsunami yet. No wave generation yet. No fantasy destruction. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark, or any on-screen text.'
   },
   P5:{
    scientific:false,
