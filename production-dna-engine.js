@@ -182,12 +182,12 @@ function optimizeFromLastApproved(){
   writeJson(DNA_KEY,profile);
   const current=currentTopic();
   const same=current&&current===profile.sourceTopic;
-  const rebuilt=applyCurrent();
+  const rebuilt=same?0:applyCurrent();
   return {
     ok:true,
     profile:profile,
     message:same
-      ? 'DNA captured from this approved production. It is ready for the next disaster.'
+      ? 'DNA captured from this approved production without changing its locked prompts. It is ready for the next disaster.'
       : 'DNA captured and applied to the current production'+(rebuilt?' · '+rebuilt+' Text-to-Video prompts refreshed':'')+'.'
   };
 }
