@@ -1,6 +1,6 @@
-/* LD AUTO v3.24.0 — approved Lituya P1-P4 + Production DNA Engine integration. */
+/* LD AUTO v3.25.0 — approved Lituya + Cyclone Nargis production locks + Production DNA Engine. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.24.0-production-dna-v1';
+const T2V_POLICY_VERSION='3.25.0-nargis-approved-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -132,6 +132,36 @@ function lituyaCause(stage){
  };
  return map[stage]||null;
 }
+function isNargis2008(){
+ var t=String(current()||'').toLowerCase();
+ return t.includes('cyclone nargis')&&t.includes('2008');
+}
+function nargisPanel(stage){
+ if(!isNargis2008()||!/^P(?:[1-9]|1[0-4])$/.test(stage))return null;
+ var base={approved:true,approvedLabel:'FINAL APPROVED — NARGIS '+stage,scientific:false};
+ if(stage==='P7'){
+   base.scene='During the height of Cyclone Nargis in a low-lying Ayeyarwady Delta community, wider destruction and infrastructure failure are already underway. Roofs fail, trees bend or fall, simple power systems collapse, and floodwater spreads through the community. CRITICAL RAIN VISIBILITY LOCK: heavy wind-driven rain must be strongly visible from the first second to the last second. Show dense slanting rain streaks and sheets crossing foreground and background, rain splashing off roofs, walls, debris and floodwater, and spray mixing with rainfall. The viewer must clearly see heavy rain lashing through the shot, not just strong wind.';
+   base.narrative='Roofs fail, trees fall, power systems collapse, and floodwater spreads through communities as Cyclone Nargis lashes the delta with violent wind and heavy visible rain.';
+   base.timing='0.0–2.0s: Begin immediately with heavy rain already clearly visible and violent storm conditions active. The viewer must instantly see rain lashing through the scene and one focal failure such as roofing damage, a falling tree, or floodwater movement.\n2.0–7.0s: Maintain dense visible rain throughout while roofs fail further, trees break or collapse, debris moves with the wind, and floodwater spreads.\n7.0–10.0s: Sustain full storm intensity. Keep rain strongly visible, wind violent, and flooding/destruction active until the final frame.';
+   base.camera='A restrained forward tracking move with clear parallax or grounded observational drift. Keep foreground, midground and background readable and keep rainfall visible in the frame at all times. Fixed focal length, natural depth and occlusion. No cuts, transitions, orbit or time-lapse.';
+   base.physics='Keep all motion physically plausible and cyclone-specific. Show believable interaction between wind, heavy visible rain, floodwater, debris, trees and damaged structures. Rain must remain continuous and visually obvious; do not reduce the scene to wind-only motion.';
+   base.audio='Loud wind-driven rain, roof impacts, rattling and breaking structures, tree cracking, floodwater movement, debris strikes and natural storm ambience only. ABSOLUTE NO VOICEOVER. No narration. No spoken dialogue. No music.';
+   base.extraNegative='No weak invisible rain. No light drizzle. No mostly dry scene. No wind-only storm look. Rain must remain visible from first frame to last frame.';
+ }
+ if(stage==='P11'){
+   base.scene='Post-disaster displacement in the Ayeyarwady Delta after Cyclone Nargis. Adult displaced residents gather around temporary emergency shelters made from simple tarpaulins, bamboo, salvaged wood and improvised covering. Relief distribution is taking place but supplies are visibly limited. Show adults waiting, sitting, carrying containers, receiving basic aid, or standing near sparse relief materials. Muddy ground and storm-damaged surroundings remain visible. Shelter conditions look temporary, strained and inadequate. No children.';
+   base.narrative='Temporary shelters and limited relief distribution support displaced residents after Cyclone Nargis.';
+   base.timing='0.0–2.0s: Begin immediately with the displacement and relief setting clearly readable, with one adult already receiving aid, carrying a container, or waiting beside an improvised shelter.\n2.0–7.0s: Continue the same grounded action. Adults shift position, receive or carry limited supplies, and move naturally through the shelter area while scarcity remains visible.\n7.0–10.0s: Sustain the humanitarian-crisis atmosphere and end with temporary shelters, limited aid and displaced adults clearly visible.';
+   base.camera='A slow lateral track or grounded observational drift revealing scene depth. Keep foreground, midground and background readable. Fixed focal length, natural depth and occlusion. No cuts, transitions, orbit or time-lapse.';
+   base.physics='This is a post-disaster displacement panel. Keep motion calm, tired and grounded. Shelter fabric and improvised materials may shift gently. Preserve object count, human identity and plausible scale.';
+   base.audio='Natural environment and object SFX only: light wind, shelter fabric flapping, mud or water footsteps, container handling and subdued aftermath ambience. ABSOLUTE NO-VOICEOVER / NO-SPEECH LOCK: no voiceover, no narration, no spoken dialogue, no interview audio, no public announcement, no radio voice, no off-screen talking, no foreground human speech, no chanting, no prayer audio, no reporter audio, no explanatory voice of any kind, and no music. The entire clip must remain nonverbal except for natural environment and object sounds.';
+   base.extraNegative='No overcrowded polished refugee-camp look. No abundant aid stockpile. No comfortable camp atmosphere. No voiceover. No narration. No dialogue. No reporter. No radio speech. No public announcement. No human speech of any kind.';
+ }
+ return base;
+}
+function eventPanel(stage){
+ return nargisPanel(stage)||lituyaCause(stage);
+}
 function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanNarrationInstructions(value):String(value||'').trim();}
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[5]=clean(parts[5]);parts[6]=clean(parts[6]);return JSON.stringify(parts);}catch(e){return '';}}
 function pinScene(card){if(!state(card).scene)card.dataset.videoScene=clean(sceneFrom(card));}
@@ -141,38 +171,38 @@ function build(card){
  if(!scene)throw Error('Add the panel scene description first.');
  if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
  var stage=card.dataset.stage;
- var lituya=lituyaCause(stage);
- if(lituya)scene=lituya.scene;
- var scientific=lituya?!!lituya.scientific:scientificScene(card,scene);
+ var special=eventPanel(stage);
+ if(special&&special.scene)scene=special.scene;
+ var scientific=special?!!special.scientific:scientificScene(card,scene);
  var camera=Number(stage.slice(1))%3===1?'A restrained forward tracking move with clear parallax':Number(stage.slice(1))%3===2?'A slow lateral track revealing the scene depth':'A restrained push-in toward the principal action';
  var modeLine=style()==='real'
    ? (scientific?'Photorealistic historical documentary explanatory visualization. This is a scientific cutaway, not an eyewitness human-camera scene. No anime or illustration.':'Photorealistic REAL HUMAN historical documentary recreation. No anime or illustration.')
    : 'Serious 2D historical graphic-novel/anime animation. No live action.';
- var timing=lituya&&lituya.timing?lituya.timing:(scientific
+ var timing=special&&special.timing?lituya.timing:(scientific
    ? '0.0–2.0s: Establish the geological or scientific setting and the focal mechanism clearly; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue the same mechanism with restrained, coherent cause-and-effect motion at plausible scale.\n7.0–10.0s: Sustain the buildup or explanatory beat and end on a clear readable composition without jumping to the next story stage.'
    : '0.0–2.0s: Establish the described setting, visible adult positions when adults are present, and one clear focal action; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue that same action with coherent cause and effect, natural momentum and local environmental response.\n7.0–10.0s: Sustain the panel’s intended beat and finish on a readable composition; do not jump to the next story stage.');
- var physics=lituya&&lituya.physics?lituya.physics:(scientific
+ var physics=special&&special.physics?lituya.physics:(scientific
    ? 'This panel is an explanatory scientific visualization. Do not depict invisible subsurface processes as ordinary eyewitness footage. Keep the mechanism grounded, restrained and physically plausible. No fantasy energy, glowing magic cracks or exaggerated sci-fi effects. Preserve plausible geological scale and cause-and-effect.'
    : 'Only the selected disaster mechanism belongs here. Calm scenes stay calm. Slow-onset effects are already present; no instant infection, starvation, crop death or insect reproduction. Preserve object count, human identity when people are present, and plausible scale throughout the clip.');
- var audio=lituya&&lituya.audio?lituya.audio:(scientific
+ var audio=special&&special.audio?lituya.audio:(scientific
    ? 'Restrained natural documentary ambience appropriate to the mechanism, such as low underwater rumble, rock strain or deep-earth vibration when supported by the scene. No voiceover or music.'
    : 'Natural scene-specific ambience and SFX only. No voiceover or music.');
  var negative=scientific
    ? 'No children, gore, human figures unless the panel specifically requires them, fantasy energy, glowing sci-fi fault lines, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.'
    : 'No children, gore, duplicated people, distorted anatomy, morphing, giant insects, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.';
- if(lituya&&lituya.extraNegative)negative+=' '+lituya.extraNegative;
+ if(special&&special.extraNegative)negative+=' '+special.extraNegative;
  var result='VIDEO PROMPT — EXACTLY 10 SECONDS\n'+current()+' · '+stage+'\n\n'
    +(universalHookDna()?universalHookDna()+'\n\n':'')
    +'TEXT-TO-VIDEO. Create the entire scene from this description. No reference image is required. '+(format()==='shorts'?'Portrait 9:16.':'Landscape 16:9.')+' One continuous shot. '+modeLine
    +'\n\n'+lock()
    +'\n\nPANEL SCENE:\n'+scene
-   +'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(lituya?lituya.narrative:(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.'))
+   +'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(special&&special.narrative?special.narrative:(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.'))
    +'\n\nTIMING:\n'+timing
-   +'\n\nCAMERA:\n'+(lituya&&lituya.camera?lituya.camera:(camera+'. Fixed focal length, natural depth and occlusion. Never pass through solid objects unnaturally. No cuts, transitions, orbit or time-lapse. This panel uses its own camera behavior; the HOOK’s forward-charge behavior does not automatically apply here.'))
+   +'\n\nCAMERA:\n'+(special&&special.camera?special.camera:(camera+'. Fixed focal length, natural depth and occlusion. Never pass through solid objects unnaturally. No cuts, transitions, orbit or time-lapse. This panel uses its own camera behavior; the HOOK’s forward-charge behavior does not automatically apply here.'))
    +'\n\nPHYSICS AND TIME:\n'+physics
    +'\n\nAUDIO:\n'+audio
    +'\n\nNEGATIVE:\n'+negative
-   +'\n\nSTATUS: '+(lituya&&lituya.approved?(lituya.approvedLabel+' — locked final prompt.'):'FOR TESTING — review historical details and rendered continuity before approval.');
+   +'\n\nSTATUS: '+(special&&special.approved?(special.approvedLabel+' — locked final prompt.'):'FOR TESTING — review historical details and rendered continuity before approval.');
  return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,result):result;
 }
 function generate(card){try{rebuildTextPrompt(card);}catch(e){showToast(e.message);}}
@@ -268,7 +298,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,lituyaCause:lituyaCause};
+window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,lituyaCause:lituyaCause,nargisPanel:nargisPanel,eventPanel:eventPanel};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){all();saveCurrent();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
