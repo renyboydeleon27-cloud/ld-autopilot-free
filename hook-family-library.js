@@ -35,6 +35,15 @@ function choices(ctx){var family=Object.prototype.hasOwnProperty.call(data,ctx.f
  var canonical=/^desert locust(?: crisis)?\s*(?:[—–-]\s*)?\(?2020\)?$/i.test((ctx.topic||'').trim());
  if(family==='insect'&&i===0&&canonical&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDLocustLaundryHook&&window.LDLocustLaundryHook.prompt){result.prompt=window.LDLocustLaundryHook.prompt();result.status='APPROVED';result.source='Topic-specific';result.concept='Peaceful laundry → subtle dimming → adult turns → swarm arrives → six seconds of forward travel.';}
  if(family==='earthquake'&&i===0&&/^great kant[oō] earthquake\s*\(?1923\)?$/i.test((ctx.topic||'').trim())&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDEarthquakeTwistHookV315&&window.LDEarthquakeTwistHookV315.prompt){result.prompt=window.LDEarthquakeTwistHookV315.prompt();result.status='APPROVED';result.source='Topic-specific';}
+ var nargis=/\bcyclone\s+nargis\b/i.test(ctx.topic||'')&&/\b2008\b/.test(ctx.topic||'');
+ if(family==='cyclone'&&i===0&&nargis&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDCycloneNargisHook&&window.LDCycloneNargisHook.prompt){
+   result.prompt=window.LDCycloneNargisHook.prompt();
+   result.status='APPROVED';
+   result.source='Topic-specific';
+   result.title='Nargis Emotional Rain Reveal';
+   result.concept='Crying adult woman in heavy rain → slow pull-back → muddy floodwater and debris → destroyed flooded village revealed behind her.';
+   result.why='Approved for Cyclone Nargis 2008: immediate human emotion, progressive zoom-out reveal, heavy-rain atmosphere, flooded-village devastation and strict black-and-white continuity.';
+ }
  var mahina=/\bcyclone\s+mahina\b/i.test(ctx.topic||'')&&/\b1899\b/.test(ctx.topic||'');
  if(family==='cyclone'&&i===0&&mahina&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDCycloneMahinaHook&&window.LDCycloneMahinaHook.prompt){
    result.prompt=window.LDCycloneMahinaHook.prompt();
@@ -55,5 +64,5 @@ function choices(ctx){var family=Object.prototype.hasOwnProperty.call(data,ctx.f
  return result;
  });
 }
-window.LDHookFamilyLibrary={version:'3.20.6',detect:detect,choices:choices,families:Object.keys(data).map(function(k){return {id:k,label:data[k][0]};})};
+window.LDHookFamilyLibrary={version:'3.25.0',detect:detect,choices:choices,families:Object.keys(data).map(function(k){return {id:k,label:data[k][0]};})};
 })();
