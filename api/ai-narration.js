@@ -25,6 +25,14 @@ FACT SAFETY LOCK:
 - Prefer a broader accurate sentence over a vivid unsupported detail.
 - Separate established historical facts from cinematic phrasing. Cinematic language must never change the factual meaning.
 - Before returning JSON, silently audit every stage for unsupported specificity, contradictions, repeated facts, and chronology errors. Rewrite anything questionable.
+
+HOOK PERFORMANCE LOCK:
+- HOOK is not a historical summary, lesson, conclusion, or policy statement. It is the first ~10 seconds of a Living Disaster short.
+- Write one concise, speakable cinematic line that creates immediate tension or curiosity around the disaster itself.
+- Prefer concrete disaster action and human-scale stakes that are historically safe. Avoid abstract phrases such as "changed lives and policy", "central chapter", "understanding of disasters", "legacy", or textbook-style significance.
+- Do not manufacture a twist, warning sign, witness action, exact timing, or visual event just to make the hook dramatic.
+- Keep the strongest reveal for the disaster while remaining factually grounded.
+- P1-P14 should then progress chronologically without simply repeating the HOOK.
 Avoid robotic wording, keyword stuffing, repetitive event-name insertion, textbook jargon and redundant dates.
 Each stage must be concise and speakable, roughly suitable for about 8-10 seconds of narration.
 HOOK should create immediate curiosity without making a false claim.
