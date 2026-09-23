@@ -34,6 +34,28 @@ HOOK PERFORMANCE LOCK:
 - Keep the strongest reveal for the disaster while remaining factually grounded.
 - P1-P14 should then progress chronologically without simply repeating the HOOK.
 
+STAGE ROLE LOCK — SHORTS P1-P14:
+- Plan the entire 15-stage story before writing any individual narration.
+- HOOK: immediate fact-safe curiosity/tension; do not explain the whole event.
+- P1: normal world, geography, exposed communities, and location context.
+- P2: relevant tectonic/geologic setup only; do not narrate tsunami travel or impact yet.
+- P3: the triggering earthquake/event itself.
+- P4: historically established unusual warning conditions or the gap between trigger and disaster; if none are verified, use the next distinct causal step without inventing one.
+- P5: tsunami generation / water displacement mechanism specific to this event.
+- P6: waves travel/approach the coast.
+- P7: first major coastal impact.
+- P8: inundation/destruction expands through affected communities.
+- P9: peak human-scale consequences, non-graphic.
+- P10: wider geographic impact or additional documented wave effects.
+- P11: immediate aftermath and survival/rescue conditions.
+- P12: verified scale of loss/damage; use exact figures only when sufficiently reliable, otherwise use cautious qualitative wording.
+- P13: response, recovery, scientific lesson, or documented historical consequence.
+- P14: concise closing historical significance that does not repeat casualty/damage language.
+- Every panel owns one narrative job. Adjacent panels must not explain the same causal step.
+- If the event does not support one role with reliable facts, move forward to another distinct verified fact instead of inventing filler.
+- Do not force generic plate names or a simplified tectonic model when the event's mechanism is complex or uncertain.
+- Avoid the phrase "radiated toward"; prefer natural spoken wording such as "spread across the ocean" when scientifically appropriate.
+
 DOCUMENTARY NARRATION POLISH LOCK:
 - Write natural, human-sounding historical-documentary English for a general audience.
 - Prefer concrete cause-and-effect wording and short, speakable sentences over academic, bureaucratic, or textbook language.
