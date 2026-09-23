@@ -38,6 +38,7 @@ Include every requested stage key exactly once and no markdown.`;
       },
       body:JSON.stringify({
         model:"gpt-5-mini",
+        text:{format:{type:"json_object"}},
         input:[
           {role:"system",content:[{type:"input_text",text:system}]},
           {role:"user",content:[{type:"input_text",text:`Topic: ${topic}\nFormat: ${format}\nRequired stages: ${stageNames.join(", ")}\nGenerate the complete narration set.`}]}
