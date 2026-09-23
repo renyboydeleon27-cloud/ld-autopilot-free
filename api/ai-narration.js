@@ -1,3 +1,5 @@
+import { buildResearch } from "./ai-research.js";
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -10,6 +12,26 @@ export default async function handler(req, res) {
   if (!topic) return res.status(400).json({ ok:false, error:"Please provide a disaster topic first." });
   const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
   if (!apiKey) return res.status(500).json({ ok:false, error:"OPENAI_API_KEY is not configured on the server." });
+
+  // RESEARCH -> VALIDATION -> NARRATION GATE
+  let research;
+  try { research = await buildResearch(topic); }
+  catch (e) { return res.status(502).json({ok:false,error:"Research verification failed: "+String(e?.message||e)}); }
+
+  if (!research?.narrationGate?.allowed) {
+    return res.status(422).json({
+      ok:false,
+      error:`Narration blocked by research gate: ${research?.validation?.status || "NEEDS_REVIEW"}. ${research?.validation?.reason || "Evidence is not strong enough yet."}`,
+      research
+    });
+  }
+
+  const evidenceForNarration = {
+    validation: research.validation,
+    exactNumbersAllowed: research.narrationGate.exactNumbersAllowed,
+    factPack: research.factPack,
+    sources: research.sources.map(s=>({authority:s.authority,name:s.name,url:s.url}))
+  };
 
   // VERIFIED FACT PACK LAYER — narration must first build a structured evidence-aware fact pack.
   // This is intentionally separated from the prose-writing step so uncertain details can be excluded.
@@ -114,7 +136,7 @@ Include every requested stage key exactly once and no markdown.`;
         text:{format:{type:"json_object"}},
         input:[
           {role:"system",content:[{type:"input_text",text:system}]},
-          {role:"user",content:[{type:"input_text",text:`Topic: ${topic}\nFormat: ${format}\nRequired stages: ${stageNames.join(", ")}\nGenerate the complete narration set.`}]}
+          {role:"user",content:[{type:"input_text",text:`Topic: ${topic}\nFormat: ${format}\nRequired stages: ${stageNames.join(", ")}\nGenerate the complete narration set.\n\nRESEARCH EVIDENCE (authoritative-source gate):\n${JSON.stringify(evidenceForNarration)}\nUse this evidence as the factual boundary. If exactNumbersAllowed is false, do not state exact numerical claims from uncertain fields.`}]}
         ],
         max_output_tokens: 5000
       })
@@ -130,7 +152,7 @@ Include every requested stage key exactly once and no markdown.`;
       if (typeof stages[name] !== "string" || !stages[name].trim()) return res.status(502).json({ok:false,error:`AI response is missing ${name}. Please try again.`});
       stages[name] = stages[name].trim();
     }
-    return res.status(200).json({ok:true,topic,format,stages});
+    return res.status(200).json({ok:true,topic,format,researchStatus:research.validation.status,stages});
   } catch (err) {
     return res.status(500).json({ok:false,error:"AI narration error: "+String(err?.message||err)});
   }
