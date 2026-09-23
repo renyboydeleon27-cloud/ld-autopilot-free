@@ -57,6 +57,9 @@ async function fetchUsgsCandidate(topic, year) {
   url.searchParams.set("format","geojson");
   url.searchParams.set("starttime",start);
   url.searchParams.set("endtime",end);
+  // Do not use the modern USGS catalog as a hard requirement for old historical events.
+  // Coverage/completeness is much stronger for instrument-era earthquakes.
+  if (year < 1900) return {status:"historical-catalog-gap", reason:"Pre-1900 event: use NOAA/NCEI historical evidence as primary source."};
   url.searchParams.set("minmagnitude","5");
   url.searchParams.set("orderby","magnitude");
   url.searchParams.set("limit","100");
@@ -153,7 +156,17 @@ function crossValidate(noaa, usgs) {
   const n = noaa?.status === "candidate" ? noaa.event : null;
   const u = usgs?.status === "candidate" ? usgs.event : null;
   if (!n && !u) return {status:"NEEDS_REVIEW",confidence:"none",checks:[],reason:"No confident authoritative event candidate was found."};
-  if (n && !u) return {status:"PARTIAL",confidence:noaa.confidence||"medium",checks:[{field:"NOAA/NCEI event",match:true}],reason:"NOAA/NCEI candidate found; no matching USGS catalog candidate was found."};
+  if (n && !u) {
+    const historicalGap = usgs?.status === "historical-catalog-gap";
+    return {
+      status: historicalGap && noaa.confidence === "high" ? "VERIFIED" : "PARTIAL",
+      confidence: historicalGap && noaa.confidence === "high" ? "high" : (noaa.confidence||"medium"),
+      checks:[{field:"NOAA/NCEI historical event",match:true},{field:"USGS cross-check",match:null,reason:usgs?.reason||"No matching catalog candidate"}],
+      reason: historicalGap
+        ? "NOAA/NCEI is the primary authoritative historical source; USGS modern catalog cross-check is not required for this pre-1900 event."
+        : "NOAA/NCEI candidate found; no matching USGS catalog candidate was found."
+    };
+  }
   if (!n && u) return {status:"PARTIAL",confidence:usgs.confidence||"low",checks:[{field:"USGS event",match:true}],reason:"USGS candidate found; no matching NOAA/NCEI tsunami candidate was found."};
 
   const ud=datePartsFromIso(u.time);
