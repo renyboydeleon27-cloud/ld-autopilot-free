@@ -86,6 +86,51 @@ async function fetchUsgsCandidate(topic, year) {
   };
 }
 
+
+async function fetchNoaaTsunamiCandidate(topic, year) {
+  if (!year) return {status:"skipped", reason:"No event year found in topic."};
+  const base = "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/hazards/MapServer/0/query";
+  const url = new URL(base);
+  url.searchParams.set("where", `YEAR=${year}`);
+  url.searchParams.set("outFields", "*");
+  url.searchParams.set("returnGeometry", "true");
+  url.searchParams.set("f", "json");
+  const r = await fetch(url);
+  if (!r.ok) return {status:"error", reason:`NOAA/NCEI HTTP ${r.status}`};
+  const data = await r.json();
+  if (data?.error) return {status:"error", reason:data.error.message || "NOAA/NCEI query error"};
+  const words = topicSearchText(topic).toLowerCase().split(" ").filter(w=>w.length>2);
+  const scored = (data.features || []).map(feature => {
+    const a = feature.attributes || {};
+    const hay = [a.LOCATION_NAME,a.COUNTRY,a.REGION,a.COMMENTS,a.CAUSE].filter(Boolean).join(" ").toLowerCase();
+    const score = words.reduce((n,w)=>n + (hay.includes(w) ? 1 : 0), 0);
+    return {feature,score};
+  }).sort((a,b)=>b.score-a.score);
+  const best = scored[0];
+  if (!best || best.score === 0) return {status:"no-confident-match", candidates:(data.features||[]).length};
+  const a=best.feature.attributes||{};
+  return {
+    status:"candidate",
+    confidence: best.score >= 2 ? "high" : "medium",
+    matchScore:best.score,
+    event:{
+      id:a.ID ?? a.OBJECTID ?? null,
+      year:a.YEAR ?? null, month:a.MONTH ?? null, day:a.DAY ?? null,
+      hour:a.HOUR ?? null, minute:a.MINUTE ?? null,
+      location:a.LOCATION_NAME ?? null,
+      country:a.COUNTRY ?? null,
+      cause:a.CAUSE ?? null,
+      validity:a.VALIDITY ?? a.EVENT_VALIDITY ?? null,
+      maximumWaterHeightM:a.MAX_WATER_HEIGHT ?? a.MAXIMUM_WATER_HEIGHT ?? null,
+      deaths:a.DEATHS ?? a.TOTAL_DEATHS ?? null,
+      injuries:a.INJURIES ?? a.TOTAL_INJURIES ?? null,
+      housesDestroyed:a.HOUSES_DESTROYED ?? null,
+      housesDamaged:a.HOUSES_DAMAGED ?? null,
+      raw:a
+    }
+  };
+}
+
 function classifyTopic(topic) {
   const t = topic.toLowerCase();
   if (t.includes("tsunami")) return "tsunami";
@@ -108,7 +153,7 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     ok: true,
-    version: "research-layer-2",
+    version: "research-layer-3",
     topic,
     hazardType,
     status: sources.length ? "source-plan-ready" : "needs-source-registry",
@@ -132,7 +177,7 @@ export default async function handler(req, res) {
       conflictingSourcesMustBeFlagged: true
     },
     note: sources.length
-      ? "Authoritative sources are registered. USGS event retrieval is active when the topic contains a usable year; NOAA event-record retrieval is the next adapter."
+      ? "Authoritative sources are registered. NOAA/NCEI tsunami-event and USGS earthquake-event retrieval are active when the topic contains a usable year. Candidate matches remain evidence candidates until cross-source validation."
       : "No authoritative source adapter is registered for this hazard type yet."
   });
 }
