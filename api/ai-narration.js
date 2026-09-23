@@ -49,7 +49,7 @@ Include every requested stage key exactly once and no markdown.`;
           {role:"system",content:[{type:"input_text",text:system}]},
           {role:"user",content:[{type:"input_text",text:`Topic: ${topic}\nFormat: ${format}\nRequired stages: ${stageNames.join(", ")}\nGenerate the complete narration set.`}]}
         ],
-        max_output_tokens:2400
+        max_output_tokens: 5000
       })
     });
     const data = await response.json();
