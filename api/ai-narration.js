@@ -33,6 +33,15 @@ HOOK PERFORMANCE LOCK:
 - Do not manufacture a twist, warning sign, witness action, exact timing, or visual event just to make the hook dramatic.
 - Keep the strongest reveal for the disaster while remaining factually grounded.
 - P1-P14 should then progress chronologically without simply repeating the HOOK.
+
+DOCUMENTARY NARRATION POLISH LOCK:
+- Write natural, human-sounding historical-documentary English for a general audience.
+- Prefer concrete cause-and-effect wording and short, speakable sentences over academic, bureaucratic, or textbook language.
+- Avoid phrases like "radiated toward", "sea-borne threat", "central chapter", "modest shaking", and other unnecessarily formal wording when plain English is clearer.
+- Each stage must advance the story with materially new information. Do not restate the same weak-shaking, wave, impact, casualty, or aftermath point across adjacent stages.
+- Preserve verified facts and chronology while simplifying technical science accurately.
+- Do not claim what people expected, knew, believed, noticed, or understood unless that is historically established. Describe observable conditions instead.
+- Aim for narration that can be spoken naturally in about 8-10 seconds per stage.
 Avoid robotic wording, keyword stuffing, repetitive event-name insertion, textbook jargon and redundant dates.
 Each stage must be concise and speakable, roughly suitable for about 8-10 seconds of narration.
 HOOK should create immediate curiosity without making a false claim.
