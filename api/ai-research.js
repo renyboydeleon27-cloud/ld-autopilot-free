@@ -99,19 +99,42 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
   if (!year) return {status:"skipped", reason:"No event year found in topic."};
   const base = "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/hazards/MapServer/0/query";
   const url = new URL(base);
+  // NOAA ArcGIS field names have changed across published layers; query the
+  // year defensively and fall back to a broad server-side query if needed.
   url.searchParams.set("where", `YEAR=${year}`);
   url.searchParams.set("outFields", "*");
   url.searchParams.set("returnGeometry", "true");
   url.searchParams.set("f", "json");
   const r = await fetch(url);
   if (!r.ok) return {status:"error", reason:`NOAA/NCEI HTTP ${r.status}`};
-  const data = await r.json();
-  if (data?.error) return {status:"error", reason:data.error.message || "NOAA/NCEI query error"};
+  let data = await r.json();
+  if (data?.error) {
+    const fallback = new URL(base);
+    fallback.searchParams.set("where","1=1");
+    fallback.searchParams.set("outFields","*");
+    fallback.searchParams.set("returnGeometry","true");
+    fallback.searchParams.set("f","json");
+    fallback.searchParams.set("resultRecordCount","2000");
+    const fr=await fetch(fallback);
+    if (!fr.ok) return {status:"error",reason:`NOAA/NCEI fallback HTTP ${fr.status}`};
+    data=await fr.json();
+    if (data?.error) return {status:"error",reason:data.error.message || "NOAA/NCEI query error"};
+    data.features=(data.features||[]).filter(feature => {
+      const a=feature.attributes||{};
+      const y=Number(a.YEAR ?? a.Year ?? a.year ?? a.EVENT_YEAR ?? a.Event_Year);
+      return y===year;
+    });
+  }
   const words = topicSearchText(topic).toLowerCase().split(" ").filter(w=>w.length>2);
   const regionHints = topic.toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2);
   const scored = (data.features || []).map(feature => {
     const a = feature.attributes || {};
-    const hay = [a.LOCATION_NAME,a.COUNTRY,a.REGION,a.COMMENTS,a.CAUSE].filter(Boolean).join(" ").toLowerCase();
+    const location = a.LOCATION_NAME ?? a.Location_Name ?? a.LOCATION ?? a.Location ?? a.location;
+    const country = a.COUNTRY ?? a.Country ?? a.country;
+    const region = a.REGION ?? a.Region ?? a.region;
+    const comments = a.COMMENTS ?? a.Comments ?? a.comments;
+    const cause = a.CAUSE ?? a.Cause ?? a.cause;
+    const hay = [location,country,region,comments,cause].filter(Boolean).join(" ").toLowerCase();
     const direct = words.reduce((n,w)=>n + (hay.includes(w) ? 3 : 0), 0);
     const regional = regionHints.reduce((n,w)=>n + (hay.includes(w) ? 1 : 0), 0);
     const score = direct + regional;
@@ -126,11 +149,12 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
     matchScore:best.score,
     event:{
       id:a.ID ?? a.OBJECTID ?? null,
-      year:a.YEAR ?? null, month:a.MONTH ?? null, day:a.DAY ?? null,
-      hour:a.HOUR ?? null, minute:a.MINUTE ?? null,
-      location:a.LOCATION_NAME ?? null,
-      country:a.COUNTRY ?? null,
-      cause:a.CAUSE ?? null,
+      year:a.YEAR ?? a.Year ?? a.year ?? a.EVENT_YEAR ?? null,
+      month:a.MONTH ?? a.Month ?? a.month ?? null, day:a.DAY ?? a.Day ?? a.day ?? null,
+      hour:a.HOUR ?? a.Hour ?? a.hour ?? null, minute:a.MINUTE ?? a.Minute ?? a.minute ?? null,
+      location:a.LOCATION_NAME ?? a.Location_Name ?? a.LOCATION ?? a.Location ?? null,
+      country:a.COUNTRY ?? a.Country ?? null,
+      cause:a.CAUSE ?? a.Cause ?? null,
       validity:a.VALIDITY ?? a.EVENT_VALIDITY ?? null,
       maximumWaterHeightM:a.MAX_WATER_HEIGHT ?? a.MAXIMUM_WATER_HEIGHT ?? null,
       deaths:a.DEATHS ?? a.TOTAL_DEATHS ?? null,
