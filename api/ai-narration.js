@@ -52,6 +52,10 @@ STAGE ROLE LOCK — SHORTS P1-P14:
 - P13: response, recovery, scientific lesson, or documented historical consequence.
 - P14: concise closing historical significance that does not repeat casualty/damage language.
 - Every panel owns one narrative job. Adjacent panels must not explain the same causal step.
+- HARD NO-REUSE RULE: before drafting, assign each important fact or idea to exactly one stage. Once a fact is the main point of a stage, it cannot be the main point, explanation, warning, consequence, or paraphrase in the immediately following stage.
+- Specifically, if P3 establishes unusually weak or limited felt shaking, P4 MUST NOT discuss weak shaking, lack of alarm, lack of warning from shaking, or the mismatch again. P4 must move to the next distinct verified event or condition.
+- If no separate verified P4 warning condition exists, advance the chronology to the next distinct causal step rather than filling P4 with a paraphrase.
+- Final audit: compare every adjacent pair (HOOK/P1, P1/P2 ... P13/P14). If two stages could be summarized by the same factual sentence, rewrite the later stage with new verified information.
 - If the event does not support one role with reliable facts, move forward to another distinct verified fact instead of inventing filler.
 - Do not force generic plate names or a simplified tectonic model when the event's mechanism is complex or uncertain.
 - Avoid the phrase "radiated toward"; prefer natural spoken wording such as "spread across the ocean" when scientifically appropriate.
