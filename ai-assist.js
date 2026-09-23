@@ -11,8 +11,30 @@ function mount(){
   const box=document.createElement('section');
   box.id='ldAiTestBox';
   box.style.cssText='margin:12px 0;padding:12px;border:2px solid #7c5cff;border-radius:12px;background:rgba(124,92,255,.08)';
-  box.innerHTML='<strong>✨ LD AI Assist</strong><p style="font-size:12px;opacity:.8">Secure OpenAI assistance through the Vercel backend. Your API key stays on the server.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ldAiNarrationBtn" class="primary small">✨ AI Generate Narration</button><button type="button" id="ldAiTestBtn" class="ghost small">Test AI Connection</button></div><div id="ldAiTestResult" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>';
+  box.innerHTML='<strong>✨ LD AI Assist</strong><p style="font-size:12px;opacity:.8">Secure OpenAI assistance through the Vercel backend. Your API key stays on the server.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ldAiNarrationBtn" class="primary small">✨ AI Generate Narration</button><button type="button" id="ldAiTestBtn" class="ghost small">Test AI Connection</button><button type="button" id="ldResearchBtn" class="ghost small">Research Diagnostics</button></div><div id="ldAiTestResult" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>';
   anchor.insertAdjacentElement('afterend',box);
+
+  document.getElementById('ldResearchBtn').onclick=async()=>{
+    const btn=document.getElementById('ldResearchBtn'),out=document.getElementById('ldAiTestResult');
+    const topic=getTopic();
+    if(!topic){out.textContent='❌ No topic selected.';return;}
+    btn.disabled=true;out.textContent='🔎 Checking NOAA/NCEI + USGS research sources…';
+    try{
+      const r=await fetch('/api/ai-research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
+      const d=await r.json();
+      if(!r.ok||!d.ok) throw new Error(d.error||('HTTP '+r.status));
+      const n=d.retrieval?.noaa||{},u=d.retrieval?.usgs||{},v=d.validation||{};
+      out.textContent=[
+        'RESEARCH DIAGNOSTICS',
+        'Topic: '+topic,
+        'Gate: '+(v.status||'unknown'),
+        'Reason: '+(v.reason||'—'),
+        'NOAA/NCEI: '+(n.status||'not run')+(n.reason?' — '+n.reason:'')+(n.event?.location?' — '+n.event.location:''),
+        'USGS: '+(u.status||'not run')+(u.reason?' — '+u.reason:'')+(u.event?.place?' — '+u.event.place:'')
+      ].join('\n');
+    }catch(e){out.textContent='❌ Research diagnostics: '+String(e.message||e);}
+    finally{btn.disabled=false;}
+  };
 
   document.getElementById('ldAiTestBtn').onclick=async()=>{
     const btn=document.getElementById('ldAiTestBtn'),out=document.getElementById('ldAiTestResult');
