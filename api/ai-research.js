@@ -141,12 +141,26 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
     return {feature,score};
   }).sort((a,b)=>b.score-a.score);
   const best = scored[0];
-  if (!best || best.score === 0) return {status:"no-confident-match", candidates:(data.features||[]).length};
+  if (!best || best.score === 0) {
+    // Historical NOAA records do not always repeat the modern event name in
+    // searchable text. If the requested year has exactly one tsunami source
+    // record, retain it as a cautious year-only candidate instead of discarding it.
+    if ((data.features || []).length === 1) {
+      const only=data.features[0], a=only.attributes||{};
+      best={feature:only,score:0,yearOnly:true};
+    } else {
+      return {
+        status:"no-confident-match",
+        candidates:(data.features||[]).length,
+        sample:(data.features||[]).slice(0,5).map(x=>x.attributes||{})
+      };
+    }
+  }
   const a=best.feature.attributes||{};
   return {
     status:"candidate",
-    confidence: best.score >= 2 ? "high" : "medium",
-    matchScore:best.score,
+    confidence: best.yearOnly ? "low" : (best.score >= 2 ? "high" : "medium"),
+    matchScore:best.score,\n    matchMethod:best.yearOnly ? "year-only-single-record" : "topic-text",
     event:{
       id:a.ID ?? a.OBJECTID ?? null,
       year:a.YEAR ?? a.Year ?? a.year ?? a.EVENT_YEAR ?? null,
