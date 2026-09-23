@@ -1,6 +1,7 @@
 // LD AUTO Research Source Layer
 // Builds a structured research plan/fact-pack candidate before narration.
-// No OpenAI call here: authoritative-source retrieval is kept separate from prose generation.\n// v2 adds live USGS event lookup when a usable event year is present.
+// No OpenAI call here: authoritative-source retrieval is kept separate from prose generation.
+// v2 adds live USGS event lookup when a usable event year is present.
 
 const SOURCE_REGISTRY = {
   tsunami: [
@@ -175,46 +176,71 @@ function classifyTopic(topic) {
   return "general";
 }
 
-export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.status(204).end();
-  if (req.method !== "POST") return res.status(405).json({ok:false,error:"POST only"});
-
-  const topic = String(req.body?.topic || "").trim().slice(0, 240);
-  if (!topic) return res.status(400).json({ok:false,error:"Please provide a disaster topic first."});
-
+export async function buildResearch(topic) {
   const hazardType = classifyTopic(topic);
   const sources = SOURCE_REGISTRY[hazardType] || [];
+  const year = extractYear(topic);
+  let noaa = null;
+  let usgs = null;
 
-  const validation = crossValidate(noaa, usgs);\n\n  return res.status(200).json({
-    ok: true,
-    version: "research-layer-4",
-    topic,
-    hazardType,
-    status: sources.length ? "source-plan-ready" : "needs-source-registry",
-    factPack: {
-      identity: [],
-      cause: [],
-      chronology: [],
-      warning_conditions: [],
-      physical_impact: [],
-      human_impact: [],
-      aftermath: [],
-      significance: [],
-      uncertainty: []
+  if (hazardType === "tsunami") {
+    try { noaa = await fetchNoaaTsunamiCandidate(topic, year); }
+    catch (e) { noaa = {status:"error",reason:String(e?.message||e)}; }
+  }
+  if (hazardType === "tsunami" || hazardType === "earthquake") {
+    try { usgs = await fetchUsgsCandidate(topic, year); }
+    catch (e) { usgs = {status:"error",reason:String(e?.message||e)}; }
+  }
+
+  const validation = crossValidate(noaa, usgs);
+  const identity = [
+    ...(noaa?.status === "candidate" ? [{source:"NOAA/NCEI",confidence:noaa.confidence,event:noaa.event}] : []),
+    ...(usgs?.status === "candidate" ? [{source:"USGS",confidence:usgs.confidence,event:usgs.event}] : [])
+  ];
+
+  return {
+    ok:true,
+    version:"research-layer-4",
+    topic, hazardType,
+    status:sources.length ? "source-plan-ready" : "needs-source-registry",
+    factPack:{
+      identity,
+      cause:noaa?.status === "candidate" && noaa.event?.cause ? [{source:"NOAA/NCEI",value:noaa.event.cause}] : [],
+      chronology:[], warning_conditions:[],
+      physical_impact:noaa?.status === "candidate" && noaa.event?.maximumWaterHeightM != null ? [{source:"NOAA/NCEI",maximumWaterHeightM:noaa.event.maximumWaterHeightM}] : [],
+      human_impact:noaa?.status === "candidate" ? [{
+        source:"NOAA/NCEI", deaths:noaa.event.deaths, injuries:noaa.event.injuries,
+        housesDestroyed:noaa.event.housesDestroyed, housesDamaged:noaa.event.housesDamaged
+      }] : [],
+      aftermath:[], significance:[],
+      uncertainty: validation.status === "VERIFIED" ? [] : [validation.reason]
     },
     sources,
-    evidencePolicy: {
-      narrationMustUseVerifiedFactsOnly: true,
-      preserveUncertainty: true,
-      doNotInventMissingFacts: true,
-      exactNumbersRequireReliableEvidence: true,
-      conflictingSourcesMustBeFlagged: true
+    retrieval:{year,noaa,usgs},
+    validation,
+    narrationGate:{
+      allowed:validation.status === "VERIFIED" || validation.status === "PARTIAL",
+      exactNumbersAllowed:validation.status === "VERIFIED",
+      status:validation.status
     },
-    note: sources.length
-      ? "Authoritative sources are registered. NOAA/NCEI tsunami-event and USGS earthquake-event retrieval are active when the topic contains a usable year. Candidate matches remain evidence candidates until cross-source validation."
-      : "No authoritative source adapter is registered for this hazard type yet."
-  });
+    evidencePolicy:{
+      narrationMustUseVerifiedFactsOnly:true,
+      preserveUncertainty:true,
+      doNotInventMissingFacts:true,
+      exactNumbersRequireReliableEvidence:true,
+      conflictingSourcesMustBeFlagged:true
+    }
+  };
+}
+
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin","*");
+  res.setHeader("Access-Control-Allow-Methods","POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers","Content-Type");
+  if (req.method === "OPTIONS") return res.status(204).end();
+  if (req.method !== "POST") return res.status(405).json({ok:false,error:"POST only"});
+  const topic=String(req.body?.topic||"").trim().slice(0,240);
+  if (!topic) return res.status(400).json({ok:false,error:"Please provide a disaster topic first."});
+  try { return res.status(200).json(await buildResearch(topic)); }
+  catch (e) { return res.status(500).json({ok:false,error:"Research error: "+String(e?.message||e)}); }
 }
