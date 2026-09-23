@@ -21,8 +21,12 @@ function mount(){
     btn.disabled=true;out.textContent='🔎 Checking NOAA/NCEI + USGS research sources…';
     try{
       const r=await fetch('/api/ai-research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
-      const d=await r.json();
-      if(!r.ok||!d.ok) throw new Error(d.error||('HTTP '+r.status));
+      const raw=await r.text();
+      let d;
+      try{d=JSON.parse(raw);}catch{
+        throw new Error('Research endpoint returned non-JSON (HTTP '+r.status+'): '+raw.slice(0,180));
+      }
+      if(!r.ok||!d.ok) throw new Error((d.error||('HTTP '+r.status))+(d.detail?' — '+d.detail:''));
       const n=d.retrieval?.noaa||{},u=d.retrieval?.usgs||{},v=d.validation||{};
       out.textContent=[
         'RESEARCH DIAGNOSTICS',
