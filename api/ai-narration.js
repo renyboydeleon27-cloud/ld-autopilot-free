@@ -11,11 +11,35 @@ export default async function handler(req, res) {
   const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
   if (!apiKey) return res.status(500).json({ ok:false, error:"OPENAI_API_KEY is not configured on the server." });
 
+  // VERIFIED FACT PACK LAYER — narration must first build a structured evidence-aware fact pack.
+  // This is intentionally separated from the prose-writing step so uncertain details can be excluded.
+  const factPackInstruction = `
+VERIFIED FACT PACK — INTERNAL FIRST PASS:
+Before writing narration, silently build a fact pack for the selected event with these fields:
+1. identity: canonical event name, year/date only when reliable, country/region.
+2. cause: triggering hazard and mechanism; preserve scientific uncertainty.
+3. chronology: ordered sequence of distinct, historically supportable events.
+4. warning_conditions: only documented warning signs/conditions; otherwise mark unknown internally.
+5. physical_impact: wave/run-up/inundation/eruption/shaking/wind/fire measurements only when sufficiently reliable.
+6. human_impact: deaths, injuries, displacement, homes/damage only when sufficiently reliable.
+7. aftermath: rescue, recovery, response, or documented consequences.
+8. significance: documented scientific/historical lessons, not generic legacy language.
+9. uncertainty: identify disputed, estimated, model-dependent, or poorly constrained details.
+
+EVIDENCE GATE:
+- Narration may use only details that survive this internal fact-pack audit.
+- Never convert an estimate, disputed interpretation, or uncertain mechanism into a definite statement.
+- If a numerical value is uncertain or sources historically vary, omit the number or use cautious qualitative wording.
+- Do not fill an empty stage with plausible background detail. Advance to another supported fact instead.
+- Historical database values can contain uncertainty, especially older events; preserve that uncertainty in wording.
+- The fact pack is internal planning only. Return only the requested narration JSON, not the fact pack.
+`;
+
   const stageNames = format === "shorts"
     ? ["HOOK", ...Array.from({length:14},(_,i)=>"P"+(i+1))]
     : ["HOOK", ...Array.from({length:30},(_,i)=>"S"+(i+1))];
 
-  const system = `You are the Living Disaster Book narration engine.
+  const system = `You are the Living Disaster Book narration engine.\n${factPackInstruction}
 Write natural, human-sounding historical-documentary English for a general audience.
 Preserve verified facts, dates, places, causes and consequences. Explain technical science clearly and cinematically.
 FACT SAFETY LOCK:
