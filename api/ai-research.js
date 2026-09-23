@@ -131,6 +131,43 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
   };
 }
 
+
+function normalizeWords(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g," ").split(" ").filter(w=>w.length>2);
+}
+function datePartsFromIso(iso) {
+  if (!iso) return null;
+  const d=new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return {year:d.getUTCFullYear(),month:d.getUTCMonth()+1,day:d.getUTCDate()};
+}
+function crossValidate(noaa, usgs) {
+  const n = noaa?.status === "candidate" ? noaa.event : null;
+  const u = usgs?.status === "candidate" ? usgs.event : null;
+  if (!n && !u) return {status:"NEEDS_REVIEW",confidence:"none",checks:[],reason:"No confident authoritative event candidate was found."};
+  if (n && !u) return {status:"PARTIAL",confidence:noaa.confidence||"medium",checks:[{field:"NOAA/NCEI event",match:true}],reason:"NOAA/NCEI candidate found; no matching USGS catalog candidate was found."};
+  if (!n && u) return {status:"PARTIAL",confidence:usgs.confidence||"low",checks:[{field:"USGS event",match:true}],reason:"USGS candidate found; no matching NOAA/NCEI tsunami candidate was found."};
+
+  const ud=datePartsFromIso(u.time);
+  const dateMatch = !!(ud && Number(n.year)===ud.year && (!n.month || Number(n.month)===ud.month) && (!n.day || Number(n.day)===ud.day));
+  const nw=normalizeWords([n.location,n.country].filter(Boolean).join(" "));
+  const uw=normalizeWords(u.place);
+  const shared=nw.filter(w=>uw.includes(w));
+  const locationMatch=shared.length>0;
+  const nMag=Number(n.raw?.EQ_MAGNITUDE ?? n.raw?.EQ_MAG_MW);
+  const uMag=Number(u.magnitude);
+  const magnitudeComparable=Number.isFinite(nMag)&&Number.isFinite(uMag);
+  const magnitudeClose=!magnitudeComparable || Math.abs(nMag-uMag)<=0.6;
+  const checks=[
+    {field:"date",match:dateMatch,noaa:{year:n.year,month:n.month,day:n.day},usgs:ud},
+    {field:"location",match:locationMatch,sharedTerms:shared},
+    {field:"magnitude",match:magnitudeClose,comparable:magnitudeComparable,noaa:Number.isFinite(nMag)?nMag:null,usgs:Number.isFinite(uMag)?uMag:null}
+  ];
+  if (dateMatch && locationMatch && magnitudeClose) return {status:"VERIFIED",confidence:"high",checks,reason:"NOAA/NCEI and USGS candidates agree on the event identity within configured checks."};
+  if (dateMatch && (locationMatch || magnitudeClose)) return {status:"PARTIAL",confidence:"medium",checks,reason:"Authoritative candidates partly agree but require review before exact details are locked."};
+  return {status:"CONFLICT",confidence:"low",checks,reason:"NOAA/NCEI and USGS candidates do not agree strongly enough to lock the event identity."};
+}
+
 function classifyTopic(topic) {
   const t = topic.toLowerCase();
   if (t.includes("tsunami")) return "tsunami";
@@ -151,9 +188,9 @@ export default async function handler(req, res) {
   const hazardType = classifyTopic(topic);
   const sources = SOURCE_REGISTRY[hazardType] || [];
 
-  return res.status(200).json({
+  const validation = crossValidate(noaa, usgs);\n\n  return res.status(200).json({
     ok: true,
-    version: "research-layer-3",
+    version: "research-layer-4",
     topic,
     hazardType,
     status: sources.length ? "source-plan-ready" : "needs-source-registry",
