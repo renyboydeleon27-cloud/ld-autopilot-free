@@ -44,6 +44,7 @@ function topicSearchText(topic) {
     .replace(/\b(1[0-9]{3}|20[0-9]{2})\b/g, " ")
     .replace(/\b(tsunami|earthquake|quake|mega-tsunami|megatsunami)\b/gi, " ")
     .replace(/[—–-]/g, " ")
+    .replace(/\\b(usa|u\\.?s\\.?a\\.?|united states|japan|alaska)\\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -63,9 +64,12 @@ async function fetchUsgsCandidate(topic, year) {
   if (!r.ok) return {status:"error", reason:`USGS HTTP ${r.status}`};
   const data = await r.json();
   const words = topicSearchText(topic).toLowerCase().split(" ").filter(w=>w.length>2);
+  const regionHints = topic.toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2);
   const scored = (data.features || []).map(feature => {
     const place = String(feature?.properties?.place || "").toLowerCase();
-    const score = words.reduce((n,w)=>n + (place.includes(w) ? 1 : 0), 0);
+    const direct = words.reduce((n,w)=>n + (place.includes(w) ? 3 : 0), 0);
+    const regional = regionHints.reduce((n,w)=>n + (place.includes(w) ? 1 : 0), 0);
+    const score = direct + regional;
     return {feature,score};
   }).sort((a,b)=>b.score-a.score || (b.feature?.properties?.mag||0)-(a.feature?.properties?.mag||0));
   const best = scored[0];
@@ -101,10 +105,13 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
   const data = await r.json();
   if (data?.error) return {status:"error", reason:data.error.message || "NOAA/NCEI query error"};
   const words = topicSearchText(topic).toLowerCase().split(" ").filter(w=>w.length>2);
+  const regionHints = topic.toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2);
   const scored = (data.features || []).map(feature => {
     const a = feature.attributes || {};
     const hay = [a.LOCATION_NAME,a.COUNTRY,a.REGION,a.COMMENTS,a.CAUSE].filter(Boolean).join(" ").toLowerCase();
-    const score = words.reduce((n,w)=>n + (hay.includes(w) ? 1 : 0), 0);
+    const direct = words.reduce((n,w)=>n + (hay.includes(w) ? 3 : 0), 0);
+    const regional = regionHints.reduce((n,w)=>n + (hay.includes(w) ? 1 : 0), 0);
+    const score = direct + regional;
     return {feature,score};
   }).sort((a,b)=>b.score-a.score);
   const best = scored[0];
