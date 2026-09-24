@@ -1,4 +1,4 @@
-/* LD AUTO v3.34.0 — SMART CONTINUE obeys PROJECT LOCKS */
+/* LD AUTO v3.35.0 — SMART CONTINUE with mobile sticky action bar */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -78,9 +78,11 @@ function status(text,type=''){
   el.textContent=text;
   el.dataset.state=type;
 }
+function smartButtons(){
+  return [document.getElementById('ldSmartContinueBtn'),document.getElementById('ldSmartStickyBtn')].filter(Boolean);
+}
 function buttonLabel(text){
-  const btn=document.getElementById('ldSmartContinueBtn');
-  if(btn)btn.textContent=text;
+  smartButtons().forEach(btn=>btn.textContent=text);
 }
 function panelPayload(card){
   const continuity=window.ldVideoContinuity||{};
@@ -260,7 +262,7 @@ async function run(){
   if(busy)return;
   busy=true;
   const btn=document.getElementById('ldSmartContinueBtn');
-  if(btn)btn.disabled=true;
+  smartButtons().forEach(b=>b.disabled=true);
   try{
     if(!window.LDProjectLocks?.isLocked?.()&&!window.ldProjectLocks?.locked){
       document.getElementById('ldProjectLocks')?.scrollIntoView({behavior:'smooth',block:'center'});
@@ -298,7 +300,7 @@ async function run(){
     status('⚠️ '+String(e?.message||e),'error');
   }finally{
     busy=false;
-    if(btn)btn.disabled=false;
+    smartButtons().forEach(b=>b.disabled=false);
   }
 }
 
@@ -325,6 +327,17 @@ function mount(){
   panel.innerHTML='<div class="ld-smart-head"><div><span class="audit-label">GUIDED MODE</span><strong>LD Autopilot</strong><p>One button prepares the current stage, audits/fixes T2V when needed, and advances after you approve the result.</p></div></div><button type="button" id="ldSmartContinueBtn" class="primary">🚀 SMART CONTINUE</button><div id="ldSmartContinueStatus" class="ld-smart-status">Open a production and press SMART CONTINUE.</div>';
   setup.after(panel);
   panel.querySelector('#ldSmartContinueBtn').addEventListener('click',run);
+
+  let sticky=document.getElementById('ldSmartStickyBar');
+  if(!sticky){
+    sticky=document.createElement('div');
+    sticky.id='ldSmartStickyBar';
+    sticky.className='ld-smart-sticky-bar';
+    sticky.innerHTML='<button type="button" id="ldSmartStickyBtn" class="primary">🚀 SMART CONTINUE</button>';
+    document.body.appendChild(sticky);
+    sticky.querySelector('#ldSmartStickyBtn').addEventListener('click',run);
+  }
+
   mountAdvanced();
 
   const style=document.createElement('style');
@@ -333,6 +346,9 @@ function mount(){
     .ld-smart-continue{margin:14px 0;padding:16px;border:2px solid rgba(124,92,255,.75);border-radius:16px;background:rgba(124,92,255,.08)}
     .ld-smart-head strong{display:block;font-size:1.05rem;margin:3px 0}.ld-smart-head p{font-size:.85rem;opacity:.82;margin:4px 0 12px}
     #ldSmartContinueBtn{width:100%;min-height:48px;font-size:1rem;font-weight:800}
+    .ld-smart-sticky-bar{position:fixed;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,680px);z-index:9999;padding:8px;border-radius:16px;background:rgba(15,22,32,.94);backdrop-filter:blur(10px);box-shadow:0 8px 28px rgba(0,0,0,.42);border:1px solid rgba(124,92,255,.65)}
+    #ldSmartStickyBtn{width:100%;min-height:50px;font-size:1rem;font-weight:900}
+    .shell{padding-bottom:92px}
     .ld-smart-status{margin-top:10px;padding:10px;border-radius:10px;background:rgba(0,0,0,.18);font-size:.84rem;white-space:pre-wrap}
     .ld-smart-status[data-state="pass"]{outline:1px solid rgba(101,194,141,.55)}
     .ld-smart-status[data-state="error"]{outline:1px solid rgba(255,110,110,.55)}
