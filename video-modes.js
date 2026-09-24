@@ -197,6 +197,58 @@ function rockyMountainLocustPanel(stage){
  };
  return map[stage]||null;
 }
+function rockyMountainLocustLatePanel(stage){
+ if(!isRockyMountainLocust1874()||!/^P1[0-4]$/.test(stage))return null;
+ var base={approved:false,scientific:false};
+ var map={
+  P10:{
+   scene:'In an 1874 Great Plains farming community after the worst locust feeding has passed, adult farmers and local civic officials inspect stripped fields, damaged crop rows, nearly empty storage areas and surviving farm equipment. Two or three adults compare the damage directly in the field while one records losses in a small period notebook or ledger. Keep the emphasis on visible agricultural loss and sober assessment, not modern emergency-management staging. No aircraft, motor vehicles, radios, plastic equipment or modern uniforms.',
+   narrative:'Farmers and local officials assess the scale of crop losses and the growing threat to food and household survival.',
+   timing:'0.0–2.0s: Establish stripped fields, damaged crops and a small group of adults inspecting the loss.\n2.0–7.0s: One farmer lifts damaged stalks while another adult checks nearby storage or records losses in a period notebook.\n7.0–10.0s: Hold on the contrast between devastated farmland and the adults quietly assessing what remains.',
+   camera:'A restrained lateral documentary track across damaged rows toward the adults assessing the field. No cuts, orbit, time-lapse or modern disaster-news behavior.',
+   physics:'Damage is already present. Nothing repairs or collapses instantly. Adults handle real crop remnants and period objects naturally. Preserve plausible 1874 farm scale and materials.',
+   audio:'Dry prairie wind, footsteps through damaged vegetation, light handling of stalks and paper, distant farm ambience only. No voiceover, dialogue or music.',
+   extraNegative:'No aircraft. No motor vehicles. No radio equipment. No modern emergency uniforms. No plastic containers. No modern clipboards. No intact lush field dominating the scene. No giant insects.'
+  },
+  P11:{
+   scene:'In an 1874 Great Plains town or rural relief point after the locust disaster, adult volunteers, farmers and local relief organizers prepare period-appropriate aid for affected families. Show sacks of grain or flour, folded clothing, seed bags, wooden crates and simple supplies being sorted beside a storehouse, rail-side freight area or public building, then loaded by hand onto a horse-drawn wagon. The focal action is practical relief distribution after crop failure. Keep every object believable for 1874. Absolutely no aircraft, no motor trucks, no tractors, no radios, no plastic packaging, no modern disaster-response gear and no twentieth-century relief equipment.',
+   narrative:'Communities organize food, clothing, seed and other practical relief for families hit by the 1874 locust disaster.',
+   timing:'0.0–2.0s: Establish the period relief point with adult volunteers, stacked sacks, wooden crates and a horse-drawn wagon.\n2.0–7.0s: Adults sort and lift supplies by hand, passing sacks or seed bags toward the wagon in one continuous practical workflow.\n7.0–10.0s: End with the wagon partly loaded and the relief effort visibly organized for delivery to affected farms.',
+   camera:'One continuous restrained forward-and-side documentary move that keeps the supply stacks, adult workers and horse-drawn wagon readable together. No cuts, orbit or time-lapse.',
+   physics:'Supplies have realistic weight. Adults lift, pass and load one item at a time with believable body mechanics. The horse and wagon remain stable. No instant loading, teleporting objects or duplicated people.',
+   audio:'Wooden crate movement, cloth sacks shifting, wagon creaks, horse movement, footsteps and quiet outdoor town ambience only. No voiceover, dialogue or music.',
+   extraNegative:'No aircraft. No helicopters. No airplanes. No motor trucks. No tractors. No radios. No plastic bags. No modern pallets. No fluorescent vests. No modern aid logos. No twentieth-century relief equipment. No giant insects.'
+  },
+  P12:{
+   scene:'During the difficult aftermath of the 1874 locust disaster, adult residents in a Great Plains community receive and move basic relief supplies while damaged farms remain visible nearby. Show modest period clothing, horse-drawn transport, sacks of food or seed, folded blankets or clothing, wooden crates and simple nineteenth-century buildings. The mood is serious and practical: shortages and economic strain are visible through sparse supplies and damaged farmland, without turning the scene into a modern refugee camp.',
+   narrative:'The crop disaster creates wider hardship as affected households depend on limited food, seed and material assistance.',
+   timing:'0.0–2.0s: Establish a modest 1870s community relief scene with damaged farmland visible in context.\n2.0–7.0s: Adults receive, carry or organize limited supplies with restrained, tired movement.\n7.0–10.0s: Hold on the small scale of available aid against the wider agricultural damage.',
+   camera:'A slow observational push through the relief area toward the adults and damaged farmland beyond. No cuts, orbit or time-lapse.',
+   physics:'Objects remain scarce, physical and period-correct. Adults carry realistic loads. No instant crowd growth, magical supply appearance or modern logistics.',
+   audio:'Wind, footsteps, cloth and crate handling, wagon creaks and subdued outdoor ambience only. No voiceover, dialogue or music.',
+   extraNegative:'No modern refugee camp. No aircraft. No motor vehicles. No plastic packaging. No modern tents. No loudspeakers. No modern uniforms. No aid-brand logos.'
+  },
+  P13:{
+   scene:'As the immediate crisis begins to ease, adult Great Plains farmers start the slow work of recovery using period-appropriate 1870s methods. Show damaged fields being cleared, seed sacks opened, hand tools and horse-drawn farm equipment prepared for replanting. The land should still carry clear signs of the locust disaster, but the focal action is careful recovery rather than a magically restored harvest.',
+   narrative:'Recovery begins slowly as affected farmers clear damaged ground, secure seed and prepare to plant again.',
+   timing:'0.0–2.0s: Establish damaged but quiet farmland with adults preparing seed and period tools.\n2.0–7.0s: Farmers clear rows, handle seed sacks and ready horse-drawn equipment in a deliberate recovery workflow.\n7.0–10.0s: End on the first visible steps toward replanting while much of the landscape remains damaged.',
+   camera:'A restrained lateral move along damaged rows toward the recovery work. No cuts, time-lapse, orbit or instant seasonal transformation.',
+   physics:'Recovery is gradual. Fields do not become green instantly. Tools, horses, seed and soil behave naturally and remain period-accurate.',
+   audio:'Light wind, soil and tool sounds, sack movement, horse tack and restrained farm ambience only. No voiceover, dialogue or music.',
+   extraNegative:'No instant green recovery. No modern tractors. No aircraft. No powered machinery outside the era. No plastic seed bags. No modern irrigation. No giant insects.'
+  },
+  P14:{
+   scene:'A reflective closing view of the Great Plains after the 1874 Rocky Mountain locust disaster: recovering farmland stretches beyond a few still-scarred patches while adult farmers continue ordinary work with period-appropriate tools and horse-drawn equipment. Keep the image grounded in the late nineteenth-century world and let the contrast between surviving damage and renewed cultivation carry the final lesson visually. No written lesson, title card, modern technology or invented monument is shown.',
+   narrative:'The 1874 locust disaster remains a stark historical example of how quickly an environmental crisis could devastate farming communities across the Great Plains.',
+   timing:'0.0–2.0s: Establish a broad recovered-but-still-scarred prairie farming landscape.\n2.0–7.0s: Show adult farmers continuing steady period-appropriate work among visible reminders of past crop damage.\n7.0–10.0s: Finish on a wide, quiet historical composition that feels reflective rather than triumphant.',
+   camera:'A slow restrained pullback or lateral drift revealing the wider prairie and recovering farms. No cuts, orbit, time-lapse or modern aerial-drone look.',
+   physics:'The landscape shows gradual recovery, not instant transformation. Human and animal movement remains natural and period-correct.',
+   audio:'Prairie wind, distant horse and farm-tool sounds, light vegetation movement only. No voiceover, dialogue or music.',
+   extraNegative:'No modern machinery. No aircraft. No drone view. No modern roads. No text, captions, memorial plaque or title card. No giant insects.'
+  }
+ };
+ return map[stage]||null;
+}
 function isNargis2008(){
  var t=String(current()||'').toLowerCase();
  return t.includes('cyclone nargis')&&t.includes('2008');
@@ -225,7 +277,7 @@ function nargisPanel(stage){
  return base;
 }
 function eventPanel(stage){
- return rockyMountainLocustPanel(stage)||nargisPanel(stage)||lituyaCause(stage);
+ return rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
 }
 function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanNarrationInstructions(value):String(value||'').trim();}
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[5]=clean(parts[5]);parts[6]=clean(parts[6]);return JSON.stringify(parts);}catch(e){return '';}}
