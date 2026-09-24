@@ -267,10 +267,10 @@ function classifyTopic(topic) {
 
 export async function buildResearch(topic) {
   const hazardType = classifyTopic(topic);
+  const year = extractYear(topic);
   let sources = [...(SOURCE_REGISTRY[hazardType] || [])];
   const curatedProfiles=CURATED_EVENT_EVIDENCE.filter(p=>p.matches({topic,year,hazardType}));
   for(const p of curatedProfiles) if(!sources.some(s=>s.id===p.source.id)) sources.push(p.source);
-  const year = extractYear(topic);
   let noaa = null;
   let usgs = null;
 
@@ -305,6 +305,7 @@ export async function buildResearch(topic) {
     add("event.country",e.country,e.country?`Country: ${e.country}.`:null);
     add("event.cause",e.cause,e.cause?`Cause: ${e.cause}.`:null);
     add("impact.maximumWaterHeightM",e.maximumWaterHeightM,e.maximumWaterHeightM!=null?`Maximum water height: ${e.maximumWaterHeightM} m.`:null);
+    add("tsunami.numberOfRunupObservations",e.numberOfRunupObservations,e.numberOfRunupObservations!=null?`Runup observations: ${e.numberOfRunupObservations}.`:null);
     add("impact.deaths",e.deaths,e.deaths!=null?`Deaths: ${e.deaths}.`:null);
     add("impact.injuries",e.injuries,e.injuries!=null?`Injuries: ${e.injuries}.`:null);
     add("impact.housesDestroyed",e.housesDestroyed,e.housesDestroyed!=null?`Houses destroyed: ${e.housesDestroyed}.`:null);
