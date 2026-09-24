@@ -1,4 +1,4 @@
-/* LD AUTO v3.28.3 — reject untitled productions in AI Assist */
+/* LD AUTO v3.30.0 — AI Assist current-panel fixer + narration/research tools */
 (()=>{
 'use strict';
 function getTopic(){
@@ -58,15 +58,78 @@ function polishSavedSanrikuNarration(){
   });
   return changed;
 }
+function currentPanelCard(){
+  const cards=[...document.querySelectorAll('.stage-card')].filter(card=>/^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage||''));
+  const open=cards.filter(card=>!card.querySelector('.stage-body')?.classList.contains('hidden'));
+  if(!open.length) return null;
+  if(open.length===1) return open[0];
+  const center=(window.innerHeight||800)/2;
+  return open.slice().sort((x,y)=>{
+    const xr=x.getBoundingClientRect(), yr=y.getBoundingClientRect();
+    return Math.abs((xr.top+xr.height/2)-center)-Math.abs((yr.top+yr.height/2)-center);
+  })[0];
+}
+function visualMode(){
+  return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';
+}
+function panelPayload(card){
+  const continuity=window.ldVideoContinuity||{};
+  const sceneField=card.querySelector('.video-scene');
+  const promptField=card.querySelector('.text-video-prompt');
+  return {
+    topic:getTopic(),
+    stage:card.dataset.stage||'',
+    format:document.getElementById('format')?.value||'shorts',
+    visualMode:visualMode(),
+    year:String(continuity.year||'').trim(),
+    location:String(continuity.location||'').trim(),
+    sharedDetails:String(continuity.details||'').trim(),
+    narration:String(card.querySelector('.narration')?.value||'').trim(),
+    currentScene:String(sceneField?.value||card.dataset.videoScene||'').trim(),
+    currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim().slice(0,14000)
+  };
+}
+function applyFixedPanel(card, scene){
+  const field=card.querySelector('.video-scene');
+  if(!field) throw new Error('Open Text-to-Video for this panel first.');
+  field.value=String(scene||'').trim();
+  field.dispatchEvent(new Event('input',{bubbles:true}));
+  field.dispatchEvent(new Event('change',{bubbles:true}));
+  if(window.LDVideoModes?.state?.(card)?.mode==='text'){
+    window.LDVideoModes.prompt(card);
+  }
+}
 function mount(){
   if(document.getElementById('ldAiTestBox')) return;
   const anchor=document.querySelector('.hero')||document.querySelector('main')||document.body;
   const box=document.createElement('section');
   box.id='ldAiTestBox';
   box.style.cssText='margin:12px 0;padding:12px;border:2px solid #7c5cff;border-radius:12px;background:rgba(124,92,255,.08)';
-  box.innerHTML='<strong>✨ LD AI Assist</strong><p style="font-size:12px;opacity:.8">Secure OpenAI assistance through the Vercel backend. Your API key stays on the server.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ldAiNarrationBtn" class="primary small">✨ AI Generate Narration</button><button type="button" id="ldPreflightBtn" class="ghost small">🛡️ Narration Preflight (FREE)</button><button type="button" id="ldAiTestBtn" class="ghost small">Test AI Connection</button><button type="button" id="ldResearchBtn" class="ghost small">Research Diagnostics</button></div><div id="ldAiTestResult" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>';
+  box.innerHTML='<strong>✨ LD AI Assist</strong><p style="font-size:12px;opacity:.8">Secure OpenAI assistance through the Vercel backend. Your API key stays on the server.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ldAiNarrationBtn" class="primary small">✨ AI Generate Narration</button><button type="button" id="ldAiFixPanelBtn" class="primary small">✨ Fix Current Panel</button><button type="button" id="ldPreflightBtn" class="ghost small">🛡️ Narration Preflight (FREE)</button><button type="button" id="ldAiTestBtn" class="ghost small">Test AI Connection</button><button type="button" id="ldResearchBtn" class="ghost small">Research Diagnostics</button></div><div id="ldAiTestResult" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>';
   anchor.insertAdjacentElement('afterend',box);
   polishSavedSanrikuNarration();
+
+  document.getElementById('ldAiFixPanelBtn').onclick=async()=>{
+    const btn=document.getElementById('ldAiFixPanelBtn'),out=document.getElementById('ldAiTestResult');
+    const topic=getTopic(),card=currentPanelCard();
+    if(invalidTopic(topic)){out.textContent='❌ Set a real disaster topic and build/open that production first.';return;}
+    if(!card){out.textContent='❌ Open the P1–P14 panel you want AI Assist to fix first.';return;}
+    const payload=panelPayload(card);
+    if(!payload.currentScene){out.textContent='❌ '+payload.stage+' has no panel scene description yet.';return;}
+    btn.disabled=true;
+    out.textContent='✨ Fixing '+payload.stage+' scene while preserving the current production DNA…';
+    try{
+      const r=await fetch('/api/ai-panel-fix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const raw=await r.text();
+      let d;
+      try{d=JSON.parse(raw);}catch{throw new Error('Panel-fix endpoint returned non-JSON (HTTP '+r.status+'): '+raw.slice(0,180));}
+      if(!r.ok||!d.ok) throw new Error(d.error||('HTTP '+r.status));
+      applyFixedPanel(card,d.scene);
+      const note=d.note?('\n'+d.note):'';
+      out.textContent='✅ '+payload.stage+' fixed. Full Text-to-Video prompt rebuilt automatically.'+note;
+    }catch(e){out.textContent='❌ Panel fix: '+String(e.message||e);}
+    finally{btn.disabled=false;}
+  };
 
   document.getElementById('ldResearchBtn').onclick=async()=>{
     const btn=document.getElementById('ldResearchBtn'),out=document.getElementById('ldAiTestResult');
