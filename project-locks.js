@@ -213,7 +213,7 @@ function mount(){
     .project-lock-grid legend{font-size:.78rem;font-weight:800;padding:0 5px}.project-lock-grid label{display:flex;align-items:center;gap:7px;padding:7px 4px;font-size:.88rem}
     .project-lock-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.project-lock-actions button{flex:1;min-width:140px}
     .visual-mode-field{display:none!important}
-    body.ld-project-locked #productionVideoMethod{display:none!important}
+    #productionVideoMethod{display:none!important}
     @media(max-width:620px){.project-lock-grid{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
