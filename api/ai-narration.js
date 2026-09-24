@@ -29,6 +29,7 @@ export default async function handler(req, res) {
   const evidenceForNarration = {
     validation: research.validation,
     exactNumbersAllowed: research.narrationGate.exactNumbersAllowed,
+    verifiedClaims: research.verifiedClaims || [],
     factPack: research.factPack,
     sources: research.sources.map(s=>({authority:s.authority,name:s.name,url:s.url}))
   };
@@ -63,9 +64,12 @@ EVIDENCE GATE:
 
   const system = `You are the Living Disaster Book narration engine.\n${factPackInstruction}
 EVIDENCE-LOCKED NARRATION — HARD BOUNDARY:
+- VERIFIED CLAIMS is the factual allow-list for event-specific narration. Treat it as stricter than the larger raw factPack.
 - The RESEARCH EVIDENCE supplied by the user message is the ONLY factual source you may use for event-specific claims.
 - Do NOT supplement it from model memory, common knowledge, inference, or typical disaster behavior.
-- Every event-specific claim must be directly represented in factPack.identity, cause, chronology, warning_conditions, physical_impact, human_impact, aftermath, or significance.
+- Every event-specific factual claim must be explicitly entailed by an item in verifiedClaims. If it is absent from verifiedClaims, do not state it.
+- Do not broaden a numeric database value into a range, ranking, superlative, comparison, or qualitative adjective such as strong/weak/deadly unless a verified claim explicitly supports that wording.
+- Do not invent human activity/context (holidays, crowds, occupations, routines, reactions) from location/date alone.
 - If a field is empty, that class of claim is unavailable. Do not invent it and do not replace it with a plausible generic event detail.
 - Generic science may explain a mechanism only when the evidence pack identifies that mechanism for this event; generic science cannot establish that the mechanism happened in this event.
 - Never state sea withdrawal/recession, strong or weak shaking, warning signs, witness behavior, community activities, rescue actions, exact wave behavior, or a named scientific classification unless that detail exists explicitly in the evidence pack.
@@ -177,8 +181,8 @@ Include every requested stage key exactly once and no markdown.`;
         model:"gpt-5-mini",
         text:{format:{type:"json_schema",name:"evidence_audit",strict:true,schema:{type:"object",properties:{valid:{type:"boolean"},unsupported:{type:"array",items:{type:"object",properties:{stage:{type:"string"},claim:{type:"string"},reason:{type:"string"}},required:["stage","claim","reason"],additionalProperties:false}}},required:["valid","unsupported"],additionalProperties:false}}},
         input:[
-          {role:"system",content:[{type:"input_text",text:`You are a strict evidence auditor. Compare narration claims ONLY against the supplied research fact pack. Do not use outside knowledge. Event identity being VERIFIED does not verify other details. Split each stage into event-specific factual claims. A claim is supported only if the fact pack explicitly entails it; paraphrases are allowed, inference and typical disaster behavior are not. Generic connective/cinematic wording is allowed only when it adds no new factual assertion. Return JSON exactly: {"valid":true,"unsupported":[]} or {"valid":false,"unsupported":[{"stage":"HOOK","claim":"...","reason":"..."}]}.`}]},
-          {role:"user",content:[{type:"input_text",text:`FACT PACK:\n${JSON.stringify(research.factPack)}\n\nNARRATION:\n${JSON.stringify(stages)}`}]}
+          {role:"system",content:[{type:"input_text",text:`You are a strict evidence auditor. Compare narration claims ONLY against the supplied VERIFIED CLAIMS allow-list. Do not use outside knowledge. Event identity being VERIFIED does not verify other details. Split each stage into event-specific factual claims. A claim is supported only if VERIFIED CLAIMS explicitly entail it; paraphrases are allowed, inference and typical disaster behavior are not. Generic connective/cinematic wording is allowed only when it adds no new factual assertion. Return JSON exactly: {"valid":true,"unsupported":[]} or {"valid":false,"unsupported":[{"stage":"HOOK","claim":"...","reason":"..."}]}.`}]},
+          {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nNARRATION:\n${JSON.stringify(stages)}`}]}
         ],
         max_output_tokens:4000
       })
@@ -207,7 +211,7 @@ Include every requested stage key exactly once and no markdown.`;
           text:{format:{type:"json_schema",name:"repaired_stages",strict:true,schema:{type:"object",properties:Object.fromEntries(repairStages.map(n=>[n,{type:"string"}])),required:repairStages,additionalProperties:false}}},
           input:[
             {role:"system",content:[{type:"input_text",text:"Rewrite ONLY the requested rejected narration stages. Use ONLY facts explicitly entailed by the supplied fact pack. Remove unsupported ranking, comparison, sensory, witness, warning, or causal claims. Do not use outside knowledge. Keep each line natural, cinematic, concise, and about 8-10 seconds. Return only the requested stage keys."}]},
-            {role:"user",content:[{type:"input_text",text:`FACT PACK:\n${JSON.stringify(research.factPack)}\n\nREJECTED CLAIMS:\n${JSON.stringify(unsupported)}\n\nCURRENT REJECTED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
+            {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nREJECTED CLAIMS:\n${JSON.stringify(unsupported)}\n\nCURRENT REJECTED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
           ],
           max_output_tokens:2000
         })
@@ -229,7 +233,7 @@ Include every requested stage key exactly once and no markdown.`;
           text:{format:{type:"json_schema",name:"repair_audit",strict:true,schema:{type:"object",properties:{valid:{type:"boolean"},unsupported:{type:"array",items:{type:"object",properties:{stage:{type:"string"},claim:{type:"string"},reason:{type:"string"}},required:["stage","claim","reason"],additionalProperties:false}}},required:["valid","unsupported"],additionalProperties:false}}},
           input:[
             {role:"system",content:[{type:"input_text",text:"Strictly audit the repaired narration ONLY against the supplied fact pack. Do not use outside knowledge. A claim is supported only if explicitly entailed. Return valid=true only if every event-specific claim is supported."}]},
-            {role:"user",content:[{type:"input_text",text:`FACT PACK:\n${JSON.stringify(research.factPack)}\n\nREPAIRED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
+            {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nREPAIRED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
           ],
           max_output_tokens:1500
         })
