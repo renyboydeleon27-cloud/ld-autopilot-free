@@ -1,6 +1,6 @@
-/* LD AUTO v3.29.2 — Rocky Mountain Locust P1–P3 progression locks. */
+/* LD AUTO v3.31.2 — Rocky Mountain Locust P1 zero-locust hard lock. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.29.2-locust-p1-p3-progression-v1';
+const T2V_POLICY_VERSION='3.31.2-locust-p1-zero-hard-lock-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -164,13 +164,13 @@ function rockyMountainLocustPanel(stage){
   P1:{
    approved:false,
    scientific:false,
-   scene:'A calm ordinary farming day across the Great Plains, USA, in 1874, before the Rocky Mountain locust outbreak becomes visibly threatening. Adult frontier farmers work healthy crop fields using period-accurate hand tools while a horse-drawn wagon, simple wooden farmhouse, barn, fences and broad prairie farmland establish the historical setting. Crops are still healthy and intact. The farmers behave normally and show no panic. Only a few ordinary distant insects may be present naturally, but there is no visible swarm, no crop destruction and no unusual darkening of the sky yet. Establish peaceful normal life immediately before the coming disaster.',
+   scene:'A calm ordinary farming day across the Great Plains, USA, in 1874, before the Rocky Mountain locust outbreak becomes visibly threatening. Adult frontier farmers work healthy crop fields using period-accurate hand tools while a horse-drawn wagon, simple wooden farmhouse, barn, fences and broad prairie farmland establish the historical setting. Crops are still healthy and intact. The farmers behave normally and show no panic. There must be ZERO visible locusts or other visible swarming insects anywhere in the frame at any time. No insects in the air, on crops, on soil, near the camera, or in the distance. No visible swarm, no crop destruction and no unusual darkening of the sky. Establish a completely calm pre-disaster world before the locust plague becomes visible at all.',
    narrative:'Adult frontier farmers work healthy Great Plains fields during an ordinary day in 1874, before the locust swarm becomes visibly threatening.',
-   timing:'0.0–2.0s: Establish a peaceful 1874 Great Plains farm with healthy crops, adult farmers, period hand tools, and a horse-drawn wagon or nearby wooden farm structures. No disaster is visible.\\n2.0–7.0s: Continue normal farm work with restrained natural movement in clothing, crops, horses and prairie vegetation. Keep the fields healthy and the atmosphere calm.\\n7.0–10.0s: Hold the peaceful pre-disaster world. At most, allow a few small distant insects moving naturally, but do not reveal a swarm, crop damage or a darkened sky yet.',
+   timing:'0.0–2.0s: Establish a peaceful 1874 Great Plains farm with healthy crops, adult farmers, period hand tools, and a horse-drawn wagon or nearby wooden farm structures. No disaster is visible.\\n2.0–7.0s: Continue normal farm work with restrained natural movement in clothing, crops, horses and prairie vegetation. Keep the fields healthy and the atmosphere calm.\\n7.0–10.0s: Hold the peaceful pre-disaster world with ZERO visible locusts or swarming insects. Keep the sky clear, crops healthy, and the farm completely normal through the final frame.',
    camera:'One restrained cinematic historical-anime documentary shot with a gentle forward track or slow lateral drift. Keep foreground crops, working adults and the wider prairie farm readable together. No cuts, transitions, orbit, time-lapse or disaster-camera behavior.',
-   physics:'This is the calm-before-disaster panel. Crops remain healthy, farm objects remain stable, adults continue ordinary work, horses and vegetation move naturally, and any insects remain few, small and distant. No sudden swarm formation, no instant crop loss, no impossible insect growth, no panic and no destruction.',
+   physics:'This is the calm-before-disaster panel. Crops remain healthy, farm objects remain stable, adults continue ordinary work, and horses and vegetation move naturally. ZERO visible locusts or swarming insects are allowed in this panel. No insect buildup, no sudden swarm formation, no instant crop loss, no impossible insect growth, no panic and no destruction.',
    audio:'Quiet prairie ambience, light wind through crops, subtle farm-tool sounds, distant horse or wagon movement and natural rural environment SFX only. No voiceover, no dialogue and no music.',
-   extraNegative:'No visible locust swarm yet. No dense insects. No sky darkening. No crop destruction. No stripped vegetation. No panic. No giant insects. No modern machinery. No children. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark or any on-screen text.'
+   extraNegative:'No visible locusts at any time. No insects in the air, on crops, on soil, near the camera, or in the distance. No swarm. No distant insect cloud. No dense insects. No sky darkening. No crop destruction. No stripped vegetation. No panic. No giant insects. No modern machinery. No children. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark or any on-screen text.'
   },
   P2:{
    approved:false,
