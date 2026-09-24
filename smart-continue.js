@@ -1,4 +1,4 @@
-/* LD AUTO v3.35.2 — live CURRENT TARGET label for Smart Continue */
+/* LD AUTO v3.35.3 — visible AI progress + audit cache + request timeout */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -7,6 +7,8 @@ const toast=document.getElementById('toast');
 if(!stages||!setup)return;
 
 let busy=false;
+const auditPassCache=new Map();
+let phaseTimer=null;
 
 function showToast(message){
   if(!toast)return;
@@ -98,6 +100,40 @@ function approveLabel(card){
   const stage=card?.dataset?.stage||'CURRENT';
   return '✅ APPROVE '+stage+' → NEXT';
 }
+function promptHash(value){
+  const s=String(value||'');
+  let h=2166136261;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}
+  return (h>>>0).toString(36);
+}
+function auditCacheKey(payload){
+  return [payload.stage,payload.visualMode,payload.year,payload.location,promptHash(payload.currentPrompt)].join('|');
+}
+function stopPhase(){
+  if(phaseTimer){clearInterval(phaseTimer);phaseTimer=null;}
+}
+function startPhase(label,stage){
+  stopPhase();
+  const started=Date.now();
+  const update=()=>{
+    const sec=Math.max(0,Math.floor((Date.now()-started)/1000));
+    buttonLabel('⏳ '+label+' '+stage+(sec?' · '+sec+'s':''));
+  };
+  update();
+  phaseTimer=setInterval(update,1000);
+}
+async function fetchWithTimeout(url,options,timeoutMs=55000){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+    return await fetch(url,{...options,signal:controller.signal});
+  }catch(e){
+    if(e?.name==='AbortError')throw new Error('AI request timed out. Tap SMART CONTINUE to retry.');
+    throw e;
+  }finally{
+    clearTimeout(timer);
+  }
+}
 function panelPayload(card){
   const continuity=window.ldVideoContinuity||{};
   const sceneField=card.querySelector('.video-scene');
@@ -151,7 +187,12 @@ async function ensureNarration(card){
   return true;
 }
 async function audit(payload){
-  const r=await fetch('/api/ai-t2v-audit',{
+  const key=auditCacheKey(payload);
+  const cached=auditPassCache.get(key);
+  if(cached)return {...cached,cached:true};
+
+  startPhase('AUDITING',payload.stage);
+  const r=await fetchWithTimeout('/api/ai-t2v-audit',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify(payload)
@@ -160,10 +201,12 @@ async function audit(payload){
   let d;
   try{d=JSON.parse(raw);}catch{throw new Error('T2V Audit returned an invalid response.');}
   if(!r.ok||!d.ok)throw new Error(d.error||('T2V Audit HTTP '+r.status));
+  if(d.result==='PASS')auditPassCache.set(key,d);
   return d;
 }
 async function fixPanel(card,payload){
-  const r=await fetch('/api/ai-panel-fix',{
+  startPhase('FIXING',payload.stage);
+  const r=await fetchWithTimeout('/api/ai-panel-fix',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify(payload)
@@ -244,6 +287,7 @@ async function prepareTextToVideo(card){
     if(!rebuilt)throw new Error('The prompt could not be rebuilt after AI Fix.');
     payload=panelPayload(card);
     status('SMART CONTINUE · Re-auditing after the automatic fix…','working');
+    startPhase('RE-AUDITING',payload.stage);
     result=await audit(payload);
   }
 
@@ -252,6 +296,7 @@ async function prepareTextToVideo(card){
     throw new Error('AI Audit still needs review: '+issues);
   }
 
+  stopPhase();
   const finalPrompt=window.LDVideoModes?.prompt?.(card)||payload.currentPrompt;
   const copied=await copyText(finalPrompt);
   card.dataset.smartReady='1';
@@ -310,9 +355,11 @@ async function run(){
 
     await prepare(card);
   }catch(e){
+    stopPhase();
     buttonLabel('🚀 SMART CONTINUE');
     status('⚠️ '+String(e?.message||e),'error');
   }finally{
+    stopPhase();
     busy=false;
     smartButtons().forEach(b=>b.disabled=false);
   }
