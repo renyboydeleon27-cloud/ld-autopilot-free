@@ -1,4 +1,4 @@
-/* LD AUTO v3.31.0 — AI T2V Audit + current-panel fixer + narration/research tools */
+/* LD AUTO v3.31.4 — T2V Audit visual-mode false-positive fix */
 (()=>{
 'use strict';
 function getTopic(){
@@ -70,6 +70,8 @@ function currentPanelCard(){
   })[0];
 }
 function visualMode(){
+  const selected=document.getElementById('visualMode')?.value;
+  if(selected==='real'||selected==='anime') return selected;
   return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';
 }
 function panelPayload(card){
@@ -149,6 +151,7 @@ function mount(){
       const issues=Array.isArray(d.issues)?d.issues.filter(Boolean):[];
       const lines=[
         (d.result==='PASS'?'✅ ':'⚠️ ')+(d.result||'AUDIT COMPLETE')+' — '+(d.summary||''),
+        'MODE: '+(payload.visualMode==='real'?'Real Human':'Historical Anime')+' · STAGE: '+payload.stage
       ];
       if(issues.length){
         lines.push('ISSUES');
