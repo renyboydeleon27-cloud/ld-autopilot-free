@@ -162,8 +162,9 @@ function migrateIfNeeded(){
   persist();
 }
 function syncProduction(){
+  if(!current())migrateIfNeeded();
   const lock=current();
-  if(!lock)return;
+  if(!lock){render();return;}
   syncVisualStyle(lock,false);
   syncVideoMode(lock);
   render();
@@ -236,10 +237,10 @@ window.addEventListener('load',()=>setTimeout(syncProduction,250));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
 
 window.LDProjectLocks={
-  get:()=>current(),
-  isLocked:()=>!!current(),
-  videoMode:()=>current()?.videoMode||'',
-  visualStyle:()=>current()?.visualStyle||'',
+  get:()=>editing?null:current(),
+  isLocked:()=>!!current()&&!editing,
+  videoMode:()=>editing?'':(current()?.videoMode||''),
+  visualStyle:()=>editing?'':(current()?.visualStyle||''),
   lock:lockProject,
   resetForNewProject,
   syncProduction
