@@ -54,6 +54,24 @@ function sanitizeNarrationLine(stage, text, stageEvidence) {
   return evidenceFallback(stage, stageEvidence?.[stage]||[]) || t;
 }
 
+function polishNarrationQuality(stage, text, stageEvidence) {
+  const t=String(text??"").trim();
+  const evidence=stageEvidence?.[stage]||[];
+  const byField=Object.fromEntries(evidence.map(x=>[x.field,x.value]));
+  if(stage==="HOOK" && /^On .+, the disaster began\.$/i.test(t) &&
+     String(byField["earthquake.shaking"]||"").toLowerCase()==="weak" &&
+     String(byField["event.classification"]||"").toLowerCase()==="tsunami earthquake"){
+    const date=String(byField["event.date"]||"").trim();
+    const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+    const spoken=m ? new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric",timeZone:"UTC"}) : date;
+    if(spoken) return `On ${spoken}, the ground shook only weakly—but this was a tsunami earthquake.`;
+  }
+  if(stage==="P1" && /^The event occurred in /i.test(t)){
+    return evidenceFallback(stage,evidence) || t;
+  }
+  return t;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -446,7 +464,7 @@ Include every requested stage key exactly once and no markdown.`;
 
     for (const name of stageNames) {
       if (typeof stages[name] !== "string" || !stages[name].trim()) return res.status(502).json({ok:false,error:`AI response is missing ${name}. Please try again.`});
-      stages[name] = sanitizeNarrationLine(name, stages[name], stageEvidence);
+      stages[name] = polishNarrationQuality(name, sanitizeNarrationLine(name, stages[name], stageEvidence), stageEvidence);
     }
     return res.status(200).json({ok:true,topic,format,researchStatus:research.validation.status,stages});
   } catch (err) {
