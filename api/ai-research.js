@@ -257,11 +257,42 @@ export async function buildResearch(topic) {
     ...(usgs?.status === "candidate" ? [{source:"USGS",confidence:usgs.confidence,event:usgs.event}] : [])
   ];
 
+  // Build an explicit allow-list of atomic facts with provenance. Narration
+  // should prefer these records over interpreting the larger raw source object.
+  const verifiedClaims=[];
+  if(noaa?.status==="candidate"){
+    const e=noaa.event||{};
+    const sourceId="noaa-ncei-tsunami";
+    const sourceUrl=SOURCE_REGISTRY.tsunami[0].url;
+    const add=(field,value,claim)=>{
+      if(value!==null&&value!==undefined&&value!=="") verifiedClaims.push({field,value,claim,sourceId,authority:"NOAA/NCEI",sourceUrl});
+    };
+    add("event.year",e.year,e.year?`Event year: ${e.year}.`:null);
+    if(e.month&&e.day) add("event.date",`${e.year}-${String(e.month).padStart(2,"0")}-${String(e.day).padStart(2,"0")}`,`Event date: ${e.year}-${String(e.month).padStart(2,"0")}-${String(e.day).padStart(2,"0")}.`);
+    add("event.location",e.location,e.location?`Recorded location: ${e.location}.`:null);
+    add("event.country",e.country,e.country?`Recorded country: ${e.country}.`:null);
+    add("event.cause",e.cause,e.cause?`NOAA/NCEI cause field: ${e.cause}.`:null);
+    add("impact.maximumWaterHeightM",e.maximumWaterHeightM,e.maximumWaterHeightM!=null?`Maximum water height field: ${e.maximumWaterHeightM} m.`:null);
+    add("impact.deaths",e.deaths,e.deaths!=null?`Deaths field: ${e.deaths}.`:null);
+    add("impact.injuries",e.injuries,e.injuries!=null?`Injuries field: ${e.injuries}.`:null);
+    add("impact.housesDestroyed",e.housesDestroyed,e.housesDestroyed!=null?`Houses destroyed field: ${e.housesDestroyed}.`:null);
+    add("impact.housesDamaged",e.housesDamaged,e.housesDamaged!=null?`Houses damaged field: ${e.housesDamaged}.`:null);
+    const mag=e.raw?.EQ_MAGNITUDE ?? e.raw?.EQ_MAG_MW;
+    add("earthquake.magnitude",mag,mag!=null?`Earthquake magnitude field: ${mag}.`:null);
+  }
+  if(usgs?.status==="candidate"){
+    const e=usgs.event||{}, sourceId="usgs-earthquake", sourceUrl=SOURCE_REGISTRY.earthquake[0].url;
+    if(e.time) verifiedClaims.push({field:"earthquake.originTime",value:e.time,claim:`USGS origin time: ${e.time}.`,sourceId,authority:"USGS",sourceUrl});
+    if(e.place) verifiedClaims.push({field:"earthquake.place",value:e.place,claim:`USGS place: ${e.place}.`,sourceId,authority:"USGS",sourceUrl});
+    if(e.magnitude!=null) verifiedClaims.push({field:"earthquake.magnitude",value:e.magnitude,claim:`USGS magnitude: ${e.magnitude}${e.magnitudeType?" "+e.magnitudeType:""}.`,sourceId,authority:"USGS",sourceUrl});
+  }
+
   return {
     ok:true,
-    version:"research-layer-4",
+    version:"research-layer-5-provenance",
     topic, hazardType,
     status:sources.length ? "source-plan-ready" : "needs-source-registry",
+    verifiedClaims,
     factPack:{
       identity,
       cause:noaa?.status === "candidate" && noaa.event?.cause ? [{source:"NOAA/NCEI",value:noaa.event.cause}] : [],
