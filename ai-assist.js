@@ -5,6 +5,34 @@ function getTopic(){
   return document.getElementById('topic')?.value?.trim()||
     document.getElementById('projectTitle')?.textContent?.trim()||'';
 }
+function polishSavedSanrikuNarration(){
+  const topic=getTopic();
+  if(!/sanriku/i.test(topic)||!/\b1896\b/.test(topic)) return 0;
+  const replacements={
+    HOOK:[
+      ["On June 15, 1896, the disaster began.","On June 15, 1896, the ground shook only weakly—but this was a tsunami earthquake."]
+    ],
+    P1:[
+      ["The event occurred in Sanriku, Japan.","The disaster unfolded in Sanriku, Japan."]
+    ]
+  };
+  let changed=0;
+  document.querySelectorAll('.stage-card').forEach(card=>{
+    const stage=card.dataset.stage, narration=card.querySelector('.narration');
+    if(!narration||!replacements[stage]) return;
+    const current=String(narration.value||"").trim();
+    for(const [from,to] of replacements[stage]){
+      if(current===from){
+        narration.value=to;
+        narration.dispatchEvent(new Event('input',{bubbles:true}));
+        narration.dispatchEvent(new Event('change',{bubbles:true}));
+        changed++;
+        break;
+      }
+    }
+  });
+  return changed;
+}
 function mount(){
   if(document.getElementById('ldAiTestBox')) return;
   const anchor=document.querySelector('.hero')||document.querySelector('main')||document.body;
@@ -13,6 +41,7 @@ function mount(){
   box.style.cssText='margin:12px 0;padding:12px;border:2px solid #7c5cff;border-radius:12px;background:rgba(124,92,255,.08)';
   box.innerHTML='<strong>✨ LD AI Assist</strong><p style="font-size:12px;opacity:.8">Secure OpenAI assistance through the Vercel backend. Your API key stays on the server.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ldAiNarrationBtn" class="primary small">✨ AI Generate Narration</button><button type="button" id="ldPreflightBtn" class="ghost small">🛡️ Narration Preflight (FREE)</button><button type="button" id="ldAiTestBtn" class="ghost small">Test AI Connection</button><button type="button" id="ldResearchBtn" class="ghost small">Research Diagnostics</button></div><div id="ldAiTestResult" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>';
   anchor.insertAdjacentElement('afterend',box);
+  polishSavedSanrikuNarration();
 
   document.getElementById('ldResearchBtn').onclick=async()=>{
     const btn=document.getElementById('ldResearchBtn'),out=document.getElementById('ldAiTestResult');
