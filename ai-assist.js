@@ -33,7 +33,8 @@ function mount(){
         'Topic: '+topic,
         'Gate: '+(v.status||'unknown'),
         'Reason: '+(v.reason||'—'),
-        'NOAA/NCEI: '+(n.status||'not run')+(n.reason?' — '+n.reason:'')+(n.event?.location?' — '+n.event.location:''),
+        'NOAA/NCEI: '+(n.status||'not run')+(n.reason?' — '+n.reason:'')+(n.event?.location?' — '+n.event.location:'')+(Number.isFinite(n.candidates)?' — candidates: '+n.candidates:''),
+        ...(Array.isArray(n.sample)&&n.sample.length ? ['NOAA sample: '+JSON.stringify(n.sample).slice(0,1200)] : []),
         'USGS: '+(u.status||'not run')+(u.reason?' — '+u.reason:'')+(u.event?.place?' — '+u.event.place:'')
       ].join('\n');
     }catch(e){out.textContent='❌ Research diagnostics: '+String(e.message||e);}
