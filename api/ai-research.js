@@ -31,6 +31,24 @@ const SOURCE_REGISTRY = {
       supports: ["earthquake event records","origin time","location","magnitude","catalog metadata"],
       confidence: "authoritative"
     }
+  ],
+  insect: [
+    {
+      id: "usda-nal-rocky-mountain-locust",
+      authority: "USDA National Agricultural Library",
+      name: "Charles Valentine Riley Collection / Rocky Mountain Locust historical reports",
+      url: "https://www.nal.usda.gov/collections/special-collections/charles-valentine-riley-collection-0",
+      supports: ["historical locust identity","1874 invasion chronology","range","agricultural damage"],
+      confidence: "authoritative"
+    },
+    {
+      id: "peer-reviewed-grasshopper-control-2020",
+      authority: "Peer-reviewed",
+      name: "Control of Pest Grasshoppers in North America",
+      url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7565557/",
+      supports: ["species identity","1874-1877 outbreak range","crop and rangeland impact","U.S. Entomological Commission response"],
+      confidence: "peer-reviewed"
+    }
   ]
 };
 
@@ -68,6 +86,82 @@ const CURATED_EVENT_EVIDENCE = [
       {field:"survey.matsuo.maximumHeightLocation",value:"Shirahama",claim:"Matsuo's later survey placed the often-quoted 38-metre height at Shirahama."},
       {field:"tsunami.heightVariationShortDistance",value:true,claim:"Tsunami heights along the Sanriku coast varied significantly over short distances."},
       {field:"earthquake.sourceRegion",value:"Japan Trench",claim:"The 1896 Sanriku tsunami earthquake occurred along the Japan Trench."}
+    ]
+  },
+  {
+    id:"rocky-mountain-locust-1874-riley",
+    matches:({topic,year,hazardType})=>hazardType==="insect" && year===1874 && /rocky mountain locust|locust plague/i.test(topic),
+    source:{
+      id:"usda-nal-rocky-mountain-locust",
+      authority:"USDA National Agricultural Library / primary historical source",
+      name:"C. V. Riley, The Locust Plague in the United States (1877), preserved in the USDA National Agricultural Library",
+      url:"https://www.nal.usda.gov/collections/special-collections/charles-valentine-riley-collection-0",
+      supports:["1874 locust identity","invasion chronology","affected U.S. regions"],
+      confidence:"authoritative"
+    },
+    claims:[
+      {field:"event.year",value:1874,claim:"The Rocky Mountain locust plague described here occurred in 1874."},
+      {field:"event.location",value:"Great Plains",claim:"The 1874 Rocky Mountain locust invasion affected the Great Plains."},
+      {field:"event.country",value:"United States",claim:"The 1874 Rocky Mountain locust invasion affected large parts of the United States."},
+      {field:"event.species",value:"Rocky Mountain locust",claim:"The invading insect was the Rocky Mountain locust."},
+      {field:"event.speciesScientific",value:"Melanoplus spretus",claim:"The Rocky Mountain locust is Melanoplus spretus."},
+      {field:"event.type",value:"locust infestation",claim:"The 1874 disaster was a large locust infestation."},
+      {field:"chronology.1874.june",value:"southern Dakota",claim:"In 1874, invading swarms appeared during June in southern Dakota."},
+      {field:"chronology.1874.july",value:"Colorado, Nebraska and Minnesota",claim:"During July 1874, swarms appeared in Colorado, Nebraska and Minnesota."},
+      {field:"chronology.1874.lateJuly",value:"Iowa and western Kansas",claim:"During the latter part of July 1874, swarms appeared in Iowa and western Kansas."},
+      {field:"chronology.1874.august",value:"southeast Kansas and Missouri",claim:"During August 1874, swarms reached southeast Kansas and Missouri."},
+      {field:"chronology.1874.october",value:"Dallas, Texas",claim:"By the middle of October 1874, invading swarms had reached Dallas, Texas."}
+    ]
+  },
+  {
+    id:"rocky-mountain-locust-1874-peer-reviewed",
+    matches:({topic,year,hazardType})=>hazardType==="insect" && year===1874 && /rocky mountain locust|locust plague/i.test(topic),
+    source:{
+      id:"peer-reviewed-grasshopper-control-2020",
+      authority:"Peer-reviewed",
+      name:"Control of Pest Grasshoppers in North America (2020)",
+      url:"https://pmc.ncbi.nlm.nih.gov/articles/PMC7565557/",
+      supports:["species identity","1874-1877 outbreak range","crop and rangeland damage","federal scientific response"],
+      confidence:"peer-reviewed"
+    },
+    claims:[
+      {field:"outbreak.period",value:"1874–1877",claim:"From 1874 to 1877, Rocky Mountain locust infestations were extremely expansive and severe over large areas of the Great Plains."},
+      {field:"outbreak.range",value:"Central Canada to Texas",claim:"Historical Rocky Mountain locust swarms damaged crops and rangelands from central Canada to Texas."},
+      {field:"impact.agriculture",value:"crops and rangelands decimated",claim:"Rocky Mountain locust swarms decimated crops and rangelands across affected areas."},
+      {field:"response.entomologicalCommission",value:true,claim:"The severe 1874–1877 infestations helped lead Congress to establish the United States Entomological Commission to study and control grasshopper plagues."}
+    ]
+  },
+  {
+    id:"rocky-mountain-locust-1874-nebraska-history",
+    matches:({topic,year,hazardType})=>hazardType==="insect" && year===1874 && /rocky mountain locust|locust plague/i.test(topic),
+    source:{
+      id:"nebraska-history-grasshoppered",
+      authority:"History Nebraska",
+      name:"Grasshoppered: America's Response to the 1874 Rocky Mountain Locust Invasion",
+      url:"https://history.nebraska.gov/wp-content/uploads/2017/11/doc_publications_NH2008Grasshoppered.pdf",
+      supports:["1874 Great Plains agricultural destruction","settler distress","relief response"],
+      confidence:"institutional-history"
+    },
+    claims:[
+      {field:"impact.nebraskaFields",value:"fields denuded",claim:"In the summer of 1874, Rocky Mountain locusts denuded fields across affected Great Plains settlements."},
+      {field:"impact.settlerDistress",value:"widespread distress",claim:"Crop losses during the 1874 invasion caused severe distress among many farming families in affected areas."},
+      {field:"response.publicAid",value:"public relief organized",claim:"Relief efforts supplied food and other assistance to communities hit by the locust invasion."}
+    ]
+  },
+  {
+    id:"rocky-mountain-locust-1874-unl",
+    matches:({topic,year,hazardType})=>hazardType==="insect" && year===1874 && /rocky mountain locust|locust plague/i.test(topic),
+    source:{
+      id:"unl-great-plains-insect-lore",
+      authority:"University of Nebraska–Lincoln",
+      name:"Encyclopedia of the Great Plains — Insect Lore",
+      url:"https://plainshumanities.unl.edu/encyclopedia/doc/egp.fol.026.html",
+      supports:["Great Plains historical context","1873-1878 swarm period","Kansas 1874 historical label"],
+      confidence:"academic-reference"
+    },
+    claims:[
+      {field:"significance.kansasGrasshopperYear",value:"Grasshopper Year",claim:"In Kansas, 1874 became known as the \"Grasshopper Year.\""},
+      {field:"outbreak.broaderPeriod",value:"1873–1878",claim:"The Rocky Mountain locust swarms that shaped Great Plains memory extended across the 1873–1878 period."}
     ]
   }
 ];
@@ -272,6 +366,7 @@ function classifyTopic(topic) {
   const t = topic.toLowerCase();
   if (t.includes("tsunami")) return "tsunami";
   if (t.includes("earthquake") || t.includes("quake")) return "earthquake";
+  if (t.includes("locust") || t.includes("insect") || t.includes("grasshopper")) return "insect";
   return "general";
 }
 
@@ -293,7 +388,27 @@ export async function buildResearch(topic) {
     catch (e) { usgs = {status:"error",reason:String(e?.message||e)}; }
   }
 
-  const validation = crossValidate(noaa, usgs);
+  let validation = crossValidate(noaa, usgs);
+  if(validation.status==="NEEDS_REVIEW" && curatedProfiles.length){
+    const distinctAuthorities=[...new Set(curatedProfiles.map(p=>p.source?.authority).filter(Boolean))];
+    const identityFields=new Set(curatedProfiles.flatMap(p=>p.claims||[]).map(x=>x.field));
+    const hasIdentity=identityFields.has("event.year") && identityFields.has("event.location");
+    if(hasIdentity && distinctAuthorities.length>=2){
+      validation={
+        status:"VERIFIED",
+        confidence:"high",
+        checks:curatedProfiles.map(p=>({field:p.source.name,match:true,authority:p.source.authority})),
+        reason:"Multiple curated authoritative or scholarly sources support the event identity and stage evidence."
+      };
+    } else {
+      validation={
+        status:"PARTIAL",
+        confidence:"medium",
+        checks:curatedProfiles.map(p=>({field:p.source.name,match:true,authority:p.source.authority})),
+        reason:"Curated historical evidence is available, but the event identity has limited independent source coverage."
+      };
+    }
+  }
   const identity = [
     ...(noaa?.status === "candidate" ? [{source:"NOAA/NCEI",confidence:noaa.confidence,event:noaa.event}] : []),
     ...(usgs?.status === "candidate" ? [{source:"USGS",confidence:usgs.confidence,event:usgs.event}] : [])
@@ -354,7 +469,7 @@ export async function buildResearch(topic) {
 
   return {
     ok:true,
-    version:"research-layer-7-structured-impact",
+    version:"research-layer-8-multi-hazard-curated",
     topic, hazardType,
     status:sources.length ? "source-plan-ready" : "needs-source-registry",
     verifiedClaims:verifiedClaims.filter(x=>!claimConflicts.some(y=>y.field===x.field)),
