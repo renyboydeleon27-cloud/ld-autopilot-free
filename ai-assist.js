@@ -15,6 +15,9 @@ function polishSavedSanrikuNarration(){
     P1:[
       ["The event occurred in Sanriku, Japan.","The disaster unfolded in Sanriku, Japan."]
     ],
+    P5:[
+      ["At Miyako the water then began to rise at about 20:00.","At Miyako, the water began to rise around 8:00 p.m."]
+    ],
     P6:[
       ["The largest wave at Miyako arrived at 20:07, was about 4.5 metres high, and was described as making a booming sound.","At 20:07, Miyako’s largest observed wave arrived about 4.5 metres high, with a booming sound."]
     ],
@@ -23,6 +26,12 @@ function polishSavedSanrikuNarration(){
     ],
     P9:[
       ["The tsunami was instrumentally recorded at three tide-gauge stations in Japan.","Three tide-gauge stations in Japan recorded the tsunami."]
+    ],
+    P11:[
+      ["An 1896 survey by Iki reported a maximum tsunami height of 24 metres at Yoshihama.","An 1896 survey reported a maximum tsunami height of 24 metres at Yoshihama."]
+    ],
+    P14:[
+      ["This was the Sanriku tsunami of 1896-06-15 in Japan.","This was the Sanriku tsunami of June 15, 1896, in Japan."]
     ]
   };
   let changed=0;
