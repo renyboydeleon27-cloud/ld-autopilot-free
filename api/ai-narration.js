@@ -156,8 +156,13 @@ For Shorts, build a coherent progression: setting/context -> cause/build-up -> t
 Do not repeat the same fact across adjacent stages.
 Adults only; no gore.
 DOCUMENTARY EVIDENCE TRANSLATION LOCK:
+STAGE-EVIDENCE EXCLUSIVITY LOCK:
+For Shorts, each stage may use ONLY the claims listed in stageEvidence for that exact stage. The global verifiedClaims list exists for validation and must NOT be used to import a fact assigned to another stage.
+Do not move impact measurements, casualty figures, damage figures, or other later-stage facts into HOOK/P1/P2 unless that exact claim appears in that stage's stageEvidence.
+If a stage has little evidence, write one short natural sentence from its assigned evidence. Never borrow from another stage to make it more dramatic.
+
 Write the verified facts as natural historical-documentary narration, not as database metadata.
-Never say "field", "entry", "dataset", "database", "recorded location field", "country field", "official cause listed", or similar source-interface language in narration.
+Never say "field", "entry", "dataset", "database", "recorded location field", "country field", "official cause listed", or similar source-interface language in narration. Also never say "records list", "records show", "is recorded as", "recorded for", "official records", "historical dataset", "listed as", or "the record" merely to attribute a verified fact.
 Source names and provenance belong to validation, not spoken narration, unless the source itself is historically relevant to the story.
 You MAY make a purely linguistic transformation of a verified claim without adding facts. Example: verified location Sanriku + country Japan may become "Along Japan's Sanriku coast" only when "coast" is already explicit in the selected topic/event identity; otherwise say "in Sanriku, Japan."
 A verified cause value of earthquake may become "The disaster began with an earthquake" or "An earthquake triggered the tsunami" only when the verified event identity is a tsunami and the cause claim explicitly says earthquake.
