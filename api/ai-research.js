@@ -34,6 +34,34 @@ const SOURCE_REGISTRY = {
   ]
 };
 
+
+
+const CURATED_EVENT_EVIDENCE = [
+  {
+    id:"sanriku-1896-satake-2017",
+    matches:({topic,year,hazardType})=>hazardType==="tsunami" && year===1896 && /sanriku/i.test(topic),
+    source:{
+      id:"satake-2017-sanriku",
+      authority:"Peer-reviewed",
+      name:"Satake, Fujii & Yamaki (2017), Geoscience Letters",
+      url:"https://link.springer.com/article/10.1186/s40562-017-0099-y",
+      supports:["tsunami-earthquake classification","weak shaking","local timing observations at Miyako","Japan Trench source context"],
+      confidence:"peer-reviewed"
+    },
+    claims:[
+      {field:"event.classification",value:"tsunami earthquake",claim:"The 1896 Sanriku event is described as a typical tsunami earthquake."},
+      {field:"earthquake.shaking",value:"weak",claim:"Ground shaking from the 1896 Sanriku earthquake was weak."},
+      {field:"earthquake.originLocalTime",value:"19:32",claim:"The estimated earthquake origin time was 19:32 local time."},
+      {field:"observation.miyako.seaRecessionTime",value:"about 19:50",claim:"At Miyako, the sea began to recede at about 19:50."},
+      {field:"observation.miyako.waterRiseTime",value:"about 20:00",claim:"At Miyako, the water rose at about 20:00."},
+      {field:"observation.miyako.largestWaveTime",value:"20:07",claim:"At Miyako, the largest observed wave arrived at 20:07."},
+      {field:"observation.miyako.waveHeightM",value:4.5,claim:"At Miyako, the largest observed wave was about 4.5 metres high."},
+      {field:"observation.miyako.subsequentWaves",value:6,claim:"At Miyako, six subsequent waves were observed until noon the following day."},
+      {field:"earthquake.sourceRegion",value:"Japan Trench",claim:"The 1896 Sanriku tsunami earthquake occurred along the Japan Trench."}
+    ]
+  }
+];
+
 function extractYear(topic) {
   const m = topic.match(/\b(1[0-9]{3}|20[0-9]{2})\b/);
   return m ? Number(m[1]) : null;
@@ -239,7 +267,9 @@ function classifyTopic(topic) {
 
 export async function buildResearch(topic) {
   const hazardType = classifyTopic(topic);
-  const sources = SOURCE_REGISTRY[hazardType] || [];
+  let sources = [...(SOURCE_REGISTRY[hazardType] || [])];
+  const curatedProfiles=CURATED_EVENT_EVIDENCE.filter(p=>p.matches({topic,year,hazardType}));
+  for(const p of curatedProfiles) if(!sources.some(s=>s.id===p.source.id)) sources.push(p.source);
   const year = extractYear(topic);
   let noaa = null;
   let usgs = null;
@@ -288,6 +318,17 @@ export async function buildResearch(topic) {
     if(e.place) verifiedClaims.push({field:"earthquake.place",value:e.place,claim:`USGS place: ${e.place}.`,sourceId,authority:"USGS",sourceUrl});
     if(e.magnitude!=null) verifiedClaims.push({field:"earthquake.magnitude",value:e.magnitude,claim:`USGS magnitude: ${e.magnitude}${e.magnitudeType?" "+e.magnitudeType:""}.`,sourceId,authority:"USGS",sourceUrl});
   }
+
+  curatedProfiles.forEach(profile=>{
+    profile.claims.forEach(item=>{
+      verifiedClaims.push({
+        ...item,
+        sourceId:profile.source.id,
+        authority:profile.source.authority,
+        sourceUrl:profile.source.url
+      });
+    });
+  });
 
   const claimConflicts=[];
   const magnitudeClaims=verifiedClaims.filter(x=>x.field==="earthquake.magnitude" && Number.isFinite(Number(x.value)));
