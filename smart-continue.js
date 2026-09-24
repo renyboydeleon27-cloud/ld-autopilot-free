@@ -1,4 +1,4 @@
-/* LD AUTO v3.33.0 — SMART CONTINUE guided one-button workflow */
+/* LD AUTO v3.34.0 — SMART CONTINUE obeys PROJECT LOCKS */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -23,6 +23,8 @@ function topic(){
 }
 function format(){return document.getElementById('format')?.value||'shorts';}
 function visualMode(){
+  const locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;
+  if(locked==='real'||locked==='anime')return locked;
   const selected=document.getElementById('visualMode')?.value;
   if(selected==='real'||selected==='anime')return selected;
   return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';
@@ -248,7 +250,9 @@ async function prepare(card){
   if(stage==='HOOK')return prepareHook(card);
   if(stage==='ENDING'||stage==='THUMBNAIL')return prepareImageStage(card);
 
-  const mode=card.dataset.videoMode||'image';
+  const lockedMode=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode;
+  const mode=(lockedMode==='text'||lockedMode==='image')?lockedMode:(card.dataset.videoMode||'image');
+  if(card.dataset.videoMode!==mode&&window.LDVideoModes?.setAllMode)window.LDVideoModes.setAllMode(mode);
   if(mode==='text')return prepareTextToVideo(card);
   return prepareImageToVideo(card);
 }
@@ -258,6 +262,10 @@ async function run(){
   const btn=document.getElementById('ldSmartContinueBtn');
   if(btn)btn.disabled=true;
   try{
+    if(!window.LDProjectLocks?.isLocked?.()&&!window.ldProjectLocks?.locked){
+      document.getElementById('ldProjectLocks')?.scrollIntoView({behavior:'smooth',block:'center'});
+      throw new Error('Lock Video Mode and Visual Style first.');
+    }
     if(!stages.querySelector('.stage-card')){
       const t=topic();
       if(!t)throw new Error('Enter the disaster topic first.');
