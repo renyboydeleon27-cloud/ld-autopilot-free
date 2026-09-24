@@ -97,7 +97,7 @@ async function fetchUsgsCandidate(topic, year) {
 
 async function fetchNoaaTsunamiCandidate(topic, year) {
   if (!year) return {status:"skipped", reason:"No event year found in topic."};
-  const base = "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/hazards/MapServer/0/query";
+  const base = "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/hazards/MapServer/1/query";
   const url = new URL(base);
   // NOAA ArcGIS field names have changed across published layers; query the
   // year defensively and fall back to a broad server-side query if needed.
