@@ -26,12 +26,32 @@ export default async function handler(req, res) {
     });
   }
 
+  const storyMap = {
+    HOOK:["event.date","event.location","event.country","event.cause"],
+    P1:["event.location","event.country"], P2:["event.date","event.cause"],
+    P3:["earthquake.magnitude","earthquake.originTime"],
+    P4:["impact.maximumWaterHeightM"], P5:["tsunami.numberOfRunupObservations"],
+    P6:["impact.maximumWaterHeightM"],
+    P7:["impact.housesDestroyed","impact.housesDamaged"],
+    P8:["impact.deaths","impact.injuries"],
+    P9:["impact.housesDestroyed","impact.housesDamaged"],
+    P10:["impact.deaths","impact.injuries"],
+    P11:["tsunami.numberOfRunupObservations","impact.maximumWaterHeightM"],
+    P12:["impact.deaths","impact.injuries"],
+    P13:["impact.housesDestroyed","impact.housesDamaged"],
+    P14:["event.date","event.location","impact.maximumWaterHeightM","impact.deaths"]
+  };
+  const claimsByField = Object.fromEntries((research.verifiedClaims||[]).map(x=>[x.field,x]));
+  const stageEvidence = Object.fromEntries(Object.entries(storyMap).map(([stage,fields])=>[
+    stage, fields.map(field=>claimsByField[field]).filter(Boolean)
+  ]));
+
   const evidenceForNarration = {
     validation: research.validation,
     exactNumbersAllowed: research.narrationGate.exactNumbersAllowed,
     verifiedClaims: research.verifiedClaims || [],
     factPack: research.factPack,
-    sources: research.sources.map(s=>({authority:s.authority,name:s.name,url:s.url}))
+    sources: research.sources.map(s=>({authority:s.authority,name:s.name,url:s.url})),\n    stageEvidence
   };
 
   // VERIFIED FACT PACK LAYER — narration must first build a structured evidence-aware fact pack.
