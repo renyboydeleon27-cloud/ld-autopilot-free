@@ -84,6 +84,9 @@ function polishNarrationQuality(stage, text, stageEvidence) {
   if(stage==="P11" && /^An 1896 survey by Iki reported a maximum tsunami height of 24 metres at Yoshihama\.$/i.test(t)){
     return "An 1896 survey reported a maximum tsunami height of 24 metres at Yoshihama.";
   }
+  if(stage==="P12" && /^A later survey by Matsuo reported an often-quoted 38-metre height at Shirahama\.$/i.test(t)){
+    return "A later survey reported an often-cited tsunami height of 38 metres at Shirahama.";
+  }
   if(stage==="P14" && /^This was the Sanriku tsunami of 1896-06-15 in Japan\.$/i.test(t)){
     return "This was the Sanriku tsunami of June 15, 1896, in Japan.";
   }
