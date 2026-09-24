@@ -1,7 +1,7 @@
-/* LD AUTO v3.17 — Top 3 Hook Choice System. All-family defaults and approved topic overrides. */
+/* LD AUTO v3.32.0 — Top 3 Hook Choice System with visual-mode hard reset sync. */
 (function(){'use strict';
 window.LD_HOOK_CHOICES_ENABLED=true;
-var HOOK_POLICY_VERSION='3.29.3-locust-no-smoke-v1';
+var HOOK_POLICY_VERSION='3.32.0-visual-mode-hard-reset-v1';
 var MODE_KEY='ld-auto-visual-mode-v1', ACTIVE_KEY='ld-auto-active-hook-v1';
 
 function topic(){var input=document.getElementById('topic');var typed=(input&&input.value||'').trim();if(typed)return typed;var title=(document.getElementById('projectTitle')&&document.getElementById('projectTitle').textContent||'').trim();return title==='No production yet'?'':title;}
@@ -35,6 +35,26 @@ function useHook(c){
   var role=h.querySelector('.scene-role');if(role)role.textContent='ACTIVE HOOK · '+c.title+' · '+c.status;
   var note=h.querySelector('.stage-note');if(note)note.textContent='Active HOOK: '+c.title+' · '+c.status+' · text-to-video';
   setActive(c.id);render();toast(c.title+' selected');
+}
+function syncVisualMode(previousMode){
+  var prior=getActiveRecord();
+  var list=choices();
+  if(!list.length){render();return null;}
+  var chosen=null;
+  if(prior&&prior.topic===topic()&&prior.format===format()&&prior.mode===previousMode&&prior.id){
+    chosen=list.find(function(item){return item.id===prior.id;})||null;
+  }
+  if(!chosen){
+    var activeNow=getActive();
+    if(activeNow)chosen=list.find(function(item){return item.id===activeNow;})||null;
+  }
+  if(chosen){
+    useHook(chosen);
+    var h=card(),done=h&&h.querySelector('.done-toggle');if(done)done.checked=false;
+    return chosen.title;
+  }
+  render();
+  return null;
 }
 function addStyles(){
   if(document.getElementById('hookChoiceStyles'))return;
@@ -83,7 +103,7 @@ var te=document.getElementById('topic');if(te)te.addEventListener('input',functi
 });
 document.addEventListener('click',function(e){if(e.target.closest('#buildBtn,.project-list button,.collapse-btn,#jumpStage'))schedule();});
 var stages=document.getElementById('stages');if(stages)new MutationObserver(schedule).observe(stages,{childList:true});
-window.LDHookChoiceSystem={render:render,choices:choices,useHook:useHook};
+window.LDHookChoiceSystem={render:render,choices:choices,useHook:useHook,syncVisualMode:syncVisualMode};
 schedule();
 })();
 
