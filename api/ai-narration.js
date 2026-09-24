@@ -51,7 +51,8 @@ export default async function handler(req, res) {
     exactNumbersAllowed: research.narrationGate.exactNumbersAllowed,
     verifiedClaims: research.verifiedClaims || [],
     factPack: research.factPack,
-    sources: research.sources.map(s=>({authority:s.authority,name:s.name,url:s.url})),\n    stageEvidence
+    sources: research.sources.map(s=>({authority:s.authority,name:s.name,url:s.url})),
+    stageEvidence
   };
 
   // VERIFIED FACT PACK LAYER — narration must first build a structured evidence-aware fact pack.
