@@ -52,11 +52,21 @@ const CURATED_EVENT_EVIDENCE = [
       {field:"event.classification",value:"tsunami earthquake",claim:"The 1896 Sanriku event is described as a typical tsunami earthquake."},
       {field:"earthquake.shaking",value:"weak",claim:"Ground shaking from the 1896 Sanriku earthquake was weak."},
       {field:"earthquake.originLocalTime",value:"19:32",claim:"The estimated earthquake origin time was 19:32 local time."},
+      {field:"observation.miyako.shockDurationMin",value:5,claim:"At Miyako, the weak earthquake shock lasted about 5 minutes."},
       {field:"observation.miyako.seaRecessionTime",value:"about 19:50",claim:"At Miyako, the sea began to recede at about 19:50."},
       {field:"observation.miyako.waterRiseTime",value:"about 20:00",claim:"At Miyako, the water rose at about 20:00."},
       {field:"observation.miyako.largestWaveTime",value:"20:07",claim:"At Miyako, the largest observed wave arrived at 20:07."},
       {field:"observation.miyako.waveHeightM",value:4.5,claim:"At Miyako, the largest observed wave was about 4.5 metres high."},
+      {field:"observation.miyako.waveSound",value:"booming sound",claim:"The Miyako observation described a booming sound as the largest wave arrived."},
+      {field:"observation.miyako.pathDestruction",value:"houses swept away",claim:"At Miyako, the largest wave swept away houses in its path."},
       {field:"observation.miyako.subsequentWaves",value:6,claim:"At Miyako, six subsequent waves were observed until noon the following day."},
+      {field:"tsunami.instrumentalTideGaugeStations",value:3,claim:"The 1896 tsunami was instrumentally recorded at three tide-gauge stations at regional distances in Japan."},
+      {field:"survey.yamana.villages",value:37,claim:"A post-tsunami survey covered all 37 villages along the Sanriku coast."},
+      {field:"survey.iki.maximumHeightM",value:24,claim:"Iki's 1896 survey reported a maximum tsunami height of 24 metres."},
+      {field:"survey.iki.maximumHeightLocation",value:"Yoshihama",claim:"Iki's 1896 survey placed its maximum reported tsunami height at Yoshihama."},
+      {field:"survey.matsuo.maximumHeightM",value:38,claim:"Matsuo's later survey reported an often-quoted 38-metre height for the 1896 tsunami."},
+      {field:"survey.matsuo.maximumHeightLocation",value:"Shirahama",claim:"Matsuo's later survey placed the often-quoted 38-metre height at Shirahama."},
+      {field:"tsunami.heightVariationShortDistance",value:true,claim:"Tsunami heights along the Sanriku coast varied significantly over short distances."},
       {field:"earthquake.sourceRegion",value:"Japan Trench",claim:"The 1896 Sanriku tsunami earthquake occurred along the Japan Trench."}
     ]
   }
