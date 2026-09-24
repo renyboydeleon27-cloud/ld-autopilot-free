@@ -1,6 +1,19 @@
 function textFromResponse(data){
   if(data?.output_text) return String(data.output_text).trim();
-  return (data?.output||[]).flatMap(x=>x?.content||[]).map(x=>x?.text||'').join('').trim();
+  const parts=[];
+  for(const item of data?.output||[]){
+    for(const content of item?.content||[]){
+      if(typeof content?.text==='string'&&content.text.trim()) parts.push(content.text);
+      else if(typeof content?.output_text==='string'&&content.output_text.trim()) parts.push(content.output_text);
+      else if(typeof content?.refusal==='string'&&content.refusal.trim()) parts.push(content.refusal);
+    }
+  }
+  return parts.join('').trim();
+}
+function responseProblem(data){
+  if(data?.status==='failed')return data?.error?.message||'AI panel-fix response failed.';
+  if(data?.status==='incomplete')return data?.incomplete_details?.reason||'AI panel-fix response was incomplete.';
+  return '';
 }
 function parseJsonObject(text){
   const clean=String(text||'').trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'').trim();
@@ -99,10 +112,45 @@ export default async function handler(req,res){
     if(!response.ok){
       return res.status(response.status).json({ok:false,error:data?.error?.message||"OpenAI request failed."});
     }
-    const parsed=parseJsonObject(textFromResponse(data));
-    const scene=String(parsed?.scene||"").trim();
-    const note=String(parsed?.note||"").trim();
-    if(!scene) return res.status(502).json({ok:false,error:"AI returned no usable panel scene."});
+    const raw=textFromResponse(data);
+    let parsed=parseJsonObject(raw);
+    let scene=String(parsed?.scene||"").trim();
+    let note=String(parsed?.note||"").trim();
+
+    // Rare structured-output edge case: retry once with a smaller plain-text JSON request
+    // instead of blocking SMART CONTINUE with an empty scene.
+    if(!scene){
+      const problem=responseProblem(data);
+      const retry=await fetch("https://api.openai.com/v1/responses",{
+        method:"POST",
+        headers:{
+          "Authorization":`Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          model:"gpt-5.6-luna",
+          input:[
+            {role:"system",content:[{type:"input_text",text:system+" Return compact valid JSON with non-empty scene and note strings."}]},
+            {role:"user",content:[{type:"input_text",text:user}]}
+          ],
+          max_output_tokens:700
+        })
+      });
+      const retryData=await retry.json();
+      if(retry.ok){
+        const retryRaw=textFromResponse(retryData);
+        parsed=parseJsonObject(retryRaw);
+        scene=String(parsed?.scene||"").trim();
+        note=String(parsed?.note||"").trim();
+      }
+      if(!scene){
+        return res.status(502).json({
+          ok:false,
+          error:"AI panel fix could not return a usable replacement scene. Tap retry once; if it repeats, rebuild this panel prompt.",
+          detail:problem||raw.slice(0,220)
+        });
+      }
+    }
     return res.status(200).json({ok:true,topic,stage,scene,note});
   }catch(err){
     return res.status(500).json({ok:false,error:"AI panel-fix backend error: "+String(err?.message||err)});
