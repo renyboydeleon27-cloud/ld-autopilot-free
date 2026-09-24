@@ -1,9 +1,13 @@
-/* LD AUTO v3.28.2 — multi-hazard OpenAI narration assist */
+/* LD AUTO v3.28.3 — reject untitled productions in AI Assist */
 (()=>{
 'use strict';
 function getTopic(){
   return document.getElementById('topic')?.value?.trim()||
     document.getElementById('projectTitle')?.textContent?.trim()||'';
+}
+function invalidTopic(topic){
+  const t=String(topic||'').trim().toLowerCase();
+  return !t || t==='no production yet' || t==='untitled disaster';
 }
 function polishSavedSanrikuNarration(){
   const topic=getTopic();
@@ -67,7 +71,7 @@ function mount(){
   document.getElementById('ldResearchBtn').onclick=async()=>{
     const btn=document.getElementById('ldResearchBtn'),out=document.getElementById('ldAiTestResult');
     const topic=getTopic();
-    if(!topic){out.textContent='❌ No topic selected.';return;}
+    if(invalidTopic(topic)){out.textContent='❌ Set a real disaster topic and build/open that production first.';return;}
     btn.disabled=true;out.textContent='🔎 Checking verified research sources…';
     try{
       const r=await fetch('/api/ai-research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
@@ -102,7 +106,7 @@ function mount(){
   document.getElementById('ldPreflightBtn').onclick=async()=>{
     const btn=document.getElementById('ldPreflightBtn'),out=document.getElementById('ldAiTestResult');
     const topic=getTopic();
-    if(!topic||topic==='No production yet'){out.textContent='❌ Create or open a production first.';return;}
+    if(invalidTopic(topic)){out.textContent='❌ Set a real disaster topic and build/open that production first.';return;}
     const format=document.getElementById('format')?.value||'shorts';
     btn.disabled=true;out.textContent='🛡️ Checking narration evidence without calling OpenAI…';
     try{
@@ -141,7 +145,7 @@ function mount(){
     const btn=document.getElementById('ldAiNarrationBtn'),out=document.getElementById('ldAiTestResult');
     const topic=getTopic();
     const cards=[...document.querySelectorAll('.stage-card')];
-    if(!topic || topic==='No production yet'){out.textContent='❌ Create or open a production first.';return;}
+    if(invalidTopic(topic)){out.textContent='❌ Set a real disaster topic and build/open that production first.';return;}
     if(!cards.length){out.textContent='❌ No production stages found. Create or open a production first.';return;}
     const format=document.getElementById('format')?.value||'shorts';
     btn.disabled=true;out.textContent='✨ Generating historically grounded narration…';
