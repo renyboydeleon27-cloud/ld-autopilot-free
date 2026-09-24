@@ -175,12 +175,12 @@ Include every requested stage key exactly once and no markdown.`;
       headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},
       body:JSON.stringify({
         model:"gpt-5-mini",
-        text:{format:{type:"json_object"}},
+        text:{format:{type:"json_schema",name:"evidence_audit",strict:true,schema:{type:"object",properties:{valid:{type:"boolean"},unsupported:{type:"array",items:{type:"object",properties:{stage:{type:"string"},claim:{type:"string"},reason:{type:"string"}},required:["stage","claim","reason"],additionalProperties:false}}},required:["valid","unsupported"],additionalProperties:false}}},
         input:[
           {role:"system",content:[{type:"input_text",text:`You are a strict evidence auditor. Compare narration claims ONLY against the supplied research fact pack. Do not use outside knowledge. Event identity being VERIFIED does not verify other details. Split each stage into event-specific factual claims. A claim is supported only if the fact pack explicitly entails it; paraphrases are allowed, inference and typical disaster behavior are not. Generic connective/cinematic wording is allowed only when it adds no new factual assertion. Return JSON exactly: {"valid":true,"unsupported":[]} or {"valid":false,"unsupported":[{"stage":"HOOK","claim":"...","reason":"..."}]}.`}]},
           {role:"user",content:[{type:"input_text",text:`FACT PACK:\n${JSON.stringify(research.factPack)}\n\nNARRATION:\n${JSON.stringify(stages)}`}]}
         ],
-        max_output_tokens:2500
+        max_output_tokens:4000
       })
     });
     const validatorData = await validatorResponse.json();
