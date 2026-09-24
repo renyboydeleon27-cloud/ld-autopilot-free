@@ -1,9 +1,9 @@
-/* LD AUTO v3.32.0 — visual-mode hard reset and zero-footprint rebuild. */
+/* LD AUTO v3.34.0 — PROJECT LOCKS enforced for video and visual modes. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.32.0-visual-mode-hard-reset-v1';
+const T2V_POLICY_VERSION='3.34.0-project-locks-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
-function style(){var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
+function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
 function format(){return document.getElementById('format').value;}
 function state(card){return {mode:card.dataset.videoMode||'image',text:card.dataset.textVideoPrompt||'',scene:card.dataset.videoScene||'',signature:card.dataset.textVideoSignature||''};}
 function defaults(topic){var year=(topic.match(/\b(?:1\d{3}|20\d{2}|2100)\b/)||[])[0]||'';return {year:year,location:'',details:''};}
@@ -349,7 +349,10 @@ function syncGlobalControl(){var root=document.getElementById('productionVideoMe
 var message=!cards.length?'Create or open a Shorts production to choose the video method.':mode==='mixed'?'This saved production has mixed methods. Choose one button to apply it to every panel.':(mode==='text'?'Text-to-Video':'Image-to-Video')+' is active for all '+cards.length+' panels.';
 if(pending)message+=' '+pending+' text prompts need building or refresh; check the shared setting below.';
 var status=root.querySelector('.production-video-status');if(status.textContent!==message)status.textContent=message;}
-function setAllMode(mode){if(mode!=='image'&&mode!=='text')return;var cards=panelCards();if(!cards.length)return;
+function setAllMode(mode){
+ var locked=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode;
+ if(window.ldProjectLocks?.locked&&locked&&mode!==locked){showToast('Video Mode is locked for this project.');return;}
+ if(mode!=='image'&&mode!=='text')return;var cards=panelCards();if(!cards.length)return;
 var built=0;cards.forEach(function(card){if(state(card).mode!==mode)card.querySelector('.done-toggle').checked=false;card.dataset.videoMode=mode;
 // Build only missing text versions. Switching never replaces an edited prompt.
 if(mode==='text'&&!valid(card)&&ready()){try{pinScene(card);card.dataset.textVideoPrompt=build(card);card.dataset.textVideoSignature=signature(card);var text=card.querySelector('.text-video-prompt');if(text)text.value=state(card).text;built++;}catch(e){/* Keep the panel's missing-prompt status visible. */}}
