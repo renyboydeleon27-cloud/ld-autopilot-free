@@ -1,4 +1,4 @@
-/* LD AUTO v3.32.0 — Visual Mode hard reset: no cross-mode footprint. */
+/* LD AUTO v3.34.0 — Visual Style obeys PROJECT LOCKS. */
 (()=>{
   const MODE_KEY='ld-auto-visual-mode-v1';
   const stages=document.getElementById('stages');
@@ -17,7 +17,8 @@
   const topicEl=document.getElementById('topic');
   const projectTitle=document.getElementById('projectTitle');
   const saved=localStorage.getItem(MODE_KEY);
-  select.value=saved==='real'?'real':'anime';
+  const lockedStyle=window.ldProjectLocks?.locked?window.ldProjectLocks.visualStyle:'';
+  select.value=(lockedStyle==='real'||lockedStyle==='anime')?lockedStyle:(saved==='real'?'real':'anime');
 
   const BASE_REAL_STYLE='Cinematic historical live-action realism with real adult humans, natural skin texture, realistic hair and fabric, grounded anatomy, period-accurate clothing and environment, believable practical lighting and documentary composition';
   const LEGACY_REAL_STYLE='Cinematic historical live-action realism with real adult humans, natural skin texture, realistic hair and fabric, grounded anatomy, period-accurate clothing and environment, believable practical lighting, documentary composition, authentic 1980s archival/broadcast finish with subtle film grain, slightly faded colors, mild analog softness and restrained VHS-era texture';
@@ -148,6 +149,12 @@
   let guard=false;
   let previousMode=select.value;
   select.addEventListener('change',()=>{
+    const projectLock=window.LDProjectLocks?.get?.()||window.ldProjectLocks;
+    if(projectLock?.locked&&projectLock.visualStyle&&select.value!==projectLock.visualStyle){
+      select.value=projectLock.visualStyle;
+      showToast('Visual Style is locked for this project.');
+      return;
+    }
     const fromMode=previousMode;
     const toMode=select.value;
     localStorage.setItem(MODE_KEY,toMode);
