@@ -1,4 +1,4 @@
-/* LD AUTO v3.31.2 — visual-mode-aware quality polish */
+/* LD AUTO v3.31.3 — visual-mode-aware quality polish, mobile-safe */
 (()=>{'use strict';
 const QUALITY={
  narration:`DOCUMENTARY NARRATION POLISH LOCK: Write natural, human-sounding historical-documentary English for a general audience. Preserve verified facts, dates, places, causes and consequences, but explain technical science in clear cinematic language. Prefer concrete cause-and-effect wording and speakable sentences. Avoid robotic phrasing, awkward event-name insertion, textbook jargon, redundant dates, keyword stuffing and unnecessarily complex clauses. Keep each narration segment concise enough for its intended delivery time. Do not invent facts or certainty.`,
@@ -9,22 +9,23 @@ function currentFlowLock(){
  return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?QUALITY.real:QUALITY.anime;
 }
 function upsertQuality(el){
- if(!el||!el.value?.trim())return;
+ if(!el||!el.value?.trim())return false;
  const next=currentFlowLock();
  const marker='QUALITY POLISH LOCK:';
  const idx=el.value.indexOf(marker);
- if(idx>=0){
-   const prefix=el.value.slice(0,idx).replace(/\s+$/,'');
-   el.value=prefix+"\n\n"+next;
- }else{
-   el.value=el.value.trim()+"\n\n"+next;
- }
+ const desired=idx>=0
+   ? el.value.slice(0,idx).replace(/\s+$/,'')+"\n\n"+next
+   : el.value.trim()+"\n\n"+next;
+ if(el.value===desired)return false;
+ el.value=desired;
  el.dispatchEvent(new Event('input',{bubbles:true}));
+ return true;
 }
 function polish(){
  document.querySelectorAll('.stage-card').forEach(card=>{
   const stage=(card.dataset.stage||card.querySelector('.stage-name')?.textContent||'').trim().toUpperCase();
   if(stage==='ENDING'||stage==='THUMBNAIL')return;
+  if(card.dataset.videoMode==='text')return;
   upsertQuality(card.querySelector('.flow-prompt'));
  });
 }
@@ -34,7 +35,8 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
  if(e.target&&e.target.id==='visualMode')setTimeout(polish,80);
 });
-new MutationObserver(()=>setTimeout(polish,120)).observe(document.getElementById('stages')||document.body,{childList:true,subtree:true});
+const stageRoot=document.getElementById('stages');
+if(stageRoot)new MutationObserver(()=>setTimeout(polish,120)).observe(stageRoot,{childList:true});
 window.addEventListener('load',()=>setTimeout(polish,700));
 window.ldApplyQualityPolish=polish;
 })();
