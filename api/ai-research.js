@@ -302,7 +302,7 @@ export async function buildResearch(topic) {
 
   return {
     ok:true,
-    version:"research-layer-6-conflict-safe",
+    version:"research-layer-7-structured-impact",
     topic, hazardType,
     status:sources.length ? "source-plan-ready" : "needs-source-registry",
     verifiedClaims:verifiedClaims.filter(x=>!claimConflicts.some(y=>y.field===x.field)),
@@ -310,12 +310,20 @@ export async function buildResearch(topic) {
     factPack:{
       identity,
       cause:noaa?.status === "candidate" && noaa.event?.cause ? [{source:"NOAA/NCEI",value:noaa.event.cause}] : [],
-      chronology:[], warning_conditions:[],
-      physical_impact:noaa?.status === "candidate" && noaa.event?.maximumWaterHeightM != null ? [{source:"NOAA/NCEI",maximumWaterHeightM:noaa.event.maximumWaterHeightM}] : [],
-      human_impact:noaa?.status === "candidate" ? [{
-        source:"NOAA/NCEI", deaths:noaa.event.deaths, injuries:noaa.event.injuries,
-        housesDestroyed:noaa.event.housesDestroyed, housesDamaged:noaa.event.housesDamaged
-      }] : [],
+      chronology:[
+        ...(noaa?.status==="candidate" && noaa.event?.year ? [{source:"NOAA/NCEI",type:"event_date",year:noaa.event.year,month:noaa.event.month,day:noaa.event.day}] : []),
+        ...(usgs?.status==="candidate" && usgs.event?.time ? [{source:"USGS",type:"earthquake_origin_time",time:usgs.event.time}] : [])
+      ], warning_conditions:[],
+      physical_impact:noaa?.status === "candidate" ? [
+        ...(noaa.event?.maximumWaterHeightM != null ? [{source:"NOAA/NCEI",type:"maximum_runup",value:noaa.event.maximumWaterHeightM,unit:"m"}] : []),
+        ...(noaa.event?.numberOfRunupObservations != null ? [{source:"NOAA/NCEI",type:"runup_observation_count",value:noaa.event.numberOfRunupObservations}] : [])
+      ] : [],
+      human_impact:noaa?.status === "candidate" ? [
+        ...(noaa.event?.deaths != null ? [{source:"NOAA/NCEI",type:"deaths",value:noaa.event.deaths}] : []),
+        ...(noaa.event?.injuries != null ? [{source:"NOAA/NCEI",type:"injuries",value:noaa.event.injuries}] : []),
+        ...(noaa.event?.housesDestroyed != null ? [{source:"NOAA/NCEI",type:"houses_destroyed",value:noaa.event.housesDestroyed}] : []),
+        ...(noaa.event?.housesDamaged != null ? [{source:"NOAA/NCEI",type:"houses_damaged",value:noaa.event.housesDamaged}] : [])
+      ] : [],
       aftermath:[], significance:[],
       uncertainty:[...(validation.status === "VERIFIED" ? [] : [validation.reason]),...claimConflicts.map(x=>x.reason)]
     },
