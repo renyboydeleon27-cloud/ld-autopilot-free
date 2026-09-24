@@ -11,7 +11,7 @@ function mount(){
   const box=document.createElement('section');
   box.id='ldAiTestBox';
   box.style.cssText='margin:12px 0;padding:12px;border:2px solid #7c5cff;border-radius:12px;background:rgba(124,92,255,.08)';
-  box.innerHTML='<strong>✨ LD AI Assist</strong><p style="font-size:12px;opacity:.8">Secure OpenAI assistance through the Vercel backend. Your API key stays on the server.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ldAiNarrationBtn" class="primary small">✨ AI Generate Narration</button><button type="button" id="ldAiTestBtn" class="ghost small">Test AI Connection</button><button type="button" id="ldResearchBtn" class="ghost small">Research Diagnostics</button></div><div id="ldAiTestResult" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>';
+  box.innerHTML='<strong>✨ LD AI Assist</strong><p style="font-size:12px;opacity:.8">Secure OpenAI assistance through the Vercel backend. Your API key stays on the server.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ldAiNarrationBtn" class="primary small">✨ AI Generate Narration</button><button type="button" id="ldPreflightBtn" class="ghost small">🛡️ Narration Preflight (FREE)</button><button type="button" id="ldAiTestBtn" class="ghost small">Test AI Connection</button><button type="button" id="ldResearchBtn" class="ghost small">Research Diagnostics</button></div><div id="ldAiTestResult" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>';
   anchor.insertAdjacentElement('afterend',box);
 
   document.getElementById('ldResearchBtn').onclick=async()=>{
@@ -38,6 +38,31 @@ function mount(){
         'USGS: '+(u.status||'not run')+(u.reason?' — '+u.reason:'')+(u.event?.place?' — '+u.event.place:'')
       ].join('\n');
     }catch(e){out.textContent='❌ Research diagnostics: '+String(e.message||e);}
+    finally{btn.disabled=false;}
+  };
+
+  document.getElementById('ldPreflightBtn').onclick=async()=>{
+    const btn=document.getElementById('ldPreflightBtn'),out=document.getElementById('ldAiTestResult');
+    const topic=getTopic();
+    if(!topic||topic==='No production yet'){out.textContent='❌ Create or open a production first.';return;}
+    const format=document.getElementById('format')?.value||'shorts';
+    btn.disabled=true;out.textContent='🛡️ Checking narration evidence without calling OpenAI…';
+    try{
+      const r=await fetch('/api/ai-narration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,format,preflightOnly:true})});
+      const raw=await r.text();
+      let d;
+      try{d=JSON.parse(raw);}catch{throw new Error('Preflight endpoint returned non-JSON (HTTP '+r.status+'): '+raw.slice(0,180));}
+      if(!r.ok||!d.ok){
+        if(Array.isArray(d.missingStageEvidence)&&d.missingStageEvidence.length){
+          out.textContent='❌ FREE preflight blocked. No OpenAI generation used.\nMissing stage evidence: '+d.missingStageEvidence.join(', ');
+          return;
+        }
+        throw new Error(d.error||('HTTP '+r.status));
+      }
+      const summary=d.stageEvidenceSummary||{};
+      const stageCount=Object.keys(summary).length;
+      out.textContent='✅ FREE preflight passed — '+stageCount+' narration stages have verified stage evidence.\nNo OpenAI generation credit used.';
+    }catch(e){out.textContent='❌ FREE preflight: '+String(e.message||e);}
     finally{btn.disabled=false;}
   };
 
@@ -76,6 +101,10 @@ function mount(){
         }
         if(Array.isArray(d.missingEvidence)&&d.missingEvidence.length){
           out.textContent='❌ '+(d.error||'Insufficient research evidence.')+'\nMissing evidence: '+d.missingEvidence.join(', ');
+          return;
+        }
+        if(Array.isArray(d.missingStageEvidence)&&d.missingStageEvidence.length){
+          out.textContent='❌ '+(d.error||'Narration preflight blocked.')+'\nMissing stage evidence: '+d.missingStageEvidence.join(', ')+'\nNo OpenAI generation credit was used after this preflight block.';
           return;
         }
         throw new Error(d.error||('HTTP '+r.status));
