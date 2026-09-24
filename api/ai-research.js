@@ -289,12 +289,24 @@ export async function buildResearch(topic) {
     if(e.magnitude!=null) verifiedClaims.push({field:"earthquake.magnitude",value:e.magnitude,claim:`USGS magnitude: ${e.magnitude}${e.magnitudeType?" "+e.magnitudeType:""}.`,sourceId,authority:"USGS",sourceUrl});
   }
 
+  const claimConflicts=[];
+  const magnitudeClaims=verifiedClaims.filter(x=>x.field==="earthquake.magnitude" && Number.isFinite(Number(x.value)));
+  const magnitudeValues=[...new Set(magnitudeClaims.map(x=>Number(x.value)))];
+  if(magnitudeValues.length>1){
+    claimConflicts.push({
+      field:"earthquake.magnitude",
+      values:magnitudeClaims.map(x=>({value:x.value,authority:x.authority,sourceId:x.sourceId})),
+      reason:"Authoritative sources report different earthquake magnitude values; narration must not select one or convert them into a range without explicit resolution."
+    });
+  }
+
   return {
     ok:true,
-    version:"research-layer-5-provenance",
+    version:"research-layer-6-conflict-safe",
     topic, hazardType,
     status:sources.length ? "source-plan-ready" : "needs-source-registry",
-    verifiedClaims,
+    verifiedClaims:verifiedClaims.filter(x=>!claimConflicts.some(y=>y.field===x.field)),
+    claimConflicts,
     factPack:{
       identity,
       cause:noaa?.status === "candidate" && noaa.event?.cause ? [{source:"NOAA/NCEI",value:noaa.event.cause}] : [],
@@ -305,7 +317,7 @@ export async function buildResearch(topic) {
         housesDestroyed:noaa.event.housesDestroyed, housesDamaged:noaa.event.housesDamaged
       }] : [],
       aftermath:[], significance:[],
-      uncertainty: validation.status === "VERIFIED" ? [] : [validation.reason]
+      uncertainty:[...(validation.status === "VERIFIED" ? [] : [validation.reason]),...claimConflicts.map(x=>x.reason)]
     },
     sources,
     retrieval:{year,noaa,usgs},
@@ -320,7 +332,8 @@ export async function buildResearch(topic) {
       preserveUncertainty:true,
       doNotInventMissingFacts:true,
       exactNumbersRequireReliableEvidence:true,
-      conflictingSourcesMustBeFlagged:true
+      conflictingSourcesMustBeFlagged:true,
+      conflictedClaimsExcludedFromNarration:true
     }
   };
 }
