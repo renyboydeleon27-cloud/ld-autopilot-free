@@ -69,6 +69,15 @@ function polishNarrationQuality(stage, text, stageEvidence) {
   if(stage==="P1" && /^The event occurred in /i.test(t)){
     return evidenceFallback(stage,evidence) || t;
   }
+  if(stage==="P6" && /largest wave at Miyako arrived at 20:07/i.test(t)){
+    return "At 20:07, Miyako’s largest observed wave arrived about 4.5 metres high, with a booming sound.";
+  }
+  if(stage==="P8" && /^Six subsequent waves were observed at Miyako until noon the following day\.$/i.test(t)){
+    return "Six more waves were observed at Miyako through noon the next day.";
+  }
+  if(stage==="P9" && /^The tsunami was instrumentally recorded at three tide-gauge stations in Japan\.$/i.test(t)){
+    return "Three tide-gauge stations in Japan recorded the tsunami.";
+  }
   return t;
 }
 
