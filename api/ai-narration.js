@@ -143,12 +143,12 @@ Include every requested stage key exactly once and no markdown.`;
       },
       body:JSON.stringify({
         model:"gpt-5-mini",
-        text:{format:{type:"json_object"}},
+        text:{format:{type:"json_schema",name:"narration_set",strict:true,schema:{type:"object",properties:{stages:{type:"object",properties:Object.fromEntries(stageNames.map(n=>[n,{type:"string"}])),required:stageNames,additionalProperties:false}},required:["stages"],additionalProperties:false}}},
         input:[
           {role:"system",content:[{type:"input_text",text:system}]},
           {role:"user",content:[{type:"input_text",text:`Topic: ${topic}\nFormat: ${format}\nRequired stages: ${stageNames.join(", ")}\nGenerate the complete narration set.\n\nRESEARCH EVIDENCE (authoritative-source gate):\n${JSON.stringify(evidenceForNarration)}\nUse this evidence as the factual boundary. If exactNumbersAllowed is false, do not state exact numerical claims from uncertain fields.`}]}
         ],
-        max_output_tokens: 5000
+        max_output_tokens: 8000
       })
     });
     const data = await response.json();
