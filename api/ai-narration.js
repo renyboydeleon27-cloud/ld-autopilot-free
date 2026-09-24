@@ -81,19 +81,21 @@ export default async function handler(req, res) {
   }
 
   const storyMap = {
-    HOOK:["event.date"],
-    P1:["event.location","event.country"], P2:["event.cause"],
-    P3:["earthquake.magnitude","earthquake.originTime"],
-    P4:["impact.maximumWaterHeightM"], P5:["tsunami.numberOfRunupObservations"],
-    P6:["impact.maximumWaterHeightM"],
-    P7:["impact.housesDestroyed","impact.housesDamaged"],
-    P8:["impact.deaths","impact.injuries"],
-    P9:["impact.housesDestroyed","impact.housesDamaged"],
-    P10:["impact.deaths","impact.injuries"],
-    P11:["tsunami.numberOfRunupObservations","impact.maximumWaterHeightM"],
-    P12:["impact.deaths","impact.injuries"],
-    P13:["impact.housesDestroyed","impact.housesDamaged"],
-    P14:["event.date","event.location","impact.maximumWaterHeightM","impact.deaths"]
+    HOOK:["event.date","earthquake.shaking"],
+    P1:["event.location","event.country"],
+    P2:["event.cause"],
+    P3:["earthquake.originLocalTime","earthquake.magnitude"],
+    P4:["observation.miyako.seaRecessionTime"],
+    P5:["observation.miyako.waterRiseTime"],
+    P6:["observation.miyako.largestWaveTime","observation.miyako.waveHeightM"],
+    P7:["impact.maximumWaterHeightM"],
+    P8:["impact.housesDestroyed"],
+    P9:["impact.housesDamaged"],
+    P10:["impact.deaths"],
+    P11:["impact.injuries"],
+    P12:["observation.miyako.subsequentWaves"],
+    P13:["event.classification","earthquake.sourceRegion"],
+    P14:["event.date","event.location","event.country"]
   };
   const claimsByField = Object.fromEntries((research.verifiedClaims||[]).map(x=>[x.field,x]));
   const stageEvidence = Object.fromEntries(Object.entries(storyMap).map(([stage,fields])=>[
@@ -171,21 +173,21 @@ HOOK PERFORMANCE LOCK:
 
 STAGE ROLE LOCK — SHORTS P1-P14:
 - Plan the entire 15-stage story before writing any individual narration.
-- HOOK: immediate fact-safe curiosity/tension; do not explain the whole event.
+- HOOK: immediate fact-safe curiosity/tension; do not explain the whole event. When verified weak-shaking evidence exists for a tsunami earthquake, it may be used as the contrast that opens the story.
 - P1: normal world, geography, exposed communities, and location context.
 - P2: relevant tectonic/geologic setup only; do not narrate tsunami travel or impact yet.
 - P3: the triggering earthquake/event itself.
-- P4: historically established unusual warning conditions or the gap between trigger and disaster; if none are verified, use the next distinct causal step without inventing one.
-- P5: tsunami generation / water displacement mechanism specific to this event.
-- P6: waves travel/approach the coast.
+- P4: historically established unusual warning conditions or the gap between trigger and disaster; if a verified local observation exists, anchor it to that named location and do not generalize it to the entire coast.
+- P5: the next distinct verified local or physical development after P4. Do not invent a generation mechanism if one is not in evidence.
+- P6: the next distinct verified wave arrival/measurement or approach detail.
 - P7: first major coastal impact.
 - P8: inundation/destruction expands through affected communities.
 - P9: peak human-scale consequences, non-graphic.
 - P10: wider geographic impact or additional documented wave effects.
 - P11: immediate aftermath and survival/rescue conditions.
 - P12: verified scale of loss/damage; use exact figures only when sufficiently reliable, otherwise use cautious qualitative wording.
-- P13: response, recovery, scientific lesson, or documented historical consequence.
-- P14: concise closing historical significance that does not repeat casualty/damage language.
+- P13: verified scientific classification/source context, response, recovery, or documented historical consequence.
+- P14: concise closing callback to event identity/date/location; do not repeat casualty or damage figures.
 - Every panel owns one narrative job. Adjacent panels must not explain the same causal step.
 - HARD NO-REUSE RULE: before drafting, assign each important fact or idea to exactly one stage. Once a fact is the main point of a stage, it cannot be the main point, explanation, warning, consequence, or paraphrase in the immediately following stage.
 - Specifically, if P3 establishes unusually weak or limited felt shaking, P4 MUST NOT discuss weak shaking, lack of alarm, lack of warning from shaking, or the mismatch again. P4 must move to the next distinct verified event or condition.
