@@ -234,7 +234,10 @@ Include every requested stage key exactly once and no markdown.`;
             {role:"system",content:[{type:"input_text",text:"Rewrite ONLY the requested rejected narration stages. Use ONLY facts explicitly entailed by the supplied fact pack. Remove unsupported ranking, comparison, sensory, witness, warning, or causal claims. Do not use outside knowledge. Keep each line natural, cinematic, concise, and about 8-10 seconds. Return only the requested stage keys."}]},
             {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nREJECTED CLAIMS:\n${JSON.stringify(unsupported)}\n\nCURRENT REJECTED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
           ],
-          max_output_tokens:4000\n        })\n      });\n      const repairData=await repairResponse.json();
+          max_output_tokens:4000
+        })
+      });
+      const repairData=await repairResponse.json();
       if(!repairResponse.ok) return res.status(502).json({ok:false,error:repairData?.error?.message||"Narration auto-repair failed."});
       const repairRaw=repairData.output_text||(repairData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
       let repaired;
