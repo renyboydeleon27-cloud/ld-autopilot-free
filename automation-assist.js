@@ -165,9 +165,9 @@
       'The crisis expands across regions or borders as swarms continue migrating.',
       'Damaged fields reveal the scale of lost food and income after swarms pass.',
       'Farmers and authorities assess losses while food-security concerns grow.',
-      'Response teams organize surveillance, ground control, or aircraft operations where available.',
+      'Communities organize monitoring, local control efforts, and emergency relief suited to the time and place.',
       'Agriculture, household income, markets, and food supplies face wider economic pressure.',
-      'Control campaigns and monitoring reduce swarm pressure while affected communities begin recovery.',
+      'As swarm pressure eases or shifts, affected communities begin the long process of recovery and replanting.',
       'The outbreak leaves lessons for early warning, weather monitoring, surveillance, and rapid response.'
     ],
     generic:[]
