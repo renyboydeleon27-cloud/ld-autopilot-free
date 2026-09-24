@@ -1,4 +1,4 @@
-/* LD AUTO v3.35.4 — sticky audit status + stage-specific retry diagnostics */
+/* LD AUTO v3.35.6 — migrate legacy 1874 locust narration before audit */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -151,8 +151,63 @@ function panelPayload(card){
     currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim().slice(0,14000)
   };
 }
+function isRocky1874(){
+  const t=topic().toLowerCase();
+  return t.includes('rocky mountain locust')&&t.includes('1874');
+}
+function migrateLegacyNarration(card){
+  if(!isRocky1874()||!card)return false;
+  const field=card.querySelector('.narration');
+  if(!field)return false;
+  const current=String(field.value||'').trim();
+  const stage=card.dataset.stage||'';
+  const replacements={
+    P11:{
+      tests:[
+        /^Response teams organize surveillance(?:, ground control, or aircraft operations| and control operations) where available\.?$/i,
+        /^Response teams organize surveillance and control operations where available\.?$/i
+      ],
+      value:'Communities organize food, clothing, seed and other practical relief for families hit by the 1874 locust disaster.'
+    },
+    P12:{
+      tests:[
+        /^Agriculture, household income, markets, and food supplies face wider economic pressure\.?$/i
+      ],
+      value:'The crop disaster creates wider hardship as affected households depend on limited food, seed and material assistance.'
+    },
+    P13:{
+      tests:[
+        /^Control campaigns and monitoring reduce swarm pressure while affected communities begin recovery\.?$/i,
+        /^Communities organize monitoring, local control efforts, and emergency relief suited to the time and place\.?$/i
+      ],
+      value:'Recovery begins slowly as affected farmers clear damaged ground, secure seed and prepare to plant again.'
+    },
+    P14:{
+      tests:[
+        /^The outbreak leaves lessons for early warning, weather monitoring, surveillance, and rapid response\.?$/i,
+        /^As swarm pressure eases or shifts, affected communities begin the long process of recovery and replanting\.?$/i
+      ],
+      value:'The 1874 locust disaster remains a stark historical example of how quickly an environmental crisis could devastate farming communities across the Great Plains.'
+    }
+  };
+  const rule=replacements[stage];
+  if(!rule||!rule.tests.some(rx=>rx.test(current)))return false;
+  field.value=rule.value;
+  field.dispatchEvent(new Event('input',{bubbles:true}));
+  field.dispatchEvent(new Event('change',{bubbles:true}));
+  delete card.dataset.smartReady;
+  auditPassCache.clear();
+  return true;
+}
+function migrateLegacyNarrations(){
+  let changed=0;
+  stages.querySelectorAll('.stage-card').forEach(card=>{if(migrateLegacyNarration(card))changed++;});
+  if(changed)showToast('Updated '+changed+' legacy 1874 narration'+(changed===1?'':'s')+' to match the historical panel scenes.');
+  return changed;
+}
 async function ensureNarration(card){
   if(!/^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage||''))return true;
+  migrateLegacyNarration(card);
   const narration=card.querySelector('.narration');
   if(narration?.value.trim())return true;
 
@@ -451,8 +506,21 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   if(e.target.closest('#jumpStage,.done-toggle'))setTimeout(scheduleTargetUpdate,60);
 });
-window.addEventListener('ld:production-built',()=>setTimeout(scheduleTargetUpdate,120));
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
+window.addEventListener('ld:production-built',()=>{
+  setTimeout(()=>{
+    migrateLegacyNarrations();
+    scheduleTargetUpdate();
+  },160);
+});
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>{
+    mount();
+    setTimeout(migrateLegacyNarrations,260);
+  });
+}else{
+  mount();
+  setTimeout(migrateLegacyNarrations,260);
+}
 
-window.LDSmartContinue={run,prepare,currentCard,updateTargetLabel};
+window.LDSmartContinue={run,prepare,currentCard,updateTargetLabel,migrateLegacyNarrations};
 })();
