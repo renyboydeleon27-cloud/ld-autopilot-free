@@ -166,6 +166,55 @@ Include every requested stage key exactly once and no markdown.`;
       });
     }
     const stages = parsed?.stages || {};
+
+    // PROGRAMMATIC EVIDENCE GUARD — reject high-risk event claims unless the
+    // retrieved fact pack explicitly contains evidence for that claim class.
+    const fp = research.factPack || {};
+    const evidenceText = JSON.stringify(fp).toLowerCase();
+    const hasEvidence = (...terms) => terms.some(term => evidenceText.includes(term));
+    const unsupportedClaims = [];
+    const claimRules = [
+      {
+        id:"sensory-roar",
+        re:/\b(roar|roaring|thunder-like|thunderous|rumbl(?:e|ing))\b/i,
+        supported:()=>hasEvidence("roar","thunder","rumbl")
+      },
+      {
+        id:"sea-recession",
+        re:/\b(sea|ocean|water)\b[^.!?]{0,80}\b(pulled back|receded|withdrew|retreated)\b|\b(pulled back|receded|withdrew|retreated)\b[^.!?]{0,80}\b(sea|ocean|water)\b/i,
+        supported:()=>hasEvidence("reced","withdraw","retreat","pulled back")
+      },
+      {
+        id:"shaking-strength",
+        re:/\b(strong|violent|weak|faint|mild|limited|modest)\b[^.!?]{0,50}\b(quake|earthquake|shaking|tremor)\b|\b(quake|earthquake|shaking|tremor)\b[^.!?]{0,50}\b(strong|violent|weak|faint|mild|limited|modest)\b/i,
+        supported:()=>hasEvidence("shaking","tremor","intensity")
+      },
+      {
+        id:"witness-knowledge",
+        re:/\b(people|residents|villagers|survivors|witnesses)\b[^.!?]{0,100}\b(saw|heard|noticed|knew|realized|expected|understood|watched)\b/i,
+        supported:()=>hasEvidence("witness","heard","noticed","observed","testimony")
+      },
+      {
+        id:"rescue-response",
+        re:/\b(rescue|rescued|evacuat(?:e|ed|ion)|relief|aid)\b/i,
+        supported:()=>Array.isArray(fp.aftermath) && fp.aftermath.length>0
+      }
+    ];
+    for (const [stage,text] of Object.entries(stages)) {
+      if (typeof text !== "string") continue;
+      for (const rule of claimRules) {
+        if (rule.re.test(text) && !rule.supported()) unsupportedClaims.push({stage,claimClass:rule.id,text});
+      }
+    }
+    if (unsupportedClaims.length) {
+      return res.status(422).json({
+        ok:false,
+        error:"Narration rejected by programmatic evidence guard: unsupported event-specific claim detected.",
+        unsupportedClaims,
+        researchStatus:research.validation.status
+      });
+    }
+
     for (const name of stageNames) {
       if (typeof stages[name] !== "string" || !stages[name].trim()) return res.status(502).json({ok:false,error:`AI response is missing ${name}. Please try again.`});
       stages[name] = stages[name].trim();
