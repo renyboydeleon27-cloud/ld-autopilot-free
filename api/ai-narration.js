@@ -167,6 +167,39 @@ Include every requested stage key exactly once and no markdown.`;
     }
     const stages = parsed?.stages || {};
 
+    // CLAIM-LEVEL EVIDENCE VALIDATOR — semantic second pass.
+    // Unlike phrase blacklists, this asks the model to map every event-specific
+    // claim to the retrieved evidence pack, then rejects unsupported claims.
+    const validatorResponse = await fetch("https://api.openai.com/v1/responses", {
+      method:"POST",
+      headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"gpt-5-mini",
+        text:{format:{type:"json_object"}},
+        input:[
+          {role:"system",content:[{type:"input_text",text:`You are a strict evidence auditor. Compare narration claims ONLY against the supplied research fact pack. Do not use outside knowledge. Event identity being VERIFIED does not verify other details. Split each stage into event-specific factual claims. A claim is supported only if the fact pack explicitly entails it; paraphrases are allowed, inference and typical disaster behavior are not. Generic connective/cinematic wording is allowed only when it adds no new factual assertion. Return JSON exactly: {"valid":true,"unsupported":[]} or {"valid":false,"unsupported":[{"stage":"HOOK","claim":"...","reason":"..."}]}.`}]},
+          {role:"user",content:[{type:"input_text",text:`FACT PACK:\n${JSON.stringify(research.factPack)}\n\nNARRATION:\n${JSON.stringify(stages)}`}]}
+        ],
+        max_output_tokens:2500
+      })
+    });
+    const validatorData = await validatorResponse.json();
+    if (!validatorResponse.ok) {
+      return res.status(502).json({ok:false,error:validatorData?.error?.message || "Evidence validator request failed."});
+    }
+    const validatorRaw = validatorData.output_text || (validatorData.output || []).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
+    let audit;
+    try { audit=JSON.parse(validatorRaw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim()); }
+    catch { return res.status(502).json({ok:false,error:"Evidence validator returned an unexpected format."}); }
+    if (audit?.valid !== true || (Array.isArray(audit?.unsupported) && audit.unsupported.length)) {
+      return res.status(422).json({
+        ok:false,
+        error:"Narration rejected by claim-level evidence validator.",
+        unsupportedClaims:Array.isArray(audit?.unsupported)?audit.unsupported:[],
+        researchStatus:research.validation.status
+      });
+    }
+
     // PROGRAMMATIC EVIDENCE GUARD — reject high-risk event claims unless the
     // retrieved fact pack explicitly contains evidence for that claim class.
     const fp = research.factPack || {};
