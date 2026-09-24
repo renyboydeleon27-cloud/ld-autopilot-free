@@ -1,4 +1,4 @@
-/* LD AUTO v3.28.0 — OpenAI narration assist */
+/* LD AUTO v3.28.2 — multi-hazard OpenAI narration assist */
 (()=>{
 'use strict';
 function getTopic(){
