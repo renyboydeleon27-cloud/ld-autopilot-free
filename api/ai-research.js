@@ -172,6 +172,8 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
       cause:a.CAUSE ?? a.Cause ?? null,
       validity:a.VALIDITY ?? a.EVENT_VALIDITY ?? null,
       maximumWaterHeightM:a.MAX_EVENT_RUNUP ?? a.MAX_WATER_HEIGHT ?? a.MAXIMUM_WATER_HEIGHT ?? null,
+      magnitude:a.EQ_MAGNITUDE ?? a.EQ_MAG_MW ?? a.EQ_MAG_MS ?? null,
+      numberOfRunupObservations:a.NUM_RUNUP ?? a.NUM_RUNUPS ?? null,
       deaths:a.DEATHS ?? a.TOTAL_DEATHS ?? null,
       injuries:a.INJURIES ?? a.TOTAL_INJURIES ?? null,
       housesDestroyed:a.HOUSES_DESTROYED ?? null,
