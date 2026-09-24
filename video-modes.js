@@ -1,6 +1,6 @@
-/* LD AUTO v3.29.0 — Auto Visual DNA from Visual Mode + year + location, with optional advanced override. */
+/* LD AUTO v3.29.1 — Auto Visual DNA + Rocky Mountain Locust P1 calm-before-disaster lock. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.29.0-auto-visual-dna-v1';
+const T2V_POLICY_VERSION='3.29.1-locust-p1-calm-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -154,6 +154,24 @@ function lituyaCause(stage){
  };
  return map[stage]||null;
 }
+function isRockyMountainLocust1874(){
+ var t=String(current()||'').toLowerCase();
+ return t.includes('rocky mountain locust')&&t.includes('1874');
+}
+function rockyMountainLocustPanel(stage){
+ if(!isRockyMountainLocust1874()||stage!=='P1')return null;
+ return {
+  approved:false,
+  scientific:false,
+  scene:'A calm ordinary farming day across the Great Plains, USA, in 1874, before the Rocky Mountain locust outbreak becomes visibly threatening. Adult frontier farmers work healthy crop fields using period-accurate hand tools while a horse-drawn wagon, simple wooden farmhouse, barn, fences and broad prairie farmland establish the historical setting. Crops are still healthy and intact. The farmers behave normally and show no panic. Only a few ordinary distant insects may be present naturally, but there is no visible swarm, no crop destruction and no unusual darkening of the sky yet. Establish peaceful normal life immediately before the coming disaster.',
+  narrative:'Adult frontier farmers work healthy Great Plains fields during an ordinary day in 1874, before the locust swarm becomes visibly threatening.',
+  timing:'0.0–2.0s: Establish a peaceful 1874 Great Plains farm with healthy crops, adult farmers, period hand tools, and a horse-drawn wagon or nearby wooden farm structures. No disaster is visible.\\n2.0–7.0s: Continue normal farm work with restrained natural movement in clothing, crops, horses and prairie vegetation. Keep the fields healthy and the atmosphere calm.\\n7.0–10.0s: Hold the peaceful pre-disaster world. At most, allow a few small distant insects moving naturally, but do not reveal a swarm, crop damage or a darkened sky yet.',
+  camera:'One restrained cinematic historical-anime documentary shot with a gentle forward track or slow lateral drift. Keep foreground crops, working adults and the wider prairie farm readable together. No cuts, transitions, orbit, time-lapse or disaster-camera behavior.',
+  physics:'This is the calm-before-disaster panel. Crops remain healthy, farm objects remain stable, adults continue ordinary work, horses and vegetation move naturally, and any insects remain few, small and distant. No sudden swarm formation, no instant crop loss, no impossible insect growth, no panic and no destruction.',
+  audio:'Quiet prairie ambience, light wind through crops, subtle farm-tool sounds, distant horse or wagon movement and natural rural environment SFX only. No voiceover, no dialogue and no music.',
+  extraNegative:'No visible locust swarm yet. No dense insects. No sky darkening. No crop destruction. No stripped vegetation. No panic. No giant insects. No modern machinery. No children. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark or any on-screen text.'
+ };
+}
 function isNargis2008(){
  var t=String(current()||'').toLowerCase();
  return t.includes('cyclone nargis')&&t.includes('2008');
@@ -182,11 +200,20 @@ function nargisPanel(stage){
  return base;
 }
 function eventPanel(stage){
- return nargisPanel(stage)||lituyaCause(stage);
+ return rockyMountainLocustPanel(stage)||nargisPanel(stage)||lituyaCause(stage);
 }
 function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanNarrationInstructions(value):String(value||'').trim();}
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[5]=clean(parts[5]);parts[6]=clean(parts[6]);return JSON.stringify(parts);}catch(e){return '';}}
-function pinScene(card){if(!state(card).scene)card.dataset.videoScene=clean(sceneFrom(card));}
+function pinScene(card){
+ var special=eventPanel(card.dataset.stage);
+ if(special&&special.scene){
+   card.dataset.videoScene=clean(special.scene);
+   var field=card.querySelector('.video-scene');
+   if(field)field.value=card.dataset.videoScene;
+   return;
+ }
+ if(!state(card).scene)card.dataset.videoScene=clean(sceneFrom(card));
+}
 function signature(card){var dna=window.LDProductionDNA?.signature?.()||'';return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna]);}
 function build(card){
  var scene=cleanSceneText(sceneFrom(card));
@@ -320,7 +347,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,lituyaCause:lituyaCause,nargisPanel:nargisPanel,eventPanel:eventPanel};
+window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,eventPanel:eventPanel};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
