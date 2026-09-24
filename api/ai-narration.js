@@ -482,13 +482,19 @@ Include every requested stage key exactly once and no markdown.`;
       {
         id:"rescue-response",
         re:/\b(rescue|rescued|evacuat(?:e|ed|ion)|relief|aid)\b/i,
-        supported:()=>Array.isArray(fp.aftermath) && fp.aftermath.length>0
+        supported:(stage)=>{
+          const stageItems=stageEvidence?.[stage]||[];
+          const stageText=JSON.stringify(stageItems).toLowerCase();
+          return (Array.isArray(fp.aftermath) && fp.aftermath.length>0) ||
+            stageItems.some(x=>String(x?.field||"").startsWith("response.")) ||
+            /relief|aid|assistance|rescue|evacuat/.test(stageText);
+        }
       }
     ];
     for (const [stage,text] of Object.entries(stages)) {
       if (typeof text !== "string") continue;
       for (const rule of claimRules) {
-        if (rule.re.test(text) && !rule.supported()) unsupportedClaims.push({stage,claimClass:rule.id,text});
+        if (rule.re.test(text) && !rule.supported(stage)) unsupportedClaims.push({stage,claimClass:rule.id,text});
       }
     }
     if (unsupportedClaims.length) {
