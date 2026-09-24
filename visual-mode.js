@@ -1,3 +1,4 @@
+/* LD AUTO v3.32.0 — Visual Mode hard reset: no cross-mode footprint. */
 (()=>{
   const MODE_KEY='ld-auto-visual-mode-v1';
   const stages=document.getElementById('stages');
@@ -145,7 +146,35 @@
   }
 
   let guard=false;
-  select.addEventListener('change',()=>{localStorage.setItem(MODE_KEY,select.value);guard=true;applyAll(true);setTimeout(()=>guard=false,30);});
+  let previousMode=select.value;
+  select.addEventListener('change',()=>{
+    const fromMode=previousMode;
+    const toMode=select.value;
+    localStorage.setItem(MODE_KEY,toMode);
+    guard=true;
+
+    // First convert all visible/hidden image and image-to-video content to the new rendering mode.
+    applyAll(false);
+
+    // A visual-mode change invalidates rendered assets from the old mode.
+    stages.querySelectorAll('.stage-card .done-toggle').forEach(done=>{done.checked=false;});
+
+    // Preserve the selected HOOK concept when possible, but regenerate its prompt in the new mode.
+    const hookTitle=window.LDHookChoiceSystem?.syncVisualMode?.(fromMode)||'';
+
+    // Rebuild every P1–P14 Text-to-Video variant, including hidden variants, so no stale
+    // Anime/Real Human wording survives in scene, camera, DNA, negatives, or signatures.
+    const rebuilt=window.LDVideoModes?.hardResetVisualMode?.()||0;
+
+    // Re-apply the mode-aware quality lock only to Image-to-Video content.
+    window.ldApplyQualityPolish?.();
+    window.LDHookChoiceSystem?.render?.();
+
+    previousMode=toMode;
+    setTimeout(()=>{guard=false;},80);
+    const label=toMode==='real'?'Real Human':'Historical Anime';
+    showToast('Visual Mode: '+label+' · hard reset complete'+(rebuilt?' · '+rebuilt+' T2V rebuilt':'')+(hookTitle?' · HOOK synced':''));
+  });
   topicEl?.addEventListener('input',()=>{updateHint();if(select.value==='real')setTimeout(()=>{guard=true;applyAll(false);guard=false;},80);});
   document.addEventListener('input',e=>{if(guard||!e.target.matches('.image-prompt,.flow-prompt'))return;const card=e.target.closest('.stage-card');if(!card)return;setTimeout(()=>{guard=true;applyCard(card,false);guard=false;},0);});
   document.addEventListener('click',e=>{if(!e.target.closest('.generate-template-btn,#generateAllBtn,#buildBtn'))return;setTimeout(()=>{guard=true;applyAll(false);guard=false;},120);});
