@@ -1,24 +1,39 @@
+/* LD AUTO v3.31.2 — visual-mode-aware quality polish */
 (()=>{'use strict';
 const QUALITY={
  narration:`DOCUMENTARY NARRATION POLISH LOCK: Write natural, human-sounding historical-documentary English for a general audience. Preserve verified facts, dates, places, causes and consequences, but explain technical science in clear cinematic language. Prefer concrete cause-and-effect wording and speakable sentences. Avoid robotic phrasing, awkward event-name insertion, textbook jargon, redundant dates, keyword stuffing and unnecessarily complex clauses. Keep each narration segment concise enough for its intended delivery time. Do not invent facts or certainty.`,
- flow:`QUALITY POLISH LOCK: Preserve the supplied image, composition, historical setting and existing motion plan. Keep faces, hands, limbs, clothing, props, vehicles, architecture and background geometry stable and coherent for the entire shot. Motion must remain physically caused, subtle and continuous; avoid AI-like drifting, rubbery anatomy, facial swimming, object warping, texture crawling, duplicated people, spontaneous damage and unsupported movement. Use one restrained professional documentary camera behavior appropriate to the scene and maintain consistent motion quality across the production. Preserve the era-aware archival/restored-film capture treatment consistently from shot to shot; do not drift toward modern HD, glossy digital grading, live-action modernity or CGI. Historical objects, infrastructure, signage, transport, clothing and architecture must remain appropriate to the event year and location. Existing scene-variety, location-variety, camera-variety, HOOK survival, anatomy, structure and negative locks remain fully active.`
+ real:`QUALITY POLISH LOCK: Preserve the supplied image, composition, historical setting and existing motion plan. Keep faces, hands, limbs, clothing, props, vehicles, architecture and background geometry stable and coherent for the entire shot. Motion must remain physically caused, subtle and continuous; avoid AI-like drifting, rubbery anatomy, facial swimming, object warping, texture crawling, duplicated people, spontaneous damage and unsupported movement. Use one restrained professional documentary camera behavior appropriate to the scene and maintain consistent motion quality across the production. Preserve the era-aware archival/restored-film capture treatment consistently from shot to shot; do not drift toward modern HD, glossy digital grading or CGI. Historical objects, infrastructure, signage, transport, clothing and architecture must remain appropriate to the event year and location. Existing scene-variety, location-variety, camera-variety, HOOK survival, anatomy, structure and negative locks remain fully active.`,
+ anime:`QUALITY POLISH LOCK: Preserve the supplied composition, historical setting and existing motion plan in a serious 2D historical anime / graphic-novel visual world. Keep faces, hands, limbs, clothing, props, vehicles, architecture and background geometry stable and coherent for the entire shot. Preserve detailed hand-drawn linework, painted 2D backgrounds, grounded adult proportions, natural depth and physically caused motion. Avoid AI-like drifting, rubbery anatomy, facial swimming, object warping, texture crawling, duplicated people, spontaneous damage and unsupported movement. Use one restrained cinematic documentary camera behavior appropriate to the scene. Historical objects, infrastructure, signage, transport, clothing and architecture must remain appropriate to the event year and location. NO live action, NO photorealism, NO archival-film capture treatment, NO 3D CGI, NO glossy render, NO chibi. Existing scene-variety, location-variety, camera-variety, HOOK survival, anatomy, structure and negative locks remain fully active.`
 };
-function appendOnce(el,text,marker){
- if(!el||!el.value?.trim()||el.value.includes(marker))return;
- el.value=el.value.trim()+"\n\n"+text;
+function currentFlowLock(){
+ return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?QUALITY.real:QUALITY.anime;
+}
+function upsertQuality(el){
+ if(!el||!el.value?.trim())return;
+ const next=currentFlowLock();
+ const marker='QUALITY POLISH LOCK:';
+ const idx=el.value.indexOf(marker);
+ if(idx>=0){
+   const prefix=el.value.slice(0,idx).replace(/\s+$/,'');
+   el.value=prefix+"\n\n"+next;
+ }else{
+   el.value=el.value.trim()+"\n\n"+next;
+ }
  el.dispatchEvent(new Event('input',{bubbles:true}));
 }
 function polish(){
  document.querySelectorAll('.stage-card').forEach(card=>{
   const stage=(card.dataset.stage||card.querySelector('.stage-name')?.textContent||'').trim().toUpperCase();
   if(stage==='ENDING'||stage==='THUMBNAIL')return;
-  // Narration is spoken text. Authoring instructions must never be appended here.
-  appendOnce(card.querySelector('.flow-prompt'),QUALITY.flow,'QUALITY POLISH LOCK:');
+  upsertQuality(card.querySelector('.flow-prompt'));
  });
 }
 document.addEventListener('click',e=>{
  if(e.target.closest('#buildBtn,#generateAllBtn,.generate-template-btn'))[100,300,650].forEach(ms=>setTimeout(polish,ms));
 },true);
+document.addEventListener('change',e=>{
+ if(e.target&&e.target.id==='visualMode')setTimeout(polish,80);
+});
 new MutationObserver(()=>setTimeout(polish,120)).observe(document.getElementById('stages')||document.body,{childList:true,subtree:true});
 window.addEventListener('load',()=>setTimeout(polish,700));
 window.ldApplyQualityPolish=polish;
