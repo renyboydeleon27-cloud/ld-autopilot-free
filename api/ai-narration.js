@@ -192,12 +192,57 @@ Include every requested stage key exactly once and no markdown.`;
     try { audit=JSON.parse(validatorRaw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim()); }
     catch { return res.status(502).json({ok:false,error:"Evidence validator returned an unexpected format."}); }
     if (audit?.valid !== true || (Array.isArray(audit?.unsupported) && audit.unsupported.length)) {
-      return res.status(422).json({
-        ok:false,
-        error:"Narration rejected by claim-level evidence validator.",
-        unsupportedClaims:Array.isArray(audit?.unsupported)?audit.unsupported:[],
-        researchStatus:research.validation.status
+      const unsupported=Array.isArray(audit?.unsupported)?audit.unsupported:[];
+      const repairStages=[...new Set(unsupported.map(x=>x.stage).filter(s=>stageNames.includes(s)))];
+      if (!repairStages.length) {
+        return res.status(422).json({ok:false,error:"Narration rejected by claim-level evidence validator.",unsupportedClaims:unsupported,researchStatus:research.validation.status});
+      }
+
+      // AUTO-REPAIR only the rejected stages. Keep already-supported stages unchanged.
+      const repairResponse=await fetch("https://api.openai.com/v1/responses",{
+        method:"POST",
+        headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"gpt-5-mini",
+          text:{format:{type:"json_schema",name:"repaired_stages",strict:true,schema:{type:"object",properties:Object.fromEntries(repairStages.map(n=>[n,{type:"string"}])),required:repairStages,additionalProperties:false}}},
+          input:[
+            {role:"system",content:[{type:"input_text",text:"Rewrite ONLY the requested rejected narration stages. Use ONLY facts explicitly entailed by the supplied fact pack. Remove unsupported ranking, comparison, sensory, witness, warning, or causal claims. Do not use outside knowledge. Keep each line natural, cinematic, concise, and about 8-10 seconds. Return only the requested stage keys."}]},
+            {role:"user",content:[{type:"input_text",text:`FACT PACK:\n${JSON.stringify(research.factPack)}\n\nREJECTED CLAIMS:\n${JSON.stringify(unsupported)}\n\nCURRENT REJECTED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
+          ],
+          max_output_tokens:2000
+        })
       });
+      const repairData=await repairResponse.json();
+      if(!repairResponse.ok) return res.status(502).json({ok:false,error:repairData?.error?.message||"Narration auto-repair failed."});
+      const repairRaw=repairData.output_text||(repairData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
+      let repaired;
+      try{repaired=JSON.parse(repairRaw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim());}
+      catch{return res.status(502).json({ok:false,error:"Narration auto-repair returned an unexpected format."});}
+      for(const s of repairStages) if(typeof repaired?.[s]==="string"&&repaired[s].trim()) stages[s]=repaired[s].trim();
+
+      // Revalidate repaired stages semantically against the same evidence boundary.
+      const recheckResponse=await fetch("https://api.openai.com/v1/responses",{
+        method:"POST",
+        headers:{"Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"gpt-5-mini",
+          text:{format:{type:"json_schema",name:"repair_audit",strict:true,schema:{type:"object",properties:{valid:{type:"boolean"},unsupported:{type:"array",items:{type:"object",properties:{stage:{type:"string"},claim:{type:"string"},reason:{type:"string"}},required:["stage","claim","reason"],additionalProperties:false}}},required:["valid","unsupported"],additionalProperties:false}}},
+          input:[
+            {role:"system",content:[{type:"input_text",text:"Strictly audit the repaired narration ONLY against the supplied fact pack. Do not use outside knowledge. A claim is supported only if explicitly entailed. Return valid=true only if every event-specific claim is supported."}]},
+            {role:"user",content:[{type:"input_text",text:`FACT PACK:\n${JSON.stringify(research.factPack)}\n\nREPAIRED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
+          ],
+          max_output_tokens:1500
+        })
+      });
+      const recheckData=await recheckResponse.json();
+      if(!recheckResponse.ok) return res.status(502).json({ok:false,error:recheckData?.error?.message||"Narration repair validation failed."});
+      const recheckRaw=recheckData.output_text||(recheckData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
+      let recheck;
+      try{recheck=JSON.parse(recheckRaw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim());}
+      catch{return res.status(502).json({ok:false,error:"Narration repair validator returned an unexpected format."});}
+      if(recheck?.valid!==true||(Array.isArray(recheck?.unsupported)&&recheck.unsupported.length)){
+        return res.status(422).json({ok:false,error:"Narration auto-repair was still not fully supported by evidence.",unsupportedClaims:Array.isArray(recheck?.unsupported)?recheck.unsupported:[],researchStatus:research.validation.status});
+      }
     }
 
     // PROGRAMMATIC EVIDENCE GUARD — reject high-risk event claims unless the
