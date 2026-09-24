@@ -155,6 +155,15 @@ HOOK should create immediate curiosity without making a false claim.
 For Shorts, build a coherent progression: setting/context -> cause/build-up -> trigger -> escalation -> peak impact -> aftermath/rescue -> displacement/recovery -> lessons/legacy.
 Do not repeat the same fact across adjacent stages.
 Adults only; no gore.
+DOCUMENTARY EVIDENCE TRANSLATION LOCK:
+Write the verified facts as natural historical-documentary narration, not as database metadata.
+Never say "field", "entry", "dataset", "database", "recorded location field", "country field", "official cause listed", or similar source-interface language in narration.
+Source names and provenance belong to validation, not spoken narration, unless the source itself is historically relevant to the story.
+You MAY make a purely linguistic transformation of a verified claim without adding facts. Example: verified location Sanriku + country Japan may become "Along Japan's Sanriku coast" only when "coast" is already explicit in the selected topic/event identity; otherwise say "in Sanriku, Japan."
+A verified cause value of earthquake may become "The disaster began with an earthquake" or "An earthquake triggered the tsunami" only when the verified event identity is a tsunami and the cause claim explicitly says earthquake.
+Keep sentences human, concrete, cinematic, and speakable. Do not add people, weather, warning signs, sensory details, rankings, comparisons, or causal mechanisms that are absent from VERIFIED CLAIMS.
+Do not pad a stage with metadata wording just to make it longer. If evidence is sparse, prefer a short natural sentence.
+
 Return ONLY valid JSON in exactly this shape:
 {"stages":{"HOOK":"...","P1":"..."}}
 Include every requested stage key exactly once and no markdown.`;
