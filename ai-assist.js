@@ -65,7 +65,21 @@ function mount(){
     try{
       const r=await fetch('/api/ai-narration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,format})});
       const d=await r.json();
-      if(!r.ok||!d.ok) throw new Error(d.error||('HTTP '+r.status));
+      if(!r.ok||!d.ok){
+        if(Array.isArray(d.unsupportedClaims)&&d.unsupportedClaims.length){
+          const details=d.unsupportedClaims.slice(0,12).map((x,i)=>
+            (i+1)+'. '+(x.stage||'Stage')+' ❌ '+(x.claim?'"'+x.claim+'"':'Unsupported claim')+
+            (x.reason?'\n   Reason: '+x.reason:'')
+          );
+          out.textContent='❌ '+(d.error||'Narration rejected.')+'\n\nUNSUPPORTED CLAIMS\n'+details.join('\n');
+          return;
+        }
+        if(Array.isArray(d.missingEvidence)&&d.missingEvidence.length){
+          out.textContent='❌ '+(d.error||'Insufficient research evidence.')+'\nMissing evidence: '+d.missingEvidence.join(', ');
+          return;
+        }
+        throw new Error(d.error||('HTTP '+r.status));
+      }
       let filled=0;
       cards.forEach(card=>{
         const stage=card.dataset.stage;
