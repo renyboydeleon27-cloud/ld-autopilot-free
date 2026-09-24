@@ -1,4 +1,4 @@
-/* LD AUTO v3.30.0 — AI Assist current-panel fixer + narration/research tools */
+/* LD AUTO v3.31.0 — AI T2V Audit + current-panel fixer + narration/research tools */
 (()=>{
 'use strict';
 function getTopic(){
@@ -105,7 +105,7 @@ function mount(){
   const box=document.createElement('section');
   box.id='ldAiTestBox';
   box.style.cssText='margin:12px 0;padding:12px;border:2px solid #7c5cff;border-radius:12px;background:rgba(124,92,255,.08)';
-  box.innerHTML='<strong>✨ LD AI Assist</strong><p style="font-size:12px;opacity:.8">Secure OpenAI assistance through the Vercel backend. Your API key stays on the server.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ldAiNarrationBtn" class="primary small">✨ AI Generate Narration</button><button type="button" id="ldAiFixPanelBtn" class="primary small">✨ Fix Current Panel</button><button type="button" id="ldPreflightBtn" class="ghost small">🛡️ Narration Preflight (FREE)</button><button type="button" id="ldAiTestBtn" class="ghost small">Test AI Connection</button><button type="button" id="ldResearchBtn" class="ghost small">Research Diagnostics</button></div><div id="ldAiTestResult" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>';
+  box.innerHTML='<strong>✨ LD AI Assist</strong><p style="font-size:12px;opacity:.8">Secure OpenAI assistance through the Vercel backend. Your API key stays on the server.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ldAiNarrationBtn" class="primary small">✨ AI Generate Narration</button><button type="button" id="ldAiFixPanelBtn" class="primary small">✨ Fix Current Panel</button><button type="button" id="ldAiT2vAuditBtn" class="ghost small">✨ AI T2V Audit</button><button type="button" id="ldPreflightBtn" class="ghost small">🛡️ Narration Preflight (FREE)</button><button type="button" id="ldAiTestBtn" class="ghost small">Test AI Connection</button><button type="button" id="ldResearchBtn" class="ghost small">Research Diagnostics</button></div><div id="ldAiTestResult" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div>';
   anchor.insertAdjacentElement('afterend',box);
   polishSavedSanrikuNarration();
 
@@ -128,6 +128,36 @@ function mount(){
       const note=d.note?('\n'+d.note):'';
       out.textContent='✅ '+payload.stage+' fixed. Full Text-to-Video prompt rebuilt automatically.'+note;
     }catch(e){out.textContent='❌ Panel fix: '+String(e.message||e);}
+    finally{btn.disabled=false;}
+  };
+
+  document.getElementById('ldAiT2vAuditBtn').onclick=async()=>{
+    const btn=document.getElementById('ldAiT2vAuditBtn'),out=document.getElementById('ldAiTestResult');
+    const topic=getTopic(),card=currentPanelCard();
+    if(invalidTopic(topic)){out.textContent='❌ Set a real disaster topic and build/open that production first.';return;}
+    if(!card){out.textContent='❌ Open the P1–P14 panel you want to audit first.';return;}
+    const payload=panelPayload(card);
+    if(!payload.currentPrompt){out.textContent='❌ Build/refresh the Text-to-Video prompt for '+payload.stage+' first.';return;}
+    btn.disabled=true;
+    out.textContent='✨ Auditing '+payload.stage+' Text-to-Video prompt…';
+    try{
+      const r=await fetch('/api/ai-t2v-audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const raw=await r.text();
+      let d;
+      try{d=JSON.parse(raw);}catch{throw new Error('T2V audit returned non-JSON (HTTP '+r.status+'): '+raw.slice(0,180));}
+      if(!r.ok||!d.ok) throw new Error(d.error||('HTTP '+r.status));
+      const issues=Array.isArray(d.issues)?d.issues.filter(Boolean):[];
+      const lines=[
+        (d.result==='PASS'?'✅ ':'⚠️ ')+(d.result||'AUDIT COMPLETE')+' — '+(d.summary||''),
+      ];
+      if(issues.length){
+        lines.push('ISSUES');
+        issues.slice(0,10).forEach((x,i)=>lines.push((i+1)+'. '+x));
+      }
+      if(d.recommendedAction) lines.push('NEXT: '+d.recommendedAction);
+      lines.push('Audit only — prompt was not changed.');
+      out.textContent=lines.join('\n');
+    }catch(e){out.textContent='❌ T2V Audit: '+String(e.message||e);}
     finally{btn.disabled=false;}
   };
 
