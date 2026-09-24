@@ -146,6 +146,23 @@ export default async function handler(req, res) {
     }
   }
 
+  if(req.body?.preflightOnly===true){
+    return res.status(200).json({
+      ok:true,
+      preflight:true,
+      creditSafe:true,
+      topic,
+      format,
+      researchStatus:research.validation.status,
+      stageEvidenceSummary:Object.fromEntries(
+        Object.entries(stageEvidence).map(([stage,items])=>[
+          stage,
+          (items||[]).map(x=>x.field)
+        ])
+      )
+    });
+  }
+
   // VERIFIED FACT PACK LAYER — narration must first build a structured evidence-aware fact pack.
   // This is intentionally separated from the prose-writing step so uncertain details can be excluded.
   const factPackInstruction = `
