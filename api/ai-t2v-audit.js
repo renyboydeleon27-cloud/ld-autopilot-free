@@ -79,18 +79,41 @@ export default async function handler(req,res){
         "Content-Type":"application/json"
       },
       body:JSON.stringify({
-        model:"gpt-5-mini",
+        model:"gpt-5.6-luna",
         input:[
           {role:"system",content:[{type:"input_text",text:system}]},
           {role:"user",content:[{type:"input_text",text:user}]}
         ],
+        text:{
+          format:{
+            type:"json_schema",
+            name:"ld_t2v_audit",
+            strict:true,
+            schema:{
+              type:"object",
+              properties:{
+                result:{type:"string",enum:["PASS","NEEDS FIX"]},
+                summary:{type:"string"},
+                issues:{type:"array",items:{type:"string"}},
+                recommendedAction:{type:"string"}
+              },
+              required:["result","summary","issues","recommendedAction"],
+              additionalProperties:false
+            }
+          }
+        },
         max_output_tokens:700
       })
     });
     const data=await response.json();
     if(!response.ok) return res.status(response.status).json({ok:false,error:data?.error?.message||"OpenAI request failed."});
-    const parsed=parseJsonObject(outputText(data));
-    if(!parsed) return res.status(502).json({ok:false,error:"AI audit returned invalid JSON."});
+    const rawOutput=outputText(data);
+    const parsed=parseJsonObject(rawOutput);
+    if(!parsed) return res.status(502).json({
+      ok:false,
+      error:"AI audit structured output could not be parsed.",
+      detail:rawOutput.slice(0,220)
+    });
 
     const result=String(parsed.result||"").trim().toUpperCase()==="PASS"?"PASS":"NEEDS FIX";
     const issues=Array.isArray(parsed.issues)?parsed.issues.map(x=>String(x||"").trim()).filter(Boolean).slice(0,10):[];
