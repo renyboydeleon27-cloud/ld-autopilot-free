@@ -68,7 +68,7 @@ function mount(){
     const btn=document.getElementById('ldResearchBtn'),out=document.getElementById('ldAiTestResult');
     const topic=getTopic();
     if(!topic){out.textContent='❌ No topic selected.';return;}
-    btn.disabled=true;out.textContent='🔎 Checking NOAA/NCEI + USGS research sources…';
+    btn.disabled=true;out.textContent='🔎 Checking verified research sources…';
     try{
       const r=await fetch('/api/ai-research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
       const raw=await r.text();
@@ -78,15 +78,23 @@ function mount(){
       }
       if(!r.ok||!d.ok) throw new Error((d.error||('HTTP '+r.status))+(d.detail?' — '+d.detail:''));
       const n=d.retrieval?.noaa||{},u=d.retrieval?.usgs||{},v=d.validation||{};
-      out.textContent=[
+      const sourceNames=(d.sources||[]).map(s=>(s.authority||'Source')+': '+(s.name||s.id||'')).slice(0,8);
+      const claimCount=Array.isArray(d.verifiedClaims)?d.verifiedClaims.length:0;
+      const lines=[
         'RESEARCH DIAGNOSTICS',
         'Topic: '+topic,
+        'Hazard: '+(d.hazardType||'general'),
         'Gate: '+(v.status||'unknown'),
         'Reason: '+(v.reason||'—'),
-        'NOAA/NCEI: '+(n.status||'not run')+(n.reason?' — '+n.reason:'')+(n.event?.location?' — '+n.event.location:'')+(Number.isFinite(n.candidates)?' — candidates: '+n.candidates:''),
-        ...(Array.isArray(n.sample)&&n.sample.length ? ['NOAA sample: '+JSON.stringify(n.sample).slice(0,1200)] : []),
-        'USGS: '+(u.status||'not run')+(u.reason?' — '+u.reason:'')+(u.event?.place?' — '+u.event.place:'')
-      ].join('\n');
+        'Verified claims: '+claimCount
+      ];
+      if(sourceNames.length){
+        lines.push('Sources:');
+        sourceNames.forEach(x=>lines.push('• '+x));
+      }
+      if(n.status) lines.push('NOAA/NCEI: '+n.status+(n.reason?' — '+n.reason:'')+(n.event?.location?' — '+n.event.location:'')+(Number.isFinite(n.candidates)?' — candidates: '+n.candidates:''));
+      if(u.status) lines.push('USGS: '+u.status+(u.reason?' — '+u.reason:'')+(u.event?.place?' — '+u.event.place:''));
+      out.textContent=lines.join('\n');
     }catch(e){out.textContent='❌ Research diagnostics: '+String(e.message||e);}
     finally{btn.disabled=false;}
   };
