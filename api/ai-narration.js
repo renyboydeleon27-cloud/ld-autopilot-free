@@ -181,7 +181,7 @@ Include every requested stage key exactly once and no markdown.`;
     const raw = data.output_text || (data.output || []).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
     let parsed;
     try { parsed = JSON.parse(raw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim()); }
-    catch { return res.status(502).json({ok:false,error:"AI returned an unexpected format. Please try again."}); }
+    catch { return res.status(502).json({ok:false,error:"AI returned an unexpected format. Please try again.",outputPreview:raw.slice(0,700),outputLength:raw.length,responseStatus:data.status||null,incompleteReason:data.incomplete_details?.reason||null}); }
     if (parsed?.error === "INSUFFICIENT_EVIDENCE") {
       return res.status(422).json({
         ok:false,
