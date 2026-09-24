@@ -1,9 +1,9 @@
-/* LD AUTO v3.31.5 — mode-neutral Rocky Mountain Locust camera locks. */
+/* LD AUTO v3.32.0 — visual-mode hard reset and zero-footprint rebuild. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.31.5-locust-mode-neutral-camera-v1';
+const T2V_POLICY_VERSION='3.32.0-visual-mode-hard-reset-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
-function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
+function style(){var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
 function format(){return document.getElementById('format').value;}
 function state(card){return {mode:card.dataset.videoMode||'image',text:card.dataset.textVideoPrompt||'',scene:card.dataset.videoScene||'',signature:card.dataset.textVideoSignature||''};}
 function defaults(topic){var year=(topic.match(/\b(?:1\d{3}|20\d{2}|2100)\b/)||[])[0]||'';return {year:year,location:'',details:''};}
@@ -365,6 +365,56 @@ function rebuildAll(force){
  });
  return count;
 }
+function sanitizeSceneForMode(value){
+ var s=String(value||'').trim();
+ if(style()==='real'){
+   s=s.replace(/serious 2D historical graphic-novel\/anime animation/gi,'photorealistic historical documentary recreation')
+      .replace(/serious 2D historical anime \/ graphic-novel visual world/gi,'photorealistic historical live-action documentary world')
+      .replace(/historical-anime documentary shot/gi,'historical documentary shot')
+      .replace(/historical anime documentary-style/gi,'historical documentary')
+      .replace(/historical anime scene/gi,'historical live-action scene')
+      .replace(/\b2D historical anime\b/gi,'photorealistic historical live-action')
+      .replace(/\banime adult characters\b/gi,'real adult humans');
+ }else{
+   s=s.replace(/photorealistic REAL HUMAN historical documentary recreation/gi,'serious 2D historical graphic-novel/anime animation')
+      .replace(/photorealistic historical live-action documentary world/gi,'serious 2D historical anime / graphic-novel visual world')
+      .replace(/historical live-action documentary shot/gi,'historical anime documentary-style shot')
+      .replace(/historical live-action scene/gi,'historical anime scene')
+      .replace(/\bphotorealistic historical live-action\b/gi,'2D historical anime')
+      .replace(/\breal adult humans\b/gi,'grounded adult characters');
+ }
+ return s.replace(/\s{2,}/g,' ').trim();
+}
+function hardResetVisualMode(){
+ var cards=panelCards();
+ var rebuilt=0;
+ refreshAutoDnaUi();
+ cards.forEach(function(card){
+   var special=eventPanel(card.dataset.stage);
+   var scene=special&&special.scene?special.scene:sanitizeSceneForMode(state(card).scene||sceneFrom(card));
+   card.dataset.videoScene=clean(scene);
+   var sceneField=card.querySelector('.video-scene');
+   if(sceneField)sceneField.value=card.dataset.videoScene;
+   card.dataset.textVideoPrompt='';
+   card.dataset.textVideoSignature='';
+   var textField=card.querySelector('.text-video-prompt');
+   if(textField)textField.value='';
+   var done=card.querySelector('.done-toggle');
+   if(done)done.checked=false;
+   if(ready()){
+     try{
+       card.dataset.textVideoPrompt=build(card);
+       card.dataset.textVideoSignature=signature(card);
+       if(textField)textField.value=card.dataset.textVideoPrompt;
+       rebuilt++;
+     }catch(e){}
+   }
+ });
+ all();
+ saveCurrent();
+ window.dispatchEvent(new CustomEvent('ld:visual-mode-hard-reset',{detail:{mode:style(),rebuilt:rebuilt}}));
+ return rebuilt;
+}
 function globalControl(){var root=document.getElementById('productionVideoMethod');if(!root){root=document.createElement('section');root.id='productionVideoMethod';root.className='video-mode-controls';root.innerHTML='<h3>Video method · P1–P14</h3><div class="production-video-buttons" role="group" aria-label="Video method for all panels"><button type="button" class="ghost" data-method="image" aria-pressed="false">Image-to-Video</button><button type="button" class="ghost" data-method="text" aria-pressed="false">Text-to-Video</button></div><p class="production-video-status" role="status"></p><p>One choice applies to every panel. Both prompt versions stay saved.</p>';var setup=document.getElementById('buildBtn').closest('section');setup.after(root);root.querySelectorAll('[data-method]').forEach(function(button){button.onclick=function(){setAllMode(button.dataset.method);};});}syncGlobalControl();}
 function panel(){globalControl();var old=document.getElementById('chapterVideoContext');if(old)old.remove();if(!document.querySelector('.stage-card'))return;
 var box=document.createElement('section');box.id='chapterVideoContext';box.className='video-mode-controls';box.innerHTML='<h3>HOOK → P14 shared setting</h3><p>Shared Visual DNA is generated automatically from Visual Mode + event year + main location. No copy-paste needed. Use Advanced override only when this chapter needs special recurring details. Build or refresh Text-to-Video prompts after changing the mode, year, location or override. Image-to-Video retains your existing prompt.</p><label>Event year<input class="video-year" inputmode="numeric" maxlength="4"></label><label>Main location<input class="video-location" placeholder="e.g. Tokyo, Japan"></label><label>Auto visual DNA<textarea class="video-auto-dna" rows="6" readonly aria-readonly="true"></textarea></label><details class="video-advanced"><summary>Advanced override (optional)</summary><label>Custom continuity details<textarea class="video-details" rows="3" placeholder="Only add special recurring character, wardrobe, building, terrain or palette details when needed."></textarea></label></details><button type="button" class="ghost build-missing-video">Build / refresh Text-to-Video prompts (P1–P14)</button><p>New prompts are for testing. Review the scene details; prompts cannot guarantee identical faces across separate generated clips.</p>';
@@ -372,7 +422,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,eventPanel:eventPanel};
+window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,eventPanel:eventPanel};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
