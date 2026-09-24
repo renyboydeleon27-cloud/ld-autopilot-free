@@ -1,4 +1,4 @@
-/* LD AUTO v3.35.3 — visible AI progress + audit cache + request timeout */
+/* LD AUTO v3.35.4 — sticky audit status + stage-specific retry diagnostics */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -86,9 +86,9 @@ async function copyText(value){
 }
 function status(text,type=''){
   const el=document.getElementById('ldSmartContinueStatus');
-  if(!el)return;
-  el.textContent=text;
-  el.dataset.state=type;
+  if(el){el.textContent=text;el.dataset.state=type;}
+  const sticky=document.getElementById('ldSmartStickyStatus');
+  if(sticky){sticky.textContent=text;sticky.dataset.state=type;}
 }
 function smartButtons(){
   return [document.getElementById('ldSmartContinueBtn'),document.getElementById('ldSmartStickyBtn')].filter(Boolean);
@@ -356,8 +356,10 @@ async function run(){
     await prepare(card);
   }catch(e){
     stopPhase();
-    buttonLabel('🚀 SMART CONTINUE');
-    status('⚠️ '+String(e?.message||e),'error');
+    const failed=currentCard();
+    const stage=failed?.dataset?.stage||'CURRENT';
+    buttonLabel('⚠️ '+stage+' NEEDS REVIEW · TAP RETRY');
+    status('⚠️ '+stage+': '+String(e?.message||e),'error');
   }finally{
     stopPhase();
     busy=false;
@@ -394,7 +396,7 @@ function mount(){
     sticky=document.createElement('div');
     sticky.id='ldSmartStickyBar';
     sticky.className='ld-smart-sticky-bar';
-    sticky.innerHTML='<div class="ld-smart-target">CURRENT TARGET: —</div><button type="button" id="ldSmartStickyBtn" class="primary">🚀 SMART CONTINUE</button>';
+    sticky.innerHTML='<div class="ld-smart-target">CURRENT TARGET: —</div><button type="button" id="ldSmartStickyBtn" class="primary">🚀 SMART CONTINUE</button><div id="ldSmartStickyStatus" class="ld-smart-sticky-status">Ready.</div>';
     document.body.appendChild(sticky);
     sticky.querySelector('#ldSmartStickyBtn').addEventListener('click',run);
   }
@@ -410,7 +412,9 @@ function mount(){
     .ld-smart-target{font-size:.76rem;font-weight:900;letter-spacing:.06em;text-align:center;margin:0 0 7px;opacity:.92}
     .ld-smart-sticky-bar{position:fixed;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,680px);z-index:9999;padding:8px;border-radius:16px;background:rgba(15,22,32,.94);backdrop-filter:blur(10px);box-shadow:0 8px 28px rgba(0,0,0,.42);border:1px solid rgba(124,92,255,.65)}
     #ldSmartStickyBtn{width:100%;min-height:50px;font-size:1rem;font-weight:900}
-    .shell{padding-bottom:92px}
+    .ld-smart-sticky-status{margin-top:6px;font-size:.72rem;line-height:1.25;text-align:center;opacity:.86;white-space:normal}
+    .ld-smart-sticky-status[data-state="error"]{opacity:1;font-weight:800}
+    .shell{padding-bottom:112px}
     .ld-smart-status{margin-top:10px;padding:10px;border-radius:10px;background:rgba(0,0,0,.18);font-size:.84rem;white-space:pre-wrap}
     .ld-smart-status[data-state="pass"]{outline:1px solid rgba(101,194,141,.55)}
     .ld-smart-status[data-state="error"]{outline:1px solid rgba(255,110,110,.55)}
