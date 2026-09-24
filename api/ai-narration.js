@@ -18,6 +18,7 @@ function evidenceFallback(stage, evidence=[]) {
   const byField=Object.fromEntries(evidence.map(x=>[x.field,x.value]));
   const location=naturalCaseValue(byField["event.location"]);
   const country=naturalCaseValue(byField["event.country"]);
+  const date=String(byField["event.date"]??"").trim();
   const cause=String(byField["event.cause"]??"").trim().toLowerCase();
   const magnitude=byField["earthquake.magnitude"];
   const water=byField["impact.maximumWaterHeightM"];
@@ -26,6 +27,11 @@ function evidenceFallback(stage, evidence=[]) {
   const destroyed=byField["impact.housesDestroyed"];
   const damaged=byField["impact.housesDamaged"];
 
+  if(stage==="HOOK" && date) {
+    const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+    const spoken=m ? new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric",timeZone:"UTC"}) : date;
+    return `On ${spoken}, the disaster began.`;
+  }
   if(stage==="P1" && location) return `The disaster unfolded in ${location}${country ? ", "+country : ""}.`;
   if(stage==="P2" && cause) return `The disaster began with ${articleFor(cause)} ${cause}.`;
   if(magnitude!==undefined) return `The earthquake had a magnitude of ${magnitude}.`;
@@ -75,7 +81,7 @@ export default async function handler(req, res) {
   }
 
   const storyMap = {
-    HOOK:["event.date","event.location","event.country","event.cause"],
+    HOOK:["event.date"],
     P1:["event.location","event.country"], P2:["event.cause"],
     P3:["earthquake.magnitude","earthquake.originTime"],
     P4:["impact.maximumWaterHeightM"], P5:["tsunami.numberOfRunupObservations"],
@@ -136,7 +142,7 @@ EVIDENCE-LOCKED NARRATION — HARD BOUNDARY:
 - VERIFIED CLAIMS is the factual allow-list for event-specific narration. Treat it as stricter than the larger raw factPack.
 - The RESEARCH EVIDENCE supplied by the user message is the ONLY factual source you may use for event-specific claims.
 - Do NOT supplement it from model memory, common knowledge, inference, or typical disaster behavior.
-- Every event-specific factual claim must be explicitly entailed by an item in verifiedClaims. If it is absent from verifiedClaims, do not state it.
+- Every event-specific factual claim must exist in verifiedClaims. For Shorts, it must ALSO be explicitly entailed by that exact stage's stageEvidence; stageEvidence is the binding per-stage allow-list.
 - Do not broaden a numeric database value into a range, ranking, superlative, comparison, or qualitative adjective such as strong/weak/deadly unless a verified claim explicitly supports that wording.
 - Do not invent human activity/context (holidays, crowds, occupations, routines, reactions) from location/date alone.
 - If a field is empty, that class of claim is unavailable. Do not invent it and do not replace it with a plausible generic event detail.
@@ -265,7 +271,7 @@ Include every requested stage key exactly once and no markdown.`;
         text:{format:{type:"json_schema",name:"evidence_audit",strict:true,schema:{type:"object",properties:{valid:{type:"boolean"},unsupported:{type:"array",items:{type:"object",properties:{stage:{type:"string"},claim:{type:"string"},reason:{type:"string"}},required:["stage","claim","reason"],additionalProperties:false}}},required:["valid","unsupported"],additionalProperties:false}}},
         input:[
           {role:"system",content:[{type:"input_text",text:`You are a strict evidence auditor. Compare each narration stage ONLY against the supplied STAGE EVIDENCE for that exact stage. Do not use outside knowledge or borrow facts assigned to another stage. Event identity being VERIFIED does not verify other details. Split each stage into event-specific factual claims. A claim is supported only if that stage's evidence explicitly entails it; paraphrases are allowed, inference and typical disaster behavior are not. Generic connective/cinematic wording is allowed only when it adds no new factual assertion. Return JSON exactly: {"valid":true,"unsupported":[]} or {"valid":false,"unsupported":[{"stage":"HOOK","claim":"...","reason":"..."}]}.`}]},
-          {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nNARRATION:\n${JSON.stringify(stages)}`}]}
+          {role:"user",content:[{type:"input_text",text:`STAGE EVIDENCE:\n${JSON.stringify(stageEvidence)}\n\nNARRATION:\n${JSON.stringify(stages)}`}]}
         ],
         max_output_tokens:4000
       })
@@ -294,7 +300,7 @@ Include every requested stage key exactly once and no markdown.`;
           text:{format:{type:"json_schema",name:"repaired_stages",strict:true,schema:{type:"object",properties:Object.fromEntries(repairStages.map(n=>[n,{type:"string"}])),required:repairStages,additionalProperties:false}}},
           input:[
             {role:"system",content:[{type:"input_text",text:"Rewrite ONLY the requested rejected narration stages. Use ONLY facts explicitly entailed by the supplied STAGE EVIDENCE for each exact stage. Never borrow facts from another stage. Remove unsupported ranking, comparison, sensory, witness, warning, or causal claims. Do not use outside knowledge. Keep each line natural, cinematic, concise, and about 8-10 seconds. Return only the requested stage keys."}]},
-            {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nREJECTED CLAIMS:\n${JSON.stringify(unsupported)}\n\nCURRENT REJECTED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
+            {role:"user",content:[{type:"input_text",text:`STAGE EVIDENCE:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stageEvidence[s]||[]])))}\n\nREJECTED CLAIMS:\n${JSON.stringify(unsupported)}\n\nCURRENT REJECTED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
           ],
           max_output_tokens:4000
         })
@@ -320,7 +326,7 @@ Include every requested stage key exactly once and no markdown.`;
           text:{format:{type:"json_schema",name:"repair_audit",strict:true,schema:{type:"object",properties:{valid:{type:"boolean"},unsupported:{type:"array",items:{type:"object",properties:{stage:{type:"string"},claim:{type:"string"},reason:{type:"string"}},required:["stage","claim","reason"],additionalProperties:false}}},required:["valid","unsupported"],additionalProperties:false}}},
           input:[
             {role:"system",content:[{type:"input_text",text:"Strictly audit each repaired narration stage ONLY against the supplied STAGE EVIDENCE for that exact stage. Do not use outside knowledge or facts assigned to another stage. A claim is supported only if explicitly entailed by that stage's evidence. Return valid=true only if every event-specific claim is supported."}]},
-            {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nREPAIRED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
+            {role:"user",content:[{type:"input_text",text:`STAGE EVIDENCE:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stageEvidence[s]||[]])))}\n\nREPAIRED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
           ],
           max_output_tokens:1500
         })
