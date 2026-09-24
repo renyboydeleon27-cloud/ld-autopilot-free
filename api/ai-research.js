@@ -271,16 +271,16 @@ export async function buildResearch(topic) {
     };
     add("event.year",e.year,e.year?`Event year: ${e.year}.`:null);
     if(e.month&&e.day) add("event.date",`${e.year}-${String(e.month).padStart(2,"0")}-${String(e.day).padStart(2,"0")}`,`Event date: ${e.year}-${String(e.month).padStart(2,"0")}-${String(e.day).padStart(2,"0")}.`);
-    add("event.location",e.location,e.location?`Recorded location: ${e.location}.`:null);
-    add("event.country",e.country,e.country?`Recorded country: ${e.country}.`:null);
-    add("event.cause",e.cause,e.cause?`NOAA/NCEI cause field: ${e.cause}.`:null);
-    add("impact.maximumWaterHeightM",e.maximumWaterHeightM,e.maximumWaterHeightM!=null?`Maximum water height field: ${e.maximumWaterHeightM} m.`:null);
-    add("impact.deaths",e.deaths,e.deaths!=null?`Deaths field: ${e.deaths}.`:null);
-    add("impact.injuries",e.injuries,e.injuries!=null?`Injuries field: ${e.injuries}.`:null);
-    add("impact.housesDestroyed",e.housesDestroyed,e.housesDestroyed!=null?`Houses destroyed field: ${e.housesDestroyed}.`:null);
-    add("impact.housesDamaged",e.housesDamaged,e.housesDamaged!=null?`Houses damaged field: ${e.housesDamaged}.`:null);
+    add("event.location",e.location,e.location?`Location: ${e.location}.`:null);
+    add("event.country",e.country,e.country?`Country: ${e.country}.`:null);
+    add("event.cause",e.cause,e.cause?`Cause: ${e.cause}.`:null);
+    add("impact.maximumWaterHeightM",e.maximumWaterHeightM,e.maximumWaterHeightM!=null?`Maximum water height: ${e.maximumWaterHeightM} m.`:null);
+    add("impact.deaths",e.deaths,e.deaths!=null?`Deaths: ${e.deaths}.`:null);
+    add("impact.injuries",e.injuries,e.injuries!=null?`Injuries: ${e.injuries}.`:null);
+    add("impact.housesDestroyed",e.housesDestroyed,e.housesDestroyed!=null?`Houses destroyed: ${e.housesDestroyed}.`:null);
+    add("impact.housesDamaged",e.housesDamaged,e.housesDamaged!=null?`Houses damaged: ${e.housesDamaged}.`:null);
     const mag=e.raw?.EQ_MAGNITUDE ?? e.raw?.EQ_MAG_MW;
-    add("earthquake.magnitude",mag,mag!=null?`Earthquake magnitude field: ${mag}.`:null);
+    add("earthquake.magnitude",mag,mag!=null?`Earthquake magnitude: ${mag}.`:null);
   }
   if(usgs?.status==="candidate"){
     const e=usgs.event||{}, sourceId="usgs-earthquake", sourceUrl=SOURCE_REGISTRY.earthquake[0].url;
