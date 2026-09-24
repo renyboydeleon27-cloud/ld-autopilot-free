@@ -80,22 +80,39 @@ export default async function handler(req, res) {
     });
   }
 
-  const storyMap = {
-    HOOK:["event.date","earthquake.shaking"],
+  const isSanriku1896=/sanriku/i.test(topic) && /\b1896\b/.test(topic);
+  const storyMap = isSanriku1896 ? {
+    HOOK:["event.date","earthquake.shaking","event.classification"],
     P1:["event.location","event.country"],
-    P2:["event.cause"],
-    P3:["earthquake.originLocalTime","earthquake.magnitude"],
+    P2:["event.cause","earthquake.sourceRegion"],
+    P3:["earthquake.originLocalTime","observation.miyako.shockDurationMin"],
     P4:["observation.miyako.seaRecessionTime"],
     P5:["observation.miyako.waterRiseTime"],
-    P6:["observation.miyako.largestWaveTime","observation.miyako.waveHeightM"],
-    P7:["impact.maximumWaterHeightM"],
-    P8:["impact.housesDestroyed"],
-    P9:["impact.housesDamaged"],
-    P10:["impact.deaths"],
-    P11:["impact.injuries"],
-    P12:["observation.miyako.subsequentWaves"],
-    P13:["event.classification","earthquake.sourceRegion"],
+    P6:["observation.miyako.largestWaveTime","observation.miyako.waveHeightM","observation.miyako.waveSound"],
+    P7:["observation.miyako.pathDestruction"],
+    P8:["observation.miyako.subsequentWaves"],
+    P9:["tsunami.instrumentalTideGaugeStations"],
+    P10:["impact.deaths","survey.yamana.villages"],
+    P11:["survey.iki.maximumHeightM","survey.iki.maximumHeightLocation"],
+    P12:["survey.matsuo.maximumHeightM","survey.matsuo.maximumHeightLocation"],
+    P13:["tsunami.heightVariationShortDistance"],
     P14:["event.date","event.location","event.country"]
+  } : {
+    HOOK:["event.date"],
+    P1:["event.location","event.country"],
+    P2:["event.cause"],
+    P3:["earthquake.magnitude","earthquake.originTime"],
+    P4:["impact.maximumWaterHeightM"],
+    P5:["tsunami.numberOfRunupObservations"],
+    P6:["impact.maximumWaterHeightM"],
+    P7:["impact.housesDestroyed","impact.housesDamaged"],
+    P8:["impact.deaths","impact.injuries"],
+    P9:["impact.housesDestroyed","impact.housesDamaged"],
+    P10:["impact.deaths","impact.injuries"],
+    P11:["tsunami.numberOfRunupObservations","impact.maximumWaterHeightM"],
+    P12:["impact.deaths","impact.injuries"],
+    P13:["impact.housesDestroyed","impact.housesDamaged"],
+    P14:["event.date","event.location","impact.maximumWaterHeightM","impact.deaths"]
   };
   const claimsByField = Object.fromEntries((research.verifiedClaims||[]).map(x=>[x.field,x]));
   const stageEvidence = Object.fromEntries(Object.entries(storyMap).map(([stage,fields])=>[
@@ -110,6 +127,24 @@ export default async function handler(req, res) {
     sources: research.sources.map(s=>({authority:s.authority,name:s.name,url:s.url})),
     stageEvidence
   };
+
+  // FREE PREFLIGHT — stop before any OpenAI call if a Shorts stage has no evidence.
+  // This prevents spending generation/validator credits on a narration set that
+  // the stage-scoped evidence validator would reject anyway.
+  if(format==="shorts"){
+    const missingStageEvidence=Object.entries(stageEvidence)
+      .filter(([,items])=>!Array.isArray(items)||items.length===0)
+      .map(([stage])=>stage);
+    if(missingStageEvidence.length){
+      return res.status(422).json({
+        ok:false,
+        error:"Narration preflight blocked before AI generation: some stages have no verified stage-specific evidence.",
+        missingStageEvidence,
+        creditSafe:true,
+        researchStatus:research.validation.status
+      });
+    }
+  }
 
   // VERIFIED FACT PACK LAYER — narration must first build a structured evidence-aware fact pack.
   // This is intentionally separated from the prose-writing step so uncertain details can be excluded.
