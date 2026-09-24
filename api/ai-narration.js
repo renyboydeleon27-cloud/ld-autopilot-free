@@ -120,6 +120,7 @@ export default async function handler(req, res) {
   }
 
   const isSanriku1896=/sanriku/i.test(topic) && /\b1896\b/.test(topic);
+  const isRockyMountainLocust1874=/rocky mountain locust|locust plague/i.test(topic) && /\b1874\b/.test(topic);
   const storyMap = isSanriku1896 ? {
     HOOK:["event.date","earthquake.shaking","event.classification"],
     P1:["event.location","event.country"],
@@ -136,6 +137,22 @@ export default async function handler(req, res) {
     P12:["survey.matsuo.maximumHeightM","survey.matsuo.maximumHeightLocation"],
     P13:["tsunami.heightVariationShortDistance"],
     P14:["event.date","event.location","event.country"]
+  } : isRockyMountainLocust1874 ? {
+    HOOK:["event.year","event.species","impact.agriculture"],
+    P1:["event.location","event.country"],
+    P2:["outbreak.period","outbreak.range"],
+    P3:["chronology.1874.june"],
+    P4:["chronology.1874.july"],
+    P5:["chronology.1874.lateJuly"],
+    P6:["chronology.1874.august"],
+    P7:["chronology.1874.october"],
+    P8:["impact.agriculture"],
+    P9:["impact.nebraskaFields"],
+    P10:["impact.settlerDistress"],
+    P11:["response.publicAid"],
+    P12:["outbreak.broaderPeriod"],
+    P13:["response.entomologicalCommission"],
+    P14:["significance.kansasGrasshopperYear","event.year","event.species"]
   } : {
     HOOK:["event.date"],
     P1:["event.location","event.country"],
