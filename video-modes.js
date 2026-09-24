@@ -1,6 +1,6 @@
-/* LD AUTO v3.29.1 — Auto Visual DNA + Rocky Mountain Locust P1 calm-before-disaster lock. */
+/* LD AUTO v3.29.2 — Rocky Mountain Locust P1–P3 progression locks. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.29.1-locust-p1-calm-v1';
+const T2V_POLICY_VERSION='3.29.2-locust-p1-p3-progression-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -159,18 +159,43 @@ function isRockyMountainLocust1874(){
  return t.includes('rocky mountain locust')&&t.includes('1874');
 }
 function rockyMountainLocustPanel(stage){
- if(!isRockyMountainLocust1874()||stage!=='P1')return null;
- return {
-  approved:false,
-  scientific:false,
-  scene:'A calm ordinary farming day across the Great Plains, USA, in 1874, before the Rocky Mountain locust outbreak becomes visibly threatening. Adult frontier farmers work healthy crop fields using period-accurate hand tools while a horse-drawn wagon, simple wooden farmhouse, barn, fences and broad prairie farmland establish the historical setting. Crops are still healthy and intact. The farmers behave normally and show no panic. Only a few ordinary distant insects may be present naturally, but there is no visible swarm, no crop destruction and no unusual darkening of the sky yet. Establish peaceful normal life immediately before the coming disaster.',
-  narrative:'Adult frontier farmers work healthy Great Plains fields during an ordinary day in 1874, before the locust swarm becomes visibly threatening.',
-  timing:'0.0–2.0s: Establish a peaceful 1874 Great Plains farm with healthy crops, adult farmers, period hand tools, and a horse-drawn wagon or nearby wooden farm structures. No disaster is visible.\\n2.0–7.0s: Continue normal farm work with restrained natural movement in clothing, crops, horses and prairie vegetation. Keep the fields healthy and the atmosphere calm.\\n7.0–10.0s: Hold the peaceful pre-disaster world. At most, allow a few small distant insects moving naturally, but do not reveal a swarm, crop damage or a darkened sky yet.',
-  camera:'One restrained cinematic historical-anime documentary shot with a gentle forward track or slow lateral drift. Keep foreground crops, working adults and the wider prairie farm readable together. No cuts, transitions, orbit, time-lapse or disaster-camera behavior.',
-  physics:'This is the calm-before-disaster panel. Crops remain healthy, farm objects remain stable, adults continue ordinary work, horses and vegetation move naturally, and any insects remain few, small and distant. No sudden swarm formation, no instant crop loss, no impossible insect growth, no panic and no destruction.',
-  audio:'Quiet prairie ambience, light wind through crops, subtle farm-tool sounds, distant horse or wagon movement and natural rural environment SFX only. No voiceover, no dialogue and no music.',
-  extraNegative:'No visible locust swarm yet. No dense insects. No sky darkening. No crop destruction. No stripped vegetation. No panic. No giant insects. No modern machinery. No children. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark or any on-screen text.'
+ if(!isRockyMountainLocust1874()||!/^P[1-3]$/.test(stage))return null;
+ var map={
+  P1:{
+   approved:false,
+   scientific:false,
+   scene:'A calm ordinary farming day across the Great Plains, USA, in 1874, before the Rocky Mountain locust outbreak becomes visibly threatening. Adult frontier farmers work healthy crop fields using period-accurate hand tools while a horse-drawn wagon, simple wooden farmhouse, barn, fences and broad prairie farmland establish the historical setting. Crops are still healthy and intact. The farmers behave normally and show no panic. Only a few ordinary distant insects may be present naturally, but there is no visible swarm, no crop destruction and no unusual darkening of the sky yet. Establish peaceful normal life immediately before the coming disaster.',
+   narrative:'Adult frontier farmers work healthy Great Plains fields during an ordinary day in 1874, before the locust swarm becomes visibly threatening.',
+   timing:'0.0–2.0s: Establish a peaceful 1874 Great Plains farm with healthy crops, adult farmers, period hand tools, and a horse-drawn wagon or nearby wooden farm structures. No disaster is visible.\\n2.0–7.0s: Continue normal farm work with restrained natural movement in clothing, crops, horses and prairie vegetation. Keep the fields healthy and the atmosphere calm.\\n7.0–10.0s: Hold the peaceful pre-disaster world. At most, allow a few small distant insects moving naturally, but do not reveal a swarm, crop damage or a darkened sky yet.',
+   camera:'One restrained cinematic historical-anime documentary shot with a gentle forward track or slow lateral drift. Keep foreground crops, working adults and the wider prairie farm readable together. No cuts, transitions, orbit, time-lapse or disaster-camera behavior.',
+   physics:'This is the calm-before-disaster panel. Crops remain healthy, farm objects remain stable, adults continue ordinary work, horses and vegetation move naturally, and any insects remain few, small and distant. No sudden swarm formation, no instant crop loss, no impossible insect growth, no panic and no destruction.',
+   audio:'Quiet prairie ambience, light wind through crops, subtle farm-tool sounds, distant horse or wagon movement and natural rural environment SFX only. No voiceover, no dialogue and no music.',
+   extraNegative:'No visible locust swarm yet. No dense insects. No sky darkening. No crop destruction. No stripped vegetation. No panic. No giant insects. No modern machinery. No children. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark or any on-screen text.'
+  },
+  P2:{
+   approved:false,
+   scientific:false,
+   scene:'Across the Great Plains, USA, in 1874, favorable seasonal conditions have created an unusually dense early buildup of Rocky Mountain locusts in open prairie breeding areas near farmland. Show warm prairie grassland, low vegetation and patches of bare soil with visibly increasing numbers of locusts gathering, crawling and hopping across the ground and plants. The insect population should look clearly abnormal and fast-growing, but this is not yet the full sky-darkening swarm. Nearby crops and farmland are still mostly intact. The scene should feel like an ominous early warning stage, showing that the locust population is rapidly building before the true plague arrives.',
+   narrative:'Favorable seasonal conditions allow Rocky Mountain locust populations to build rapidly across the Great Plains before the full plague forms.',
+   timing:'0.0–2.0s: Establish open 1874 prairie breeding ground near farmland, with healthy vegetation and a visibly unusual number of locusts already present on soil and low plants.\\n2.0–7.0s: Show the early buildup continuing as more small locusts crawl, hop and lift briefly into loose clusters across the ground and vegetation. Keep nearby crops mostly intact and the sky largely clear.\\n7.0–10.0s: End on a clearly abnormal but still early-stage concentration of locusts, creating ominous escalation without becoming a full sky-darkening swarm.',
+   camera:'A slow lateral track close enough to read locust buildup across foreground soil and vegetation while preserving the wider prairie farmland in depth. No cuts, transitions, orbit or time-lapse.',
+   physics:'This is an early population-buildup panel, not an instant plague. Locusts remain normal-sized and move through plausible crawling, hopping and short flight. Do not depict magical reproduction, instant multiplication, sudden crop death or impossible insect density. Crops remain mostly intact.',
+   audio:'Prairie wind, dry grass movement, subtle natural insect activity and distant farm ambience only. No voiceover, dialogue or music.',
+   extraNegative:'No full locust cloud. No blackened sky. No total crop destruction. No stripped fields. No panic crowd. No giant insects. No impossible instant multiplication. No modern machinery. No children. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark or any on-screen text.'
+  },
+  P3:{
+   approved:false,
+   scientific:false,
+   scene:'Across the Great Plains, USA, in 1874, adult farmers or frontier scouts clearly notice a rapidly growing concentration of Rocky Mountain locusts gathering across prairie vegetation, fence lines and open ground near farmland. Show large numbers of locusts clinging to grasses, low plants and patches of soil while more insects rise in loose moving clusters above the land. The buildup should now feel serious and alarming, with adults stopping their work to look across the fields and open prairie in concern. However, this is still not yet the full sky-darkening plague. Most crops remain standing, and the swarm is gathering visibly rather than completely overwhelming the landscape. The scene should communicate a clear early realization that a major locust disaster is approaching.',
+   narrative:'Farmers and scouts begin to realize that rapidly growing Rocky Mountain locust gatherings are forming across the Great Plains and may become a major disaster.',
+   timing:'0.0–2.0s: Begin with adult farmers or frontier scouts already noticing dense locust concentrations on nearby grasses, fence lines and open ground. Their attention shifts toward the growing insect activity.\\n2.0–7.0s: More locusts rise into loose moving clusters above the prairie while adults stop work and watch with visible concern. Keep most crops standing and avoid full landscape overwhelm.\\n7.0–10.0s: Build a strong sense of approaching danger as the gathering becomes larger and more organized, but stop before the sky is darkened or the fields are completely invaded.',
+   camera:'A restrained push-in toward the concerned adults and the visibly gathering locust concentrations, preserving readable foreground vegetation, midground people and open prairie depth. No cuts, transitions, orbit or time-lapse.',
+   physics:'Locust density is clearly higher than P2, but movement remains physically plausible and insects remain normal-sized. The gathering forms through many individual insects crawling, hopping and taking short flight; do not show instant materialization or impossible multiplication. Most crops remain standing and largely intact.',
+   audio:'Growing natural insect wing and movement sounds mixed with prairie wind, light farm ambience and subtle human movement only. No voiceover, dialogue or music.',
+   extraNegative:'No full sky-darkening plague yet. No complete crop stripping. No total field destruction. No giant insects. No magical insect appearance. No panic stampede. No modern objects. No children. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark or any on-screen text.'
+  }
  };
+ return map[stage]||null;
 }
 function isNargis2008(){
  var t=String(current()||'').toLowerCase();
