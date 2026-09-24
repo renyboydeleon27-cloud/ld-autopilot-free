@@ -71,12 +71,28 @@ export default async function handler(req,res){
         "Content-Type":"application/json"
       },
       body:JSON.stringify({
-        model:"gpt-5-mini",
+        model:"gpt-5.6-luna",
         input:[
           {role:"system",content:[{type:"input_text",text:system}]},
           {role:"user",content:[{type:"input_text",text:user}]}
         ],
-        max_output_tokens:650
+        text:{
+          format:{
+            type:"json_schema",
+            name:"ld_panel_fix",
+            strict:true,
+            schema:{
+              type:"object",
+              properties:{
+                scene:{type:"string"},
+                note:{type:"string"}
+              },
+              required:["scene","note"],
+              additionalProperties:false
+            }
+          }
+        },
+        max_output_tokens:520
       })
     });
     const data=await response.json();
