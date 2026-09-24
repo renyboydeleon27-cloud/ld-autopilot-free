@@ -1,4 +1,4 @@
-/* LD AUTO v3.35.1 — stage-specific approve button labels */
+/* LD AUTO v3.35.2 — live CURRENT TARGET label for Smart Continue */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -42,6 +42,16 @@ function currentCard(){
     const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
     return Math.abs((ar.top+ar.height/2)-center)-Math.abs((br.top+br.height/2)-center);
   })[0]||cards[0];
+}
+function currentTargetText(){
+  const card=currentCard();
+  return card?'CURRENT TARGET: '+(card.dataset.stage||'CURRENT'):'CURRENT TARGET: —';
+}
+function updateTargetLabel(){
+  const text=currentTargetText();
+  document.querySelectorAll('.ld-smart-target').forEach(el=>{
+    if(el.textContent!==text)el.textContent=text;
+  });
 }
 function setOpen(card){
   if(!card)return;
@@ -328,7 +338,7 @@ function mount(){
   const panel=document.createElement('section');
   panel.id='ldSmartContinuePanel';
   panel.className='card ld-smart-continue';
-  panel.innerHTML='<div class="ld-smart-head"><div><span class="audit-label">GUIDED MODE</span><strong>LD Autopilot</strong><p>One button prepares the current stage, audits/fixes T2V when needed, and advances after you approve the result.</p></div></div><button type="button" id="ldSmartContinueBtn" class="primary">🚀 SMART CONTINUE</button><div id="ldSmartContinueStatus" class="ld-smart-status">Open a production and press SMART CONTINUE.</div>';
+  panel.innerHTML='<div class="ld-smart-head"><div><span class="audit-label">GUIDED MODE</span><strong>LD Autopilot</strong><p>One button prepares the current stage, audits/fixes T2V when needed, and advances after you approve the result.</p></div></div><div class="ld-smart-target">CURRENT TARGET: —</div><button type="button" id="ldSmartContinueBtn" class="primary">🚀 SMART CONTINUE</button><div id="ldSmartContinueStatus" class="ld-smart-status">Open a production and press SMART CONTINUE.</div>';
   setup.after(panel);
   panel.querySelector('#ldSmartContinueBtn').addEventListener('click',run);
 
@@ -337,7 +347,7 @@ function mount(){
     sticky=document.createElement('div');
     sticky.id='ldSmartStickyBar';
     sticky.className='ld-smart-sticky-bar';
-    sticky.innerHTML='<button type="button" id="ldSmartStickyBtn" class="primary">🚀 SMART CONTINUE</button>';
+    sticky.innerHTML='<div class="ld-smart-target">CURRENT TARGET: —</div><button type="button" id="ldSmartStickyBtn" class="primary">🚀 SMART CONTINUE</button>';
     document.body.appendChild(sticky);
     sticky.querySelector('#ldSmartStickyBtn').addEventListener('click',run);
   }
@@ -350,6 +360,7 @@ function mount(){
     .ld-smart-continue{margin:14px 0;padding:16px;border:2px solid rgba(124,92,255,.75);border-radius:16px;background:rgba(124,92,255,.08)}
     .ld-smart-head strong{display:block;font-size:1.05rem;margin:3px 0}.ld-smart-head p{font-size:.85rem;opacity:.82;margin:4px 0 12px}
     #ldSmartContinueBtn{width:100%;min-height:48px;font-size:1rem;font-weight:800}
+    .ld-smart-target{font-size:.76rem;font-weight:900;letter-spacing:.06em;text-align:center;margin:0 0 7px;opacity:.92}
     .ld-smart-sticky-bar{position:fixed;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,680px);z-index:9999;padding:8px;border-radius:16px;background:rgba(15,22,32,.94);backdrop-filter:blur(10px);box-shadow:0 8px 28px rgba(0,0,0,.42);border:1px solid rgba(124,92,255,.65)}
     #ldSmartStickyBtn{width:100%;min-height:50px;font-size:1rem;font-weight:900}
     .shell{padding-bottom:92px}
@@ -364,11 +375,33 @@ function mount(){
     body:not(.ld-advanced-open) .copy-text-video{display:none!important}
   `;
   document.head.appendChild(style);
+  updateTargetLabel();
 }
 
-const observer=new MutationObserver(()=>mountAdvanced());
+let targetQueued=false;
+function scheduleTargetUpdate(){
+  if(targetQueued)return;
+  targetQueued=true;
+  requestAnimationFrame(()=>{
+    targetQueued=false;
+    updateTargetLabel();
+  });
+}
+const observer=new MutationObserver(()=>{
+  mountAdvanced();
+  scheduleTargetUpdate();
+});
 observer.observe(document.body,{childList:true,subtree:true});
+window.addEventListener('scroll',scheduleTargetUpdate,{passive:true});
+window.addEventListener('resize',scheduleTargetUpdate,{passive:true});
+document.addEventListener('click',e=>{
+  if(e.target.closest('.collapse-btn,#nextIncompleteBtn,#auditNextBtn,#jumpStage,.next-stage-btn,.done-toggle'))setTimeout(scheduleTargetUpdate,60);
+});
+document.addEventListener('change',e=>{
+  if(e.target.closest('#jumpStage,.done-toggle'))setTimeout(scheduleTargetUpdate,60);
+});
+window.addEventListener('ld:production-built',()=>setTimeout(scheduleTargetUpdate,120));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
 
-window.LDSmartContinue={run,prepare,currentCard};
+window.LDSmartContinue={run,prepare,currentCard,updateTargetLabel};
 })();
