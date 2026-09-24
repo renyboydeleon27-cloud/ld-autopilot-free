@@ -14,6 +14,15 @@ function polishSavedSanrikuNarration(){
     ],
     P1:[
       ["The event occurred in Sanriku, Japan.","The disaster unfolded in Sanriku, Japan."]
+    ],
+    P6:[
+      ["The largest wave at Miyako arrived at 20:07, was about 4.5 metres high, and was described as making a booming sound.","At 20:07, Miyako’s largest observed wave arrived about 4.5 metres high, with a booming sound."]
+    ],
+    P8:[
+      ["Six subsequent waves were observed at Miyako until noon the following day.","Six more waves were observed at Miyako through noon the next day."]
+    ],
+    P9:[
+      ["The tsunami was instrumentally recorded at three tide-gauge stations in Japan.","Three tide-gauge stations in Japan recorded the tsunami."]
     ]
   };
   let changed=0;
