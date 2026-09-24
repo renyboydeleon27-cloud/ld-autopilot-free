@@ -1,4 +1,4 @@
-/* LD AUTO v3.35.0 — SMART CONTINUE with mobile sticky action bar */
+/* LD AUTO v3.35.1 — stage-specific approve button labels */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -83,6 +83,10 @@ function smartButtons(){
 }
 function buttonLabel(text){
   smartButtons().forEach(btn=>btn.textContent=text);
+}
+function approveLabel(card){
+  const stage=card?.dataset?.stage||'CURRENT';
+  return '✅ APPROVE '+stage+' → NEXT';
 }
 function panelPayload(card){
   const continuity=window.ldVideoContinuity||{};
@@ -177,7 +181,7 @@ async function prepareHook(card){
   if(!prompt)throw new Error('No HOOK prompt is ready yet.');
   const copied=await copyText(prompt);
   card.dataset.smartReady='1';
-  buttonLabel('✅ RESULT APPROVED → NEXT');
+  buttonLabel(approveLabel(card));
   status('HOOK READY FOR FLOW'+(copied?' · prompt copied automatically':' · use Copy prompt if clipboard is blocked')+'. After you review the generated clip, press this same button again to approve and continue.','pass');
 }
 async function prepareImageStage(card){
@@ -186,7 +190,7 @@ async function prepareImageStage(card){
   if(!image)throw new Error(stage+' image prompt is empty.');
   const copied=await copyText(image);
   card.dataset.smartReady='1';
-  buttonLabel('✅ RESULT APPROVED → NEXT');
+  buttonLabel(approveLabel(card));
   status(stage+' READY'+(copied?' · image prompt copied automatically':'')+'. After reviewing the result, press this same button again.','pass');
 }
 async function prepareImageToVideo(card){
@@ -201,7 +205,7 @@ async function prepareImageToVideo(card){
   if(!prompt)throw new Error('Image-to-Video prompt is not ready.');
   const copied=await copyText(prompt);
   card.dataset.smartReady='1';
-  buttonLabel('✅ RESULT APPROVED → NEXT');
+  buttonLabel(approveLabel(card));
   status(card.dataset.stage+' IMAGE-TO-VIDEO READY'+(copied?' · Flow prompt copied automatically':'')+'. Review the Flow result, then press this same button again.','pass');
 }
 async function prepareTextToVideo(card){
@@ -241,7 +245,7 @@ async function prepareTextToVideo(card){
   const finalPrompt=window.LDVideoModes?.prompt?.(card)||payload.currentPrompt;
   const copied=await copyText(finalPrompt);
   card.dataset.smartReady='1';
-  buttonLabel('✅ RESULT APPROVED → NEXT');
+  buttonLabel(approveLabel(card));
   status('✅ '+card.dataset.stage+' READY FOR FLOW · AI T2V Audit PASS'+(copied?' · prompt copied automatically':'')+'. Generate in Flow, review the clip, then press this same button again.','pass');
 }
 async function prepare(card){
