@@ -220,8 +220,12 @@ Include every requested stage key exactly once and no markdown.`;
       if(!repairResponse.ok) return res.status(502).json({ok:false,error:repairData?.error?.message||"Narration auto-repair failed."});
       const repairRaw=repairData.output_text||(repairData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
       let repaired;
-      try{repaired=JSON.parse(repairRaw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim());}
-      catch{return res.status(502).json({ok:false,error:"Narration auto-repair returned an unexpected format."});}
+      try{
+        repaired=JSON.parse(repairRaw.replace(/^```json\s*/i,"").replace(/```$/,"").trim());
+        if(repaired?.stages && typeof repaired.stages==="object") repaired=repaired.stages;
+      }catch{
+        return res.status(502).json({ok:false,error:"Narration auto-repair returned an unexpected format.",repairPreview:repairRaw.slice(0,500)});
+      }
       for(const s of repairStages) if(typeof repaired?.[s]==="string"&&repaired[s].trim()) stages[s]=repaired[s].trim();
 
       // Revalidate repaired stages semantically against the same evidence boundary.
