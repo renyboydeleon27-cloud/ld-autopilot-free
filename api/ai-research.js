@@ -44,7 +44,7 @@ function topicSearchText(topic) {
     .replace(/\b(1[0-9]{3}|20[0-9]{2})\b/g, " ")
     .replace(/\b(tsunami|earthquake|quake|mega-tsunami|megatsunami)\b/gi, " ")
     .replace(/[—–-]/g, " ")
-    .replace(/\\b(usa|u\\.?s\\.?a\\.?|united states|japan|alaska)\\b/gi, " ")
+    .replace(/\b(usa|u\.?s\.?a\.?|united states|japan|alaska)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -160,7 +160,8 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
   return {
     status:"candidate",
     confidence: best.yearOnly ? "low" : (best.score >= 2 ? "high" : "medium"),
-    matchScore:best.score,\n    matchMethod:best.yearOnly ? "year-only-single-record" : "topic-text",
+    matchScore:best.score,
+    matchMethod:best.yearOnly ? "year-only-single-record" : "topic-text",
     event:{
       id:a.ID ?? a.OBJECTID ?? null,
       year:a.YEAR ?? a.Year ?? a.year ?? a.EVENT_YEAR ?? null,
