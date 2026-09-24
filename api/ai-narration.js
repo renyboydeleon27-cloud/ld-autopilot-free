@@ -216,7 +216,7 @@ Include every requested stage key exactly once and no markdown.`;
         model:"gpt-5-mini",
         text:{format:{type:"json_schema",name:"evidence_audit",strict:true,schema:{type:"object",properties:{valid:{type:"boolean"},unsupported:{type:"array",items:{type:"object",properties:{stage:{type:"string"},claim:{type:"string"},reason:{type:"string"}},required:["stage","claim","reason"],additionalProperties:false}}},required:["valid","unsupported"],additionalProperties:false}}},
         input:[
-          {role:"system",content:[{type:"input_text",text:`You are a strict evidence auditor. Compare narration claims ONLY against the supplied VERIFIED CLAIMS allow-list. Do not use outside knowledge. Event identity being VERIFIED does not verify other details. Split each stage into event-specific factual claims. A claim is supported only if VERIFIED CLAIMS explicitly entail it; paraphrases are allowed, inference and typical disaster behavior are not. Generic connective/cinematic wording is allowed only when it adds no new factual assertion. Return JSON exactly: {"valid":true,"unsupported":[]} or {"valid":false,"unsupported":[{"stage":"HOOK","claim":"...","reason":"..."}]}.`}]},
+          {role:"system",content:[{type:"input_text",text:`You are a strict evidence auditor. Compare each narration stage ONLY against the supplied STAGE EVIDENCE for that exact stage. Do not use outside knowledge or borrow facts assigned to another stage. Event identity being VERIFIED does not verify other details. Split each stage into event-specific factual claims. A claim is supported only if that stage's evidence explicitly entails it; paraphrases are allowed, inference and typical disaster behavior are not. Generic connective/cinematic wording is allowed only when it adds no new factual assertion. Return JSON exactly: {"valid":true,"unsupported":[]} or {"valid":false,"unsupported":[{"stage":"HOOK","claim":"...","reason":"..."}]}.`}]},
           {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nNARRATION:\n${JSON.stringify(stages)}`}]}
         ],
         max_output_tokens:4000
@@ -245,7 +245,7 @@ Include every requested stage key exactly once and no markdown.`;
           model:"gpt-5-mini",
           text:{format:{type:"json_schema",name:"repaired_stages",strict:true,schema:{type:"object",properties:Object.fromEntries(repairStages.map(n=>[n,{type:"string"}])),required:repairStages,additionalProperties:false}}},
           input:[
-            {role:"system",content:[{type:"input_text",text:"Rewrite ONLY the requested rejected narration stages. Use ONLY facts explicitly entailed by the supplied fact pack. Remove unsupported ranking, comparison, sensory, witness, warning, or causal claims. Do not use outside knowledge. Keep each line natural, cinematic, concise, and about 8-10 seconds. Return only the requested stage keys."}]},
+            {role:"system",content:[{type:"input_text",text:"Rewrite ONLY the requested rejected narration stages. Use ONLY facts explicitly entailed by the supplied STAGE EVIDENCE for each exact stage. Never borrow facts from another stage. Remove unsupported ranking, comparison, sensory, witness, warning, or causal claims. Do not use outside knowledge. Keep each line natural, cinematic, concise, and about 8-10 seconds. Return only the requested stage keys."}]},
             {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nREJECTED CLAIMS:\n${JSON.stringify(unsupported)}\n\nCURRENT REJECTED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
           ],
           max_output_tokens:4000
@@ -271,7 +271,7 @@ Include every requested stage key exactly once and no markdown.`;
           model:"gpt-5-mini",
           text:{format:{type:"json_schema",name:"repair_audit",strict:true,schema:{type:"object",properties:{valid:{type:"boolean"},unsupported:{type:"array",items:{type:"object",properties:{stage:{type:"string"},claim:{type:"string"},reason:{type:"string"}},required:["stage","claim","reason"],additionalProperties:false}}},required:["valid","unsupported"],additionalProperties:false}}},
           input:[
-            {role:"system",content:[{type:"input_text",text:"Strictly audit the repaired narration ONLY against the supplied fact pack. Do not use outside knowledge. A claim is supported only if explicitly entailed. Return valid=true only if every event-specific claim is supported."}]},
+            {role:"system",content:[{type:"input_text",text:"Strictly audit each repaired narration stage ONLY against the supplied STAGE EVIDENCE for that exact stage. Do not use outside knowledge or facts assigned to another stage. A claim is supported only if explicitly entailed by that stage's evidence. Return valid=true only if every event-specific claim is supported."}]},
             {role:"user",content:[{type:"input_text",text:`VERIFIED CLAIMS:\n${JSON.stringify(research.verifiedClaims||[])}\n\nREPAIRED STAGES:\n${JSON.stringify(Object.fromEntries(repairStages.map(s=>[s,stages[s]])))}`}]}
           ],
           max_output_tokens:1500
