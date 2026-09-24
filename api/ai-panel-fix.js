@@ -32,6 +32,10 @@ export default async function handler(req,res){
   if(!currentScene) return res.status(400).json({ok:false,error:"Current panel scene is empty."});
   if(!process.env.OPENAI_API_KEY) return res.status(500).json({ok:false,error:"OPENAI_API_KEY is not configured on the server."});
 
+  const topicStageRule=/rocky mountain locust/i.test(topic)&&/\b1874\b/.test(topic)&&stage==="P1"
+    ? "SPECIAL CURRENT PRODUCTION RULE: P1 is pure calm-before-disaster. Return ZERO visible locusts or swarming insects anywhere in the frame for the full 10 seconds; no insects in air, on crops, on soil, near camera, or in the distance."
+    : "";
+
   const system=[
     "You are the Living Disaster Book current-panel prompt polisher.",
     "Rewrite ONLY the visual PANEL SCENE for a single 10-second historical disaster video panel.",
@@ -41,8 +45,9 @@ export default async function handler(req,res){
     "Make the scene concrete and generator-friendly: subject, environment, period objects, focal action, visible hazard state, and what must NOT appear yet.",
     "Adults only unless the existing prompt explicitly requires otherwise. No gore.",
     "For insect/locust topics: insects must be normal-sized and physically separate. Dense airborne swarms must never look like black smoke, soot, dust, fog, haze, ash, storm cloud, shadow cloud, vapor, or a solid dark mass. If the panel is explicitly pre-locust/zero-locust, preserve ZERO visible locusts or swarming insects.",
-    "Return JSON only with exactly two string fields: scene and note. scene is the polished panel scene; note is one short sentence explaining the main fix."
-  ].join("\n");
+    "Return JSON only with exactly two string fields: scene and note. scene is the polished panel scene; note is one short sentence explaining the main fix.",
+    topicStageRule
+  ].filter(Boolean).join("\n");
 
   const user=[
     "TOPIC: "+topic,
