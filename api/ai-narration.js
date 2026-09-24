@@ -180,12 +180,12 @@ STAGE ROLE LOCK — SHORTS P1-P14:
 - P4: historically established unusual warning conditions or the gap between trigger and disaster; if a verified local observation exists, anchor it to that named location and do not generalize it to the entire coast.
 - P5: the next distinct verified local or physical development after P4. Do not invent a generation mechanism if one is not in evidence.
 - P6: the next distinct verified wave arrival/measurement or approach detail.
-- P7: first major coastal impact.
-- P8: inundation/destruction expands through affected communities.
-- P9: peak human-scale consequences, non-graphic.
-- P10: wider geographic impact or additional documented wave effects.
-- P11: immediate aftermath and survival/rescue conditions.
-- P12: verified scale of loss/damage; use exact figures only when sufficiently reliable, otherwise use cautious qualitative wording.
+- P7: verified peak coastal water-height/run-up evidence; do not turn one measurement into a coast-wide claim.
+- P8: verified houses destroyed/property-destruction evidence.
+- P9: verified additional property-damage evidence.
+- P10: verified fatalities, non-graphic.
+- P11: verified injuries or other distinct human-impact evidence.
+- P12: verified subsequent-wave sequence or immediate aftermath evidence; keep local observations local.
 - P13: verified scientific classification/source context, response, recovery, or documented historical consequence.
 - P14: concise closing callback to event identity/date/location; do not repeat casualty or damage figures.
 - Every panel owns one narrative job. Adjacent panels must not explain the same causal step.
@@ -347,7 +347,7 @@ Include every requested stage key exactly once and no markdown.`;
     // PROGRAMMATIC EVIDENCE GUARD — reject high-risk event claims unless the
     // retrieved fact pack explicitly contains evidence for that claim class.
     const fp = research.factPack || {};
-    const evidenceText = JSON.stringify(fp).toLowerCase();
+    const evidenceText = JSON.stringify({factPack:fp,verifiedClaims:research.verifiedClaims||[]}).toLowerCase();
     const hasEvidence = (...terms) => terms.some(term => evidenceText.includes(term));
     const unsupportedClaims = [];
     const claimRules = [
