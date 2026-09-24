@@ -69,6 +69,9 @@ function polishNarrationQuality(stage, text, stageEvidence) {
   if(stage==="P1" && /^The event occurred in /i.test(t)){
     return evidenceFallback(stage,evidence) || t;
   }
+  if(stage==="P5" && /^At Miyako the water then began to rise at about 20:00\.$/i.test(t)){
+    return "At Miyako, the water began to rise around 8:00 p.m.";
+  }
   if(stage==="P6" && /largest wave at Miyako arrived at 20:07/i.test(t)){
     return "At 20:07, Miyako’s largest observed wave arrived about 4.5 metres high, with a booming sound.";
   }
@@ -77,6 +80,12 @@ function polishNarrationQuality(stage, text, stageEvidence) {
   }
   if(stage==="P9" && /^The tsunami was instrumentally recorded at three tide-gauge stations in Japan\.$/i.test(t)){
     return "Three tide-gauge stations in Japan recorded the tsunami.";
+  }
+  if(stage==="P11" && /^An 1896 survey by Iki reported a maximum tsunami height of 24 metres at Yoshihama\.$/i.test(t)){
+    return "An 1896 survey reported a maximum tsunami height of 24 metres at Yoshihama.";
+  }
+  if(stage==="P14" && /^This was the Sanriku tsunami of 1896-06-15 in Japan\.$/i.test(t)){
+    return "This was the Sanriku tsunami of June 15, 1896, in Japan.";
   }
   return t;
 }
