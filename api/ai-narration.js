@@ -1,5 +1,53 @@
 import { buildResearch } from "./ai-research.js";
 
+function naturalCaseValue(value) {
+  const s=String(value??"").trim();
+  if(!s) return "";
+  if(/^[A-Z][A-Z\s.'-]+$/.test(s) && s.length>3) {
+    return s.toLowerCase().replace(/\b[a-z]/g,m=>m.toUpperCase());
+  }
+  return s;
+}
+
+function articleFor(value) {
+  const s=String(value??"").trim().toLowerCase();
+  return /^[aeiou]/.test(s) ? "an" : "a";
+}
+
+function evidenceFallback(stage, evidence=[]) {
+  const byField=Object.fromEntries(evidence.map(x=>[x.field,x.value]));
+  const location=naturalCaseValue(byField["event.location"]);
+  const country=naturalCaseValue(byField["event.country"]);
+  const cause=String(byField["event.cause"]??"").trim().toLowerCase();
+  const magnitude=byField["earthquake.magnitude"];
+  const water=byField["impact.maximumWaterHeightM"];
+  const deaths=byField["impact.deaths"];
+  const injuries=byField["impact.injuries"];
+  const destroyed=byField["impact.housesDestroyed"];
+  const damaged=byField["impact.housesDamaged"];
+
+  if(stage==="P1" && location) return `The disaster unfolded in ${location}${country ? ", "+country : ""}.`;
+  if(stage==="P2" && cause) return `The disaster began with ${articleFor(cause)} ${cause}.`;
+  if(magnitude!==undefined) return `The earthquake had a magnitude of ${magnitude}.`;
+  if(water!==undefined) return `Maximum water height reached ${water} metres.`;
+  if(deaths!==undefined && injuries!==undefined) return `The disaster killed ${deaths} people and injured ${injuries}.`;
+  if(deaths!==undefined) return `The death toll was ${deaths}.`;
+  if(injuries!==undefined) return `${injuries} people were injured.`;
+  if(destroyed!==undefined && damaged!==undefined) return `${destroyed} houses were destroyed and ${damaged} were damaged.`;
+  if(destroyed!==undefined) return `${destroyed} houses were destroyed.`;
+  if(damaged!==undefined) return `${damaged} houses were damaged.`;
+  if(location) return `The event occurred in ${location}${country ? ", "+country : ""}.`;
+  if(cause) return `The disaster began with ${articleFor(cause)} ${cause}.`;
+  return "";
+}
+
+function sanitizeNarrationLine(stage, text, stageEvidence) {
+  const t=String(text??"").trim();
+  const metadataLeak=/\b(records?|recorded|dataset|database|field|entry|listed|NOAA|NCEI|USGS|source)\b/i;
+  if(!metadataLeak.test(t)) return t;
+  return evidenceFallback(stage, stageEvidence?.[stage]||[]) || t;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -28,7 +76,7 @@ export default async function handler(req, res) {
 
   const storyMap = {
     HOOK:["event.date","event.location","event.country","event.cause"],
-    P1:["event.location","event.country"], P2:["event.date","event.cause"],
+    P1:["event.location","event.country"], P2:["event.cause"],
     P3:["earthquake.magnitude","earthquake.originTime"],
     P4:["impact.maximumWaterHeightM"], P5:["tsunami.numberOfRunupObservations"],
     P6:["impact.maximumWaterHeightM"],
@@ -338,7 +386,7 @@ Include every requested stage key exactly once and no markdown.`;
 
     for (const name of stageNames) {
       if (typeof stages[name] !== "string" || !stages[name].trim()) return res.status(502).json({ok:false,error:`AI response is missing ${name}. Please try again.`});
-      stages[name] = stages[name].trim();
+      stages[name] = sanitizeNarrationLine(name, stages[name], stageEvidence);
     }
     return res.status(200).json({ok:true,topic,format,researchStatus:research.validation.status,stages});
   } catch (err) {
