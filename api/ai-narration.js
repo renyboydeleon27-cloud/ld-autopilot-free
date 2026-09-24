@@ -62,11 +62,21 @@ EVIDENCE GATE:
     : ["HOOK", ...Array.from({length:30},(_,i)=>"S"+(i+1))];
 
   const system = `You are the Living Disaster Book narration engine.\n${factPackInstruction}
+EVIDENCE-LOCKED NARRATION — HARD BOUNDARY:
+- The RESEARCH EVIDENCE supplied by the user message is the ONLY factual source you may use for event-specific claims.
+- Do NOT supplement it from model memory, common knowledge, inference, or typical disaster behavior.
+- Every event-specific claim must be directly represented in factPack.identity, cause, chronology, warning_conditions, physical_impact, human_impact, aftermath, or significance.
+- If a field is empty, that class of claim is unavailable. Do not invent it and do not replace it with a plausible generic event detail.
+- Generic science may explain a mechanism only when the evidence pack identifies that mechanism for this event; generic science cannot establish that the mechanism happened in this event.
+- Never state sea withdrawal/recession, strong or weak shaking, warning signs, witness behavior, community activities, rescue actions, exact wave behavior, or a named scientific classification unless that detail exists explicitly in the evidence pack.
+- VERIFIED means the EVENT IDENTITY passed the source gate. It does NOT mean every possible historical detail is verified.
+- If the evidence pack is too sparse to support all requested stages, return an evidence-insufficient error object instead of filling gaps: {"error":"INSUFFICIENT_EVIDENCE","missing":["chronology",...]}.
+
 Write natural, human-sounding historical-documentary English for a general audience.
 Preserve verified facts, dates, places, causes and consequences. Explain technical science clearly and cinematically.
 FACT SAFETY LOCK:
 - Never invent precise facts, dates, month/day, time of day, measurements, casualty figures, quotations, named locations, human activities, warning signs, or certainty.
-- A detail appearing in the topic may be treated as supplied by the user. Any additional specific historical detail must be highly reliable from your knowledge; when uncertain, omit it rather than filling a narrative gap.
+- A detail appearing in the topic may be treated as user-supplied identity context only. Do not use additional event-specific historical details from model knowledge; they must appear in RESEARCH EVIDENCE.
 - Do not infer morning/night, weather, celebrations, occupations, shoreline behavior, evacuation behavior, or what witnesses saw unless reliably established.
 - Prefer a broader accurate sentence over a vivid unsupported detail.
 - Separate established historical facts from cinematic phrasing. Cinematic language must never change the factual meaning.
@@ -147,6 +157,14 @@ Include every requested stage key exactly once and no markdown.`;
     let parsed;
     try { parsed = JSON.parse(raw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim()); }
     catch { return res.status(502).json({ok:false,error:"AI returned an unexpected format. Please try again."}); }
+    if (parsed?.error === "INSUFFICIENT_EVIDENCE") {
+      return res.status(422).json({
+        ok:false,
+        error:"Research verified the event identity, but the evidence pack is too sparse for evidence-locked HOOK + panels.",
+        missingEvidence:Array.isArray(parsed.missing)?parsed.missing:[],
+        researchStatus:research.validation.status
+      });
+    }
     const stages = parsed?.stages || {};
     for (const name of stageNames) {
       if (typeof stages[name] !== "string" || !stages[name].trim()) return res.status(502).json({ok:false,error:`AI response is missing ${name}. Please try again.`});
