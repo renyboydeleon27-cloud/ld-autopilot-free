@@ -1,4 +1,4 @@
-/* LD AUTO v3.39.2 — stable HOOK readiness under legacy prompt decorators. */
+/* LD AUTO v3.39.4 — persistent Smart Continue target + ready-for-approval state. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -9,6 +9,30 @@ if(!stages||!setup)return;
 let busy=false;
 const auditPassCache=new Map();
 let phaseTimer=null;
+
+const SMART_SESSION_PREFIX='ld-auto-smart-continue-session-v1:';
+function smartScope(){
+  const active=localStorage.getItem('ld-autopilot-free-active-project')||'';
+  return active||[topic(),format()].join('|');
+}
+function smartSessionKey(){return SMART_SESSION_PREFIX+smartScope();}
+function readSmartSession(){
+  try{
+    const x=JSON.parse(localStorage.getItem(smartSessionKey())||'null');
+    if(!x||x.topic!==topic()||x.format!==format())return null;
+    return x;
+  }catch{return null;}
+}
+function writeSmartSession(patch){
+  const prev=readSmartSession()||{version:'1.0',topic:topic(),format:format(),targetStage:'',pending:null};
+  const next={...prev,...patch,version:'1.0',topic:topic(),format:format(),updatedAt:new Date().toISOString()};
+  try{localStorage.setItem(smartSessionKey(),JSON.stringify(next));}catch{}
+  return next;
+}
+function stageDone(card){return !!card?.querySelector('.done-toggle')?.checked;}
+function firstIncompleteCard(cards){
+  return (cards||[]).find(card=>!stageDone(card))||null;
+}
 
 function showToast(message){
   if(!toast)return;
@@ -42,13 +66,27 @@ function eligible(card){
 function currentCard(){
   const cards=[...stages.querySelectorAll('.stage-card')].filter(eligible);
   if(!cards.length)return null;
+
+  const session=readSmartSession();
+  const remembered=session?.targetStage?cards.find(card=>card.dataset.stage===session.targetStage):null;
+  if(remembered&&!stageDone(remembered))return remembered;
+
   const open=cards.filter(card=>!card.querySelector('.stage-body')?.classList.contains('hidden'));
-  const pool=open.length?open:cards;
-  const center=(window.innerHeight||800)/2;
-  return pool.slice().sort((a,b)=>{
-    const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
-    return Math.abs((ar.top+ar.height/2)-center)-Math.abs((br.top+br.height/2)-center);
-  })[0]||cards[0];
+  const openIncomplete=open.filter(card=>!stageDone(card));
+  if(openIncomplete.length){
+    const center=(window.innerHeight||800)/2;
+    return openIncomplete.slice().sort((a,b)=>{
+      const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
+      return Math.abs((ar.top+ar.height/2)-center)-Math.abs((br.top+br.height/2)-center);
+    })[0];
+  }
+
+  const incomplete=firstIncompleteCard(cards);
+  if(incomplete)return incomplete;
+
+  if(remembered)return remembered;
+  if(open.length)return open[0];
+  return cards[cards.length-1]||cards[0];
 }
 function currentTargetText(){
   const card=currentCard();
@@ -60,7 +98,7 @@ function updateTargetLabel(){
     if(el.textContent!==text)el.textContent=text;
   });
 }
-function setOpen(card){
+function setOpen(card,options={}){
   if(!card)return;
   stages.querySelectorAll('.stage-card').forEach(c=>{
     const body=c.querySelector('.stage-body'),btn=c.querySelector('.collapse-btn');
@@ -69,7 +107,8 @@ function setOpen(card){
     body.classList.toggle('hidden',!active);
     btn.textContent=active?'Close':'Open';
   });
-  card.scrollIntoView({behavior:'smooth',block:'start'});
+  writeSmartSession({targetStage:card.dataset.stage||''});
+  if(options.scroll!==false)card.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function nextCard(card){
   const cards=[...stages.querySelectorAll('.stage-card')].filter(eligible);
@@ -257,18 +296,60 @@ function readinessSignature(card){
   return 'stage|'+promptHash(parts.join('\u241f'));
 }
 function markSmartReady(card){
+  const signature=readinessSignature(card);
   card.dataset.smartReady='1';
-  card.dataset.smartReadySignature=readinessSignature(card);
+  card.dataset.smartReadySignature=signature;
+  writeSmartSession({
+    targetStage:card.dataset.stage||'',
+    pending:{stage:card.dataset.stage||'',signature,readyAt:new Date().toISOString()}
+  });
 }
 function clearCardSmartReady(card){
   if(!card)return;
+  const stage=card.dataset.stage||'';
   delete card.dataset.smartReady;
   delete card.dataset.smartReadySignature;
+  const session=readSmartSession();
+  if(session?.pending?.stage===stage)writeSmartSession({pending:null});
 }
 function smartReadyStillCurrent(card){
   return card?.dataset?.smartReady==='1'
     && !!card.dataset.smartReadySignature
     && card.dataset.smartReadySignature===readinessSignature(card);
+}
+function restoreSmartSession(){
+  const cards=[...stages.querySelectorAll('.stage-card')].filter(eligible);
+  if(!cards.length)return null;
+
+  let session=readSmartSession();
+  let target=session?.targetStage?cards.find(card=>card.dataset.stage===session.targetStage):null;
+  if(!target||stageDone(target)){
+    target=firstIncompleteCard(cards)||target||cards[cards.length-1]||cards[0];
+    if(target)session=writeSmartSession({targetStage:target.dataset.stage||''});
+  }
+
+  const pending=session?.pending;
+  if(pending?.stage){
+    const card=cards.find(x=>x.dataset.stage===pending.stage);
+    if(card&&!stageDone(card)&&pending.signature&&pending.signature===readinessSignature(card)){
+      card.dataset.smartReady='1';
+      card.dataset.smartReadySignature=pending.signature;
+      target=card;
+      setOpen(card,{scroll:false});
+      buttonLabel(approveLabel(card));
+      status('🟡 '+card.dataset.stage+' READY FOR APPROVAL · restored after returning to LD AUTO. If the Flow result is okay, press '+approveLabel(card)+'.','pass');
+      updateTargetLabel();
+      return card;
+    }
+    writeSmartSession({pending:null});
+  }
+
+  if(target){
+    setOpen(target,{scroll:false});
+    buttonLabel('🚀 SMART CONTINUE');
+    updateTargetLabel();
+  }
+  return target;
 }
 function stopPhase(){
   if(phaseTimer){clearInterval(phaseTimer);phaseTimer=null;}
@@ -465,7 +546,7 @@ async function prepareHook(card){
   const copied=await copyText(prompt);
   markSmartReady(card);
   buttonLabel(approveLabel(card));
-  status('✅ HOOK READY FOR FLOW · LOCAL CHECK ONLY · 0 API calls'+(copied?' · prompt copied automatically':' · use Copy prompt if clipboard is blocked')+'. Review the generated clip, then press ✅ APPROVE HOOK → NEXT.','pass');
+  status('🟡 HOOK READY FOR FLOW · NOT YET APPROVED · LOCAL CHECK ONLY · 0 API calls'+(copied?' · prompt copied automatically':' · use Copy prompt if clipboard is blocked')+'. Review the generated clip, then press ✅ APPROVE HOOK → NEXT.','pass');
 }
 async function prepareImageStage(card){
   const stage=card.dataset.stage;
@@ -541,7 +622,7 @@ async function prepareTextToVideo(card){
   const copied=await copyText(finalPrompt);
   markSmartReady(card);
   buttonLabel(approveLabel(card));
-  status('✅ '+card.dataset.stage+' READY FOR FLOW · exact prompt signature verified'+(copied?' · prompt copied automatically':'')+'. Generate in Flow, review the clip, then press this same button again.','pass');
+  status('🟡 '+card.dataset.stage+' READY FOR FLOW · NOT YET APPROVED · exact prompt signature verified'+(copied?' · prompt copied automatically':'')+'. Generate in Flow, review the clip, then press '+approveLabel(card)+'.','pass');
 }
 async function prepare(card){
   clearCardSmartReady(card);
@@ -722,27 +803,51 @@ observer.observe(document.body,{childList:true,subtree:true});
 window.addEventListener('scroll',scheduleTargetUpdate,{passive:true});
 window.addEventListener('resize',scheduleTargetUpdate,{passive:true});
 document.addEventListener('click',e=>{
-  if(e.target.closest('.collapse-btn,#nextIncompleteBtn,#auditNextBtn,#jumpStage,.next-stage-btn,.done-toggle'))setTimeout(scheduleTargetUpdate,60);
+  const card=e.target.closest?.('.stage-card');
+  if(card&&e.target.closest('.collapse-btn,.next-stage-btn')){
+    setTimeout(()=>{
+      if(eligible(card))writeSmartSession({targetStage:card.dataset.stage||''});
+      scheduleTargetUpdate();
+    },60);
+    return;
+  }
+  if(e.target.closest('#nextIncompleteBtn,#auditNextBtn,#jumpStage,.done-toggle'))setTimeout(scheduleTargetUpdate,60);
 });
 document.addEventListener('change',e=>{
-  if(e.target.closest('#jumpStage,.done-toggle'))setTimeout(scheduleTargetUpdate,60);
+  if(e.target.closest('#jumpStage')){
+    const stage=String(e.target.value||'');
+    if(stage)writeSmartSession({targetStage:stage});
+    setTimeout(scheduleTargetUpdate,60);
+    return;
+  }
+  if(e.target.closest('.done-toggle'))setTimeout(()=>{
+    restoreSmartSession();
+    scheduleTargetUpdate();
+  },80);
 });
 window.addEventListener('ld:production-built',()=>{
   setTimeout(()=>{
     migrateLegacyNarrations();
+    restoreSmartSession();
     scheduleTargetUpdate();
     refreshApiCostCounter();
-  },160);
+  },180);
 });
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     mount();
-    setTimeout(migrateLegacyNarrations,260);
+    setTimeout(()=>{
+      migrateLegacyNarrations();
+      restoreSmartSession();
+    },280);
   });
 }else{
   mount();
-  setTimeout(migrateLegacyNarrations,260);
+  setTimeout(()=>{
+    migrateLegacyNarrations();
+    restoreSmartSession();
+  },280);
 }
 
-window.LDSmartContinue={run,prepare,currentCard,updateTargetLabel,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()})};
+window.LDSmartContinue={version:'3.39.4',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()})};
 })();
