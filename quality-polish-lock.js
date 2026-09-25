@@ -22,10 +22,12 @@ function upsertQuality(el){
  return true;
 }
 function polish(){
+ const lockedMode=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode||'';
  document.querySelectorAll('.stage-card').forEach(card=>{
   const stage=(card.dataset.stage||card.querySelector('.stage-name')?.textContent||'').trim().toUpperCase();
   if(stage==='ENDING'||stage==='THUMBNAIL')return;
-  if(card.dataset.videoMode==='text')return;
+  // Text-to-Video prompts are owned by the T2V/Hook systems; do not mutate them after readiness.
+  if(card.dataset.videoMode==='text'||(stage==='HOOK'&&lockedMode==='text'))return;
   upsertQuality(card.querySelector('.flow-prompt'));
  });
 }
