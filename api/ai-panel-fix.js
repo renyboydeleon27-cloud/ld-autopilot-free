@@ -35,6 +35,7 @@ export default async function handler(req,res){
   const stage=String(req.body?.stage||"").trim().toUpperCase();
   const format=req.body?.format==="longform"?"longform":"shorts";
   const visualMode=req.body?.visualMode==="real"?"real":"anime";
+  const colorMode=req.body?.colorMode==="color"?"color":"bw";
   const year=String(req.body?.year||"").trim().slice(0,4);
   const location=String(req.body?.location||"").trim().slice(0,220);
   const sharedDetails=String(req.body?.sharedDetails||"").trim().slice(0,1800);
@@ -69,6 +70,9 @@ export default async function handler(req,res){
         : ""),
     "Make the scene concrete and generator-friendly: subject, environment, period objects, focal action, visible hazard state, and what must NOT appear yet.",
     "Adults only unless the existing prompt explicitly requires otherwise. No gore.",
+    colorMode==="bw"
+      ? "Preserve STRICT true black-and-white grayscale. Do not introduce color, sepia, tint, selective color or colored accents. Anime mode remains 2D anime/graphic-novel, but fully monochrome."
+      : "",
     "For insect/locust topics: insects must be normal-sized and physically separate. Dense airborne swarms must never look like black smoke, soot, dust, fog, haze, ash, storm cloud, shadow cloud, vapor, or a solid dark mass. If the panel is explicitly pre-locust/zero-locust, preserve ZERO visible locusts or swarming insects.",
     "Return JSON only with exactly two string fields: scene and note. scene is the polished panel scene; note is one short sentence explaining the main fix.",
     topicStageRule
@@ -79,6 +83,7 @@ export default async function handler(req,res){
     "STAGE: "+stage,
     "FORMAT: "+format,
     "VISUAL MODE: "+visualMode,
+    "COLOR TREATMENT: "+(colorMode==="bw"?"BLACK & WHITE":"COLOR"),
     "EVENT YEAR: "+(year||"not supplied"),
     "MAIN LOCATION: "+(location||"not supplied"),
     "SHARED DETAILS: "+(sharedDetails||"none"),
