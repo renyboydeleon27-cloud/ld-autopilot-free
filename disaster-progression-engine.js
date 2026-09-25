@@ -20,7 +20,7 @@ function mergeLate(early){
 const FAMILIES={
   tsunami:{
     label:'Tsunami / Megatsunami',
-    detect:/\b(tsunami|mega[- ]?tsunami|tidal wave)\b/i,
+    detect:/\b(tsunami(?:s)?|mega[- ]?tsunami(?:s)?|tidal wave(?:s)?)\b/i,
     stages:mergeLate({
       P1:{role:'Normal coastal or bay setting · calm pre-disaster world',rule:'Establish ordinary life and the vulnerable shoreline before the tsunami. No wave impact, flooding or destruction yet.'},
       P2:{role:'Verified tsunami source or trigger context',rule:'Explain or visualize the documented trigger only: earthquake, landslide, volcanic process or another verified source. Never substitute a generic offshore earthquake when the event had a different cause.'},
@@ -34,7 +34,7 @@ const FAMILIES={
   },
   earthquake:{
     label:'Earthquake',
-    detect:/\b(earthquake|quake|seismic)\b/i,
+    detect:/\b(earthquake(?:s)?|quake(?:s)?|seismic)\b/i,
     stages:mergeLate({
       P1:{role:'Normal life · intact setting before shaking',rule:'Keep the environment stable and ordinary. No cracks, collapse, panic or disaster damage yet.'},
       P2:{role:'Verified tectonic or fault context',rule:'Show the documented earthquake source or pre-event context without inventing a fault mechanism, magnitude or subsurface visualization that is not supported.'},
@@ -48,7 +48,7 @@ const FAMILIES={
   },
   cyclone:{
     label:'Cyclone / Hurricane / Typhoon',
-    detect:/\b(cyclone|hurricane|typhoon|tropical storm)\b/i,
+    detect:/\b(cyclone(?:s)?|hurricane(?:s)?|typhoon(?:s)?|tropical storm(?:s)?)\b/i,
     stages:mergeLate({
       P1:{role:'Normal coastal/community life before storm conditions',rule:'Establish the intact place and ordinary activity. No destructive wind, surge or major flooding yet.'},
       P2:{role:'Storm development, path or meteorological context',rule:'Show only documented storm-development or approach context. Do not invent satellite-era visuals, forecasts or instruments for historical events.'},
@@ -62,7 +62,7 @@ const FAMILIES={
   },
   tornado:{
     label:'Tornado',
-    detect:/\b(tornado|twister)\b/i,
+    detect:/\b(tornado(?:es)?|twister(?:s)?)\b/i,
     stages:mergeLate({
       P1:{role:'Normal community / farmland before severe weather',rule:'Show intact ordinary life with no funnel, debris cloud or tornado damage yet.'},
       P2:{role:'Verified severe-weather setup',rule:'Show storm development only at the level supported by the event context. Do not invent radar, forecasts or scientific instruments outside the era.'},
@@ -76,7 +76,7 @@ const FAMILIES={
   },
   flood:{
     label:'Flood / Dam Failure',
-    detect:/\b(flood|inundation|dam failure|dam break|levee breach)\b/i,
+    detect:/\b(flood(?:s|ing)?|inundation|dam failure|dam break|levee breach)\b/i,
     stages:mergeLate({
       P1:{role:'Normal river, dam, town or floodplain before crisis',rule:'Establish intact normal conditions and ordinary water level. No inundation or structural breach yet.'},
       P2:{role:'Verified flood trigger or hydrologic buildup',rule:'Show rainfall, river rise, dam stress, snowmelt or another documented cause only when supported.'},
@@ -104,7 +104,7 @@ const FAMILIES={
   },
   avalanche:{
     label:'Avalanche',
-    detect:/\b(avalanche|snowslide|snow slide)\b/i,
+    detect:/\b(avalanche(?:s)?|snowslide(?:s)?|snow slide(?:s)?)\b/i,
     stages:mergeLate({
       P1:{role:'Stable mountain / settlement before avalanche',rule:'Show intact snowpack and ordinary mountain activity. No moving avalanche or damage yet.'},
       P2:{role:'Verified snowpack / weather / trigger context',rule:'Show only the documented instability or trigger. Do not invent an explosion, skier or earthquake trigger.'},
@@ -118,7 +118,7 @@ const FAMILIES={
   },
   landslide:{
     label:'Landslide / Mudslide / Rockslide',
-    detect:/\b(landslide|mudslide|rockslide|debris flow|mountain collapse|slope failure)\b/i,
+    detect:/\b(landslide(?:s)?|mudslide(?:s)?|rockslide(?:s)?|debris flow(?:s)?|mountain collapse|slope failure)\b/i,
     stages:mergeLate({
       P1:{role:'Stable slope / community before failure',rule:'Show the intact landscape and ordinary life. No moving slope, collapse or buried structures yet.'},
       P2:{role:'Verified trigger or slope instability context',rule:'Show rainfall, earthquake, erosion or another documented trigger only when supported.'},
@@ -132,7 +132,7 @@ const FAMILIES={
   },
   wildfire:{
     label:'Wildfire / Firestorm',
-    detect:/\b(wildfire|forest fire|bushfire|firestorm|urban fire|great fire)\b/i,
+    detect:/\b(wildfire(?:s)?|forest fire(?:s)?|bushfire(?:s)?|firestorm(?:s)?|urban fire(?:s)?|great fire(?:s)?)\b/i,
     stages:mergeLate({
       P1:{role:'Normal settlement / forest / grassland before fire',rule:'Show intact structures and vegetation. No active destructive fire or smoke emergency yet.'},
       P2:{role:'Verified ignition or fire-weather context',rule:'Use the documented ignition or environmental conditions only. Do not invent a cause when unknown.'},
@@ -146,7 +146,7 @@ const FAMILIES={
   },
   insect:{
     label:'Insect / Locust Outbreak',
-    detect:/\b(locust|grasshopper|insect plague|insect outbreak|pest swarm)\b/i,
+    detect:/\b(locust(?:s)?|grasshopper(?:s)?|insect plague(?:s)?|insect outbreak(?:s)?|pest swarm(?:s)?)\b/i,
     stages:{
       P1:{role:'Healthy farm / normal landscape before visible outbreak',rule:'Keep crops healthy and ordinary. No visible swarm or outbreak damage yet unless the event-specific panel explicitly overrides this.'},
       P2:{role:'Early insect population buildup',rule:'Show normal-sized separate insects accumulating near ground/vegetation. No smoke-like sky mass or instant crop destruction.'},
