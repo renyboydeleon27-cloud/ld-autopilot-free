@@ -159,7 +159,43 @@ function addModelUsage(target,source){
 function formatApiCost(value){
   const n=Math.max(0,Number(value)||0);
   if(n===0)return '$0.00000';
-  if(n<0.01)return '
+  if(n<0.01)return '$'+n.toFixed(5);
+  if(n<1)return '$'+n.toFixed(4);
+  return '$'+n.toFixed(3);
+}
+function formatTokenCount(value){
+  const n=Math.max(0,Math.round(Number(value)||0));
+  if(n>=1000000)return (n/1000000).toFixed(n>=10000000?1:2)+'M';
+  if(n>=1000)return (n/1000).toFixed(n>=10000?1:2)+'K';
+  return String(n);
+}
+function refreshApiCostCounter(){
+  const u=currentApiUsage();
+  const calls=Math.round(usageNumber(u.calls));
+  const label='PROJECT API · '+calls+' call'+(calls===1?'':'s')+' · '+formatTokenCount(u.totalTokens)+' tokens · '+formatApiCost(u.estimatedCostUsd)+' est.';
+  document.querySelectorAll('.ld-api-cost-counter').forEach(el=>{
+    el.textContent=label;
+    el.title='Estimated tracked OpenAI API cost for this project from API-reported token usage. This is not your OpenAI account balance. Pricing snapshot: '+(u.priceSnapshot||'unknown')+'.';
+  });
+}
+function recordApiUsage(usage){
+  if(!usage||typeof usage!=='object'||usageNumber(usage.calls)<=0)return;
+  const root=currentApiUsage();
+  root.priceSnapshot=usage.priceSnapshot||root.priceSnapshot||'2026-09-25';
+  root.currency=usage.currency||'USD';
+  root.calls+=usageNumber(usage.calls);
+  root.inputTokens+=usageNumber(usage.inputTokens);
+  root.cachedInputTokens+=usageNumber(usage.cachedInputTokens);
+  root.outputTokens+=usageNumber(usage.outputTokens);
+  root.totalTokens+=usageNumber(usage.totalTokens);
+  root.estimatedCostUsd=Math.round((root.estimatedCostUsd+(Number(usage.estimatedCostUsd)||0))*1e8)/1e8;
+  root.byModel=root.byModel&&typeof root.byModel==='object'?root.byModel:{};
+  addModelUsage(root.byModel,usage.byModel);
+  root.updatedAt=new Date().toISOString();
+  window.ldApiUsage=root;
+  refreshApiCostCounter();
+  window.dispatchEvent(new CustomEvent('ld:api-usage-updated',{detail:{...root}}));
+}
 function smartButtons(){
   return [document.getElementById('ldSmartContinueBtn'),document.getElementById('ldSmartStickyBtn')].filter(Boolean);
 }
