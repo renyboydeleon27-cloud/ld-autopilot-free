@@ -167,7 +167,7 @@
     copy.id=uid();
     copy.name=`${displayName(source)} Copy`;
     copy.createdAt=now;copy.updatedAt=now;
-    if(copy.state){copy.state.updatedAt=now;copy.state.version='1.9';}
+    if(copy.state){copy.state.updatedAt=now;copy.state.version='2.3';copy.state.apiUsage={version:'1.0',topic:copy.state.topic||copy.name,format:copy.state.format||'shorts',priceSnapshot:'2026-09-25',currency:'USD',calls:0,inputTokens:0,cachedInputTokens:0,outputTokens:0,totalTokens:0,estimatedCostUsd:0,byModel:{}};}
     lib.projects.push(copy);writeLibrary(lib);render();
   }
   function renameProject(id){
