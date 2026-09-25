@@ -1,4 +1,4 @@
-/* LD AUTO v3.35.11 — per-project OpenAI API cost counter. */
+/* LD AUTO v3.35.12 — per-project OpenAI API cost counter. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
