@@ -1,3 +1,5 @@
+import { usageFromResponse, mergeApiUsage } from "./api-usage.js";
+
 function textFromResponse(data){
   if(data?.output_text) return String(data.output_text).trim();
   const parts=[];
@@ -109,8 +111,9 @@ export default async function handler(req,res){
       })
     });
     const data=await response.json();
+    let apiUsage=usageFromResponse(data,"gpt-5.6-luna");
     if(!response.ok){
-      return res.status(response.status).json({ok:false,error:data?.error?.message||"OpenAI request failed."});
+      return res.status(response.status).json({ok:false,error:data?.error?.message||"OpenAI request failed.",apiUsage});
     }
     const raw=textFromResponse(data);
     let parsed=parseJsonObject(raw);
@@ -137,6 +140,7 @@ export default async function handler(req,res){
         })
       });
       const retryData=await retry.json();
+      apiUsage=mergeApiUsage(apiUsage,usageFromResponse(retryData,"gpt-5.6-luna"));
       if(retry.ok){
         const retryRaw=textFromResponse(retryData);
         parsed=parseJsonObject(retryRaw);
@@ -147,11 +151,12 @@ export default async function handler(req,res){
         return res.status(502).json({
           ok:false,
           error:"AI panel fix could not return a usable replacement scene. Tap retry once; if it repeats, rebuild this panel prompt.",
-          detail:problem||raw.slice(0,220)
+          detail:problem||raw.slice(0,220),
+          apiUsage
         });
       }
     }
-    return res.status(200).json({ok:true,topic,stage,scene,note});
+    return res.status(200).json({ok:true,topic,stage,scene,note,apiUsage});
   }catch(err){
     return res.status(500).json({ok:false,error:"AI panel-fix backend error: "+String(err?.message||err)});
   }
