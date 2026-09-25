@@ -62,7 +62,6 @@ function syncColorMode(){
   var list=choices();
   if(!list.length){render();return null;}
   var chosen=prior&&prior.id?list.find(function(item){return item.id===prior.id;})||null:null;
-  if(!chosen)chosen=list.find(function(item){return item.rec;})||list[0]||null;
   if(chosen){useHook(chosen);return chosen.title;}
   render();
   return null;
