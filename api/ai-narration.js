@@ -359,17 +359,18 @@ Include every requested stage key exactly once and no markdown.`;
     });
     const data = await response.json();
     apiUsageParts.push(usageFromResponse(data,"gpt-5-mini"));
-    if (!response.ok) return res.status(response.status).json({ok:false,error:data?.error?.message || "OpenAI request failed."});
+    if (!response.ok) return res.status(response.status).json({ok:false,error:data?.error?.message || "OpenAI request failed.",apiUsage:usagePayload()});
     const raw = data.output_text || (data.output || []).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
     let parsed;
     try { parsed = JSON.parse(raw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim()); }
-    catch { return res.status(502).json({ok:false,error:"AI returned an unexpected format. Please try again.",outputPreview:raw.slice(0,700),outputLength:raw.length,responseStatus:data.status||null,incompleteReason:data.incomplete_details?.reason||null}); }
+    catch { return res.status(502).json({ok:false,error:"AI returned an unexpected format. Please try again.",outputPreview:raw.slice(0,700),outputLength:raw.length,responseStatus:data.status||null,incompleteReason:data.incomplete_details?.reason||null,apiUsage:usagePayload()}); }
     if (parsed?.error === "INSUFFICIENT_EVIDENCE") {
       return res.status(422).json({
         ok:false,
         error:"Research verified the event identity, but the evidence pack is too sparse for evidence-locked HOOK + panels.",
         missingEvidence:Array.isArray(parsed.missing)?parsed.missing:[],
-        researchStatus:research.validation.status
+        researchStatus:research.validation.status,
+        apiUsage:usagePayload()
       });
     }
     const stages = parsed?.stages || {};
@@ -393,17 +394,17 @@ Include every requested stage key exactly once and no markdown.`;
     const validatorData = await validatorResponse.json();
     apiUsageParts.push(usageFromResponse(validatorData,"gpt-5-mini"));
     if (!validatorResponse.ok) {
-      return res.status(502).json({ok:false,error:validatorData?.error?.message || "Evidence validator request failed."});
+      return res.status(502).json({ok:false,error:validatorData?.error?.message || "Evidence validator request failed.",apiUsage:usagePayload()});
     }
     const validatorRaw = validatorData.output_text || (validatorData.output || []).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
     let audit;
     try { audit=JSON.parse(validatorRaw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim()); }
-    catch { return res.status(502).json({ok:false,error:"Evidence validator returned an unexpected format."}); }
+    catch { return res.status(502).json({ok:false,error:"Evidence validator returned an unexpected format.",apiUsage:usagePayload()}); }
     if (audit?.valid !== true || (Array.isArray(audit?.unsupported) && audit.unsupported.length)) {
       const unsupported=Array.isArray(audit?.unsupported)?audit.unsupported:[];
       const repairStages=[...new Set(unsupported.map(x=>x.stage).filter(s=>stageNames.includes(s)))];
       if (!repairStages.length) {
-        return res.status(422).json({ok:false,error:"Narration rejected by claim-level evidence validator.",unsupportedClaims:unsupported,researchStatus:research.validation.status});
+        return res.status(422).json({ok:false,error:"Narration rejected by claim-level evidence validator.",unsupportedClaims:unsupported,researchStatus:research.validation.status,apiUsage:usagePayload()});
       }
 
       // AUTO-REPAIR only the rejected stages. Keep already-supported stages unchanged.
@@ -422,14 +423,14 @@ Include every requested stage key exactly once and no markdown.`;
       });
       const repairData=await repairResponse.json();
       apiUsageParts.push(usageFromResponse(repairData,"gpt-5-mini"));
-      if(!repairResponse.ok) return res.status(502).json({ok:false,error:repairData?.error?.message||"Narration auto-repair failed."});
+      if(!repairResponse.ok) return res.status(502).json({ok:false,error:repairData?.error?.message||"Narration auto-repair failed.",apiUsage:usagePayload()});
       const repairRaw=repairData.output_text||(repairData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
       let repaired;
       try{
         repaired=JSON.parse(repairRaw.replace(/^```json\s*/i,"").replace(/```$/,"").trim());
         if(repaired?.stages && typeof repaired.stages==="object") repaired=repaired.stages;
       }catch{
-        return res.status(502).json({ok:false,error:"Narration auto-repair returned an unexpected format.",repairPreview:repairRaw.slice(0,700),repairLength:repairRaw.length,repairStatus:repairData.status||null,repairIncompleteReason:repairData.incomplete_details?.reason||null});
+        return res.status(502).json({ok:false,error:"Narration auto-repair returned an unexpected format.",repairPreview:repairRaw.slice(0,700),repairLength:repairRaw.length,repairStatus:repairData.status||null,repairIncompleteReason:repairData.incomplete_details?.reason||null,apiUsage:usagePayload()});
       }
       for(const s of repairStages) if(typeof repaired?.[s]==="string"&&repaired[s].trim()) stages[s]=repaired[s].trim();
 
@@ -449,13 +450,13 @@ Include every requested stage key exactly once and no markdown.`;
       });
       const recheckData=await recheckResponse.json();
       apiUsageParts.push(usageFromResponse(recheckData,"gpt-5-mini"));
-      if(!recheckResponse.ok) return res.status(502).json({ok:false,error:recheckData?.error?.message||"Narration repair validation failed."});
+      if(!recheckResponse.ok) return res.status(502).json({ok:false,error:recheckData?.error?.message||"Narration repair validation failed.",apiUsage:usagePayload()});
       const recheckRaw=recheckData.output_text||(recheckData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
       let recheck;
       try{recheck=JSON.parse(recheckRaw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim());}
-      catch{return res.status(502).json({ok:false,error:"Narration repair validator returned an unexpected format."});}
+      catch{return res.status(502).json({ok:false,error:"Narration repair validator returned an unexpected format.",apiUsage:usagePayload()});}
       if(recheck?.valid!==true||(Array.isArray(recheck?.unsupported)&&recheck.unsupported.length)){
-        return res.status(422).json({ok:false,error:"Narration auto-repair was still not fully supported by evidence.",unsupportedClaims:Array.isArray(recheck?.unsupported)?recheck.unsupported:[],researchStatus:research.validation.status});
+        return res.status(422).json({ok:false,error:"Narration auto-repair was still not fully supported by evidence.",unsupportedClaims:Array.isArray(recheck?.unsupported)?recheck.unsupported:[],researchStatus:research.validation.status,apiUsage:usagePayload()});
       }
     }
 
@@ -509,16 +510,17 @@ Include every requested stage key exactly once and no markdown.`;
         ok:false,
         error:"Narration rejected by programmatic evidence guard: unsupported event-specific claim detected.",
         unsupportedClaims,
-        researchStatus:research.validation.status
+        researchStatus:research.validation.status,
+        apiUsage:usagePayload()
       });
     }
 
     for (const name of stageNames) {
-      if (typeof stages[name] !== "string" || !stages[name].trim()) return res.status(502).json({ok:false,error:`AI response is missing ${name}. Please try again.`});
+      if (typeof stages[name] !== "string" || !stages[name].trim()) return res.status(502).json({ok:false,error:`AI response is missing ${name}. Please try again.`,apiUsage:usagePayload()});
       stages[name] = polishNarrationQuality(name, sanitizeNarrationLine(name, stages[name], stageEvidence), stageEvidence);
     }
-    return res.status(200).json({ok:true,topic,format,researchStatus:research.validation.status,stages});
+    return res.status(200).json({ok:true,topic,format,researchStatus:research.validation.status,stages,apiUsage:usagePayload()});
   } catch (err) {
-    return res.status(500).json({ok:false,error:"AI narration error: "+String(err?.message||err)});
+    return res.status(500).json({ok:false,error:"AI narration error: "+String(err?.message||err),apiUsage:usagePayload()});
   }
 }
