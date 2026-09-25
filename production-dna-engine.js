@@ -1,4 +1,4 @@
-/* LD AUTO v3.37.0 — Final Production Check gate before saving finished DNA. */
+/* LD AUTO v3.39.0 — Final Production Check with color-treatment lock awareness. */
 (function(){
 'use strict';
 
@@ -103,7 +103,9 @@ function signature(){
   if(!p)return '';
   return [p.version,p.sourceProjectId,p.createdAt].join('|');
 }
-function realMode(){return localStorage.getItem('ld-auto-visual-mode-v1')==='real';}
+function visualStyle(){const locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
+function colorMode(){const locked=window.LDProjectLocks?.colorMode?.()||window.ldProjectLocks?.colorMode;if(locked==='bw'||locked==='color')return locked;return visualStyle()==='real'?'bw':'color';}
+function realMode(){return visualStyle()==='real';}
 function stageName(cardOrStage){
   if(typeof cardOrStage==='string')return cardOrStage;
   return cardOrStage?.dataset?.stage||'';
@@ -117,7 +119,7 @@ function dnaLines(profile,stage){
   const sf=profile.stage?.[stage]||{};
   lines.push('PRODUCTION DNA OPTIMIZER LOCK:');
   lines.push('Reuse only proven cinematic technique from the approved source production. NEVER inherit its event name, year, location, measurements, people, geography, causes, sequence-specific facts, or disaster-specific claims. Current-production historical facts always have priority.');
-  if(realMode()&&u.strictBW)lines.push('VISUAL DISCIPLINE: preserve the current Real Human strict monochrome archival treatment; never allow color, sepia, tint, or selective color to return.');
+  if(colorMode()==='bw'&&u.strictBW)lines.push(visualStyle()==='anime'?'VISUAL DISCIPLINE: preserve the current strict monochrome historical-anime treatment; true black-and-white grayscale only, with no color, sepia, tint, selective color or colored accents.':'VISUAL DISCIPLINE: preserve the current Real Human strict monochrome archival treatment; never allow color, sepia, tint, or selective color to return.');
   if(realMode()&&u.archivalLiveAction)lines.push('CAPTURE DISCIPLINE: photorealistic historical live-action with restrained archival/newsreel character; preserve the current episode era and location rather than the source episode.');
   if(u.continuousShot||sf.continuous)lines.push('SHOT DISCIPLINE: prefer one coherent continuous shot when the current scene supports it.');
   if(u.noCuts||sf.noCuts)lines.push('Do not introduce unnecessary cuts that break cause-and-effect readability.');
@@ -212,8 +214,8 @@ function evaluateFinalProduction(){
   const current=currentTopic();
   const format=document.getElementById('format')?.value||'shorts';
   const locks=window.LDProjectLocks?.get?.()||window.ldProjectLocks;
-  push('locks','Project Locks',!!locks?.locked&&['image','text'].includes(locks.videoMode)&&['anime','real'].includes(locks.visualStyle),
-    locks?.locked?'Video + visual style locked.':'Lock Video Mode and Visual Style.');
+  push('locks','Project Locks',!!locks?.locked&&['image','text'].includes(locks.videoMode)&&['anime','real'].includes(locks.visualStyle)&&['bw','color'].includes(locks.colorMode),
+    locks?.locked&&['bw','color'].includes(locks.colorMode)?'Video + visual style + color treatment locked.':'Lock Video Mode, Visual Style and Color Treatment.');
 
   const continuity=window.ldVideoContinuity||{};
   const contextOk=/^\d{4}$/.test(String(continuity.year||''))&&!!String(continuity.location||'').trim();
