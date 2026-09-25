@@ -266,6 +266,7 @@
     clearTimeout(timer);
     syncCurrent();
   });
+  window.addEventListener('ld:api-usage-updated',()=>{if(!switchingProject)scheduleSync();});
   backupFileInput?.addEventListener('change',()=>{setActive('');setTimeout(()=>syncCurrent(true),700);},true);
   resetBtn?.addEventListener('click',()=>{syncCurrent();setActive('');setTimeout(render,50);},true);
   newBtn.addEventListener('click',startNew);
