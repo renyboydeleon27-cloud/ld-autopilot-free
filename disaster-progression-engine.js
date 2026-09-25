@@ -1,8 +1,8 @@
-/* LD AUTO v3.36.0 — Disaster-family progression engine.
+/* LD AUTO v3.36.1 — Disaster-family progression engine.
    Story-position guidance only. Event-specific verified facts and locked event panels always win. */
 (()=>{'use strict';
 
-const VERSION='3.36.0-family-progression-v1';
+const VERSION='3.36.1-family-progression-v1';
 
 const COMMON_LATE={
   P9:{role:'Immediate aftermath · hazard has passed or shifted locally',rule:'Show the first readable aftermath appropriate to the event. Do not reset to peak impact and do not jump straight to full recovery.'},
