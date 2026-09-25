@@ -1,4 +1,4 @@
-/* LD AUTO v3.34.0 — PROJECT LOCKS: choose once before production */
+/* LD AUTO v3.39.0 — PROJECT LOCKS with independent Color Treatment. */
 (()=>{'use strict';
 
 const CORE_KEY='ld-autopilot-free-v1';
@@ -20,7 +20,7 @@ function showToast(message){
 }
 function current(){
   const x=window.ldProjectLocks;
-  return x&&x.locked&&['image','text'].includes(x.videoMode)&&['anime','real'].includes(x.visualStyle)?x:null;
+  return x&&x.locked&&['image','text'].includes(x.videoMode)&&['anime','real'].includes(x.visualStyle)&&['bw','color'].includes(x.colorMode)?x:null;
 }
 function hasProduction(){return !!stages?.querySelector('.stage-card');}
 function inferExisting(){
@@ -30,7 +30,8 @@ function inferExisting(){
   if(cards.length&&!cards.every(c=>(c.dataset.videoMode||'image')===videoMode))videoMode='text';
   const selected=document.getElementById('visualMode')?.value;
   const visualStyle=(selected==='real'||selected==='anime')?selected:(localStorage.getItem(MODE_KEY)==='real'?'real':'anime');
-  return {locked:true,videoMode,visualStyle,migrated:true,lockedAt:new Date().toISOString()};
+  const colorMode=visualStyle==='real'?'bw':'color';
+  return {locked:true,videoMode,visualStyle,colorMode,migrated:true,lockedAt:new Date().toISOString()};
 }
 function persist(){
   if(window.LDCore?.collectState){
@@ -41,7 +42,7 @@ function persist(){
 }
 function lockedLabel(lock){
   if(!lock)return 'Project not locked yet.';
-  return 'Locked: '+(lock.videoMode==='text'?'Text-to-Video':'Image-to-Video')+' + '+(lock.visualStyle==='real'?'Real Human':'Anime');
+  return 'Locked: '+(lock.videoMode==='text'?'Text-to-Video':'Image-to-Video')+' + '+(lock.visualStyle==='real'?'Real Human':'Anime')+' + '+(lock.colorMode==='bw'?'Black & White':'Color');
 }
 function ui(){
   return document.getElementById('ldProjectLocks');
@@ -50,13 +51,15 @@ function readSelection(){
   const root=ui();
   return {
     videoMode:root?.querySelector('input[name="ldProjectVideoMode"]:checked')?.value||'',
-    visualStyle:root?.querySelector('input[name="ldProjectVisualStyle"]:checked')?.value||''
+    visualStyle:root?.querySelector('input[name="ldProjectVisualStyle"]:checked')?.value||'',
+    colorMode:root?.querySelector('input[name="ldProjectColorMode"]:checked')?.value||''
   };
 }
 function setSelection(lock){
   const root=ui(); if(!root)return;
   root.querySelectorAll('input[name="ldProjectVideoMode"]').forEach(x=>x.checked=!!lock&&x.value===lock.videoMode);
   root.querySelectorAll('input[name="ldProjectVisualStyle"]').forEach(x=>x.checked=!!lock&&x.value===lock.visualStyle);
+  root.querySelectorAll('input[name="ldProjectColorMode"]').forEach(x=>x.checked=!!lock&&x.value===lock.colorMode);
 }
 function render(){
   const root=ui(); if(!root)return;
@@ -78,7 +81,7 @@ function render(){
     inputs.forEach(x=>x.disabled=false);
     lockBtn.hidden=false;
     changeBtn.hidden=true;
-    status.textContent=editing?'Choose the new locks, then press Lock Project.':'Choose Video Mode and Visual Style before production.';
+    status.textContent=editing?'Choose the new locks, then press Lock Project.':'Choose Video Mode, Visual Style and Color Treatment before production.';
     status.dataset.state='open';
     buildBtn.disabled=true;
   }
@@ -113,8 +116,8 @@ function applyLock(lock,{forceVisual=false}={}){
 }
 function lockProject(){
   const selected=readSelection();
-  if(!['image','text'].includes(selected.videoMode)||!['anime','real'].includes(selected.visualStyle)){
-    showToast('Choose both Video Mode and Visual Style first.');
+  if(!['image','text'].includes(selected.videoMode)||!['anime','real'].includes(selected.visualStyle)||!['bw','color'].includes(selected.colorMode)){
+    showToast('Choose Video Mode, Visual Style and Color Treatment first.');
     return;
   }
   const previous=current();
@@ -122,24 +125,30 @@ function lockProject(){
     locked:true,
     videoMode:selected.videoMode,
     visualStyle:selected.visualStyle,
+    colorMode:selected.colorMode,
     lockedAt:new Date().toISOString()
   };
   const visualChanged=!!previous&&previous.visualStyle!==next.visualStyle;
   const videoChanged=!!previous&&previous.videoMode!==next.videoMode;
+  const colorChanged=!!previous&&previous.colorMode!==next.colorMode;
   editing=false;
   applyLock(next,{forceVisual:visualChanged});
-  if(hasProduction()&&(visualChanged||videoChanged)){
+  if(hasProduction()&&colorChanged){
+    window.LDVideoModes?.rebuildAll?.(true);
+    window.LDHookChoiceSystem?.syncColorMode?.();
+  }
+  if(hasProduction()&&(visualChanged||videoChanged||colorChanged)){
     stages.querySelectorAll('.done-toggle').forEach(done=>{
       done.checked=false;
       done.dispatchEvent(new Event('change',{bubbles:true}));
     });
   }
-  showToast('Project locked · '+(next.videoMode==='text'?'Text-to-Video':'Image-to-Video')+' + '+(next.visualStyle==='real'?'Real Human':'Anime'));
+  showToast('Project locked · '+(next.videoMode==='text'?'Text-to-Video':'Image-to-Video')+' + '+(next.visualStyle==='real'?'Real Human':'Anime')+' + '+(next.colorMode==='bw'?'Black & White':'Color'));
 }
 function changeLocks(){
   const lock=current(); if(!lock)return;
   if(hasProduction()){
-    const ok=confirm('Changing Project Locks will rebuild prompts and remove the previous mode/style footprint. Continue?');
+    const ok=confirm('Changing Project Locks will rebuild prompts and remove the previous mode/style/color footprint. Continue?');
     if(!ok)return;
   }
   editing=true;
@@ -191,6 +200,11 @@ function mount(){
         <label><input type="radio" name="ldProjectVisualStyle" value="real"> <span>Real Human</span></label>
         <label><input type="radio" name="ldProjectVisualStyle" value="anime"> <span>Anime</span></label>
       </fieldset>
+      <fieldset>
+        <legend>Color Treatment</legend>
+        <label><input type="radio" name="ldProjectColorMode" value="bw"> <span>Black & White</span></label>
+        <label><input type="radio" name="ldProjectColorMode" value="color"> <span>Color</span></label>
+      </fieldset>
     </div>
     <div class="project-lock-actions">
       <button type="button" class="primary lock-project-btn">🔒 Lock Project</button>
@@ -209,7 +223,7 @@ function mount(){
     .project-locks-head{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
     .project-locks-head strong{display:block;margin-top:3px}.project-lock-status{font-size:.82rem;opacity:.9;padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.07)}
     .project-lock-status[data-state="locked"]{outline:1px solid rgba(101,194,141,.55)}
-    .project-lock-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.project-lock-grid fieldset{margin:0;padding:10px;border:1px solid rgba(255,255,255,.14);border-radius:12px}
+    .project-lock-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.project-lock-grid fieldset{margin:0;padding:10px;border:1px solid rgba(255,255,255,.14);border-radius:12px}
     .project-lock-grid legend{font-size:.78rem;font-weight:800;padding:0 5px}.project-lock-grid label{display:flex;align-items:center;gap:7px;padding:7px 4px;font-size:.88rem}
     .project-lock-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.project-lock-actions button{flex:1;min-width:140px}
     .visual-mode-field{display:none!important}
@@ -226,7 +240,7 @@ buildBtn.addEventListener('click',e=>{
   if(current())return;
   e.preventDefault();
   e.stopImmediatePropagation();
-  showToast('Lock Video Mode and Visual Style first.');
+  showToast('Lock Video Mode, Visual Style and Color Treatment first.');
   ui()?.scrollIntoView({behavior:'smooth',block:'center'});
 },true);
 
@@ -241,6 +255,7 @@ window.LDProjectLocks={
   isLocked:()=>!!current()&&!editing,
   videoMode:()=>editing?'':(current()?.videoMode||''),
   visualStyle:()=>editing?'':(current()?.visualStyle||''),
+  colorMode:()=>editing?'':(current()?.colorMode||''),
   lock:lockProject,
   resetForNewProject,
   syncProduction
