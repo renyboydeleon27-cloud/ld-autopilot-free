@@ -1,4 +1,4 @@
-/* LD AUTO v3.36.1 — disaster-family progression aware Smart Continue. */
+/* LD AUTO v3.36.2 — disaster-family progression aware Smart Continue. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
