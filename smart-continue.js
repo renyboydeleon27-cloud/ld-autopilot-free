@@ -77,6 +77,46 @@ function saveDone(card){
   done.checked=true;
   done.dispatchEvent(new Event('change',{bubbles:true}));
 }
+function approvedSnapshot(card){
+  const continuity=window.ldVideoContinuity||{};
+  return {
+    version:'1.0',
+    stage:card?.dataset?.stage||'',
+    topic:topic(),
+    format:format(),
+    approvedAt:new Date().toISOString(),
+    narration:String(card?.querySelector('.narration')?.value||''),
+    imagePrompt:String(card?.querySelector('.image-prompt')?.value||''),
+    flowPrompt:String(card?.querySelector('.flow-prompt')?.value||''),
+    videoMode:String(card?.dataset?.videoMode||window.LDProjectLocks?.videoMode?.()||'image'),
+    visualStyle:visualMode(),
+    year:String(continuity.year||''),
+    location:String(continuity.location||''),
+    sharedDetails:String(continuity.details||''),
+    videoScene:String(card?.querySelector('.video-scene')?.value||card?.dataset?.videoScene||''),
+    textVideoPrompt:String(card?.querySelector('.text-video-prompt')?.value||card?.dataset?.textVideoPrompt||''),
+    textVideoSignature:String(card?.dataset?.textVideoSignature||'')
+  };
+}
+function saveApprovedMemory(card){
+  if(!card)return null;
+  const stage=card.dataset.stage||'';
+  if(!stage)return null;
+  let root=window.ldApprovedMemory;
+  if(!root||typeof root!=='object'||Array.isArray(root)||root.topic!==topic()||root.format!==format()){
+    root={version:'1.0',topic:topic(),format:format(),stages:{}};
+  }
+  if(!root.stages||typeof root.stages!=='object'||Array.isArray(root.stages))root.stages={};
+  const previous=root.stages[stage];
+  const snapshot=approvedSnapshot(card);
+  const history=Array.isArray(previous?.history)?previous.history.slice(-4):[];
+  if(previous?.latest)history.push(previous.latest);
+  root.stages[stage]={latest:snapshot,history:history.slice(-5)};
+  root.updatedAt=snapshot.approvedAt;
+  window.ldApprovedMemory=root;
+  window.dispatchEvent(new CustomEvent('ld:approved-memory-saved',{detail:{stage,snapshot}}));
+  return snapshot;
+}
 function clearSmartState(){
   stages.querySelectorAll('.stage-card').forEach(c=>delete c.dataset.smartReady);
 }
