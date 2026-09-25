@@ -1,4 +1,4 @@
-/* LD AUTO v3.39.1 — Smart Continue click-response hotfix + visible HOOK local status. */
+/* LD AUTO v3.39.2 — stable HOOK readiness under legacy prompt decorators. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -223,10 +223,26 @@ function readinessSignature(card){
   if(!card)return '';
   const stage=card.dataset.stage||'';
   const mode=card.dataset.videoMode||window.LDProjectLocks?.videoMode?.()||'image';
+  const continuity=window.ldVideoContinuity||{};
   if(/^P(?:[1-9]|1[0-4])$/.test(stage)&&mode==='text'){
     return 't2v|'+auditCacheKey(panelPayload(card));
   }
-  const continuity=window.ldVideoContinuity||{};
+  if(stage==='HOOK'){
+    // HOOK approval depends on the actual final Flow/T2V prompt and project locks.
+    // Ignore placeholder image/narration fields so legacy image decorators cannot revoke readiness.
+    const hookParts=[
+      stage,
+      window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode||mode,
+      visualMode(),
+      colorMode(),
+      topic(),
+      format(),
+      String(continuity.year||''),
+      String(continuity.location||''),
+      String(card.querySelector('.flow-prompt')?.value||'')
+    ];
+    return 'hook|'+promptHash(hookParts.join('\u241f'));
+  }
   const parts=[
     stage,
     mode,
@@ -442,6 +458,8 @@ async function prepareHook(card){
   }else if(choices.length&&!/ACTIVE HOOK/i.test(card.querySelector('.scene-role')?.textContent||'')){
     window.LDHookChoiceSystem.useHook(choices[0]);
   }
+  // Allow any already-queued legacy UI decorators to finish before capturing the approval signature.
+  await new Promise(r=>setTimeout(r,220));
   const prompt=card.querySelector('.flow-prompt')?.value?.trim();
   if(!prompt)throw new Error('No HOOK prompt is ready yet.');
   const copied=await copyText(prompt);
