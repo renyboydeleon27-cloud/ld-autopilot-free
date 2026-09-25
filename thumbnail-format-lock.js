@@ -81,6 +81,21 @@
     const card=btn.closest('.stage-card');
     if(card?.dataset?.stage==='THUMBNAIL')applyAfterGenerators();
   },false);
+  function checkCurrent(){
+    const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]');
+    const prompt=card?.querySelector('.image-prompt')?.value||'';
+    if(!prompt.trim())return {ok:false,issue:'Thumbnail prompt is empty.',hasVerifiedDeaths:false};
+    const context=preservedContext(prompt);
+    const deaths=hasVerifiedDeaths(context);
+    const hasVerifiedBranch=/RIGHT-SIDE CURIOSITY BADGE:\s*verified casualty evidence is present/i.test(prompt);
+    const hasOmitBranch=/CASUALTY BADGE RULE:\s*no verified positive death toll/i.test(prompt);
+    if(deaths&&!hasVerifiedBranch)return {ok:false,issue:'Thumbnail casualty badge rule is stale for verified death evidence.',hasVerifiedDeaths:true};
+    if(!deaths&&!hasOmitBranch)return {ok:false,issue:'Thumbnail must explicitly omit the death badge because no verified positive death toll is supplied.',hasVerifiedDeaths:false};
+    return {ok:true,issue:'',hasVerifiedDeaths:deaths};
+  }
+
+  window.LDThumbnailFormatLock=Object.freeze({apply,buildPrompt,hasVerifiedDeaths,checkCurrent});
+
   window.addEventListener('load',()=>setTimeout(apply,450));
   setTimeout(apply,240);
 })();
