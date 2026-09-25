@@ -433,17 +433,21 @@ async function run(){
     if(!card)throw new Error('No production stage is available.');
 
     if(card.dataset.smartReady==='1'){
+      const approvedStage=card.dataset.stage||'CURRENT';
+      saveApprovedMemory(card);
       saveDone(card);
       delete card.dataset.smartReady;
       const next=nextCard(card);
       if(!next){
         buttonLabel('✅ PRODUCTION COMPLETE');
-        status('Production complete. All guided stages are finished.','pass');
+        status('✅ '+approvedStage+' approved · Approved Memory Saved. Production complete.','pass');
+        showToast('Approved Memory Saved · '+approvedStage);
         return;
       }
       setOpen(next);
       buttonLabel('🚀 SMART CONTINUE');
-      status(card.dataset.stage+' approved. Preparing '+next.dataset.stage+'…','working');
+      status('✅ '+approvedStage+' approved · Approved Memory Saved. Preparing '+next.dataset.stage+'…','working');
+      showToast('Approved Memory Saved · '+approvedStage);
       await new Promise(r=>setTimeout(r,180));
       card=next;
     }
@@ -562,5 +566,5 @@ if(document.readyState==='loading'){
   setTimeout(migrateLegacyNarrations,260);
 }
 
-window.LDSmartContinue={run,prepare,currentCard,updateTargetLabel,migrateLegacyNarrations};
+window.LDSmartContinue={run,prepare,currentCard,updateTargetLabel,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null};
 })();
