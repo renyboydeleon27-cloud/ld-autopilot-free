@@ -36,6 +36,11 @@ export default async function handler(req,res){
   const narration=String(req.body?.narration||"").trim().slice(0,2600);
   const currentScene=String(req.body?.currentScene||"").trim().slice(0,6000);
   const currentPrompt=String(req.body?.currentPrompt||"").trim().slice(0,16000);
+  const eventSpecificOverride=req.body?.eventSpecificOverride===true;
+  const progressionVersion=String(req.body?.progressionVersion||"").trim().slice(0,120);
+  const progressionFamily=String(req.body?.progressionFamily||"").trim().slice(0,160);
+  const progressionRole=String(req.body?.progressionRole||"").trim().slice(0,600);
+  const progressionRule=String(req.body?.progressionRule||"").trim().slice(0,2200);
 
   if(!topic) return res.status(400).json({ok:false,error:"Missing disaster topic."});
   if(!/^P(?:[1-9]|1[0-4])$/.test(stage)) return res.status(400).json({ok:false,error:"Open a valid P1–P14 panel first."});
@@ -55,6 +60,11 @@ export default async function handler(req,res){
     "Do not treat phrases like 'cinematic documentary composition' or 'documentary camera behavior' as live-action by themselves; they are valid camera/composition language in either visual mode.",
     "Only report a visual-mode contradiction when the prompt contains an AFFIRMATIVE instruction requesting the opposite rendering mode.",
     "Check story-stage progression. Do not allow an early panel to jump to impact, destruction, recovery, or a later hazard state unless its supplied narration/current scene supports that stage.",
+    eventSpecificOverride
+      ? "EVENT-SPECIFIC PROGRESSION OVERRIDE IS ACTIVE. The dedicated event-specific panel lock supersedes generic family defaults; audit the supplied event-specific prompt as written."
+      : (progressionRole
+        ? "DISASTER-FAMILY PROGRESSION IS BINDING FOR STORY POSITION. Current role: "+progressionRole+". Current guard: "+progressionRule+" Fail the prompt if its main scene clearly belongs to a later or earlier story beat, or merely repeats a neighboring panel instead of serving this role. This progression context is NOT a factual source; never require a sub-hazard, response, casualty, measurement or mechanism unless supported by the supplied event context."
+        : ""),
     "Check camera instructions for contradictions such as simultaneous push-in and pull-back, cuts despite a one-shot lock, impossible travel through objects, or conflicting focal behavior.",
     "Check physics/time instructions for instant materialization, magical multiplication, impossible scale changes, contradictory object states, or destruction that happens without a supported cause.",
     "For insect/locust topics: normal-sized separate insects, layered depth, plausible movement. A dense swarm must NOT be described as or encouraged to resemble black smoke, soot, dust, fog, haze, ash, vapor, storm cloud, shadow cloud, or a solid dark mass.",
@@ -74,6 +84,11 @@ export default async function handler(req,res){
     "SHARED VISUAL / CONTINUITY DETAILS: "+(sharedDetails||"none"),
     "NARRATION CONTEXT: "+(narration||"none"),
     "CURRENT PANEL SCENE: "+(currentScene||"none"),
+    "EVENT-SPECIFIC PROGRESSION OVERRIDE: "+(eventSpecificOverride?"yes":"no"),
+    "PROGRESSION VERSION: "+(progressionVersion||"none"),
+    "DISASTER FAMILY: "+(progressionFamily||"not classified"),
+    "CURRENT PROGRESSION ROLE: "+(progressionRole||"not supplied"),
+    "CURRENT PROGRESSION RULE: "+(progressionRule||"not supplied"),
     "FULL TEXT-TO-VIDEO PROMPT TO AUDIT:\n"+currentPrompt
   ].join("\n\n");
 
