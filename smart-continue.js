@@ -1,4 +1,4 @@
-/* LD AUTO v3.39.0 — color-treatment aware Smart Continue and audit signatures. */
+/* LD AUTO v3.39.1 — Smart Continue click-response hotfix + visible HOOK local status. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -447,7 +447,7 @@ async function prepareHook(card){
   const copied=await copyText(prompt);
   markSmartReady(card);
   buttonLabel(approveLabel(card));
-  status('HOOK READY FOR FLOW'+(copied?' · prompt copied automatically':' · use Copy prompt if clipboard is blocked')+'. After you review the generated clip, press this same button again to approve and continue.','pass');
+  status('✅ HOOK READY FOR FLOW · LOCAL CHECK ONLY · 0 API calls'+(copied?' · prompt copied automatically':' · use Copy prompt if clipboard is blocked')+'. Review the generated clip, then press ✅ APPROVE HOOK → NEXT.','pass');
 }
 async function prepareImageStage(card){
   const stage=card.dataset.stage;
@@ -547,7 +547,7 @@ async function run(){
   try{
     if(!window.LDProjectLocks?.isLocked?.()&&!window.ldProjectLocks?.locked){
       document.getElementById('ldProjectLocks')?.scrollIntoView({behavior:'smooth',block:'center'});
-      throw new Error('Lock Video Mode and Visual Style first.');
+      throw new Error('Lock Video Mode, Visual Style and Color Treatment first.');
     }
     if(!stages.querySelector('.stage-card')){
       const t=topic();
@@ -558,6 +558,8 @@ async function run(){
 
     let card=currentCard();
     if(!card)throw new Error('No production stage is available.');
+    buttonLabel('⏳ CHECKING '+(card.dataset.stage||'CURRENT')+'…');
+    status('SMART CONTINUE received · checking '+(card.dataset.stage||'current stage')+'…','working');
 
     if(card.dataset.smartReady==='1'){
       if(!smartReadyStillCurrent(card)){
@@ -602,6 +604,14 @@ async function run(){
   }
 }
 
+// Robust delegated binding: SMART CONTINUE still responds if the panel/sticky UI already exists after navigation/cache restoration.
+document.addEventListener('click',e=>{
+  const btn=e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn');
+  if(!btn)return;
+  e.preventDefault();
+  run();
+});
+
 function mountAdvanced(){
   let details=document.getElementById('ldAdvancedTools');
   if(!details){
@@ -624,7 +634,7 @@ function mount(){
   panel.className='card ld-smart-continue';
   panel.innerHTML='<div class="ld-smart-head"><div><span class="audit-label">GUIDED MODE</span><strong>LD Autopilot</strong><p>One button prepares the current stage, audits/fixes T2V when needed, and advances after you approve the result.</p></div></div><div class="ld-smart-target">CURRENT TARGET: —</div><div class="ld-api-cost-counter">PROJECT API · 0 calls · 0 tokens · $0.00000 est.</div><button type="button" id="ldSmartContinueBtn" class="primary">🚀 SMART CONTINUE</button><div id="ldSmartContinueStatus" class="ld-smart-status">Open a production and press SMART CONTINUE.</div>';
   setup.after(panel);
-  panel.querySelector('#ldSmartContinueBtn').addEventListener('click',run);
+
 
   let sticky=document.getElementById('ldSmartStickyBar');
   if(!sticky){
@@ -633,7 +643,7 @@ function mount(){
     sticky.className='ld-smart-sticky-bar';
     sticky.innerHTML='<div class="ld-smart-target">CURRENT TARGET: —</div><div class="ld-api-cost-counter">PROJECT API · 0 calls · 0 tokens · $0.00000 est.</div><button type="button" id="ldSmartStickyBtn" class="primary">🚀 SMART CONTINUE</button><div id="ldSmartStickyStatus" class="ld-smart-sticky-status">Ready.</div>';
     document.body.appendChild(sticky);
-    sticky.querySelector('#ldSmartStickyBtn').addEventListener('click',run);
+
   }
 
   mountAdvanced();
