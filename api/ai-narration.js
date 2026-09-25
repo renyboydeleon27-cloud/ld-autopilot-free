@@ -1,4 +1,5 @@
 import { buildResearch } from "./ai-research.js";
+import { usageFromResponse, mergeApiUsage } from "./api-usage.js";
 
 function naturalCaseValue(value) {
   const s=String(value??"").trim();
@@ -105,6 +106,8 @@ export default async function handler(req, res) {
   if (!topic) return res.status(400).json({ ok:false, error:"Please provide a disaster topic first." });
   const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
   if (!apiKey) return res.status(500).json({ ok:false, error:"OPENAI_API_KEY is not configured on the server." });
+  const apiUsageParts=[];
+  const usagePayload=()=>mergeApiUsage(...apiUsageParts);
 
   // RESEARCH -> VALIDATION -> NARRATION GATE
   let research;
@@ -355,6 +358,7 @@ Include every requested stage key exactly once and no markdown.`;
       })
     });
     const data = await response.json();
+    apiUsageParts.push(usageFromResponse(data,"gpt-5-mini"));
     if (!response.ok) return res.status(response.status).json({ok:false,error:data?.error?.message || "OpenAI request failed."});
     const raw = data.output_text || (data.output || []).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
     let parsed;
@@ -387,6 +391,7 @@ Include every requested stage key exactly once and no markdown.`;
       })
     });
     const validatorData = await validatorResponse.json();
+    apiUsageParts.push(usageFromResponse(validatorData,"gpt-5-mini"));
     if (!validatorResponse.ok) {
       return res.status(502).json({ok:false,error:validatorData?.error?.message || "Evidence validator request failed."});
     }
@@ -416,6 +421,7 @@ Include every requested stage key exactly once and no markdown.`;
         })
       });
       const repairData=await repairResponse.json();
+      apiUsageParts.push(usageFromResponse(repairData,"gpt-5-mini"));
       if(!repairResponse.ok) return res.status(502).json({ok:false,error:repairData?.error?.message||"Narration auto-repair failed."});
       const repairRaw=repairData.output_text||(repairData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
       let repaired;
@@ -442,6 +448,7 @@ Include every requested stage key exactly once and no markdown.`;
         })
       });
       const recheckData=await recheckResponse.json();
+      apiUsageParts.push(usageFromResponse(recheckData,"gpt-5-mini"));
       if(!recheckResponse.ok) return res.status(502).json({ok:false,error:recheckData?.error?.message||"Narration repair validation failed."});
       const recheckRaw=recheckData.output_text||(recheckData.output||[]).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
       let recheck;
