@@ -1,8 +1,8 @@
-/* LD AUTO v3.36.1 — Disaster-family progression engine.
+/* LD AUTO v3.36.2 — Disaster-family progression engine.
    Story-position guidance only. Event-specific verified facts and locked event panels always win. */
 (()=>{'use strict';
 
-const VERSION='3.36.1-family-progression-v1';
+const VERSION='3.36.2-family-progression-v1';
 
 const COMMON_LATE={
   P9:{role:'Immediate aftermath · hazard has passed or shifted locally',rule:'Show the first readable aftermath appropriate to the event. Do not reset to peak impact and do not jump straight to full recovery.'},
@@ -132,7 +132,7 @@ const FAMILIES={
   },
   wildfire:{
     label:'Wildfire / Firestorm',
-    detect:/\b(wildfire(?:s)?|forest fire(?:s)?|bushfire(?:s)?|firestorm(?:s)?|urban fire(?:s)?|great fire(?:s)?)\b/i,
+    detect:/\b(wildfire(?:s)?|forest fire(?:s)?|bushfire(?:s)?|firestorm(?:s)?|urban fire(?:s)?|great fire(?:s)?|fire)\b/i,
     stages:mergeLate({
       P1:{role:'Normal settlement / forest / grassland before fire',rule:'Show intact structures and vegetation. No active destructive fire or smoke emergency yet.'},
       P2:{role:'Verified ignition or fire-weather context',rule:'Use the documented ignition or environmental conditions only. Do not invent a cause when unknown.'},
@@ -221,6 +221,23 @@ const FAMILIES={
     })
   }
 };
+
+Object.assign(FAMILIES.epidemic.stages,{
+  P9:{role:'Sustained health impact / community strain',rule:'Show the continuing burden of the outbreak without implying it has already ended. Keep symptoms, treatment and mortality claims within verified evidence.'},
+  P10:{role:'Care, public-health response or local coping',rule:'Show treatment, sanitation, quarantine or other response only when documented and era-appropriate.'},
+  P11:{role:'Household, workforce or social disruption',rule:'Focus on lived disruption rather than repeating a medical-care scene. Do not invent closures, mandates or institutions.'},
+  P12:{role:'Wider demographic, economic or institutional consequences',rule:'Broaden the documented impact without unsupported numbers, rankings or causal claims.'},
+  P13:{role:'Decline, adaptation or early recovery if documented',rule:'Show improvement only when the event context supports it; do not imply sudden disappearance of disease.'},
+  P14:{role:'Historical legacy · public-health or social significance',rule:'Close on documented significance, long-term change or historical identity without introducing a new outbreak beat.'}
+});
+Object.assign(FAMILIES.drought.stages,{
+  P9:{role:'Sustained livelihood hardship',rule:'Show continuing water, crop, livestock or household stress. Drought is slow-onset; do not imply the hazard suddenly ended.'},
+  P10:{role:'Local coping / relief / migration if documented',rule:'Use only supported responses and period-appropriate methods. Do not invent government programs, machinery or migration patterns.'},
+  P11:{role:'Food, water or household shortages',rule:'Focus on practical shortages and daily consequences rather than repeating the same dry-landscape shot.'},
+  P12:{role:'Wider economic, ecological or regional consequences',rule:'Broaden the documented drought impact without inventing famine, deaths or dust storms unless supported.'},
+  P13:{role:'Adaptation or gradual recovery if conditions improve',rule:'Show water management, replanting, changed practices or returning moisture only when supported. No instant full recovery.'},
+  P14:{role:'Historical drought legacy',rule:'Close on documented long-term significance, adaptation or landscape/community memory without creating a new hazard.'}
+});
 
 const ORDER=['tsunami','earthquake','cyclone','tornado','flood','volcano','avalanche','landslide','wildfire','insect','nuclear','epidemic','drought'];
 
