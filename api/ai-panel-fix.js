@@ -41,6 +41,11 @@ export default async function handler(req,res){
   const narration=String(req.body?.narration||"").trim().slice(0,2200);
   const currentScene=String(req.body?.currentScene||"").trim().slice(0,5000);
   const currentPrompt=String(req.body?.currentPrompt||"").trim().slice(0,14000);
+  const eventSpecificOverride=req.body?.eventSpecificOverride===true;
+  const progressionVersion=String(req.body?.progressionVersion||"").trim().slice(0,120);
+  const progressionFamily=String(req.body?.progressionFamily||"").trim().slice(0,160);
+  const progressionRole=String(req.body?.progressionRole||"").trim().slice(0,600);
+  const progressionRule=String(req.body?.progressionRule||"").trim().slice(0,2200);
 
   if(!topic) return res.status(400).json({ok:false,error:"Missing disaster topic."});
   if(!/^P(?:[1-9]|1[0-4])$/.test(stage)) return res.status(400).json({ok:false,error:"Open a valid P1–P14 panel first."});
@@ -57,6 +62,11 @@ export default async function handler(req,res){
     "Preserve the supplied topic, stage, year, location, narration, visual mode, chapter continuity and any explicit locks already present in the current full prompt.",
     "Do not invent precise dates, places, casualties, measurements, causes, named people, technologies, or event facts that are not already supplied.",
     "Do not jump ahead to later story stages. Preserve escalation: calm panels stay calm; buildup panels remain buildup; impact/recovery appears only when the current panel context supports it.",
+    eventSpecificOverride
+      ? "EVENT-SPECIFIC PROGRESSION OVERRIDE IS ACTIVE. Preserve the supplied dedicated event-panel role and do not replace it with a generic disaster-family template."
+      : (progressionRole
+        ? "DISASTER-FAMILY PROGRESSION ROLE: "+progressionRole+". STAGE GUARD: "+progressionRule+" Rewrite the scene so its MAIN visual beat unmistakably serves this stage, while treating the progression rule as story structure only—not as permission to invent event facts."
+        : ""),
     "Make the scene concrete and generator-friendly: subject, environment, period objects, focal action, visible hazard state, and what must NOT appear yet.",
     "Adults only unless the existing prompt explicitly requires otherwise. No gore.",
     "For insect/locust topics: insects must be normal-sized and physically separate. Dense airborne swarms must never look like black smoke, soot, dust, fog, haze, ash, storm cloud, shadow cloud, vapor, or a solid dark mass. If the panel is explicitly pre-locust/zero-locust, preserve ZERO visible locusts or swarming insects.",
@@ -74,6 +84,11 @@ export default async function handler(req,res){
     "SHARED DETAILS: "+(sharedDetails||"none"),
     "NARRATION CONTEXT: "+(narration||"none"),
     "CURRENT PANEL SCENE:\n"+currentScene,
+    "EVENT-SPECIFIC PROGRESSION OVERRIDE: "+(eventSpecificOverride?"yes":"no"),
+    "PROGRESSION VERSION: "+(progressionVersion||"none"),
+    "DISASTER FAMILY: "+(progressionFamily||"not classified"),
+    "CURRENT PROGRESSION ROLE: "+(progressionRole||"not supplied"),
+    "CURRENT PROGRESSION RULE: "+(progressionRule||"not supplied"),
     "CURRENT FULL TEXT-TO-VIDEO PROMPT / LOCKS:\n"+(currentPrompt||"not built yet"),
     "Polish this stage without changing its historical/story role."
   ].join("\n\n");
