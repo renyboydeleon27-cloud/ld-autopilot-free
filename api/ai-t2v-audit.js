@@ -30,6 +30,7 @@ export default async function handler(req,res){
   const stage=String(req.body?.stage||"").trim().toUpperCase();
   const format=req.body?.format==="longform"?"longform":"shorts";
   const visualMode=req.body?.visualMode==="real"?"real":"anime";
+  const colorMode=req.body?.colorMode==="color"?"color":"bw";
   const year=String(req.body?.year||"").trim().slice(0,20);
   const location=String(req.body?.location||"").trim().slice(0,240);
   const sharedDetails=String(req.body?.sharedDetails||"").trim().slice(0,2200);
@@ -59,6 +60,9 @@ export default async function handler(req,res){
     "A word appearing inside a NEGATIVE/NO/AVOID instruction is a prohibition, not a requested visual style. NEVER flag 'No photorealism' as a contradiction for anime, and NEVER flag 'No anime' as a contradiction for Real Human.",
     "Do not treat phrases like 'cinematic documentary composition' or 'documentary camera behavior' as live-action by themselves; they are valid camera/composition language in either visual mode.",
     "Only report a visual-mode contradiction when the prompt contains an AFFIRMATIVE instruction requesting the opposite rendering mode.",
+    colorMode==="bw"
+      ? "COLOR TREATMENT IS STRICT BLACK-AND-WHITE. PASS only if the prompt positively requires true grayscale and rejects color, sepia, tint and selective color. If VISUAL MODE is anime, black-and-white historical anime is intentional and must NOT be treated as a contradiction."
+      : "COLOR TREATMENT IS COLOR. Do not require grayscale unless an event-specific supplied lock explicitly overrides it.",
     "Check story-stage progression. Do not allow an early panel to jump to impact, destruction, recovery, or a later hazard state unless its supplied narration/current scene supports that stage.",
     eventSpecificOverride
       ? "EVENT-SPECIFIC PROGRESSION OVERRIDE IS ACTIVE. The dedicated event-specific panel lock supersedes generic family defaults; audit the supplied event-specific prompt as written."
@@ -79,6 +83,7 @@ export default async function handler(req,res){
     "STAGE: "+stage,
     "FORMAT: "+format,
     "VISUAL MODE: "+visualMode,
+    "COLOR TREATMENT: "+(colorMode==="bw"?"BLACK & WHITE":"COLOR"),
     "EVENT YEAR: "+(year||"not supplied"),
     "MAIN LOCATION: "+(location||"not supplied"),
     "SHARED VISUAL / CONTINUITY DETAILS: "+(sharedDetails||"none"),
