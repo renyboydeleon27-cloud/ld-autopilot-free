@@ -1,6 +1,6 @@
-/* LD AUTO v3.36.1 — disaster-family progression engine integration. */
+/* LD AUTO v3.36.2 — disaster-family progression engine integration. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.36.1-family-progression-v1';
+const T2V_POLICY_VERSION='3.36.2-family-progression-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
