@@ -1,4 +1,4 @@
-/* LD AUTO v3.36.4 — clearer finished-production DNA save action. */
+/* LD AUTO v3.36.5 — save DNA without invalidating finished DONE panels. */
 (function(){
 'use strict';
 
@@ -146,6 +146,8 @@ function polishPrompt(cardOrStage,prompt){
   const profile=activeProfile();
   const base=stripOldLock(prompt);
   if(!profile||!base)return base;
+  // A finished production is the SOURCE of its DNA; never feed its extracted DNA back into itself.
+  if(clean(profile.sourceTopic)===currentTopic())return base;
   const stage=stageName(cardOrStage);
   return base+'\n\n'+dnaLines(profile,stage).join('\n');
 }
@@ -182,12 +184,13 @@ function optimizeFromLastApproved(){
   writeJson(DNA_KEY,profile);
   const current=currentTopic();
   const same=current&&current===profile.sourceTopic;
+  const resigned=same?(window.LDVideoModes?.resignAll?.()||0):0;
   const rebuilt=same?0:applyCurrent();
   return {
     ok:true,
     profile:profile,
     message:same
-      ? 'DNA captured from this approved production without changing its locked prompts. It is ready for the next disaster.'
+      ? 'Finished Production DNA saved. Approved prompts and DONE checks were preserved'+(resigned?' · '+resigned+' T2V signatures kept current':'')+'. Ready for the next disaster.'
       : 'DNA captured and applied to the current production'+(rebuilt?' · '+rebuilt+' Text-to-Video prompts refreshed':'')+'.'
   };
 }
