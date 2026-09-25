@@ -1,6 +1,6 @@
-/* LD AUTO v3.34.0 — PROJECT LOCKS enforced for video and visual modes. */
+/* LD AUTO v3.35.7 — Rocky Mountain Locust final conservative polish. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.34.0-project-locks-v1';
+const T2V_POLICY_VERSION='3.35.7-rocky-locust-final-polish-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -159,7 +159,7 @@ function isRockyMountainLocust1874(){
  return t.includes('rocky mountain locust')&&t.includes('1874');
 }
 function rockyMountainLocustPanel(stage){
- if(!isRockyMountainLocust1874()||!/^P[1-3]$/.test(stage))return null;
+ if(!isRockyMountainLocust1874()||!/^P[1-9]$/.test(stage))return null;
  var map={
   P1:{
    approved:false,
@@ -175,10 +175,10 @@ function rockyMountainLocustPanel(stage){
   P2:{
    approved:false,
    scientific:false,
-   scene:'Across the Great Plains, USA, in 1874, favorable seasonal conditions have created an unusually dense early buildup of Rocky Mountain locusts in open prairie breeding areas near farmland. Show warm prairie grassland, low vegetation and patches of bare soil with visibly increasing numbers of locusts gathering, crawling and hopping across the ground and plants. The insect population should look clearly abnormal and fast-growing, but this is not yet the full sky-darkening swarm. Nearby crops and farmland are still mostly intact. The scene should feel like an ominous early warning stage, showing that the locust population is rapidly building before the true plague arrives.',
+   scene:'Across the Great Plains, USA, in 1874, favorable seasonal conditions have produced an unusually dense early buildup of Rocky Mountain locusts in open prairie breeding ground near farmland. Keep the visual emphasis low to the ground: normal-sized locusts crawl and hop across bare soil, prairie grass and low plants in clearly abnormal numbers, with only a few lifting into short flights. Nearby crop fields remain mostly intact, the sky stays broad and largely clear, and no adults are yet stopping to react. This panel is the biological buildup before P3 human realization and before any sky-filling swarm.',
    narrative:'Favorable seasonal conditions allow Rocky Mountain locust populations to build rapidly across the Great Plains before the full plague forms.',
    timing:'0.0–2.0s: Establish open 1874 prairie breeding ground near farmland, with healthy vegetation and a visibly unusual number of locusts already present on soil and low plants.\\n2.0–7.0s: Show the early buildup continuing as more small locusts crawl, hop and lift briefly into loose clusters across the ground and vegetation. Keep nearby crops mostly intact and the sky largely clear.\\n7.0–10.0s: End on a clearly abnormal but still early-stage concentration of locusts, creating ominous escalation without becoming a full sky-darkening swarm.',
-   camera:'A slow lateral track close enough to read locust buildup across foreground soil and vegetation while preserving the wider prairie farmland in depth. No cuts, transitions, orbit or time-lapse.',
+   camera:'A low restrained lateral track across foreground soil and prairie vegetation, close enough to read many separate locusts while keeping intact farmland visible in the background. Keep the horizon and sky open so the panel cannot be mistaken for the later airborne swarm. No cuts, transitions, orbit or time-lapse.',
    physics:'This is an early population-buildup panel, not an instant plague. Locusts remain normal-sized and move through plausible crawling, hopping and short flight. Do not depict magical reproduction, instant multiplication, sudden crop death or impossible insect density. Crops remain mostly intact.',
    audio:'Prairie wind, dry grass movement, subtle natural insect activity and distant farm ambience only. No voiceover, dialogue or music.',
    extraNegative:'No full locust cloud. No blackened sky. No total crop destruction. No stripped fields. No panic crowd. No giant insects. No impossible instant multiplication. No modern machinery. No children. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark or any on-screen text.'
@@ -193,6 +193,72 @@ function rockyMountainLocustPanel(stage){
    physics:'Locust density is clearly higher than P2, but movement remains physically plausible and insects remain normal-sized. The gathering forms through many individual insects crawling, hopping and taking short flight; do not show instant materialization or impossible multiplication. Most crops remain standing and largely intact.',
    audio:'Growing natural insect wing and movement sounds mixed with prairie wind, light farm ambience and subtle human movement only. No voiceover, dialogue or music.',
    extraNegative:'No full sky-darkening plague yet. No complete crop stripping. No total field destruction. No giant insects. No magical insect appearance. No panic stampede. No modern objects. No children. ABSOLUTE NO-TEXT: no labels, location names, year, captions, titles, typography, logos, watermark or any on-screen text.'
+  },
+  P4:{
+   approved:false,
+   scientific:false,
+   scene:'Across intact 1874 Great Plains farmland, an airborne front of Rocky Mountain locusts is now visibly advancing from the open prairie toward productive crop fields. Adult farmers stand near a fence line or field edge and look toward the incoming movement while thousands of separate normal-sized insects cross the air at layered depths. The main story beat is movement toward the crops, not feeding yet: foreground plants remain standing and largely undamaged. The swarm can occupy a large part of the sky, but individual insects must remain readable and the mass must never resemble smoke, fog, dust or a solid black cloud.',
+   narrative:'Dense airborne swarms begin moving toward productive farmland across the Great Plains.',
+   timing:'0.0–2.0s: Establish intact crops and adults at the field edge as the incoming swarm becomes clearly visible over the prairie.\n2.0–7.0s: The airborne front moves steadily closer in layered depth while adults watch and react with concern; crops remain mostly untouched.\n7.0–10.0s: End with the swarm reaching the immediate edge of the farmland, stopping before widespread feeding damage begins.',
+   camera:'A restrained forward track from the field edge toward the approaching airborne swarm, keeping intact crops in the foreground and the moving insect front readable in depth. No cuts, orbit, time-lapse or sudden disaster zoom.',
+   physics:'The swarm advances through the sustained flight of many separate normal-sized locusts. No instant appearance, teleporting, impossible density jump or smoke-like merging. Wind and crop movement remain natural and feeding damage has not yet become the focal action.',
+   audio:'Growing natural wing activity, prairie wind, crop movement and restrained farm ambience only. No voiceover, dialogue or music.',
+   extraNegative:'No major feeding damage yet. No stripped field. No total crop loss. No smoke-like swarm. No fog, ash, dust cloud or solid black mass. No giant insects. No modern objects. No children.'
+  },
+  P5:{
+   approved:false,
+   scientific:false,
+   scene:'The Rocky Mountain locust swarm reaches productive Great Plains crops in 1874 and the first unmistakable feeding damage becomes visible. Normal-sized locusts land on corn, grain or other field plants, cling to leaves and stalks, and actively chew vegetation while adult farmers remain nearby watching the attack unfold. Keep most plants still standing so this reads as first crop contact rather than the later peak devastation. The action must be clearly different from P4: the swarm is no longer only approaching; insects are now physically on the crops and eating them.',
+   narrative:'The swarm reaches crops and feeding damage becomes visible across fields.',
+   timing:'0.0–2.0s: Begin with locusts already landing on standing crop plants while adults notice the first visible feeding damage.\n2.0–7.0s: Show separate insects clinging, crawling and feeding on leaves and stalks as localized damage increases naturally.\n7.0–10.0s: End with clearly damaged but still standing crops, setting up the much denser peak infestation of P6.',
+   camera:'A restrained side track through standing crop rows that keeps feeding insects in the foreground and adult farmers readable in the midground. No cuts, orbit or time-lapse.',
+   physics:'Locusts remain normal-sized and physically separate. Leaves and plant edges show progressive local feeding damage rather than instant disappearance. No magical multiplication or immediate total field stripping.',
+   audio:'Natural insect wing and feeding movement, rustling crops, prairie wind and subdued farm ambience only. No voiceover, dialogue or music.',
+   extraNegative:'No completely bare field yet. No smoke-like swarm. No giant insects. No instant crop disappearance. No modern machinery. No children.'
+  },
+  P6:{
+   approved:false,
+   scientific:false,
+   scene:'At peak infestation across an 1874 Great Plains field, enormous numbers of Rocky Mountain locusts fill the air and cover standing vegetation while active feeding strips leaves from crops. Parts of the sky may look darker because of the sheer number of separate insects, but the swarm must remain visibly composed of individual locusts at multiple depths and never resemble smoke, storm cloud, fog, soot or ash. Adult farmers may appear small within the scene to communicate scale, but the visual emphasis is the overwhelming density and active crop attack.',
+   narrative:'At peak infestation, huge numbers of insects cover plants and darken parts of the sky.',
+   timing:'0.0–2.0s: Open inside a visibly dense but still physically readable swarm over standing crops.\n2.0–7.0s: Sustain intense flight and feeding as insects cover vegetation and leaves are progressively stripped.\n7.0–10.0s: Hold the overwhelming peak density and severe crop attack without jumping ahead to the post-swarm aftermath.',
+   camera:'A wide restrained push through the crop rows with strong depth layers: insects near camera, damaged vegetation midground and adults or farm structures small in the distance. No cuts, orbit or time-lapse.',
+   physics:'The density comes from many separate normal-sized insects. Crop loss progresses through feeding; plants do not vanish instantly. No solid swarm mass, giant insects, magical multiplication or impossible scale.',
+   audio:'Dense natural wing activity, crop rustle, prairie wind and restrained environmental movement only. No voiceover, dialogue or music.',
+   extraNegative:'No black smoke effect. No dust-cloud swarm. No fog-like insects. No giant locusts. No instant total crop disappearance. No modern objects. No children.'
+  },
+  P7:{
+   approved:false,
+   scientific:false,
+   scene:'Across several neighboring Great Plains farm plots in 1874, crop losses are now visibly widespread. Show damaged rows, partly stripped plants and adults moving through the affected farmland while a reduced but still active number of locusts remains in the air and on vegetation. The visual emphasis is no longer the spectacle of the densest swarm; it is the spread of agricultural damage across more than one field or farm area. Keep some standing vegetation so P9 can later show the much barer post-swarm result.',
+   narrative:'Crop losses spread as multiple farms and communities face the same outbreak.',
+   timing:'0.0–2.0s: Establish more than one damaged field or farm area in the same wider landscape.\n2.0–7.0s: Adults move through damaged rows while remaining locust activity continues at a lower visual priority than the crop loss.\n7.0–10.0s: End on a wider view that makes the spread of agricultural damage unmistakable.',
+   camera:'A measured lateral documentary move that reveals one damaged field, then a neighboring affected plot or farm structure in the same continuous shot. No cuts, orbit or time-lapse.',
+   physics:'Damage is cumulative and already present across multiple fields. Remaining insects move naturally. Do not restore crops, instantly destroy new fields, or make the swarm denser than the P6 peak.',
+   audio:'Prairie wind, dry crop movement, lighter insect activity, footsteps and restrained farm ambience only. No voiceover, dialogue or music.',
+   extraNegative:'No return to peak P6 swarm density. No pristine undamaged landscape dominating the frame. No smoke-like swarm. No giant insects. No modern machinery. No children.'
+  },
+  P8:{
+   approved:false,
+   scientific:false,
+   scene:'The 1874 locust crisis now reads at a broader regional scale: from an elevated but still period-plausible ground viewpoint, show a wide Great Plains landscape containing several separated farmsteads, field sections, fences or wagon routes while the moving swarm continues beyond the first farms toward more distant agricultural land. Keep foreground adults small and secondary if present. The focal idea is geographic spread and continued migration, clearly different from P7 field-level crop damage and P9 aftermath. Do not use a modern aerial-drone perspective.',
+   narrative:'The crisis expands across the Great Plains as swarms continue migrating beyond the first affected farms.',
+   timing:'0.0–2.0s: Establish a broad prairie farming landscape with multiple separated farm areas visible in depth.\n2.0–7.0s: Show the swarm continuing across the landscape toward more distant fields, with individual insects still readable near and mid distance.\n7.0–10.0s: Finish on the wider geographic scale of the moving outbreak rather than on one damaged crop row.',
+   camera:'A slow elevated ground-level pan or lateral drift from one farm area toward more distant fields and the continuing swarm path. No modern aerial-drone movement, cuts, orbit or time-lapse.',
+   physics:'The swarm migrates continuously across real terrain. Relative scale and depth remain stable. No teleporting swarm, impossible horizon-sized solid mass or instant landscape destruction.',
+   audio:'Broad prairie wind, layered insect wing activity, distant farm ambience and natural environmental movement only. No voiceover, dialogue or music.',
+   extraNegative:'No drone shot. No aircraft. No modern roads. No smoke-like swarm. No giant insects. No instant regional destruction. No children.'
+  },
+  P9:{
+   approved:false,
+   scientific:false,
+   scene:'After the main swarm has moved on from an 1874 Great Plains farm, reveal the stark agricultural aftermath: broad rows of denuded or heavily stripped vegetation, exposed soil and damaged stalks dominate the frame. One or two adult farmers inspect the barren field at close or mid distance, touching a stripped stalk or kneeling beside the damaged ground. Only a few isolated locusts may remain; there must be no dense active swarm. The visual beat is loss after passage, not ongoing attack.',
+   narrative:'Damaged fields reveal the scale of lost food and income after the swarms pass.',
+   timing:'0.0–2.0s: Establish a visibly denuded field after the main swarm has moved away.\n2.0–7.0s: An adult farmer examines stripped stalks or exposed soil while the camera reveals the scale of the loss.\n7.0–10.0s: End on the quiet contrast between the barren rows and the farmer, with only minimal residual insect activity.',
+   camera:'A restrained downward-to-forward move beginning on stripped plants or soil and settling on the adult farmer inspecting the damage. No cuts, orbit or time-lapse.',
+   physics:'The damage is already complete when the panel begins. No crops disappear during the shot and no new dense swarm forms. Human movement remains slow and grounded.',
+   audio:'Dry wind, footsteps, brittle plant movement and sparse residual insect sounds only. No voiceover, dialogue or music.',
+   extraNegative:'No dense swarm. No sky-darkening insects. No lush healthy crop field dominating the frame. No giant insects. No modern machinery. No children.'
   }
  };
  return map[stage]||null;
@@ -211,7 +277,7 @@ function rockyMountainLocustLatePanel(stage){
    extraNegative:'No aircraft. No motor vehicles. No radio equipment. No modern emergency uniforms. No plastic containers. No modern clipboards. No intact lush field dominating the scene. No giant insects.'
   },
   P11:{
-   scene:'In an 1874 Great Plains town or rural relief point after the locust disaster, adult volunteers, farmers and local relief organizers prepare period-appropriate aid for affected families. Show sacks of grain or flour, folded clothing, seed bags, wooden crates and simple supplies being sorted beside a storehouse, rail-side freight area or public building, then loaded by hand onto a horse-drawn wagon. The focal action is practical relief distribution after crop failure. Keep every object believable for 1874. Absolutely no aircraft, no motor trucks, no tractors, no radios, no plastic packaging, no modern disaster-response gear and no twentieth-century relief equipment.',
+   scene:'In an 1874 Great Plains town or rural relief point after the locust disaster, adult volunteers, farmers and local relief organizers sort period-appropriate aid for affected families. Show sacks of grain or flour, folded clothing, seed bags, wooden crates and simple supplies arranged beside a storehouse, rail-side freight area or public building, then loaded by hand onto one horse-drawn wagon. Keep the composition centered on organized supply handling and outbound delivery so P11 reads clearly as the relief-response panel. Keep every object believable for 1874. Absolutely no aircraft, motor trucks, tractors, radios, plastic packaging, modern disaster-response gear or twentieth-century relief equipment.',
    narrative:'Communities organize food, clothing, seed and other practical relief for families hit by the 1874 locust disaster.',
    timing:'0.0–2.0s: Establish the period relief point with adult volunteers, stacked sacks, wooden crates and a horse-drawn wagon.\n2.0–7.0s: Adults sort and lift supplies by hand, passing sacks or seed bags toward the wagon in one continuous practical workflow.\n7.0–10.0s: End with the wagon partly loaded and the relief effort visibly organized for delivery to affected farms.',
    camera:'One continuous restrained forward-and-side documentary move that keeps the supply stacks, adult workers and horse-drawn wagon readable together. No cuts, orbit or time-lapse.',
@@ -220,16 +286,16 @@ function rockyMountainLocustLatePanel(stage){
    extraNegative:'No aircraft. No helicopters. No airplanes. No motor trucks. No tractors. No radios. No plastic bags. No modern pallets. No fluorescent vests. No modern aid logos. No twentieth-century relief equipment. No giant insects.'
   },
   P12:{
-   scene:'During the difficult aftermath of the 1874 locust disaster, adult residents in a Great Plains community receive and move basic relief supplies while damaged farms remain visible nearby. Show modest period clothing, horse-drawn transport, sacks of food or seed, folded blankets or clothing, wooden crates and simple nineteenth-century buildings. The mood is serious and practical: shortages and economic strain are visible through sparse supplies and damaged farmland, without turning the scene into a modern refugee camp.',
+   scene:'During the difficult aftermath of the 1874 locust disaster, shift away from P11 supply loading and focus on the households living through the shortage. In a modest Great Plains street, farmyard or public distribution area, adult residents receive only a small amount of food, seed, clothing or other basic relief while damaged farmland or depleted farm storage remains visible in context. Keep the available supplies visibly limited and the mood tired and practical. This panel should communicate continuing household and community hardship, not another warehouse-loading scene and not a modern refugee camp.',
    narrative:'The crop disaster creates wider hardship as affected households depend on limited food, seed and material assistance.',
    timing:'0.0–2.0s: Establish a modest 1870s community relief scene with damaged farmland visible in context.\n2.0–7.0s: Adults receive, carry or organize limited supplies with restrained, tired movement.\n7.0–10.0s: Hold on the small scale of available aid against the wider agricultural damage.',
-   camera:'A slow observational push through the relief area toward the adults and damaged farmland beyond. No cuts, orbit or time-lapse.',
+   camera:'A slow observational push toward one or two adult recipients carrying limited supplies, with the damaged agricultural setting held clearly in the background. Avoid repeating P11’s wagon-loading composition. No cuts, orbit or time-lapse.',
    physics:'Objects remain scarce, physical and period-correct. Adults carry realistic loads. No instant crowd growth, magical supply appearance or modern logistics.',
    audio:'Wind, footsteps, cloth and crate handling, wagon creaks and subdued outdoor ambience only. No voiceover, dialogue or music.',
    extraNegative:'No modern refugee camp. No aircraft. No motor vehicles. No plastic packaging. No modern tents. No loudspeakers. No modern uniforms. No aid-brand logos.'
   },
   P13:{
-   scene:'As the immediate crisis begins to ease, adult Great Plains farmers start the slow work of recovery using period-appropriate 1870s methods. Show damaged fields being cleared, seed sacks opened, hand tools and horse-drawn farm equipment prepared for replanting. The land should still carry clear signs of the locust disaster, but the focal action is careful recovery rather than a magically restored harvest.',
+   scene:'As the immediate crisis begins to ease, adult Great Plains farmers begin the first practical steps of recovery using period-appropriate 1870s methods. Show a visibly damaged field where one adult clears dead stalks while another opens or measures seed from a cloth sack and a horse-drawn implement waits nearby for the next step. Keep the ground scarred and the field mostly unrecovered. The focal action is preparation to replant, clearly different from P12 relief distribution and from P14’s broader reflective recovery view.',
    narrative:'Recovery begins slowly as affected farmers clear damaged ground, secure seed and prepare to plant again.',
    timing:'0.0–2.0s: Establish damaged but quiet farmland with adults preparing seed and period tools.\n2.0–7.0s: Farmers clear rows, handle seed sacks and ready horse-drawn equipment in a deliberate recovery workflow.\n7.0–10.0s: End on the first visible steps toward replanting while much of the landscape remains damaged.',
    camera:'A restrained lateral move along damaged rows toward the recovery work. No cuts, time-lapse, orbit or instant seasonal transformation.',
@@ -238,7 +304,7 @@ function rockyMountainLocustLatePanel(stage){
    extraNegative:'No instant green recovery. No modern tractors. No aircraft. No powered machinery outside the era. No plastic seed bags. No modern irrigation. No giant insects.'
   },
   P14:{
-   scene:'A reflective closing view of the Great Plains after the 1874 Rocky Mountain locust disaster: recovering farmland stretches beyond a few still-scarred patches while adult farmers continue ordinary work with period-appropriate tools and horse-drawn equipment. Keep the image grounded in the late nineteenth-century world and let the contrast between surviving damage and renewed cultivation carry the final lesson visually. No written lesson, title card, modern technology or invented monument is shown.',
+   scene:'A reflective closing view of the Great Plains after the 1874 Rocky Mountain locust disaster: one adult farmer works a horse-drawn plow or cultivator across a broad field where new cultivation appears beside clearly visible scarred or sparsely recovered patches. Keep the composition wide and quiet so the final image feels like gradual return to farming rather than instant restoration. Preserve the late nineteenth-century world and let the contrast between surviving damage and renewed cultivation carry the final lesson visually. No written lesson, title card, modern technology or invented monument is shown.',
    narrative:'The 1874 locust disaster remains a stark historical example of how quickly an environmental crisis could devastate farming communities across the Great Plains.',
    timing:'0.0–2.0s: Establish a broad recovered-but-still-scarred prairie farming landscape.\n2.0–7.0s: Show adult farmers continuing steady period-appropriate work among visible reminders of past crop damage.\n7.0–10.0s: Finish on a wide, quiet historical composition that feels reflective rather than triumphant.',
    camera:'A slow restrained pullback or lateral drift revealing the wider prairie and recovering farms. No cuts, orbit, time-lapse or modern aerial-drone look.',
