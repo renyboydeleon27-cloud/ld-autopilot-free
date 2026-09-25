@@ -1,4 +1,4 @@
-/* LD AUTO v3.36.2 — disaster-family progression aware Smart Continue. */
+/* LD AUTO v3.39.0 — color-treatment aware Smart Continue and audit signatures. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -30,6 +30,11 @@ function visualMode(){
   const selected=document.getElementById('visualMode')?.value;
   if(selected==='real'||selected==='anime')return selected;
   return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';
+}
+function colorMode(){
+  const locked=window.LDProjectLocks?.colorMode?.()||window.ldProjectLocks?.colorMode;
+  if(locked==='bw'||locked==='color')return locked;
+  return visualMode()==='real'?'bw':'color';
 }
 function eligible(card){
   return !!card&&/^(HOOK|P(?:[1-9]|1[0-4])|ENDING|THUMBNAIL)$/.test(card.dataset.stage||'');
@@ -90,6 +95,7 @@ function approvedSnapshot(card){
     flowPrompt:String(card?.querySelector('.flow-prompt')?.value||''),
     videoMode:String(card?.dataset?.videoMode||window.LDProjectLocks?.videoMode?.()||'image'),
     visualStyle:visualMode(),
+    colorMode:colorMode(),
     year:String(continuity.year||''),
     location:String(continuity.location||''),
     sharedDetails:String(continuity.details||''),
@@ -211,7 +217,7 @@ function promptHash(value){
   return (h>>>0).toString(36);
 }
 function auditCacheKey(payload){
-  return [payload.stage,payload.visualMode,payload.year,payload.location,promptHash(payload.currentPrompt)].join('|');
+  return [payload.stage,payload.visualMode,payload.colorMode,payload.year,payload.location,promptHash(payload.currentPrompt)].join('|');
 }
 function readinessSignature(card){
   if(!card)return '';
@@ -225,6 +231,7 @@ function readinessSignature(card){
     stage,
     mode,
     visualMode(),
+    colorMode(),
     String(continuity.year||''),
     String(continuity.location||''),
     String(card.querySelector('.narration')?.value||''),
@@ -284,6 +291,7 @@ function panelPayload(card){
     stage,
     format:format(),
     visualMode:visualMode(),
+    colorMode:colorMode(),
     year:String(continuity.year||'').trim(),
     location:String(continuity.location||'').trim(),
     sharedDetails:String(continuity.details||'').trim(),
