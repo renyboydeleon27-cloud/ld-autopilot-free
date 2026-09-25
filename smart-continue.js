@@ -1,4 +1,4 @@
-/* LD AUTO v3.35.9 — automatic Approved Memory on APPROVE → NEXT. */
+/* LD AUTO v3.35.10 — Smart Continue audit/readiness signatures. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -95,7 +95,8 @@ function approvedSnapshot(card){
     sharedDetails:String(continuity.details||''),
     videoScene:String(card?.querySelector('.video-scene')?.value||card?.dataset?.videoScene||''),
     textVideoPrompt:String(card?.querySelector('.text-video-prompt')?.value||card?.dataset?.textVideoPrompt||''),
-    textVideoSignature:String(card?.dataset?.textVideoSignature||'')
+    textVideoSignature:String(card?.dataset?.textVideoSignature||''),
+    auditSignature:String(card?.dataset?.smartReadySignature||'')
   };
 }
 function saveApprovedMemory(card){
@@ -148,6 +149,40 @@ function promptHash(value){
 }
 function auditCacheKey(payload){
   return [payload.stage,payload.visualMode,payload.year,payload.location,promptHash(payload.currentPrompt)].join('|');
+}
+function readinessSignature(card){
+  if(!card)return '';
+  const stage=card.dataset.stage||'';
+  const mode=card.dataset.videoMode||window.LDProjectLocks?.videoMode?.()||'image';
+  if(/^P(?:[1-9]|1[0-4])$/.test(stage)&&mode==='text'){
+    return 't2v|'+auditCacheKey(panelPayload(card));
+  }
+  const continuity=window.ldVideoContinuity||{};
+  const parts=[
+    stage,
+    mode,
+    visualMode(),
+    String(continuity.year||''),
+    String(continuity.location||''),
+    String(card.querySelector('.narration')?.value||''),
+    String(card.querySelector('.image-prompt')?.value||''),
+    String(card.querySelector('.flow-prompt')?.value||'')
+  ];
+  return 'stage|'+promptHash(parts.join('\u241f'));
+}
+function markSmartReady(card){
+  markSmartReady(card);
+  card.dataset.smartReadySignature=readinessSignature(card);
+}
+function clearCardSmartReady(card){
+  if(!card)return;
+  delete card.dataset.smartReady;
+  delete card.dataset.smartReadySignature;
+}
+function smartReadyStillCurrent(card){
+  return card?.dataset?.smartReady==='1'
+    && !!card.dataset.smartReadySignature
+    && card.dataset.smartReadySignature===readinessSignature(card);
 }
 function stopPhase(){
   if(phaseTimer){clearInterval(phaseTimer);phaseTimer=null;}
@@ -328,7 +363,7 @@ async function prepareHook(card){
   const prompt=card.querySelector('.flow-prompt')?.value?.trim();
   if(!prompt)throw new Error('No HOOK prompt is ready yet.');
   const copied=await copyText(prompt);
-  card.dataset.smartReady='1';
+  markSmartReady(card);
   buttonLabel(approveLabel(card));
   status('HOOK READY FOR FLOW'+(copied?' · prompt copied automatically':' · use Copy prompt if clipboard is blocked')+'. After you review the generated clip, press this same button again to approve and continue.','pass');
 }
@@ -337,7 +372,7 @@ async function prepareImageStage(card){
   const image=card.querySelector('.image-prompt')?.value?.trim();
   if(!image)throw new Error(stage+' image prompt is empty.');
   const copied=await copyText(image);
-  card.dataset.smartReady='1';
+  markSmartReady(card);
   buttonLabel(approveLabel(card));
   status(stage+' READY'+(copied?' · image prompt copied automatically':'')+'. After reviewing the result, press this same button again.','pass');
 }
@@ -392,14 +427,24 @@ async function prepareTextToVideo(card){
   }
 
   stopPhase();
+  const auditedKey=auditCacheKey(payload);
   const finalPrompt=window.LDVideoModes?.prompt?.(card)||payload.currentPrompt;
+  let finalPayload=panelPayload(card);
+  if(auditCacheKey(finalPayload)!==auditedKey){
+    status('SMART CONTINUE · Final prompt changed after rebuild. Verifying the exact final version…','working');
+    const finalResult=await audit(finalPayload);
+    if(finalResult.result!=='PASS'){
+      const issues=Array.isArray(finalResult.issues)&&finalResult.issues.length?finalResult.issues.join(' · '):finalResult.summary||'Review required.';
+      throw new Error('Final prompt changed after audit and still needs review: '+issues);
+    }
+  }
   const copied=await copyText(finalPrompt);
-  card.dataset.smartReady='1';
+  markSmartReady(card);
   buttonLabel(approveLabel(card));
-  status('✅ '+card.dataset.stage+' READY FOR FLOW · AI T2V Audit PASS'+(copied?' · prompt copied automatically':'')+'. Generate in Flow, review the clip, then press this same button again.','pass');
+  status('✅ '+card.dataset.stage+' READY FOR FLOW · exact prompt signature verified'+(copied?' · prompt copied automatically':'')+'. Generate in Flow, review the clip, then press this same button again.','pass');
 }
 async function prepare(card){
-  delete card.dataset.smartReady;
+  clearCardSmartReady(card);
   buttonLabel('🚀 SMART CONTINUE');
 
   const stage=card.dataset.stage;
@@ -433,10 +478,19 @@ async function run(){
     if(!card)throw new Error('No production stage is available.');
 
     if(card.dataset.smartReady==='1'){
+      if(!smartReadyStillCurrent(card)){
+        const changedStage=card.dataset.stage||'CURRENT';
+        clearCardSmartReady(card);
+        auditPassCache.clear();
+        buttonLabel('🔄 RECHECK '+changedStage);
+        status('🔄 '+changedStage+' changed after its last audit/ready state. Rechecking the current version before approval…','working');
+        await prepare(card);
+        return;
+      }
       const approvedStage=card.dataset.stage||'CURRENT';
       saveApprovedMemory(card);
       saveDone(card);
-      delete card.dataset.smartReady;
+      clearCardSmartReady(card);
       const next=nextCard(card);
       if(!next){
         buttonLabel('✅ PRODUCTION COMPLETE');
@@ -502,6 +556,17 @@ function mount(){
 
   mountAdvanced();
 
+  stages.addEventListener('input',e=>{
+    const card=e.target.closest?.('.stage-card');
+    if(!card||card.dataset.smartReady!=='1')return;
+    if(!e.target.matches?.('.narration,.image-prompt,.flow-prompt,.video-scene,.text-video-prompt'))return;
+    if(card.dataset.smartReadySignature&&card.dataset.smartReadySignature!==readinessSignature(card)){
+      clearCardSmartReady(card);
+      buttonLabel('🚀 SMART CONTINUE');
+      status('Current '+(card.dataset.stage||'stage')+' changed after readiness. SMART CONTINUE will recheck it before approval.','working');
+    }
+  });
+
   const style=document.createElement('style');
   style.id='ldSmartContinueStyles';
   style.textContent=`
@@ -566,5 +631,5 @@ if(document.readyState==='loading'){
   setTimeout(migrateLegacyNarrations,260);
 }
 
-window.LDSmartContinue={run,prepare,currentCard,updateTargetLabel,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null};
+window.LDSmartContinue={run,prepare,currentCard,updateTargetLabel,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent};
 })();
