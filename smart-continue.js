@@ -1,4 +1,4 @@
-/* LD AUTO v3.35.6 — migrate legacy 1874 locust narration before audit */
+/* LD AUTO v3.35.9 — automatic Approved Memory on APPROVE → NEXT. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
