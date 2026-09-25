@@ -1,4 +1,4 @@
-/* LD AUTO v3.24.1 — Production DNA Engine bottom placement + reusable approved technique. */
+/* LD AUTO v3.36.4 — clearer finished-production DNA save action. */
 (function(){
 'use strict';
 
@@ -177,7 +177,7 @@ function applyCurrent(){
 }
 function optimizeFromLastApproved(){
   const source=latestApprovedProject();
-  if(!source)return {ok:false,message:'No approved source yet. Mark HOOK + P1–P14 Done in one Shorts production first.'};
+  if(!source)return {ok:false,message:'Finish and approve HOOK + P1–P14 first, then press Save Finished Production DNA.'};
   const profile=extractProfile(source);
   writeJson(DNA_KEY,profile);
   const current=currentTopic();
@@ -214,10 +214,10 @@ function render(){
   }
   placeRoot(root);
   const profile=activeProfile();
-  root.innerHTML='<div style="display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap"><div><span class="audit-label">LD PRODUCTION DNA ENGINE</span><strong style="display:block;font-size:17px;margin-top:3px">Extract → Recreate → Polish → Validate</strong><p class="dna-summary" style="margin:6px 0 0;color:#9aa7b6;font-size:12px"></p></div><button type="button" class="primary dna-optimize">🧬 Optimize From Last Approved</button></div><p class="dna-status" style="margin:10px 0 0;font-size:12px;color:#b8c4d1"></p><p style="margin:7px 0 0;font-size:11px;color:#8fa0b2">Source must have HOOK + P1–P14 marked Done. The engine reuses cinematic technique only; current-event history, location, year, causes and measurements are never copied from the source production.</p>';
+  root.innerHTML='<div style="display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap"><div><span class="audit-label">LD PRODUCTION DNA ENGINE</span><strong style="display:block;font-size:17px;margin-top:3px">Extract → Recreate → Polish → Validate</strong><p class="dna-summary" style="margin:6px 0 0;color:#9aa7b6;font-size:12px"></p></div><button type="button" class="primary dna-optimize">🧬 Save Finished Production DNA</button></div><p class="dna-status" style="margin:10px 0 0;font-size:12px;color:#b8c4d1"></p><p style="margin:7px 0 0;font-size:11px;color:#8fa0b2">After HOOK + P1–P14 are approved, save this production’s cinematic DNA for future episodes. Only reusable cinematic technique is saved; the event name, history, location, year, causes and measurements are never copied into another disaster.</p>';
   root.querySelector('.dna-summary').textContent=summarize(profile);
   const status=root.querySelector('.dna-status');
-  status.textContent=profile?'DNA profile active. New prompts can inherit the approved technique safely.':'No DNA profile active yet.';
+  status.textContent=profile?'DNA profile active. New prompts can inherit the approved technique safely.':'No finished production DNA saved yet.';
   root.querySelector('.dna-optimize').addEventListener('click',function(){
     const result=optimizeFromLastApproved();
     status.textContent=result.message;
