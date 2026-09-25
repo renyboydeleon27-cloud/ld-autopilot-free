@@ -1,3 +1,5 @@
+import { usageFromResponse } from "./api-usage.js";
+
 function outputText(data){
   if(data?.output_text) return String(data.output_text).trim();
   return (data?.output||[]).flatMap(x=>x?.content||[]).map(x=>x?.text||"").join("").trim();
@@ -110,13 +112,15 @@ export default async function handler(req,res){
       })
     });
     const data=await response.json();
-    if(!response.ok) return res.status(response.status).json({ok:false,error:data?.error?.message||"OpenAI request failed."});
+    const apiUsage=usageFromResponse(data,"gpt-5.6-luna");
+    if(!response.ok) return res.status(response.status).json({ok:false,error:data?.error?.message||"OpenAI request failed.",apiUsage});
     const rawOutput=outputText(data);
     const parsed=parseJsonObject(rawOutput);
     if(!parsed) return res.status(502).json({
       ok:false,
       error:"AI audit structured output could not be parsed.",
-      detail:rawOutput.slice(0,220)
+      detail:rawOutput.slice(0,220),
+      apiUsage
     });
 
     const result=String(parsed.result||"").trim().toUpperCase()==="PASS"?"PASS":"NEEDS FIX";
@@ -130,7 +134,8 @@ export default async function handler(req,res){
       result,
       summary:summary||(result==="PASS"?"Prompt passed the AI T2V audit.":"Prompt needs revision before generation."),
       issues:result==="PASS"?[]:issues,
-      recommendedAction:recommendedAction||(result==="PASS"?"Send this prompt to Flow after your normal visual review.":"Use Fix Current Panel, rebuild the T2V prompt, then audit again.")
+      recommendedAction:recommendedAction||(result==="PASS"?"Send this prompt to Flow after your normal visual review.":"Use Fix Current Panel, rebuild the T2V prompt, then audit again."),
+      apiUsage
     });
   }catch(err){
     return res.status(500).json({ok:false,error:"AI T2V audit backend error: "+String(err?.message||err)});
