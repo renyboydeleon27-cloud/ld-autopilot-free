@@ -20,6 +20,7 @@ function roundMoney(value){
 
 export function usageFromResponse(data,model){
   const usage=data?.usage||{};
+  const hasUsage=!!data?.usage;
   const inputTokens=n(usage.input_tokens);
   const cachedInputTokens=Math.min(inputTokens,n(usage.input_tokens_details?.cached_tokens));
   const outputTokens=n(usage.output_tokens);
@@ -31,7 +32,7 @@ export function usageFromResponse(data,model){
   return {
     priceSnapshot:OPENAI_PRICE_SNAPSHOT,
     currency:"USD",
-    calls:1,
+    calls:hasUsage?1:0,
     inputTokens,
     cachedInputTokens,
     outputTokens,
@@ -39,7 +40,7 @@ export function usageFromResponse(data,model){
     estimatedCostUsd:roundMoney(estimatedCostUsd),
     byModel:{
       [model]:{
-        calls:1,
+        calls:hasUsage?1:0,
         inputTokens,
         cachedInputTokens,
         outputTokens,
