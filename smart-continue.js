@@ -1,4 +1,4 @@
-/* LD AUTO v3.35.12 — per-project OpenAI API cost counter. */
+/* LD AUTO v3.36.0 — disaster-family progression aware Smart Continue. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -276,9 +276,12 @@ function panelPayload(card){
   const continuity=window.ldVideoContinuity||{};
   const sceneField=card.querySelector('.video-scene');
   const promptField=card.querySelector('.text-video-prompt');
+  const stage=card.dataset.stage||'';
+  const eventSpecificOverride=!!window.LDVideoModes?.eventPanel?.(stage);
+  const progression=eventSpecificOverride?null:window.LDDisasterProgression?.stage?.(topic(),stage);
   return {
     topic:topic(),
-    stage:card.dataset.stage||'',
+    stage,
     format:format(),
     visualMode:visualMode(),
     year:String(continuity.year||'').trim(),
@@ -286,7 +289,12 @@ function panelPayload(card){
     sharedDetails:String(continuity.details||'').trim(),
     narration:String(card.querySelector('.narration')?.value||'').trim(),
     currentScene:String(sceneField?.value||card.dataset.videoScene||'').trim(),
-    currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim().slice(0,14000)
+    currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim().slice(0,14000),
+    eventSpecificOverride,
+    progressionVersion:String(progression?.version||window.LDDisasterProgression?.version||''),
+    progressionFamily:String(progression?.familyLabel||''),
+    progressionRole:String(progression?.role||''),
+    progressionRule:String(progression?([progression.rule,progression.evidenceRule].filter(Boolean).join(' ')):'')
   };
 }
 function isRocky1874(){
