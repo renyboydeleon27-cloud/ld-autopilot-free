@@ -308,6 +308,7 @@ function optimizeFromLastApproved(){
   const same=current&&current===profile.sourceTopic;
   const resigned=same?(window.LDVideoModes?.resignAll?.()||0):0;
   const rebuilt=same?0:applyCurrent();
+  window.dispatchEvent(new CustomEvent('ld:production-dna-saved',{detail:{profile,sameTopic:same}}));
   return {
     ok:true,
     profile:profile,
