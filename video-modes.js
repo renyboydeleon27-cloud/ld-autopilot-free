@@ -1,6 +1,6 @@
-/* LD AUTO v3.35.7 — Rocky Mountain Locust final conservative polish. */
+/* LD AUTO v3.36.0 — disaster-family progression engine integration. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.35.7-rocky-locust-final-polish-v1';
+const T2V_POLICY_VERSION='3.36.0-family-progression-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -345,6 +345,17 @@ function nargisPanel(stage){
 function eventPanel(stage){
  return rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
 }
+function progression(stage,special){
+ if(special)return null;
+ return window.LDDisasterProgression?.stage?.(current(),stage)||null;
+}
+function progressionLock(stage,special){
+ var p=progression(stage,special);
+ if(!p)return special
+   ? 'EVENT-SPECIFIC PROGRESSION OVERRIDE: This panel uses a dedicated event-specific scene and timing lock. The generic disaster-family stage is intentionally superseded.'
+   : '';
+ return 'DISASTER-FAMILY PROGRESSION LOCK:\nFamily: '+p.familyLabel+'.\nStage: '+stage+'.\nStory role: '+p.role+'.\nStage guard: '+p.rule+'\nEvidence guard: '+p.evidenceRule+'\nDo not jump ahead to a later panel, repeat the previous panel as the same shot, or pull recovery/aftermath imagery into an earlier stage.';
+}
 function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanNarrationInstructions(value):String(value||'').trim();}
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[5]=clean(parts[5]);parts[6]=clean(parts[6]);return JSON.stringify(parts);}catch(e){return '';}}
 function pinScene(card){
@@ -365,6 +376,7 @@ function build(card){
  var stage=card.dataset.stage;
  var special=eventPanel(stage);
  if(special&&special.scene)scene=special.scene;
+ var familyProgression=progression(stage,special);
  var scientific=special?!!special.scientific:scientificScene(card,scene);
  var camera=Number(stage.slice(1))%3===1?'A restrained forward tracking move with clear parallax':Number(stage.slice(1))%3===2?'A slow lateral track revealing the scene depth':'A restrained push-in toward the principal action';
  var modeLine=style()==='real'
@@ -387,6 +399,7 @@ function build(card){
    +(universalHookDna()?universalHookDna()+'\n\n':'')
    +'TEXT-TO-VIDEO. Create the entire scene from this description. No reference image is required. '+(format()==='shorts'?'Portrait 9:16.':'Landscape 16:9.')+' One continuous shot. '+modeLine
    +'\n\n'+lock()
+   +'\n\n'+progressionLock(stage,special)
    +'\n\nPANEL SCENE:\n'+scene
    +'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(special&&special.narrative?special.narrative:(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.'))
    +'\n\nTIMING:\n'+timing
@@ -543,7 +556,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,eventPanel:eventPanel};
+window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
