@@ -41,7 +41,7 @@ export default async function handler(req,res){
   const sharedDetails=String(req.body?.sharedDetails||"").trim().slice(0,1800);
   const narration=String(req.body?.narration||"").trim().slice(0,2200);
   const currentScene=String(req.body?.currentScene||"").trim().slice(0,5000);
-  const currentPrompt=String(req.body?.currentPrompt||"").trim().slice(0,14000);
+  const currentPrompt=String(req.body?.currentPrompt||"").trim();
   const eventSpecificOverride=req.body?.eventSpecificOverride===true;
   const progressionVersion=String(req.body?.progressionVersion||"").trim().slice(0,120);
   const progressionFamily=String(req.body?.progressionFamily||"").trim().slice(0,160);
@@ -139,7 +139,7 @@ export default async function handler(req,res){
             }
           }
         },
-        max_output_tokens:520
+        max_output_tokens:1000
       })
     });
     const data=await response.json();
@@ -168,7 +168,7 @@ export default async function handler(req,res){
             {role:"system",content:[{type:"input_text",text:system+" Return compact valid JSON with non-empty scene and note strings."}]},
             {role:"user",content:[{type:"input_text",text:user}]}
           ],
-          max_output_tokens:700
+          max_output_tokens:1400
         })
       });
       const retryData=await retry.json();
