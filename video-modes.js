@@ -1,6 +1,6 @@
-/* LD AUTO v3.39.6 — absolute visual-style lock + Tri-State P14 repair. */
+/* LD AUTO v3.40.0 — cinematic refinement, continuity, weather, camera + audio direction. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.39.6-absolute-style-lock-v1';
+const T2V_POLICY_VERSION='3.40.0-cinematic-consistency-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -421,6 +421,93 @@ function progressionLock(stage,special){
    : '';
  return 'DISASTER-FAMILY PROGRESSION LOCK:\nFamily: '+p.familyLabel+'.\nStage: '+stage+'.\nStory role: '+p.role+'.\nStage guard: '+p.rule+'\nEvidence guard: '+p.evidenceRule+'\nDo not jump ahead to a later panel, repeat the previous panel as the same shot, or pull recovery/aftermath imagery into an earlier stage.';
 }
+function stageNumber(stage){var n=parseInt(String(stage||'').replace(/\D/g,''),10);return Number.isFinite(n)?n:0;}
+function familyKey(){return window.LDDisasterProgression?.family?.(current())||'generic';}
+function previousStageName(stage){var n=stageNumber(stage);return n>1?'P'+(n-1):'';}
+function previousApprovedContinuity(stage){
+ var prev=previousStageName(stage);if(!prev)return '';
+ var snap=window.ldApprovedMemory?.stages?.[prev]?.latest;
+ var card=document.querySelector('.stage-card[data-stage="'+prev+'"]');
+ var scene=clean(snap?.videoScene||card?.querySelector('.video-scene')?.value||card?.dataset?.videoScene||'');
+ var narration=clean(snap?.narration||card?.querySelector('.narration')?.value||'');
+ var summary=[scene,narration].filter(Boolean).join(' ');
+ if(!summary)return '';
+ return summary.slice(0,620);
+}
+function intensityDirector(stage){
+ var n=stageNumber(stage),fam=familyKey();
+ if(n===1)return 'INTENSITY: restrained normal-world tension. The scene must feel alive and cinematic, but do not foreshadow with impossible destruction.';
+ if(n===2)return 'INTENSITY: subtle unease and controlled buildup. Increase atmosphere and anticipation without stealing the next panel’s hazard reveal.';
+ if(n===3)return 'INTENSITY: first unmistakable danger. Make the developing hazard readable immediately, but preserve room for later escalation.';
+ if(n===4||n===5)return 'INTENSITY: strong escalation with clear physical cause-and-effect. Use human/environment scale and mounting force rather than random chaos.';
+ if(n===6)return 'INTENSITY: PEAK PRIMARY IMPACT. This is the strongest primary-disaster beat when consistent with the '+fam+' progression. Maximize scale, danger, depth and emotional pressure while keeping physics coherent and the image readable.';
+ if(n===7||n===8)return 'INTENSITY: sustained major danger / wider impact. Keep the scene powerful but distinct from P6; broaden consequences rather than replaying the same composition.';
+ if(n===9)return 'INTENSITY: immediate aftermath. Let visual shock come from scale of damage, silence, atmosphere and human reaction rather than new destruction.';
+ if(n>=10&&n<=12)return 'INTENSITY: human consequence and wider impact. Favor emotionally grounded, purposeful action and strong environmental storytelling over spectacle.';
+ if(n===13)return 'INTENSITY: restrained recovery. Use deliberate human-scale motion, visible damage continuity and cautious forward movement.';
+ return 'INTENSITY: reflective cinematic closure. End with visual weight, historical memory and a composed final image; do not introduce a new disaster beat.';
+}
+function cameraDirector(stage,scientific){
+ var n=stageNumber(stage);
+ if(scientific)return 'CINEMATIC CAMERA DIRECTOR: one precise explanatory camera move only — restrained lateral reveal or slow push that clarifies mechanism and scale. Stable horizon, coherent lens, no dramatic handheld behavior, no orbit, no hidden cut.';
+ var map={
+  1:'CINEMATIC CAMERA DIRECTOR: composed wide-to-medium observational framing with subtle parallax or a very slow motivated dolly. Let normal life and spatial geography read clearly.',
+  2:'CINEMATIC CAMERA DIRECTOR: slow lateral reveal or controlled creeping push that exposes developing environmental warning signs without showing the next major hazard beat.',
+  3:'CINEMATIC CAMERA DIRECTOR: measured push toward the first unmistakable hazard cue. Keep foreground scale references and background threat in the same coherent visual axis.',
+  4:'CINEMATIC CAMERA DIRECTOR: low-to-human-height tracking or restrained reveal that makes first contact / onset physically legible. Camera movement follows the action rather than circling it.',
+  5:'CINEMATIC CAMERA DIRECTOR: street-level or human-scale medium-wide tracking with strong foreground–midground–background depth. Keep the main hazard readable while localized damage develops.',
+  6:'CINEMATIC CAMERA DIRECTOR: professional peak-impact composition. Use a strong wide or medium-wide perspective with one foreground scale reference and the main hazard dominating depth. Controlled operator movement only; no frantic random shake.',
+  7:'CINEMATIC CAMERA DIRECTOR: broaden the geography with an elevated, lateral or deep-perspective move. Show wider consequences without copying P6’s camera path.',
+  8:'CINEMATIC CAMERA DIRECTOR: controlled trailing, receding or side-on composition that shows the hazard moving on / widening impact. Avoid another head-on peak shot.',
+  9:'CINEMATIC CAMERA DIRECTOR: slow observational reveal of aftermath. Allow damage layers and human scale to enter naturally; avoid action-movie movement.',
+ 10:'CINEMATIC CAMERA DIRECTOR: human-height purposeful tracking following rescue, assessment or response. Keep faces and hands stable; camera does not outrun the subjects.',
+ 11:'CINEMATIC CAMERA DIRECTOR: intimate medium shot or gentle lateral move centered on lived consequence / relief. Prioritize human readability over spectacle.',
+ 12:'CINEMATIC CAMERA DIRECTOR: wider environmental composition with controlled movement that connects infrastructure, landscape and human consequence in one readable geography.',
+ 13:'CINEMATIC CAMERA DIRECTOR: calm purposeful tracking or restrained crane-like reveal showing cleanup / recovery at believable pace.',
+ 14:'CINEMATIC CAMERA DIRECTOR: slow, restrained final composition — gentle push, lateral reveal or nearly locked-off frame. Finish on a deliberate movie-ending image.'
+ };
+ return (map[n]||map[6])+' Maintain one lens family and coherent perspective for the whole 10 seconds. No zoom pumping, fisheye, random orbit, camera teleportation, viewpoint reset, wall pass-through or unmotivated shake.';
+}
+function weatherContinuityLock(stage){
+ var prev=previousApprovedContinuity(stage);
+ var bridge=prev?'\nPREVIOUS APPROVED PANEL CONTINUITY REFERENCE: '+prev:'';
+ return 'WEATHER + ATMOSPHERE CONTINUITY LOCK:\nWeather is story continuity, not decoration. Preserve cloud direction, wind direction, light direction, visibility, precipitation state, ground wetness/dust state and atmospheric density from the preceding story beat unless the current panel explicitly requires a change. Any change must evolve progressively on-screen, never reset abruptly. Storm buildup must darken / thicken / intensify progressively; aftermath may ease only when the story position supports it. Keep foreground, midground and background atmosphere layered so the primary subject and hazard remain readable.'+bridge;
+}
+function transitionMorphLock(){
+ return 'MICRO-TRANSITION + MORPH CONTROL:\nAll state changes need visible physical intermediates. Wind builds before objects accelerate. People brace, turn, stumble or react before changing position. Structures flex / strain / detach before failure. Debris begins moving before reaching speed. Damage never reverses. No morph dissolve, hidden cut, snap transformation, pop-in, pop-out, teleportation, duplicate person, replacement face, changing clothing, changing body proportions, geometry melt, respawn, spontaneous repair or unexplained object multiplication. Large objects keep identity, scale and orientation until a visible force changes them.';
+}
+function subjectObjectLock(){
+ return 'SUBJECT + OBJECT PERSISTENCE LOCK:\nWithin this shot, each adult keeps the same face, age, hair, clothing, body proportions and accessories from first frame to last. Buildings, windows, roofs, poles, trees, fences, vehicles and large debris preserve geometry and identity unless visibly altered by a physical event. Across panels, reuse a recurring adult only when continuity context establishes that it is the same person; otherwise do not invent false character continuity.';
+}
+function audioDirector(stage){
+ var n=stageNumber(stage);
+ var phase=n<=2?'quiet tension with restrained ambience':n<=5?'rising environmental pressure with selective impacts':n<=8?'powerful hazard sound with controlled dynamic peaks':n===9?'post-impact atmosphere with space, distant detail and natural decay':n<=12?'human-scale ambience with restrained work / movement sounds':'quiet recovery / reflective ambience';
+ return 'PROFESSIONAL CINEMATIC AUDIO MIX:\nAudio phase: '+phase+'. Use natural, scene-specific sound only unless music or dialogue is explicitly requested. Hierarchy: primary environmental hazard/ambience first, secondary environment second, occasional physically motivated impacts third, subtle human movement/reaction last. No repetitive identical impact loop, constant metallic clanging, random cinematic boom, camera whoosh, high-pitched continuous screech, artificial bass hit, unsupported explosion, or modern siren/alarm. Keep dynamic range: quieter tension → rising pressure → peak → natural decay when appropriate. Every major audible event must have a visible cause and occur in sync with the image.';
+}
+function debrisPhysicsLock(){
+ return 'DEBRIS + DAMAGE PHYSICS LOCK:\nDebris obeys mass, gravity, wind direction and momentum. Light debris may rise higher; shingles and small boards may travel farther; heavy timber, furniture and structural fragments stay lower and move with believable inertia. No hovering heavy objects, reverse-direction debris without cause, giant foreground debris that blocks the main hazard, or sudden scale changes. Damage accumulates irreversibly: broken remains broken; detached remains detached; collapsed elements do not rebuild.';
+}
+function cinematicMasterLock(stage,scientific){
+ return 'MASTER CINEMATIC CONSISTENCY LOCK — HIGH PRIORITY:\n'
+  +intensityDirector(stage)+'\n'
+  +transitionMorphLock()+'\n'
+  +subjectObjectLock()+'\n'
+  +weatherContinuityLock(stage)+'\n'
+  +debrisPhysicsLock()+'\n'
+  +cameraDirector(stage,scientific)+'\n'
+  +audioDirector(stage)+'\n'
+  +'ERA + ACCURACY: every visible and audible element must fit the locked year, location and verified event context. Never add modern vehicles, electronics, warning systems, emergency gear, architecture, tools, signage or sound cues unless supported. Historical accuracy outranks drama.\n'
+  +'FRAME QUALITY TEST: first, middle and final frames must preserve style, subject identity, environment geometry, weather logic, lens perspective and story-stage boundaries. Intensity comes from scale, staging, timing, depth and believable reaction — never random chaos.';
+}
+function qualityPromptCompatible(text){
+ var s=String(text||'');
+ return s.includes('MASTER CINEMATIC CONSISTENCY LOCK — HIGH PRIORITY:')
+   &&s.includes('MICRO-TRANSITION + MORPH CONTROL:')
+   &&s.includes('WEATHER + ATMOSPHERE CONTINUITY LOCK:')
+   &&s.includes('CINEMATIC CAMERA DIRECTOR:')
+   &&s.includes('PROFESSIONAL CINEMATIC AUDIO MIX:')
+   &&s.includes('DEBRIS + DAMAGE PHYSICS LOCK:');
+}
 function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanNarrationInstructions(value):String(value||'').trim();}
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[6]=clean(parts[6]);parts[7]=clean(parts[7]);return JSON.stringify(parts);}catch(e){return '';}}
 function pinScene(card){
@@ -444,7 +531,7 @@ function build(card){
  scene=sanitizeSceneForStyle(scene);
  var familyProgression=progression(stage,special);
  var scientific=special?!!special.scientific:scientificScene(card,scene);
- var camera=Number(stage.slice(1))%3===1?'A restrained forward tracking move with clear parallax':Number(stage.slice(1))%3===2?'A slow lateral track revealing the scene depth':'A restrained push-in toward the principal action';
+ var camera=cameraDirector(stage,scientific);
  var modeLine=style()==='real'
    ? (scientific?'Photorealistic historical documentary explanatory visualization. This is a scientific cutaway, not an eyewitness human-camera scene. No anime or illustration.':'Photorealistic REAL HUMAN historical documentary recreation. No anime or illustration.')
    : (colorMode()==='bw'?'Serious 2D historical graphic-novel/anime animation in STRICT true black-and-white grayscale only. No live action, no photorealism, no color, no sepia, no tint, no selective color.':'Serious 2D historical graphic-novel/anime animation. No live action.');
@@ -472,9 +559,10 @@ function build(card){
    +'\n\nPANEL SCENE:\n'+scene
    +'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(special&&special.narrative?special.narrative:(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.'))
    +'\n\nTIMING:\n'+timing
-   +'\n\nCAMERA:\n'+(special&&special.camera?special.camera:(camera+'. Fixed focal length, natural depth and occlusion. Never pass through solid objects unnaturally. No cuts, transitions, orbit or time-lapse. This panel uses its own camera behavior; the HOOK’s forward-charge behavior does not automatically apply here.'))
-   +'\n\nPHYSICS AND TIME:\n'+physics
-   +'\n\nAUDIO:\n'+audio
+   +'\n\n'+cinematicMasterLock(stage,scientific)
+   +'\n\nCAMERA:\n'+(special&&special.camera?(special.camera+' '+camera):camera)
+   +'\n\nPHYSICS AND TIME:\n'+physics+' '+debrisPhysicsLock()
+   +'\n\nAUDIO:\n'+audio+'\n'+audioDirector(stage)
    +'\n\nNEGATIVE:\n'+negative
    +'\n\nSTATUS: '+(special&&special.approved?(special.approvedLabel+' — locked final prompt.'):'FOR TESTING — review historical details and rendered continuity before approval.');
  return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,result):result;
@@ -488,6 +576,7 @@ function rebuildTextPrompt(card){
  pinScene(card);
  var text=build(card);
  if(!promptStyleCompatible(text))throw Error('Visual-style lock mismatch. Rebuild the panel prompt before approval.');
+ if(!qualityPromptCompatible(text))throw Error('Cinematic consistency lock is incomplete. Rebuild the panel prompt before approval.');
  card.dataset.textVideoPrompt=text;
  card.dataset.textVideoSignature=signature(card);
  var ta=card.querySelector('.text-video-prompt');
@@ -497,7 +586,7 @@ function rebuildTextPrompt(card){
  syncGlobalControl();
  return text;
 }
-function valid(card){return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function valid(card){return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
 function completionReady(card){
  if(!supports(card))return false;
  if(state(card).mode!=='text')return true;
@@ -638,7 +727,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.39.6',supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.40.0',supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,cinematicMasterLock:cinematicMasterLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
