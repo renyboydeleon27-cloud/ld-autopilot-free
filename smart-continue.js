@@ -1,4 +1,4 @@
-/* LD AUTO v3.39.5 — persistent current-panel viewport restore on app return. */
+/* LD AUTO v3.39.6 — visual-style approval gate + persistent current-panel return. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -551,10 +551,14 @@ async function fixPanel(card,payload){
   if(!r.ok||!d.ok)throw new Error(d.error||('Panel Fix HTTP '+r.status));
   const field=card.querySelector('.video-scene');
   if(!field)throw new Error('Text-to-Video panel scene is unavailable.');
-  field.value=String(d.scene||'').trim();
+  const safeScene=window.LDVideoModes?.sanitizeSceneForStyle
+    ? window.LDVideoModes.sanitizeSceneForStyle(d.scene)
+    : String(d.scene||'').trim();
+  if(!safeScene)throw new Error('AI panel fix returned an empty scene after visual-style safety cleanup.');
+  field.value=safeScene;
   field.dispatchEvent(new Event('input',{bubbles:true}));
   field.dispatchEvent(new Event('change',{bubbles:true}));
-  return d;
+  return {...d,scene:safeScene};
 }
 async function prepareHook(card){
   let choices=window.LDHookChoiceSystem?.choices?.()||[];
@@ -635,6 +639,9 @@ async function prepareTextToVideo(card){
   stopPhase();
   const auditedKey=auditCacheKey(payload);
   const finalPrompt=window.LDVideoModes?.prompt?.(card)||payload.currentPrompt;
+  if(window.LDVideoModes?.promptStyleCompatible&&!window.LDVideoModes.promptStyleCompatible(finalPrompt)){
+    throw new Error('Visual-style lock mismatch: this project is locked to '+(visualMode()==='anime'?'Anime':'Real Human')+'. The panel prompt was blocked before approval.');
+  }
   let finalPayload=panelPayload(card);
   if(auditCacheKey(finalPayload)!==auditedKey){
     status('SMART CONTINUE · Final prompt changed after rebuild. Verifying the exact final version…','working');
@@ -644,7 +651,11 @@ async function prepareTextToVideo(card){
       throw new Error('Final prompt changed after audit and still needs review: '+issues);
     }
   }
-  const copied=await copyText(finalPrompt);
+  const exactPrompt=window.LDVideoModes?.prompt?.(card)||finalPrompt;
+  if(window.LDVideoModes?.promptStyleCompatible&&!window.LDVideoModes.promptStyleCompatible(exactPrompt)){
+    throw new Error('Visual-style lock mismatch after final rebuild. SMART CONTINUE will not approve this panel.');
+  }
+  const copied=await copyText(exactPrompt);
   markSmartReady(card);
   buttonLabel(approveLabel(card));
   status('🟡 '+card.dataset.stage+' READY FOR FLOW · NOT YET APPROVED · exact prompt signature verified'+(copied?' · prompt copied automatically':'')+'. Generate in Flow, review the clip, then press '+approveLabel(card)+'.','pass');
@@ -889,5 +900,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.39.5',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()})};
+window.LDSmartContinue={version:'3.39.6',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()})};
 })();
