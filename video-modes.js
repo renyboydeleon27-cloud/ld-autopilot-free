@@ -1,6 +1,6 @@
-/* LD AUTO v3.39.0 — monochrome anime + text-only historical accuracy lock. */
+/* LD AUTO v3.39.6 — absolute visual-style lock + Tri-State P14 repair. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.39.0-monochrome-anime-text-accuracy-v1';
+const T2V_POLICY_VERSION='3.39.6-absolute-style-lock-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -42,9 +42,9 @@ function refreshAutoDnaUi(root){
 function universalHookDna(){
  if(colorMode()!=='bw')return '';
  if(style()==='anime'){
-   return 'UNIVERSAL MONOCHROME ANIME HOOK DNA:\nSTRICT true black-and-white grayscale from frame 1 through frame 10.\nNo color.\nNo sepia.\nNo tint.\nNo selective color.\nSerious 2D historical anime / graphic-novel rendering.\nDetailed hand-drawn linework.\nGrayscale tonal shading and restrained ink-like contrast.\nGrounded realistic adult anatomy.\nHistorically accurate environment and period objects.\nDocumentary-style cinematic staging.\nNo live action.\nNo photorealism.\nNo glossy 3D CGI.\nNo chibi.\nBLACK-AND-WHITE PRIORITY: every visible element must remain true grayscale for the entire shot. If an inherited instruction conflicts with this rule, the monochrome rule wins.';
+   return 'UNIVERSAL MONOCHROME ANIME VISUAL DNA — HOOK + P1–P14:\nSTRICT true black-and-white grayscale from frame 1 through frame 10.\nNo color.\nNo sepia.\nNo tint.\nNo selective color.\nSerious 2D historical anime / graphic-novel rendering.\nDetailed hand-drawn linework.\nGrayscale tonal shading and restrained ink-like contrast.\nGrounded realistic adult anatomy.\nHistorically accurate environment and period objects.\nDocumentary-style cinematic staging.\nNo live action.\nNo photorealism.\nNo glossy 3D CGI.\nNo chibi.\nBLACK-AND-WHITE PRIORITY: every visible element must remain true grayscale for the entire shot. If an inherited instruction conflicts with this rule, the monochrome rule wins.';
  }
- return 'UNIVERSAL APPROVED HOOK DNA:\nSTRICT true black-and-white grayscale.\nNo color.\nNo sepia.\nNo tint.\nNo selective color.\nPhotorealistic historical live-action.\nArchival documentary / newsreel capture.\nSoft optical detail.\nOrganic film grain.\nSlight gate weave.\nRestrained exposure flicker.\nSame visual world as the approved HOOK for the current episode.\nBLACK-AND-WHITE PRIORITY: The entire 10-second shot must remain true grayscale from start to finish. No colorization or color returning in skin, clothing, sky, water, vegetation, fire, lightning, debris or any other visible element. If any inherited instruction conflicts with this monochrome rule, ignore that conflicting color instruction.';
+ return 'UNIVERSAL MONOCHROME REAL-HUMAN VISUAL DNA — HOOK + P1–P14:\nSTRICT true black-and-white grayscale.\nNo color.\nNo sepia.\nNo tint.\nNo selective color.\nPhotorealistic historical live-action.\nArchival documentary / newsreel capture.\nSoft optical detail.\nOrganic film grain.\nSlight gate weave.\nRestrained exposure flicker.\nSame visual world as the approved HOOK for the current episode.\nBLACK-AND-WHITE PRIORITY: The entire 10-second shot must remain true grayscale from start to finish. No colorization or color returning in skin, clothing, sky, water, vegetation, fire, lightning, debris or any other visible element. If any inherited instruction conflicts with this monochrome rule, ignore that conflicting color instruction.';
 }
 function cleanLocation(value){
  var s=String(value||'').trim();
@@ -76,10 +76,45 @@ function stripColorConflicts(prompt){
  }
  return s;
 }
+function absoluteStyleLock(){
+ if(style()==='anime'){
+   return colorMode()==='bw'
+     ? 'ABSOLUTE RENDERING MODE — HIGHEST PRIORITY: 2D HISTORICAL ANIME ONLY. Render every frame as hand-drawn 2D historical anime / graphic-novel animation in strict true black-and-white grayscale. NEVER render live-action footage, photorealistic people, photographic skin, camera-captured humans, 3D CGI humans, or a documentary/newsreel photographic look. Documentary language elsewhere refers only to composition and historical seriousness, NOT to live-action rendering. If any other wording conflicts, THIS 2D ANIME LOCK WINS.'
+     : 'ABSOLUTE RENDERING MODE — HIGHEST PRIORITY: 2D HISTORICAL ANIME ONLY. Render every frame as hand-drawn 2D historical anime / graphic-novel animation. NEVER render live-action footage, photorealistic people, photographic skin, camera-captured humans, or 3D CGI humans. Documentary language elsewhere refers only to composition and historical seriousness, NOT to live-action rendering. If any other wording conflicts, THIS 2D ANIME LOCK WINS.';
+ }
+ return colorMode()==='bw'
+   ? 'ABSOLUTE RENDERING MODE — HIGHEST PRIORITY: PHOTOREALISTIC REAL HUMAN LIVE ACTION ONLY in strict true black-and-white grayscale. No anime, no illustration, no graphic-novel rendering, no 3D CGI people. If any other wording conflicts, THIS REAL-HUMAN LOCK WINS.'
+   : 'ABSOLUTE RENDERING MODE — HIGHEST PRIORITY: PHOTOREALISTIC REAL HUMAN LIVE ACTION ONLY. No anime, no illustration, no graphic-novel rendering, no 3D CGI people. If any other wording conflicts, THIS REAL-HUMAN LOCK WINS.';
+}
+function sanitizeSceneForStyle(value){
+ var s=String(value||'').trim();
+ if(style()==='anime'){
+   s=s.replace(/\bphotorealistic\s+(?:real\s+human\s+)?(?:historical\s+)?live[- ]action\b/gi,'2D historical anime')
+      .replace(/\bphotorealistic\s+real\s+human\b/gi,'2D historical anime')
+      .replace(/\breal[- ]human\s+live[- ]action\b/gi,'2D historical anime');
+ }else{
+   s=s.replace(/\bserious\s+2D\s+historical\s+(?:graphic[- ]novel\/)?anime(?:\s+animation)?\b/gi,'photorealistic historical live action')
+      .replace(/\b2D\s+historical\s+anime(?:\s*\/\s*graphic[- ]novel)?\b/gi,'photorealistic historical live action');
+ }
+ return cleanSceneText(s);
+}
+function promptStyleCompatible(text){
+ var s=String(text||'');
+ if(style()==='anime'){
+   var affirmative=/ABSOLUTE RENDERING MODE[^\n]*2D HISTORICAL ANIME ONLY/i.test(s)
+     && /(?:2D historical anime|graphic[- ]novel\/anime animation|hand-drawn 2D historical anime)/i.test(s);
+   var opposite=/(?:^|\n)\s*(?:PHOTOREALISTIC\s+REAL\s+HUMAN|PHOTOREALISTIC\s+LIVE[- ]ACTION|Photorealistic historical live[- ]action)/im.test(s);
+   return affirmative&&!opposite;
+ }
+ var affirmativeReal=/ABSOLUTE RENDERING MODE[^\n]*PHOTOREALISTIC REAL HUMAN LIVE ACTION ONLY/i.test(s)
+   && /Photorealistic REAL HUMAN historical documentary recreation|PHOTOREALISTIC REAL HUMAN LIVE ACTION ONLY/i.test(s);
+ var oppositeAnime=/(?:^|\n)\s*(?:Serious 2D historical graphic[- ]novel\/anime animation|AUTO VISUAL DNA — MONOCHROME HISTORICAL ANIME)/im.test(s);
+ return affirmativeReal&&!oppositeAnime;
+}
 function withLock(prompt){
  var base=stripColorConflicts(stripLock(prompt));
  if(!ready())return base;
- return base+'\n\n'+(universalHookDna()?universalHookDna()+'\n\n':'')+lock();
+ return absoluteStyleLock()+'\n\n'+base+'\n\n'+(universalHookDna()?universalHookDna()+'\n\n':'')+lock();
 }
 function sceneFrom(card){var existing=state(card).scene;if(existing)return existing;
 var image=card.querySelector('.image-prompt').value||'';
@@ -357,8 +392,23 @@ function nargisPanel(stage){
  }
  return base;
 }
+function triStateTornadoPanel(stage){
+ var t=String(current()||'').toLowerCase();
+ if(!(t.includes('tri-state tornado')&&t.includes('1925'))||stage!=='P14')return null;
+ return {
+   approved:false,
+   scientific:false,
+   scene:'Final reflective aftermath along the Tri-State Tornado track in a historically appropriate 1925 Midwestern town setting. The violent tornado is gone. Show a quiet damaged street edge or neighborhood with surviving period homes, broken trees, cleared debris, salvaged lumber, and a small number of adult residents calmly looking across the storm-scarred community as recovery continues. Keep clothing, buildings, roads, utility details, tools, and any vehicles appropriate to 1925 Missouri, Illinois, or Indiana. The frame should communicate lasting community memory and the need for future preparedness through grounded aftermath details only, without inventing a specific warning system, agency, memorial, policy, technology, or statistic. No active funnel, no new destruction, no modern sirens, no modern emergency vehicles, no modern signage, and no on-screen text.',
+   narrative:'Close on the lasting historical legacy of the Tri-State Tornado without introducing a new disaster beat or unsupported modern preparedness system.',
+   timing:'0.0–2.0s: Establish the quiet post-disaster 1925 Midwestern setting with storm damage still readable and no active tornado.\n2.0–7.0s: Slowly reveal adults, surviving structures, cleared debris, and restrained recovery activity that communicates the event’s lasting community impact.\n7.0–10.0s: End on a reflective wide composition of the storm-scarred town and ongoing recovery, with no new hazard or dramatic escalation.',
+   camera:'One restrained slow push or lateral documentary-style move rendered strictly in the locked 2D historical-anime style. Keep the final image reflective rather than action-heavy. No cuts, no transition, no orbit, no time-lapse.',
+   physics:'The tornado has already passed. Debris remains where plausible; recovery activity is slow and human-scale. No sudden rebuilding, no new structural collapse, no active vortex, no impossible wind, and no invented modern preparedness equipment.',
+   audio:'Quiet post-storm ambience, light wind, distant wood and cleanup sounds, restrained adult movement. No tornado roar, no voiceover, no music.',
+   extraNegative:'No live action. No photorealistic people. No photographic skin. No 3D CGI humans. No active tornado. No new destruction. No modern sirens, emergency vehicles, radar screens, electronic warning devices, captions, titles, logos, or watermark.'
+ };
+}
 function eventPanel(stage){
- return rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
+ return triStateTornadoPanel(stage)||rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
 }
 function progression(stage,special){
  if(special)return null;
@@ -391,6 +441,7 @@ function build(card){
  var stage=card.dataset.stage;
  var special=eventPanel(stage);
  if(special&&special.scene)scene=special.scene;
+ scene=sanitizeSceneForStyle(scene);
  var familyProgression=progression(stage,special);
  var scientific=special?!!special.scientific:scientificScene(card,scene);
  var camera=Number(stage.slice(1))%3===1?'A restrained forward tracking move with clear parallax':Number(stage.slice(1))%3===2?'A slow lateral track revealing the scene depth':'A restrained push-in toward the principal action';
@@ -409,8 +460,11 @@ function build(card){
  var negative=scientific
    ? 'No children, gore, human figures unless the panel specifically requires them, fantasy energy, glowing sci-fi fault lines, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.'
    : 'No children, gore, duplicated people, distorted anatomy, morphing, giant insects, unsupported destruction, unrelated disaster, modern objects outside the era, text, captions, logos or watermark.';
+ if(style()==='anime')negative+=' ABSOLUTE STYLE NEGATIVE: no live action, no photorealistic humans, no photographic skin, no newsreel-looking real people, no 3D CGI people.';
+ else negative+=' ABSOLUTE STYLE NEGATIVE: no anime, no illustration, no graphic-novel people, no 3D CGI people.';
  if(special&&special.extraNegative)negative+=' '+special.extraNegative;
  var result='VIDEO PROMPT — EXACTLY 10 SECONDS\n'+current()+' · '+stage+'\n\n'
+   +absoluteStyleLock()+'\n\n'
    +(universalHookDna()?universalHookDna()+'\n\n':'')
    +'TEXT-TO-VIDEO. Create the entire scene from this description. No reference image is required. '+(format()==='shorts'?'Portrait 9:16.':'Landscape 16:9.')+' One continuous shot. '+modeLine
    +'\n\n'+lock()
@@ -433,6 +487,7 @@ function completeTextPrompt(text){
 function rebuildTextPrompt(card){
  pinScene(card);
  var text=build(card);
+ if(!promptStyleCompatible(text))throw Error('Visual-style lock mismatch. Rebuild the panel prompt before approval.');
  card.dataset.textVideoPrompt=text;
  card.dataset.textVideoSignature=signature(card);
  var ta=card.querySelector('.text-video-prompt');
@@ -442,7 +497,7 @@ function rebuildTextPrompt(card){
  syncGlobalControl();
  return text;
 }
-function valid(card){return completeTextPrompt(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function valid(card){return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
 function completionReady(card){
  if(!supports(card))return false;
  if(state(card).mode!=='text')return true;
@@ -583,7 +638,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.39.6',supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
