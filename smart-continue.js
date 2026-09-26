@@ -1,4 +1,4 @@
-/* LD AUTO v3.40.1 — cinematic quality + character diversity approval gate + persistent current-panel return. */
+/* LD AUTO v3.40.2 — full-prompt audit + completed-production Final Audit routing + persistent current-panel return. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -33,6 +33,13 @@ function stageDone(card){return !!card?.querySelector('.done-toggle')?.checked;}
 function firstIncompleteCard(cards){
   return (cards||[]).find(card=>!stageDone(card))||null;
 }
+function eligibleCards(){
+  return [...stages.querySelectorAll('.stage-card')].filter(eligible);
+}
+function allStagesDone(){
+  const cards=eligibleCards();
+  return cards.length>0&&cards.every(stageDone);
+}
 
 function showToast(message){
   if(!toast)return;
@@ -64,8 +71,9 @@ function eligible(card){
   return !!card&&/^(HOOK|P(?:[1-9]|1[0-4])|ENDING|THUMBNAIL)$/.test(card.dataset.stage||'');
 }
 function currentCard(){
-  const cards=[...stages.querySelectorAll('.stage-card')].filter(eligible);
+  const cards=eligibleCards();
   if(!cards.length)return null;
+  if(cards.every(stageDone))return null;
 
   const session=readSmartSession();
   const remembered=session?.targetStage?cards.find(card=>card.dataset.stage===session.targetStage):null;
@@ -89,6 +97,7 @@ function currentCard(){
   return cards[cards.length-1]||cards[0];
 }
 function currentTargetText(){
+  if(allStagesDone())return 'CURRENT TARGET: FINAL AUDIT';
   const card=currentCard();
   return card?'CURRENT TARGET: '+(card.dataset.stage||'CURRENT'):'CURRENT TARGET: —';
 }
@@ -318,8 +327,16 @@ function smartReadyStillCurrent(card){
     && card.dataset.smartReadySignature===readinessSignature(card);
 }
 function restoreSmartSession(){
-  const cards=[...stages.querySelectorAll('.stage-card')].filter(eligible);
+  const cards=eligibleCards();
   if(!cards.length)return null;
+  if(cards.every(stageDone)){
+    writeSmartSession({targetStage:'',pending:null});
+    clearSmartState();
+    buttonLabel('🔎 FINAL AUDIT');
+    status('✅ PRODUCTION COMPLETE · All stages are Done. Next step: Final Audit.','pass');
+    updateTargetLabel();
+    return null;
+  }
 
   let session=readSmartSession();
   let target=session?.targetStage?cards.find(card=>card.dataset.stage===session.targetStage):null;
@@ -354,8 +371,8 @@ function restoreSmartSession(){
 let lastHiddenAt=0;
 let viewportRestoreTimer=null;
 function currentSessionCard(){
-  const cards=[...stages.querySelectorAll('.stage-card')].filter(eligible);
-  if(!cards.length)return null;
+  const cards=eligibleCards();
+  if(!cards.length||cards.every(stageDone))return null;
   const session=readSmartSession();
   const remembered=session?.targetStage?cards.find(card=>card.dataset.stage===session.targetStage):null;
   if(remembered&&!stageDone(remembered))return remembered;
@@ -389,13 +406,13 @@ function startPhase(label,stage){
   update();
   phaseTimer=setInterval(update,1000);
 }
-async function fetchWithTimeout(url,options,timeoutMs=55000){
+async function fetchWithTimeout(url,options,timeoutMs=80000){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
     return await fetch(url,{...options,signal:controller.signal});
   }catch(e){
-    if(e?.name==='AbortError')throw new Error('AI request timed out. Tap SMART CONTINUE to retry.');
+    if(e?.name==='AbortError')throw new Error('AI request timed out. The current panel was preserved. Retry once, or review it and approve manually.');
     throw e;
   }finally{
     clearTimeout(timer);
@@ -419,7 +436,7 @@ function panelPayload(card){
     sharedDetails:String(continuity.details||'').trim(),
     narration:String(card.querySelector('.narration')?.value||'').trim(),
     currentScene:String(sceneField?.value||card.dataset.videoScene||'').trim(),
-    currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim().slice(0,14000),
+    currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim(),
     eventSpecificOverride,
     progressionVersion:String(progression?.version||window.LDDisasterProgression?.version||''),
     progressionFamily:String(progression?.familyLabel||''),
@@ -686,6 +703,26 @@ async function prepare(card){
   if(mode==='text')return prepareTextToVideo(card);
   return prepareImageToVideo(card);
 }
+function openFinalAudit(){
+  writeSmartSession({targetStage:'',pending:null});
+  clearSmartState();
+  buttonLabel('🔎 FINAL AUDIT');
+  updateTargetLabel();
+  status('✅ PRODUCTION COMPLETE · Opening Final Audit.','pass');
+  window.LDProductionDNA?.refreshFinalCheck?.();
+  window.LDFinalPackage?.refresh?.();
+  const topNext=document.getElementById('nextIncompleteBtn');
+  if(topNext){
+    topNext.click();
+    return;
+  }
+  const auditCard=document.getElementById('auditCard');
+  if(auditCard){
+    auditCard.classList.remove('hidden');
+    auditCard.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
+
 async function run(){
   if(busy)return;
   busy=true;
@@ -701,6 +738,11 @@ async function run(){
       if(!t)throw new Error('Enter the disaster topic first.');
       document.getElementById('buildBtn')?.click();
       await new Promise(r=>setTimeout(r,350));
+    }
+
+    if(allStagesDone()){
+      openFinalAudit();
+      return;
     }
 
     let card=currentCard();
@@ -724,9 +766,8 @@ async function run(){
       clearCardSmartReady(card);
       const next=nextCard(card);
       if(!next){
-        buttonLabel('✅ PRODUCTION COMPLETE');
-        status('✅ '+approvedStage+' approved · Approved Memory Saved. Production complete.','pass');
         showToast('Approved Memory Saved · '+approvedStage);
+        openFinalAudit();
         return;
       }
       setOpen(next);
@@ -912,5 +953,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.40.1',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()})};
+window.LDSmartContinue={version:'3.40.2',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
