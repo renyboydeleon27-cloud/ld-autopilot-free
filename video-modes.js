@@ -22,6 +22,7 @@ function titleDefaults(topic){
    }
  }
  location=String(location||'').replace(/\b(?:1\d{3}|20\d{2}|2100)\b/g,'').replace(/^[\s,;:\-]+|[\s,;:\-]+$/g,'').trim();
+ if(/\bSan Francisco Earthquake\b/i.test(raw)&&/^California,\s*USA$/i.test(location))location='San Francisco, California, USA';
  return {year:year,location:location,details:''};
 }
 function defaults(topic){return titleDefaults(topic);}
@@ -35,7 +36,7 @@ function hydrateContinuityFromTitle(){
  window.ldVideoContinuity=next;
  return next;
 }
-function continuity(){return Object.assign(defaults(current()),window.ldVideoContinuity||{});}
+function continuity(){var c=Object.assign(defaults(current()),window.ldVideoContinuity||{});if(/\bSan Francisco Earthquake\b/i.test(current())&&/^California,\s*USA$/i.test(String(c.location||'').trim()))c.location='San Francisco, California, USA';return c;}
 function ready(){var c=continuity();return /^\d{4}$/.test(c.year)&&!!c.location.trim();}
 function monochromeRequired(){return colorMode()==='bw';}
 function generatedVisualDna(){
@@ -97,9 +98,9 @@ function stripColorConflicts(prompt){
       .replace(/\bfull color\b/gi,'black-and-white grayscale')
       .replace(/\bcolored\b/gi,'monochrome')
       .replace(/\bcolorized\b/gi,'monochrome')
-      .replace(/\bsepia\b/gi,'black-and-white grayscale')
+      .replace(/(?<!no )\bsepia\b/gi,'black-and-white grayscale')
       .replace(/\btinted\b/gi,'black-and-white grayscale')
-      .replace(/\bselective color\b/gi,'black-and-white grayscale');
+      .replace(/(?<!no )\bselective color\b/gi,'black-and-white grayscale');
  }
  return s;
 }
