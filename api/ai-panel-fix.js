@@ -69,6 +69,11 @@ export default async function handler(req,res){
         ? "DISASTER-FAMILY PROGRESSION ROLE: "+progressionRole+". STAGE GUARD: "+progressionRule+" Rewrite the scene so its MAIN visual beat unmistakably serves this stage, while treating the progression rule as story structure only—not as permission to invent event facts."
         : ""),
     "Make the scene concrete and generator-friendly: subject, environment, period objects, focal action, visible hazard state, and what must NOT appear yet.",
+    "REFINEMENT PRIORITY: preserve identity and geometry. Do not introduce face/body/clothing morphing, character duplication, teleportation, pop-in/pop-out, object respawn, geometry melting, spontaneous repair, or unexplained multiplication.",
+    "WEATHER CONTINUITY: preserve the established cloud/light/wind/precipitation/visibility/ground state unless this exact panel calls for a progressive change. Never reset weather arbitrarily.",
+    "CINEMATIC STAGING: make the main action immediately readable with foreground/midground/background depth and a professional movie-like composition. Do not create random chaos merely to increase intensity.",
+    "PHYSICS: preserve believable debris mass, gravity, wind direction, momentum and irreversible damage. Heavy debris must not hover or dominate the foreground without cause.",
+    "AUDIO-SAFE VISUAL SCENE: do not add unsupported sirens, alarms, explosions or impact sources that would force annoying or historically inaccurate sound design.",
     "Adults only unless the existing prompt explicitly requires otherwise. No gore.",
     visualMode==="anime"
       ? "ABSOLUTE VISUAL MODE: 2D historical anime / graphic-novel ONLY. Never return or encourage photorealistic, live-action, photographic, real-human, newsreel-looking, or 3D CGI people. Documentary wording may describe composition only, never rendering style."
