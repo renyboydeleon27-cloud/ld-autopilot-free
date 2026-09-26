@@ -35,6 +35,28 @@ function choices(ctx){var family=Object.prototype.hasOwnProperty.call(data,ctx.f
  var canonical=/^desert locust(?: crisis)?\s*(?:[—–-]\s*)?\(?2020\)?$/i.test((ctx.topic||'').trim());
  if(family==='insect'&&i===0&&canonical&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDLocustLaundryHook&&window.LDLocustLaundryHook.prompt){result.prompt=window.LDLocustLaundryHook.prompt();result.status='APPROVED';result.source='Topic-specific';result.concept='Peaceful laundry → subtle dimming → adult turns → swarm arrives → six seconds of forward travel.';}
  if(family==='earthquake'&&i===0&&/^great kant[oō] earthquake\s*\(?1923\)?$/i.test((ctx.topic||'').trim())&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDEarthquakeTwistHookV315&&window.LDEarthquakeTwistHookV315.prompt){result.prompt=window.LDEarthquakeTwistHookV315.prompt();result.status='APPROVED';result.source='Topic-specific';}
+ // Approved Alternative 2 for black-and-white historical anime earthquake Shorts.
+ if(family==='earthquake'&&i===1&&ctx.mode==='anime'&&ctx.colorMode==='bw'&&ctx.format!=='longform'){
+   result.prompt=[
+     'LIVING DISASTER BOOK — APPROVED ALTERNATIVE HOOK 2 — MIRROR CRACK',
+     'TOPIC: '+ctx.topic,
+     'Exactly 10 seconds. Portrait 9:16. Text-to-video. One continuous smoothly advancing camera shot. Historical 2D anime, STRICT TRUE BLACK-AND-WHITE GRAYSCALE throughout: no color, sepia, tint or selective color. Dramatic lighting, organic film grain. No text, captions, logos or voiceover.',
+     'HISTORICAL CONTINUITY: Match the selected earthquake year, location, people, clothing, room, street, architecture and infrastructure of P1–P14. Do not substitute a different earthquake or modern details.',
+     '0.0–2.0s: A beautiful adult woman with slightly damp hair calmly combs her hair before a large framed mirror in a historically appropriate room. Camera behind her at shoulder height. Her back, reflected face and the entire mirror are visible together. Quiet ordinary life.',
+     'ONE-COMB CONTINUITY LOCK: She holds exactly ONE physical comb in ONE hand through the interior scene. The comb in the mirror is the reflection of that SAME comb, never another object. Her other hand is empty. Synchronize hand, comb, grip and reflection in every frame. No extra hands or duplicate comb.',
+     '2.0–3.5s: A low earthquake rumble. A small bottle trembles, then the mirror frame vibrates. She stops combing while still holding the single comb; her reflected eyes notice the movement. Camera slowly pushes toward the mirror.',
+     '3.5–4.8s: ONE strong earthquake jolt. A crack forms near her reflected face and spreads across the glass. Keep her startled reflection readable. Small fragments fall naturally; the mirror remains framed.',
+     '4.8–5.5s: The camera accelerates into the dark opening at the crack center. Fractures fill the frame; pass through the actual opening in one seamless transition synchronized with a deep impact sound.',
+     '5.5–10.0s: Emerge immediately at street level into the same historical earthquake at peak impact. Camera drives FORWARD continuously. Buildings shake; plausible roof and masonry sections progressively fail ahead. Adults flee, dust surges and debris falls with convincing gravity. Foreground debris, people in the middle distance and larger structural failures farther ahead. End on the strongest clear collapse while still moving forward.',
+     'LOCKS: Clear cause and effect: quake → mirror crack → camera through crack → exterior impact. Same black-and-white anime world inside and outside. Stable character anatomy and synchronized reflection. No random cuts, repeated jolts, exploding mirror, floating debris, duplicate comb or mismatched reflection. No music or voiceover.',
+     'STATUS: APPROVED ALTERNATIVE HOOK 2.'
+   ].join('\\n\\n');
+   result.status='APPROVED';
+   result.source='Approved earthquake alternative';
+   result.title='Mirror Crack Transition — Alternative 2';
+   result.concept='One comb before mirror → tremor → mirror crack → camera through crack → forward earthquake destruction.';
+   result.why='Approved black-and-white anime mirror hook with exactly one physical comb and synchronized reflection.';
+ }
  var nargis=/\bcyclone\s+nargis\b/i.test(ctx.topic||'')&&/\b2008\b/.test(ctx.topic||'');
  if(family==='cyclone'&&i===0&&nargis&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDCycloneNargisHook&&window.LDCycloneNargisHook.prompt){
    result.prompt=window.LDCycloneNargisHook.prompt();
