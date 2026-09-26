@@ -436,7 +436,7 @@ function triStateTornadoPanel(stage){
  };
 }
 function sanFrancisco1906P2(stage){
- if(stage!=='P2'||!/\\bSan Francisco Earthquake\\b/i.test(current())||!/\\b1906\\b/.test(current()))return null;
+ if(stage!=='P2'||!/\bSan Francisco Earthquake\b/i.test(current())||!/\b1906\b/.test(current()))return null;
  return {
    approved:false,
    scientific:false,
