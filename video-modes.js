@@ -1,6 +1,6 @@
 /* LD AUTO v3.40.4 — title-driven shared setting + cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.40.6-sf-p2-surface-v1';
+const T2V_POLICY_VERSION='3.40.7-sf-p2-audit-consistency-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -435,6 +435,7 @@ function triStateTornadoPanel(stage){
    extraNegative:'No live action. No photorealistic people. No photographic skin. No 3D CGI humans. No active tornado. No new destruction. No modern sirens, emergency vehicles, radar screens, electronic warning devices, captions, titles, logos, or watermark.'
  };
 }
+function isSanFrancisco1906P2(stage){return stage==='P2'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current());}
 function sanFrancisco1906P2(stage){
  if(stage!=='P2'||!/\bSan Francisco Earthquake\b/i.test(current())||!/\b1906\b/.test(current()))return null;
  return {
@@ -477,6 +478,7 @@ function previousApprovedContinuity(stage){
  return summary.slice(0,620);
 }
 function intensityDirector(stage){
+ if(isSanFrancisco1906P2(stage))return 'INTENSITY: normal life only. Fault stress is invisible and explained by narration; show no warning sign, concern, shaking, ominous change, fire, damage or buildup before P3.';
  var n=stageNumber(stage),fam=familyKey();
  if(n===1)return 'INTENSITY: restrained normal-world tension. The scene must feel alive and cinematic, but do not foreshadow with impossible destruction.';
  if(n===2)return 'INTENSITY: subtle unease and controlled buildup. Increase atmosphere and anticipation without stealing the next panel’s hazard reveal.';
@@ -490,6 +492,7 @@ function intensityDirector(stage){
  return 'INTENSITY: reflective cinematic closure. End with visual weight, historical memory and a composed final image; do not introduce a new disaster beat.';
 }
 function cameraDirector(stage,scientific){
+ if(isSanFrancisco1906P2(stage))return 'CINEMATIC CAMERA DIRECTOR: one smooth lateral surface-level move through an intact 1906 San Francisco street, visually distinct from P1. Reveal ordinary life and period setting only. Do not expose warning signs, a fault, hidden mechanisms, shaking or environmental changes.';
  var n=stageNumber(stage);
  if(scientific)return 'CINEMATIC CAMERA DIRECTOR: one precise explanatory camera move only — restrained lateral reveal or slow push that clarifies mechanism and scale. Stable horizon, coherent lens, no dramatic handheld behavior, no orbit, no hidden cut.';
  var map={
@@ -523,6 +526,7 @@ function subjectObjectLock(){
  return 'SUBJECT + OBJECT PERSISTENCE LOCK:\nWithin this shot, each adult keeps the same face, age, hair, clothing, body proportions and accessories from first frame to last. Buildings, windows, roofs, poles, trees, fences, vehicles and large debris preserve geometry and identity unless visibly altered by a physical event. Across panels, reuse a recurring adult only when continuity context establishes that it is the same person; otherwise do not invent false character continuity.';
 }
 function audioDirector(stage){
+ if(isSanFrancisco1906P2(stage))return 'PROFESSIONAL CINEMATIC AUDIO MIX: quiet ordinary street ambience from visible, era-appropriate activity only. Maintain a stable soundscape throughout. No tension rise, peak, low rumble, rock strain, deep-earth vibration, dramatic impact, alarm, music or voiceover.';
  var n=stageNumber(stage);
  var phase=n<=2?'quiet tension with restrained ambience':n<=5?'rising environmental pressure with selective impacts':n<=8?'powerful hazard sound with controlled dynamic peaks':n===9?'post-impact atmosphere with space, distant detail and natural decay':n<=12?'human-scale ambience with restrained work / movement sounds':'quiet recovery / reflective ambience';
  return 'PROFESSIONAL CINEMATIC AUDIO MIX:\nAudio phase: '+phase+'. Use natural, scene-specific sound only unless music or dialogue is explicitly requested. Hierarchy: primary environmental hazard/ambience first, secondary environment second, occasional physically motivated impacts third, subtle human movement/reaction last. No repetitive identical impact loop, constant metallic clanging, random cinematic boom, camera whoosh, high-pitched continuous screech, artificial bass hit, unsupported explosion, or modern siren/alarm. Keep dynamic range: quieter tension → rising pressure → peak → natural decay when appropriate. Every major audible event must have a visible cause and occur in sync with the image.';
@@ -531,6 +535,7 @@ function debrisPhysicsLock(){
  return 'DEBRIS + DAMAGE PHYSICS LOCK:\nDebris obeys mass, gravity, wind direction and momentum. Light debris may rise higher; shingles and small boards may travel farther; heavy timber, furniture and structural fragments stay lower and move with believable inertia. No hovering heavy objects, reverse-direction debris without cause, giant foreground debris that blocks the main hazard, or sudden scale changes. Damage accumulates irreversibly: broken remains broken; detached remains detached; collapsed elements do not rebuild.';
 }
 function stageCastProfile(stage){
+ if(isSanFrancisco1906P2(stage))return 'ordinary pre-disaster adults with neutral expressions, unaware of the coming earthquake';
  var n=stageNumber(stage);
  if(n===1)return 'normal life / pre-disaster adults';
  if(n===2)return 'pre-impact adults with subtle concern';
