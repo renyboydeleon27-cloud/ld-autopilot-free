@@ -1,6 +1,6 @@
 /* LD AUTO v3.40.4 — title-driven shared setting + cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.40.13-scene-location-parser-v1';
+const T2V_POLICY_VERSION='3.40.12-panel-scene-identity-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
