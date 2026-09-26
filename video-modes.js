@@ -1,6 +1,6 @@
 /* LD AUTO v3.40.4 — title-driven shared setting + cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.40.9-sf-p3-visible-onset-v1';
+const T2V_POLICY_VERSION='3.40.10-sf-p5-interior-variety-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -464,8 +464,22 @@ function sanFrancisco1906P3(stage){
    extraNegative:'No voiceover, spoken narration, lip-sync, major collapse, flames, instant citywide ruin or invisible earthquake.'
  };
 }
+function sanFrancisco1906P5(stage){
+ if(stage!=='P5'||!/\bSan Francisco Earthquake\b/i.test(current())||!/\b1906\b/.test(current()))return null;
+ return {
+   approved:false,
+   scientific:false,
+   scene:'INSIDE a modest 1906 San Francisco residence, seen from a doorway at a diagonal angle. This is a new interior sublocation, not the P4 street, and the two adults here are visually distinct from the P4 cast. A heavy wooden table, crockery and a plaster ceiling establish scale. Strong sustained shaking slides the dishes, swings a hanging fixture and opens a visible crack in interior plaster. A localized section of plaster and light ceiling material breaks loose and falls with gravity; the adults duck beside the table. Show substantial local damage within this room while the structure stays largely standing. Keep the same room and people for the full shot.',
+   narrative:'Localized structural damage grows as the earthquake intensifies. Narration is added separately during editing and must not be spoken by this video.',
+   timing:'0.0–1.0s: Open already inside the residence. A strong jolt moves the tableware and fixture immediately; both adults react.\n1.0–4.0s: Sustained shaking slides crockery and cracks the plaster. Camera tracks a short diagonal route from the doorway, holding the room geography.\n4.0–7.0s: A small localized ceiling/plaster section fails and falls naturally; adults duck near the sturdy table.\n7.0–10.0s: Dust settles through the still-shaking room, exposing new localized damage. End before P6 peak citywide destruction.',
+   camera:'Interior doorway three-quarter view and one controlled short diagonal move. Foreground doorway, midground adults and table, background wall damage. Do not return to the P4 street angle, exterior facade or repeated cast.',
+   physics:'Visible shaking causes each failure in order: objects rattle and slide, plaster cracks, then one localized section breaks away and falls. Keep architecture consistent and damage irreversible. No entire building collapse or fire in P5.',
+   audio:'Sound effects only: tableware rattling, wood strain and one synchronized plaster impact. No spoken words, narrator, dialogue, screams, music or deep-earth sound.',
+   extraNegative:'No repeated P4 street setup, no duplicate P4 actors, no exterior tracking shot, no full building collapse, no fire, no voiceover or text.'
+ };
+}
 function eventPanel(stage){
- return sanFrancisco1906P2(stage)||sanFrancisco1906P3(stage)||triStateTornadoPanel(stage)||rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
+ return sanFrancisco1906P2(stage)||sanFrancisco1906P3(stage)||sanFrancisco1906P5(stage)||triStateTornadoPanel(stage)||rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
 }
 function progression(stage,special){
  if(special)return null;
