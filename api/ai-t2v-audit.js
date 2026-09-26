@@ -69,13 +69,20 @@ export default async function handler(req,res){
       : (progressionRole
         ? "DISASTER-FAMILY PROGRESSION IS BINDING FOR STORY POSITION. Current role: "+progressionRole+". Current guard: "+progressionRule+" Fail the prompt if its main scene clearly belongs to a later or earlier story beat, or merely repeats a neighboring panel instead of serving this role. This progression context is NOT a factual source; never require a sub-hazard, response, casualty, measurement or mechanism unless supported by the supplied event context."
         : ""),
+    "CINEMATIC REFINEMENT AUDIT: require the prompt to preserve subject identity, object geometry, irreversible damage, natural micro-transitions, coherent weather/atmosphere, professional motivated camera movement, debris mass physics, and synchronized non-annoying environmental audio.",
+    "MORPH/CONTINUITY CHECK: fail when the prompt permits or encourages face/body/clothing morphing, character duplication, pop-in/pop-out, teleportation, geometry melting, disappearing/respawning objects, spontaneous repair, or unexplained object multiplication.",
+    "WEATHER CONTINUITY CHECK: weather, wind direction, cloud/light direction, visibility, precipitation and ground condition must evolve logically from the panel story state. Fail abrupt unexplained weather resets or contradictory simultaneous weather states.",
+    "CAMERA PROFESSIONALISM CHECK: camera movement must have one dominant motivated behavior with coherent lens perspective. Fail random orbiting, zoom pumping, impossible pass-through, viewpoint resets, contradictory push/pull instructions, excessive shake, or generic floating AI-camera behavior.",
+    "AUDIO QUALITY CHECK: audio must be scene-specific and dynamically mixed. Fail repetitive identical impact loops, constant metallic clanging, random cinematic booms/whooshes, unsupported sirens/alarms/explosions, continuous high-pitched screech, or sound events without visible/verified cause.",
+    "DEBRIS/DAMAGE CHECK: debris must respect mass, gravity, wind direction and momentum; heavy objects must not hover. Damage must accumulate irreversibly and not reset inside the shot.",
     "Check camera instructions for contradictions such as simultaneous push-in and pull-back, cuts despite a one-shot lock, impossible travel through objects, or conflicting focal behavior.",
     "Check physics/time instructions for instant materialization, magical multiplication, impossible scale changes, contradictory object states, or destruction that happens without a supported cause.",
     "For insect/locust topics: normal-sized separate insects, layered depth, plausible movement. A dense swarm must NOT be described as or encouraged to resemble black smoke, soot, dust, fog, haze, ash, vapor, storm cloud, shadow cloud, or a solid dark mass.",
     "Do not invent historical facts to create an issue. Audit only against the supplied production context and clear internal contradictions.",
     special,
     "Output JSON only with exactly these fields: result, summary, issues, recommendedAction.",
-    "result must be exactly PASS or NEEDS FIX. summary and recommendedAction must be short strings. issues must be an array of concise strings. If PASS, issues must be an empty array and recommendedAction should say the prompt can be sent to Flow after the creator's normal visual review."
+    "result must be exactly PASS or NEEDS FIX. summary and recommendedAction must be short strings. issues must be an array of concise strings. If PASS, issues must be an empty array and recommendedAction should say the prompt can be sent to Flow after the creator's normal visual review.",
+    "Do not PASS a prompt that is missing the MASTER CINEMATIC CONSISTENCY, MICRO-TRANSITION/MORPH, WEATHER, CAMERA DIRECTOR, AUDIO MIX, and DEBRIS/DAMAGE protections when the supplied prompt policy includes those sections."
   ].filter(Boolean).join("\n");
 
   const user=[
