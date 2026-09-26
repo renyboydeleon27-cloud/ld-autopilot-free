@@ -1,8 +1,21 @@
-import { usageFromResponse } from "./api-usage.js";
+import { usageFromResponse, mergeApiUsage } from "./api-usage.js";
 
 function outputText(data){
   if(data?.output_text) return String(data.output_text).trim();
-  return (data?.output||[]).flatMap(x=>x?.content||[]).map(x=>x?.text||"").join("").trim();
+  const parts=[];
+  for(const item of data?.output||[]){
+    for(const content of item?.content||[]){
+      if(typeof content?.text==="string"&&content.text.trim()) parts.push(content.text);
+      else if(typeof content?.output_text==="string"&&content.output_text.trim()) parts.push(content.output_text);
+      else if(typeof content?.refusal==="string"&&content.refusal.trim()) parts.push(content.refusal);
+    }
+  }
+  return parts.join("").trim();
+}
+function responseProblem(data){
+  if(data?.status==="failed") return data?.error?.message||"AI audit response failed.";
+  if(data?.status==="incomplete") return data?.incomplete_details?.reason||"AI audit response was incomplete.";
+  return "";
 }
 function parseJsonObject(text){
   const clean=String(text||"").trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim();
@@ -36,7 +49,7 @@ export default async function handler(req,res){
   const sharedDetails=String(req.body?.sharedDetails||"").trim().slice(0,2200);
   const narration=String(req.body?.narration||"").trim().slice(0,2600);
   const currentScene=String(req.body?.currentScene||"").trim().slice(0,6000);
-  const currentPrompt=String(req.body?.currentPrompt||"").trim().slice(0,16000);
+  const currentPrompt=String(req.body?.currentPrompt||"").trim();
   const eventSpecificOverride=req.body?.eventSpecificOverride===true;
   const progressionVersion=String(req.body?.progressionVersion||"").trim().slice(0,120);
   const progressionFamily=String(req.body?.progressionFamily||"").trim().slice(0,160);
@@ -139,20 +152,66 @@ export default async function handler(req,res){
             }
           }
         },
-        max_output_tokens:700
+        max_output_tokens:1800
       })
     });
     const data=await response.json();
-    const apiUsage=usageFromResponse(data,"gpt-5.6-luna");
+    let apiUsage=usageFromResponse(data,"gpt-5.6-luna");
     if(!response.ok) return res.status(response.status).json({ok:false,error:data?.error?.message||"OpenAI request failed.",apiUsage});
-    const rawOutput=outputText(data);
-    const parsed=parseJsonObject(rawOutput);
-    if(!parsed) return res.status(502).json({
-      ok:false,
-      error:"AI audit structured output could not be parsed.",
-      detail:rawOutput.slice(0,220),
-      apiUsage
-    });
+    let rawOutput=outputText(data);
+    let parsed=parseJsonObject(rawOutput);
+
+    // Structured output can occasionally be incomplete before the JSON object is finished.
+    // Retry once automatically with a compact-output instruction instead of forcing the user
+    // into a manual SMART CONTINUE loop.
+    if(!parsed){
+      const firstProblem=responseProblem(data);
+      const retry=await fetch("https://api.openai.com/v1/responses",{
+        method:"POST",
+        headers:{
+          "Authorization":`Bearer ${apiKey}`,
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          model:"gpt-5.6-luna",
+          input:[
+            {role:"system",content:[{type:"input_text",text:system+" Keep every string concise. Return only the required JSON object with no extra prose."}]},
+            {role:"user",content:[{type:"input_text",text:user}]}
+          ],
+          text:{
+            format:{
+              type:"json_schema",
+              name:"ld_t2v_audit_retry",
+              strict:true,
+              schema:{
+                type:"object",
+                properties:{
+                  result:{type:"string",enum:["PASS","NEEDS FIX"]},
+                  summary:{type:"string"},
+                  issues:{type:"array",items:{type:"string"}},
+                  recommendedAction:{type:"string"}
+                },
+                required:["result","summary","issues","recommendedAction"],
+                additionalProperties:false
+              }
+            }
+          },
+          max_output_tokens:2400
+        })
+      });
+      const retryData=await retry.json();
+      apiUsage=mergeApiUsage(apiUsage,usageFromResponse(retryData,"gpt-5.6-luna"));
+      if(retry.ok){
+        rawOutput=outputText(retryData);
+        parsed=parseJsonObject(rawOutput);
+      }
+      if(!parsed) return res.status(502).json({
+        ok:false,
+        error:"AI audit could not return a complete structured result after one automatic retry.",
+        detail:responseProblem(retryData)||firstProblem||rawOutput.slice(0,220),
+        apiUsage
+      });
+    }
 
     const result=String(parsed.result||"").trim().toUpperCase()==="PASS"?"PASS":"NEEDS FIX";
     const issues=Array.isArray(parsed.issues)?parsed.issues.map(x=>String(x||"").trim()).filter(Boolean).slice(0,10):[];
