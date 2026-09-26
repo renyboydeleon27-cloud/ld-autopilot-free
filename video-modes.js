@@ -503,7 +503,12 @@ function previousApprovedContinuity(stage){
  var narration=clean(snap?.narration||card?.querySelector('.narration')?.value||'');
  var summary=[scene,narration].filter(Boolean).join(' ');
  if(!summary)return '';
- return summary.slice(0,620);
+ if(summary.length<=620)return summary;
+  var head=summary.slice(0,620);
+  var boundary=Math.max(head.lastIndexOf('. '),head.lastIndexOf('! '),head.lastIndexOf('? '));
+  if(boundary>=220)return head.slice(0,boundary+1).trim();
+  var space=head.lastIndexOf(' ');
+  return head.slice(0,space>220?space:620).trim()+'…';
 }
 function intensityDirector(stage){
  if(isSanFrancisco1906P2(stage))return 'INTENSITY: normal life only. Fault stress is invisible and explained by narration; show no warning sign, concern, shaking, ominous change, fire, damage or buildup before P3.';
@@ -545,7 +550,7 @@ function weatherContinuityLock(stage){
  if(stage==='P2'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current()))return 'WEATHER + ATMOSPHERE CONTINUITY LOCK: Keep the same visible light, weather and ground condition as P1 when established. If P1 does not establish a detail, leave it unspecified; do not invent wind, rain or an ominous atmospheric change. The 1906 street is intact and quiet before perceptible shaking in P3.';
  var prev=previousApprovedContinuity(stage);
  var bridge=prev?'\nPREVIOUS APPROVED PANEL CONTINUITY REFERENCE: '+prev:'';
- return 'WEATHER + ATMOSPHERE CONTINUITY LOCK:\nWeather is story continuity, not decoration. Preserve cloud direction, wind direction, light direction, visibility, precipitation state, ground wetness/dust state and atmospheric density from the preceding story beat unless the current panel explicitly requires a change. Any change must evolve progressively on-screen, never reset abruptly. Storm buildup must darken / thicken / intensify progressively; aftermath may ease only when the story position supports it. Keep foreground, midground and background atmosphere layered so the primary subject and hazard remain readable.'+bridge;
+ return 'WEATHER + ATMOSPHERE CONTINUITY LOCK:\nWeather is story continuity, not decoration. Preserve only weather and atmosphere details visibly established by the preceding approved panel; if cloud direction, wind, light direction, visibility, precipitation, ground wetness or dust are not established, leave them unspecified and do not invent them. Any established change must evolve progressively on-screen, never reset abruptly. Storm buildup must darken / thicken / intensify progressively; aftermath may ease only when the story position supports it. Keep foreground, midground and background atmosphere layered so the primary subject and hazard remain readable.'+bridge;
 }
 function transitionMorphLock(){
  return 'MICRO-TRANSITION + MORPH CONTROL:\nAll state changes need visible physical intermediates. Wind builds before objects accelerate. People brace, turn, stumble or react before changing position. Structures flex / strain / detach before failure. Debris begins moving before reaching speed. Damage never reverses. No morph dissolve, hidden cut, snap transformation, pop-in, pop-out, teleportation, duplicate person, replacement face, changing clothing, changing body proportions, geometry melt, respawn, spontaneous repair or unexplained object multiplication. Large objects keep identity, scale and orientation until a visible force changes them.';
