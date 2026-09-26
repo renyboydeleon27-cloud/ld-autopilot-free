@@ -435,8 +435,22 @@ function triStateTornadoPanel(stage){
    extraNegative:'No live action. No photorealistic people. No photographic skin. No 3D CGI humans. No active tornado. No new destruction. No modern sirens, emergency vehicles, radar screens, electronic warning devices, captions, titles, logos, or watermark.'
  };
 }
+function sanFrancisco1906P2(stage){
+ if(stage!=='P2'||!/\\bSan Francisco Earthquake\\b/i.test(current())||!/\\b1906\\b/.test(current()))return null;
+ return {
+   approved:false,
+   scientific:false,
+   scene:'A calm, historically appropriate San Francisco street in 1906 before the first perceptible shaking. Show intact facades, period street details and a few distinct adult residents in ordinary movement. The camera observes the everyday city from a different angle and sublocation than P1. The fault stress is explained only by the narration; it is invisible in this surface-level scene. No underground cutaway, visible fault line, shaking, window rattling, falling objects, cracks, smoke, fire or destruction yet.',
+   narrative:'Stress builds along the fault as locked sections of the crust resist movement beneath the surface. This is explanatory narration only; no invisible mechanism appears on screen.',
+   timing:'0.0–2.0s: Establish the intact 1906 San Francisco street at human height with one clear foreground scale reference and ordinary adult movement.\\n2.0–7.0s: Continue a restrained lateral camera move through the same street, showing normal period architecture and distinct adults without an earthquake cue.\\n7.0–10.0s: Hold the intact pre-event setting and end before P3 begins perceptible shaking.',
+   camera:'One coherent surface-level lateral move in a historically appropriate street, visually distinct from P1. No scientific cutaway or unsupported subsurface view.',
+   physics:'Fault stress is described in the narration and remains invisible. Preserve stable buildings and objects. No premonitory shaking, rattling, structural damage or fire in P2.',
+   audio:'Ordinary quiet 1906 street ambience synchronized with visible activity only. No underground rumble, rock strain, deep-earth vibration, music or voiceover.',
+   extraNegative:'No underground or subsurface visualization; no diagram, fault cross-section, cracks, tremor, dramatic rumble, fire, collapse or premature disaster imagery.'
+ };
+}
 function eventPanel(stage){
- return triStateTornadoPanel(stage)||rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
+ return sanFrancisco1906P2(stage)||triStateTornadoPanel(stage)||rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
 }
 function progression(stage,special){
  if(special)return null;
