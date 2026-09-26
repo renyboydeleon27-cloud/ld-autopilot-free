@@ -1,6 +1,6 @@
-/* LD AUTO v3.40.0 — cinematic refinement, continuity, weather, camera + audio direction. */
+/* LD AUTO v3.40.1 — cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.40.0-cinematic-consistency-v1';
+const T2V_POLICY_VERSION='3.40.1-character-diversity-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -487,22 +487,81 @@ function audioDirector(stage){
 function debrisPhysicsLock(){
  return 'DEBRIS + DAMAGE PHYSICS LOCK:\nDebris obeys mass, gravity, wind direction and momentum. Light debris may rise higher; shingles and small boards may travel farther; heavy timber, furniture and structural fragments stay lower and move with believable inertia. No hovering heavy objects, reverse-direction debris without cause, giant foreground debris that blocks the main hazard, or sudden scale changes. Damage accumulates irreversibly: broken remains broken; detached remains detached; collapsed elements do not rebuild.';
 }
+function stageCastProfile(stage){
+ var n=stageNumber(stage);
+ if(n===1)return 'normal life / pre-disaster adults';
+ if(n===2)return 'pre-impact adults with subtle concern';
+ if(n===3)return 'small number of adults recognizing danger';
+ if(n===4||n===5)return 'exposed adults near first impact';
+ if(n===6||n===7)return 'high-intensity survival adults and scattered bystanders';
+ if(n===8||n===9)return 'aftermath survivors / affected adults';
+ if(n>=10&&n<=12)return 'response, relief, affected families, workers or townspeople';
+ if(n===13)return 'recovery adults / cleanup adults';
+ return 'reflective survivors / community adults';
+}
+function stageCrowdLevel(stage){
+ var n=stageNumber(stage);
+ if(n<=2)return 'very small cast only';
+ if(n===3||n===4)return 'small cast';
+ if(n===5||n===6)return 'small-to-medium cast only when the location logically supports it';
+ if(n===7||n===8)return 'medium cast if needed';
+ if(n>=9&&n<=12)return 'small-to-medium cast with varied support/background adults';
+ return 'small cast with selective background adults';
+}
+function roleWardrobePool(stage){
+ var fam=familyKey(),n=stageNumber(stage);
+ if(fam==='tornado'){
+   if(n<=4)return 'historically appropriate everyday Midwestern adult clothing for the event year: varied hats, coats, dresses, work shirts, suspenders, aprons, boots, trousers, skirts and outerwear depending on class, weather and role';
+   if(n<=8)return 'storm-exposed clothing with natural disorder: coats flapping, dust, loosened hats, wet or dirt-marked garments, but still historically appropriate and varied';
+   return 'post-disaster / recovery clothing with historically appropriate adult workwear, aprons, coats, boots, hats, shawls, rolled sleeves and simple town/rural garments appropriate to the year and place';
+ }
+ if(fam==='insect')return 'historically appropriate rural/farming wardrobe variety: hats, bonnets, work shirts, aprons, dresses, suspenders, boots, coats and local workwear appropriate to the year and region';
+ if(fam==='tsunami'||fam==='cyclone'||fam==='flood')return 'historically appropriate regional adult clothing varied by role, class and weather exposure, with practical differences across survivors, workers and townspeople';
+ return 'historically appropriate adult wardrobe variety by role, class, weather and local setting';
+}
+function recurringCharacterPolicy(stage){
+ var n=stageNumber(stage);
+ if(n<=2)return 'If one principal adult is featured, preserve that person’s exact identity consistently across the whole shot.';
+ if(n<=6)return 'If a principal adult or small group is central, preserve their exact identity consistently across the whole shot and keep them visually distinct from supporting adults.';
+ if(n<=10)return 'Preserve any central survivor / responder identity when clearly foregrounded, but allow varied supporting adults around them.';
+ return 'Use continuity only where narratively useful. Do not force every panel to reuse the same person, but if a recurring foreground adult appears, keep identity stable inside the shot.';
+}
+function characterDiversityLock(stage){
+ return 'CHARACTER DIVERSITY + ANTI-CLONE LOCK:\n'
+  +'Cast profile: '+stageCastProfile(stage)+'.\n'
+  +'Crowd level: '+stageCrowdLevel(stage)+'.\n'
+  +'Wardrobe pool: '+roleWardrobePool(stage)+'.\n'
+  +recurringCharacterPolicy(stage)+'\n'
+  +'For supporting adults and background adults, introduce natural visual variation appropriate to the event year, location and social setting.\n'
+  +'Vary face shape, age appearance, height, body build, hairstyle, headwear, outerwear, workwear, layering and clothing combinations.\n'
+  +'Do not duplicate the same face, hairstyle, hat, coat, dress, apron, body proportions or clothing pattern across multiple adults unless a historically correct uniform or shared role specifically requires it.\n'
+  +'Crowds must feel naturally varied and human, not cloned. Avoid background extras that look like copies of the foreground subject.\n'
+  +'No mirrored crowd members. No repeated identical silhouettes lined up unnaturally. No accidental twin copies created by the generator.\n'
+  +'If a family or repeated small group appears, keep each member recognizably consistent while preserving clear visual differences between individuals.\n'
+  +'Controlled variation only: never randomize away established identity, era, ethnicity, local dress norms, role, weather exposure or continuity.';
+}
+function antiClonePromptCompatible(text){
+ var s=String(text||'');
+ return s.includes('CHARACTER DIVERSITY + ANTI-CLONE LOCK:');
+}
 function cinematicMasterLock(stage,scientific){
  return 'MASTER CINEMATIC CONSISTENCY LOCK — HIGH PRIORITY:\n'
   +intensityDirector(stage)+'\n'
   +transitionMorphLock()+'\n'
   +subjectObjectLock()+'\n'
+  +characterDiversityLock(stage)+'\n'
   +weatherContinuityLock(stage)+'\n'
   +debrisPhysicsLock()+'\n'
   +cameraDirector(stage,scientific)+'\n'
   +audioDirector(stage)+'\n'
   +'ERA + ACCURACY: every visible and audible element must fit the locked year, location and verified event context. Never add modern vehicles, electronics, warning systems, emergency gear, architecture, tools, signage or sound cues unless supported. Historical accuracy outranks drama.\n'
-  +'FRAME QUALITY TEST: first, middle and final frames must preserve style, subject identity, environment geometry, weather logic, lens perspective and story-stage boundaries. Intensity comes from scale, staging, timing, depth and believable reaction — never random chaos.';
+  +'FRAME QUALITY TEST: first, middle and final frames must preserve style, recurring-subject identity, supporting-cast diversity, environment geometry, weather logic, lens perspective and story-stage boundaries. Intensity comes from scale, staging, timing, depth and believable reaction — never random chaos.';
 }
 function qualityPromptCompatible(text){
  var s=String(text||'');
  return s.includes('MASTER CINEMATIC CONSISTENCY LOCK — HIGH PRIORITY:')
    &&s.includes('MICRO-TRANSITION + MORPH CONTROL:')
+   &&s.includes('CHARACTER DIVERSITY + ANTI-CLONE LOCK:')
    &&s.includes('WEATHER + ATMOSPHERE CONTINUITY LOCK:')
    &&s.includes('CINEMATIC CAMERA DIRECTOR:')
    &&s.includes('PROFESSIONAL CINEMATIC AUDIO MIX:')
@@ -577,6 +636,7 @@ function rebuildTextPrompt(card){
  var text=build(card);
  if(!promptStyleCompatible(text))throw Error('Visual-style lock mismatch. Rebuild the panel prompt before approval.');
  if(!qualityPromptCompatible(text))throw Error('Cinematic consistency lock is incomplete. Rebuild the panel prompt before approval.');
+ if(!antiClonePromptCompatible(text))throw Error('Character diversity / anti-clone lock is incomplete. Rebuild the panel prompt before approval.');
  card.dataset.textVideoPrompt=text;
  card.dataset.textVideoSignature=signature(card);
  var ta=card.querySelector('.text-video-prompt');
@@ -586,7 +646,7 @@ function rebuildTextPrompt(card){
  syncGlobalControl();
  return text;
 }
-function valid(card){return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function valid(card){return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
 function completionReady(card){
  if(!supports(card))return false;
  if(state(card).mode!=='text')return true;
@@ -727,7 +787,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.40.0',supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,cinematicMasterLock:cinematicMasterLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.40.1',supports:supports,state:state,defaults:defaults,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
