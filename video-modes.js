@@ -1,6 +1,6 @@
 /* LD AUTO v3.40.4 — title-driven shared setting + cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.40.10-sf-p5-interior-variety-v1';
+const T2V_POLICY_VERSION='3.40.11-sf-p5-waterfront-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -469,13 +469,13 @@ function sanFrancisco1906P5(stage){
  return {
    approved:false,
    scientific:false,
-   scene:'INSIDE a modest 1906 San Francisco residence, seen from a doorway at a diagonal angle. This is a new interior sublocation, not the P4 street, and the two adults here are visually distinct from the P4 cast. A heavy wooden table, crockery and a plaster ceiling establish scale. Strong sustained shaking slides the dishes, swings a hanging fixture and opens a visible crack in interior plaster. A localized section of plaster and light ceiling material breaks loose and falls with gravity; the adults duck beside the table. Show substantial local damage within this room while the structure stays largely standing. Keep the same room and people for the full shot.',
-   narrative:'Localized structural damage grows as the earthquake intensifies. Narration is added separately during editing and must not be spoken by this video.',
-   timing:'0.0–1.0s: Open already inside the residence. A strong jolt moves the tableware and fixture immediately; both adults react.\n1.0–4.0s: Sustained shaking slides crockery and cracks the plaster. Camera tracks a short diagonal route from the doorway, holding the room geography.\n4.0–7.0s: A small localized ceiling/plaster section fails and falls naturally; adults duck near the sturdy table.\n7.0–10.0s: Dust settles through the still-shaking room, exposing new localized damage. End before P6 peak citywide destruction.',
-   camera:'Interior doorway three-quarter view and one controlled short diagonal move. Foreground doorway, midground adults and table, background wall damage. Do not return to the P4 street angle, exterior facade or repeated cast.',
-   physics:'Visible shaking causes each failure in order: objects rattle and slide, plaster cracks, then one localized section breaks away and falls. Keep architecture consistent and damage irreversible. No entire building collapse or fire in P5.',
-   audio:'Sound effects only: tableware rattling, wood strain and one synchronized plaster impact. No spoken words, narrator, dialogue, screams, music or deep-earth sound.',
-   extraNegative:'No repeated P4 street setup, no duplicate P4 actors, no exterior tracking shot, no full building collapse, no fire, no voiceover or text.'
+   scene:'ABSOLUTE NEW LOCATION: an OPEN WATERFRONT CARGO PIER in 1906 San Francisco, with open water occupying much of the background. This P5 is NOT a street, alley, storefront, doorway or building-corner scene. Begin with a wide unobstructed view across wooden pier boards, stacked crates, mooring lines and a moored period boat. A distinct adult woman dock worker and an older adult worker are in the open center of the pier, far from any wall. Strong earthquake shaking visibly jolts the pier, shifts a few crates and pulls mooring lines taut; the two workers crouch or move toward clear open space. One small stack of cargo topples naturally. Keep distant shore buildings secondary, with no foreground facade. Do not show a man hugging, gripping or leaning against a wall, post, doorway or building edge.',
+   narrative:'The shaking intensifies and causes localized damage at the waterfront. Narration is added later in editing; no spoken words in this video.',
+   timing:'0.0–1.0s: Show the open pier and water immediately. A visible jolt shakes the pier boards, cargo and mooring lines; both workers react.\n1.0–4.0s: Sustained earthquake motion slides several crates and sways the moored boat slightly against its lines. Camera tracks sideways across the open pier, keeping water clearly visible.\n4.0–7.0s: One cargo stack loses balance and falls onto the pier with believable weight while the two workers move away into clear space.\n7.0–10.0s: Continue shaking and show the localized pier damage from a wider angle. End before the peak citywide destruction of P6.',
+   camera:'Wide diagonal view across an OPEN pier, at least half the composition showing open sky and water. One controlled lateral tracking move parallel to the waterfront. Keep people in open space, without foreground walls, columns, doorframes, building corners or a close-up man bracing on masonry.',
+   physics:'Earthquake shaking causes pier boards, cargo and moored boat to respond coherently. Cargo falls under gravity; the boat remains moored. No tsunami, sudden water surge, ship sinking, large pier collapse, citywide collapse or fire.',
+   audio:'Sound effects only: pier timber creak, shifting cargo, mooring ropes and one synchronized crate impact. No spoken words, narrator, dialogue, music or deep-earth sound.',
+   extraNegative:'NO street, NO alley, NO storefront, NO doorway, NO building-corner foreground, NO man touching or hugging a wall, NO repeated P4 camera axis or cast, NO tsunami, NO voiceover, NO text.'
  };
 }
 function eventPanel(stage){
