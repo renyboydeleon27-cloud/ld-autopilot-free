@@ -464,6 +464,19 @@ function sanFrancisco1906P3(stage){
    extraNegative:'No voiceover, spoken narration, lip-sync, major collapse, flames, instant citywide ruin or invisible earthquake.'
  };
 }
+function sanFrancisco1906P7(stage){
+ if(stage!=='P7'||!/\bSan Francisco Earthquake\b/i.test(current())||!/\b1906\b/.test(current()))return null;
+ return {
+  approved:false,scientific:false,
+  scene:'Wider earthquake damage at a distinct 1906 San Francisco rail-side street crossing, seen from an elevated oblique position rather than the P6 intersection. A damaged rail line and broken street paving are visible from the first frame, with intact portions of period buildings farther away. EXACTLY THREE adults: one rail worker checks the damaged track, one adult resident moves carefully across the crossing, and one second resident steadies that resident by the arm. These are three separate people with distinct faces and period clothing. Keep the scene focused on wider infrastructure damage; do not replay P6 peak building collapse. Use only weather, visibility, wind and dust conditions actually established in P6; leave unestablished atmospheric details unspecified.',
+  narrative:'The damage spreads to transport routes and neighborhoods. Narration is added separately in editing and must not be spoken.',
+  timing:'0.0–2.0s: Reveal the damaged crossing and all three adults in one readable composition.\n2.0–7.0s: Track laterally as the rail worker checks the track and the two residents move together past cracked paving; existing damage remains stable.\n7.0–10.0s: Reveal the damaged route continuing toward distant buildings and hold on the wider impact without a new peak collapse.',
+  camera:'One continuous elevated oblique lateral track across the crossing, different from the forward street-level P6 view. Keep exactly three adults and the damaged rail route readable.',
+  physics:'Damaged paving and rail remain damaged. People step carefully around obstacles with grounded motion. No new large collapse, explosive track movement or invented secondary hazard.',
+  audio:'Only scene-grounded footsteps, clothing movement and light movement of loose material when visible. No voices, narrator, dialogue, music, wind or dust sounds unless established and visibly caused.',
+  extraNegative:'No fourth adult, duplicate worker, duplicate resident, dusty air, drifting dust, invented wind direction, new building collapse, or repeated P6 intersection composition.'
+ };
+}
 function sanFrancisco1906P5(stage){
  if(stage!=='P5'||!/\bSan Francisco Earthquake\b/i.test(current())||!/\b1906\b/.test(current()))return null;
  return {
@@ -479,7 +492,7 @@ function sanFrancisco1906P5(stage){
  };
 }
 function eventPanel(stage){
- return sanFrancisco1906P2(stage)||sanFrancisco1906P3(stage)||sanFrancisco1906P5(stage)||triStateTornadoPanel(stage)||rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
+ return sanFrancisco1906P2(stage)||sanFrancisco1906P3(stage)||sanFrancisco1906P5(stage)||sanFrancisco1906P7(stage)||triStateTornadoPanel(stage)||rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
 }
 function progression(stage,special){
  if(special)return null;
@@ -550,7 +563,7 @@ function weatherContinuityLock(stage){
  if(stage==='P2'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current()))return 'WEATHER + ATMOSPHERE CONTINUITY LOCK: Keep the same visible light, weather and ground condition as P1 when established. If P1 does not establish a detail, leave it unspecified; do not invent wind, rain or an ominous atmospheric change. The 1906 street is intact and quiet before perceptible shaking in P3.';
  var prev=previousApprovedContinuity(stage);
  var bridge=prev?'\nPREVIOUS APPROVED PANEL CONTINUITY REFERENCE: '+prev:'';
- return 'WEATHER + ATMOSPHERE CONTINUITY LOCK:\nWeather is story continuity, not decoration. Preserve only weather and atmosphere details visibly established by the preceding approved panel; if cloud direction, wind, light direction, visibility, precipitation, ground wetness or dust are not established, leave them unspecified and do not invent them. Any established change must evolve progressively on-screen, never reset abruptly. Storm buildup must darken / thicken / intensify progressively; aftermath may ease only when the story position supports it. Keep foreground, midground and background atmosphere layered so the primary subject and hazard remain readable.'+bridge;
+ return 'WEATHER + ATMOSPHERE CONTINUITY LOCK:\nWeather is story continuity, not decoration. Preserve only weather and atmosphere details visibly established by the preceding approved panel; if cloud direction, wind, light direction, visibility, precipitation, ground wetness or dust are not established, leave them unspecified and do not invent them. Any established change must evolve progressively on-screen, never reset abruptly. Storm buildup must darken / thicken / intensify progressively; aftermath may ease only when the story position supports it. Keep foreground, midground and background readable; add atmospheric layers only when visibly established or caused within this panel.'+bridge;
 }
 function transitionMorphLock(){
  return 'MICRO-TRANSITION + MORPH CONTROL:\nAll state changes need visible physical intermediates. Wind builds before objects accelerate. People brace, turn, stumble or react before changing position. Structures flex / strain / detach before failure. Debris begins moving before reaching speed. Damage never reverses. No morph dissolve, hidden cut, snap transformation, pop-in, pop-out, teleportation, duplicate person, replacement face, changing clothing, changing body proportions, geometry melt, respawn, spontaneous repair or unexplained object multiplication. Large objects keep identity, scale and orientation until a visible force changes them.';
