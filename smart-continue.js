@@ -621,6 +621,9 @@ async function prepareImageToVideo(card){
   status(card.dataset.stage+' IMAGE-TO-VIDEO READY'+(copied?' · Flow prompt copied automatically':'')+'. Review the Flow result, then press this same button again.','pass');
 }
 async function prepareTextToVideo(card){
+  // Run free scene-identity checks before narration or audit API calls.
+  const sceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
+  if(sceneIssue)throw new Error(sceneIssue);
   await ensureNarration(card);
 
   const continuity=window.ldVideoContinuity||{};
@@ -634,6 +637,8 @@ async function prepareTextToVideo(card){
   const prompt=window.LDVideoModes?.prompt?.(card);
   if(!prompt)throw new Error('Text-to-Video prompt could not be built.');
 
+  const builtSceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
+  if(builtSceneIssue)throw new Error(builtSceneIssue);
   let payload=panelPayload(card);
   status('SMART CONTINUE · AI is auditing '+payload.stage+'…','working');
   let result=await audit(payload);
@@ -644,6 +649,8 @@ async function prepareTextToVideo(card){
     await fixPanel(card,payload);
     const rebuilt=window.LDVideoModes?.prompt?.(card);
     if(!rebuilt)throw new Error('The prompt could not be rebuilt after AI Fix.');
+    const fixedSceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
+    if(fixedSceneIssue)throw new Error(fixedSceneIssue);
     payload=panelPayload(card);
     status('SMART CONTINUE · Re-auditing after the automatic fix…','working');
     startPhase('RE-AUDITING',payload.stage);
