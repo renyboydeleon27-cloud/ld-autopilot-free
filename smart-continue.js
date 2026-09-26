@@ -1,4 +1,4 @@
-/* LD AUTO v3.40.0 — cinematic quality approval gate + persistent current-panel return. */
+/* LD AUTO v3.40.1 — cinematic quality + character diversity approval gate + persistent current-panel return. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -645,6 +645,9 @@ async function prepareTextToVideo(card){
   if(window.LDVideoModes?.qualityPromptCompatible&&!window.LDVideoModes.qualityPromptCompatible(finalPrompt)){
     throw new Error('Cinematic consistency lock is incomplete. Rebuild this panel before approval.');
   }
+  if(window.LDVideoModes?.antiClonePromptCompatible&&!window.LDVideoModes.antiClonePromptCompatible(finalPrompt)){
+    throw new Error('Character diversity / anti-clone lock is incomplete. Rebuild this panel before approval.');
+  }
   let finalPayload=panelPayload(card);
   if(auditCacheKey(finalPayload)!==auditedKey){
     status('SMART CONTINUE · Final prompt changed after rebuild. Verifying the exact final version…','working');
@@ -660,6 +663,9 @@ async function prepareTextToVideo(card){
   }
   if(window.LDVideoModes?.qualityPromptCompatible&&!window.LDVideoModes.qualityPromptCompatible(exactPrompt)){
     throw new Error('Cinematic consistency lock is incomplete after final rebuild. SMART CONTINUE will not approve this panel.');
+  }
+  if(window.LDVideoModes?.antiClonePromptCompatible&&!window.LDVideoModes.antiClonePromptCompatible(exactPrompt)){
+    throw new Error('Character diversity / anti-clone lock is incomplete after final rebuild. SMART CONTINUE will not approve this panel.');
   }
   const copied=await copyText(exactPrompt);
   markSmartReady(card);
@@ -906,5 +912,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.40.0',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()})};
+window.LDSmartContinue={version:'3.40.1',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()})};
 })();
