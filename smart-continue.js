@@ -1,4 +1,4 @@
-/* LD AUTO v3.40.2 — full-prompt audit + completed-production Final Audit routing + persistent current-panel return. */
+/* LD AUTO v3.40.3 — Approved Memory recovery + full-prompt audit + completed-production Final Audit routing. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -153,17 +153,19 @@ function approvedSnapshot(card){
     auditSignature:String(card?.dataset?.smartReadySignature||'')
   };
 }
-function saveApprovedMemory(card){
+function saveApprovedMemory(card,options={}){
   if(!card)return null;
   const stage=card.dataset.stage||'';
   if(!stage)return null;
+  const signature=readinessSignature(card);
+  if(signature&&!card.dataset.smartReadySignature)card.dataset.smartReadySignature=signature;
   let root=window.ldApprovedMemory;
   if(!root||typeof root!=='object'||Array.isArray(root)||root.topic!==topic()||root.format!==format()){
     root={version:'1.0',topic:topic(),format:format(),stages:{}};
   }
   if(!root.stages||typeof root.stages!=='object'||Array.isArray(root.stages))root.stages={};
   const previous=root.stages[stage];
-  const snapshot=approvedSnapshot(card);
+  const snapshot={...approvedSnapshot(card),approvalMethod:String(options.method||'smart-continue')};
   const history=Array.isArray(previous?.history)?previous.history.slice(-4):[];
   if(previous?.latest)history.push(previous.latest);
   root.stages[stage]={latest:snapshot,history:history.slice(-5)};
@@ -953,5 +955,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.40.2',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.40.3',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
