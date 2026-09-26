@@ -50,7 +50,7 @@ function choices(ctx){var family=Object.prototype.hasOwnProperty.call(data,ctx.f
      '5.5–10.0s: Emerge immediately at street level into the same historical earthquake at peak impact. Camera drives FORWARD continuously. Buildings shake; plausible roof and masonry sections progressively fail ahead. Adults flee, dust surges and debris falls with convincing gravity. Foreground debris, people in the middle distance and larger structural failures farther ahead. End on the strongest clear collapse while still moving forward.',
      'LOCKS: Clear cause and effect: quake → mirror crack → camera through crack → exterior impact. Same black-and-white anime world inside and outside. Stable character anatomy and synchronized reflection. No random cuts, repeated jolts, exploding mirror, floating debris, duplicate comb or mismatched reflection. No music or voiceover.',
      'STATUS: APPROVED ALTERNATIVE HOOK 2.'
-   ].join('\\n\\n');
+   ].join('\n\n');
    result.status='APPROVED';
    result.source='Approved earthquake alternative';
    result.title='Mirror Crack Transition — Alternative 2';
