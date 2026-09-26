@@ -1,6 +1,6 @@
 /* LD AUTO v3.40.4 — title-driven shared setting + cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.40.11-sf-p5-waterfront-v1';
+const T2V_POLICY_VERSION='3.40.12-panel-scene-identity-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -655,6 +655,46 @@ function pinScene(card){
  }
  if(!state(card).scene)card.dataset.videoScene=clean(sceneFrom(card));
 }
+function sceneLocationKey(scene){
+ var s=String(scene||'').toLowerCase();
+ if(/waterfront|cargo pier|wharf|dockside|harbor quay/.test(s))return 'waterfront';
+ if(/inside.*(?:residence|home|bedroom|kitchen|dining room|apartment)|interior.*(?:residence|home|room)/.test(s))return 'residential interior';
+ if(/inside.*(?:shop|market|workshop|factory)|interior.*(?:shop|market|workshop|factory)/.test(s))return 'workplace interior';
+ if(/street|road|sidewalk|alley|building.corner|storefront/.test(s))return 'street';
+ if(/shelter|hospital|clinic|relief center/.test(s))return 'relief interior';
+ if(/field|farm|crop/.test(s))return 'field';
+ if(/shore|coast|beach|seawall/.test(s))return 'shore';
+ return '';
+}
+function sceneActionKey(scene){
+ var s=String(scene||'').toLowerCase();
+ if(/(?:man|adult|person).{0,90}(?:hug|grip|brace|lean|hold).{0,45}(?:wall|doorway|building|post)/.test(s))return 'wall brace';
+ if(/cargo|crate|mooring/.test(s))return 'cargo motion';
+ if(/ceiling|plaster|tableware/.test(s))return 'interior damage';
+ if(/rescue|search|aid|shelter/.test(s))return 'response';
+ if(/collapse|facade|masonry|roof/.test(s))return 'structural damage';
+ return '';
+}
+function sceneVarietyIssue(card){
+ var stage=card?.dataset?.stage||'',n=stageNumber(stage);
+ if(n<2)return '';
+ var previous=document.querySelector('.stage-card[data-stage="P'+(n-1)+'"]');
+ if(!previous)return '';
+ var now=eventPanel(stage)?.scene||String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim();
+ var before=eventPanel('P'+(n-1))?.scene||String(previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||'').trim();
+ if(!now||!before)return '';
+ var a=sceneLocationKey(now),b=sceneLocationKey(before),actionA=sceneActionKey(now),actionB=sceneActionKey(before);
+ var sanFrancisco=/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current());
+ if(a&&a===b&&sanFrancisco&&n>=3&&n<=6)return 'LOCAL SCENE VARIETY CHECK: '+stage+' repeats the '+b+' setup from P'+(n-1)+'. Choose a different primary place and camera position before AI Audit. This check uses no API credits.';
+ if(a&&a===b&&actionA&&actionA===actionB)return 'LOCAL SCENE VARIETY CHECK: '+stage+' repeats the '+b+' location and '+actionA+' action from P'+(n-1)+'. Change both before AI Audit. This check uses no API credits.';
+ return '';
+}
+function adjacentSceneLock(stage){
+ var n=stageNumber(stage);if(n<2)return '';
+ var previous=document.querySelector('.stage-card[data-stage="P'+(n-1)+'"]');
+ var prior=previous&&(eventPanel('P'+(n-1))?.scene||previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||'');
+ return 'PANEL SCENE IDENTITY LOCK: Give '+stage+' its own primary place, camera angle, foreground action and cast. The prior panel P'+(n-1)+' used '+(sceneLocationKey(prior)||'its established setting')+' and '+(sceneActionKey(prior)||'its established action')+'. Keep historical continuity while changing the visual setup where the narrative permits. Never repeat a wall-bracing foreground adult, identical street corner, camera axis or background layout with only different faces. The current PANEL SCENE and event-specific timing have priority over this variety rule.';
+}
 function signature(card){var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=window.LDDisasterProgression?.version||'';return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
 function build(card){
  var scene=cleanSceneText(sceneFrom(card));
@@ -691,7 +731,7 @@ function build(card){
    +'TEXT-TO-VIDEO. Create the entire scene from this description. No reference image is required. '+(format()==='shorts'?'Portrait 9:16.':'Landscape 16:9.')+' One continuous shot. '+modeLine
    +'\n\n'+lock()
    +'\n\n'+progressionLock(stage,special)
-   +'\n\nPANEL SCENE:\n'+scene
+   +'\n\nPANEL SCENE:\n'+scene+'\n\n'+adjacentSceneLock(stage)
    +'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(isSanFrancisco1906P2(stage)?'Do not include any narration text or spoken explanation in this video. Fault stress is invisible and will be narrated separately during editing.':(special&&special.narrative?special.narrative:(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.')))
    +'\n\nTIMING:\n'+timing
    +'\n\n'+cinematicMasterLock(stage,scientific)
@@ -864,7 +904,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.40.4',supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.40.12',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
