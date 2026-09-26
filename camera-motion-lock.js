@@ -20,6 +20,8 @@ function stageName(card){return (card.dataset.stage||card.querySelector('.stage-
 function apply(){
  document.querySelectorAll('.stage-card').forEach(card=>{
   const st=stageName(card); if(!(st in plans))return;
+  // The chosen HOOK has its own timed camera choreography; T2V panels use the cinematic director in video-modes.js.
+  if(st==='HOOK'||card.dataset.videoMode==='text'||window.LDProjectLocks?.videoMode?.()==='text')return;
   const el=card.querySelector('.flow-prompt'); if(!el||!el.value.trim())return;
   const marker='ADAPTIVE CAMERA MOTION LOCK:';
   if(el.value.includes(marker))return;
