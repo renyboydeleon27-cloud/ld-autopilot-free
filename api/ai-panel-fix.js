@@ -70,6 +70,9 @@ export default async function handler(req,res){
         : ""),
     "Make the scene concrete and generator-friendly: subject, environment, period objects, focal action, visible hazard state, and what must NOT appear yet.",
     "Adults only unless the existing prompt explicitly requires otherwise. No gore.",
+    visualMode==="anime"
+      ? "ABSOLUTE VISUAL MODE: 2D historical anime / graphic-novel ONLY. Never return or encourage photorealistic, live-action, photographic, real-human, newsreel-looking, or 3D CGI people. Documentary wording may describe composition only, never rendering style."
+      : "ABSOLUTE VISUAL MODE: photorealistic REAL HUMAN live-action historical recreation ONLY. Never return or encourage anime, illustration, graphic-novel, or 3D CGI people.",
     colorMode==="bw"
       ? "Preserve STRICT true black-and-white grayscale. Do not introduce color, sepia, tint, selective color or colored accents. Anime mode remains 2D anime/graphic-novel, but fully monochrome."
       : "",
@@ -83,6 +86,7 @@ export default async function handler(req,res){
     "STAGE: "+stage,
     "FORMAT: "+format,
     "VISUAL MODE: "+visualMode,
+    "VISUAL MODE ABSOLUTE LOCK: "+(visualMode==="anime"?"2D HISTORICAL ANIME ONLY — NO LIVE ACTION / NO PHOTOREALISTIC HUMANS":"PHOTOREALISTIC REAL HUMAN LIVE ACTION ONLY — NO ANIME / NO ILLUSTRATION"),
     "COLOR TREATMENT: "+(colorMode==="bw"?"BLACK & WHITE":"COLOR"),
     "EVENT YEAR: "+(year||"not supplied"),
     "MAIN LOCATION: "+(location||"not supplied"),
@@ -175,6 +179,16 @@ export default async function handler(req,res){
           apiUsage
         });
       }
+    }
+    if(visualMode==="anime"){
+      scene=scene
+        .replace(/\bphotorealistic\s+(?:real\s+human\s+)?(?:historical\s+)?live[- ]action\b/gi,"2D historical anime")
+        .replace(/\bphotorealistic\s+real\s+human\b/gi,"2D historical anime")
+        .replace(/\breal[- ]human\s+live[- ]action\b/gi,"2D historical anime");
+    }else{
+      scene=scene
+        .replace(/\bserious\s+2D\s+historical\s+(?:graphic[- ]novel\/)?anime(?:\s+animation)?\b/gi,"photorealistic historical live action")
+        .replace(/\b2D\s+historical\s+anime(?:\s*\/\s*graphic[- ]novel)?\b/gi,"photorealistic historical live action");
     }
     return res.status(200).json({ok:true,topic,stage,scene,note,apiUsage});
   }catch(err){
