@@ -70,6 +70,10 @@ export default async function handler(req,res){
         ? "DISASTER-FAMILY PROGRESSION IS BINDING FOR STORY POSITION. Current role: "+progressionRole+". Current guard: "+progressionRule+" Fail the prompt if its main scene clearly belongs to a later or earlier story beat, or merely repeats a neighboring panel instead of serving this role. This progression context is NOT a factual source; never require a sub-hazard, response, casualty, measurement or mechanism unless supported by the supplied event context."
         : ""),
     "CINEMATIC REFINEMENT AUDIT: require the prompt to preserve subject identity, object geometry, irreversible damage, natural micro-transitions, coherent weather/atmosphere, professional motivated camera movement, debris mass physics, and synchronized non-annoying environmental audio.",
+    "CHARACTER DIVERSITY AUDIT: require the prompt to prevent cloned-looking adults, duplicated faces, repeated identical wardrobe, mirrored crowd members, copy-paste background extras, or accidental twin copies.",
+    "RECURRING SUBJECT AUDIT: if a principal subject is foregrounded, preserve that subject's identity through the shot while keeping supporting adults visually distinct.",
+    "CROWD VARIATION AUDIT: supporting/background adults should show natural historical variation in face shape, age appearance, height, build, hairstyle, headwear and clothing combinations unless a uniformed group is explicitly required.",
+    "CONTROLLED RANDOMIZATION RULE: diversity must never override an established recurring character, the locked year/location, local dress norms, role, weather exposure, or verified historical context.",
     "MORPH/CONTINUITY CHECK: fail when the prompt permits or encourages face/body/clothing morphing, character duplication, pop-in/pop-out, teleportation, geometry melting, disappearing/respawning objects, spontaneous repair, or unexplained object multiplication.",
     "WEATHER CONTINUITY CHECK: weather, wind direction, cloud/light direction, visibility, precipitation and ground condition must evolve logically from the panel story state. Fail abrupt unexplained weather resets or contradictory simultaneous weather states.",
     "CAMERA PROFESSIONALISM CHECK: camera movement must have one dominant motivated behavior with coherent lens perspective. Fail random orbiting, zoom pumping, impossible pass-through, viewpoint resets, contradictory push/pull instructions, excessive shake, or generic floating AI-camera behavior.",
@@ -82,7 +86,7 @@ export default async function handler(req,res){
     special,
     "Output JSON only with exactly these fields: result, summary, issues, recommendedAction.",
     "result must be exactly PASS or NEEDS FIX. summary and recommendedAction must be short strings. issues must be an array of concise strings. If PASS, issues must be an empty array and recommendedAction should say the prompt can be sent to Flow after the creator's normal visual review.",
-    "Do not PASS a prompt that is missing the MASTER CINEMATIC CONSISTENCY, MICRO-TRANSITION/MORPH, WEATHER, CAMERA DIRECTOR, AUDIO MIX, and DEBRIS/DAMAGE protections when the supplied prompt policy includes those sections."
+    "Do not PASS a prompt that is missing the MASTER CINEMATIC CONSISTENCY, MICRO-TRANSITION/MORPH, WEATHER, CAMERA DIRECTOR, AUDIO MIX, DEBRIS/DAMAGE, and CHARACTER DIVERSITY / ANTI-CLONE protections when the supplied prompt policy includes those sections."
   ].filter(Boolean).join("\n");
 
   const user=[
