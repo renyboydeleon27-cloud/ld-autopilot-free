@@ -1,4 +1,4 @@
-/* LD AUTO v3.39.0 — Final Production Check with color-treatment lock awareness. */
+/* LD AUTO v3.40.3 — Final Production Check with Approved Memory recovery for completed legacy projects. */
 (function(){
 'use strict';
 
@@ -242,8 +242,9 @@ function evaluateFinalProduction(){
     });
   }
   const missingAudit=CORE_STAGES.filter(stage=>memory[stage]?.latest&&!memory[stage].latest.auditSignature);
-  push('audit','Audit signatures current',typeof signatureFn==='function'&&!stale.length&&!missingAudit.length,
-    stale.length?'Changed after approval: '+stale.join(', '):(missingAudit.length?'Missing audit signature: '+missingAudit.join(', '):'Approved content still matches its audited version.'));
+  const signaturesOk=typeof signatureFn==='function'&&!missingMemory.length&&!stale.length&&!missingAudit.length;
+  push('audit','Audit signatures current',signaturesOk,
+    missingMemory.length?'Approved Memory must be recovered before signatures can be verified.':(stale.length?'Changed after approval: '+stale.join(', '):(missingAudit.length?'Missing audit signature: '+missingAudit.join(', '):'Approved content still matches its approved version.')));
 
   const incompleteCore=CORE_STAGES.filter(stage=>!currentStageReady(cardFor(stage)));
   push('content','Narration + production prompts',!incompleteCore.length,
@@ -266,6 +267,36 @@ function evaluateFinalProduction(){
   const ok=!!current&&checks.every(x=>x.ok);
   return {ok,topic:current,checks,failed:checks.filter(x=>!x.ok)};
 }
+function recoveryEligible(gate){
+  const failed=Array.isArray(gate?.failed)?gate.failed:[];
+  const missingMemory=failed.some(x=>x.key==='memory');
+  const otherFailures=failed.filter(x=>x.key!=='memory'&&x.key!=='audit');
+  return missingMemory&&otherFailures.length===0;
+}
+function recoverApprovedMemory(){
+  const gateBefore=evaluateFinalProduction();
+  if(!recoveryEligible(gateBefore))return {ok:false,message:'Approved Memory recovery is only available when the production is otherwise fully complete and valid.'};
+  const saver=window.LDSmartContinue?.saveApprovedMemory;
+  if(typeof saver!=='function')return {ok:false,message:'Approved Memory recovery tool is not loaded yet. Refresh LD AUTO and try again.'};
+  let recovered=0;
+  CORE_STAGES.forEach(stage=>{
+    const card=cardFor(stage);
+    if(!card||!card.querySelector('.done-toggle')?.checked||!currentStageReady(card))return;
+    if(window.ldApprovedMemory?.stages?.[stage]?.latest)return;
+    if(saver(card,{method:'final-audit-recovery'}))recovered++;
+  });
+  const field=document.querySelector('#stages textarea');
+  if(field)field.dispatchEvent(new Event('input',{bubbles:true}));
+  window.dispatchEvent(new CustomEvent('ld:approved-memory-recovered',{detail:{count:recovered,topic:currentTopic()}}));
+  const after=evaluateFinalProduction();
+  return {
+    ok:after.checks?.find(x=>x.key==='memory')?.ok===true,
+    count:recovered,
+    message:recovered
+      ? 'Recovered Approved Memory for '+recovered+' completed core stage'+(recovered===1?'':'s')+'. Final Production Check refreshed.'
+      : (after.ok?'Approved Memory is already complete.':'No recoverable Approved Memory snapshots were created.')
+  };
+}
 function refreshFinalCheck(root){
   root=root||document.getElementById('productionDnaEngine');
   if(!root)return evaluateFinalProduction();
@@ -273,6 +304,7 @@ function refreshFinalCheck(root){
   const badge=root.querySelector('.dna-final-badge');
   const list=root.querySelector('.dna-final-list');
   const btn=root.querySelector('.dna-optimize');
+  const recover=root.querySelector('.dna-recover');
   if(badge){
     badge.textContent=gate.ok?'✅ PRODUCTION VERIFIED — READY TO SAVE DNA':'⚠️ '+gate.failed.length+' CHECK'+(gate.failed.length===1?'':'S')+' NEED ATTENTION';
     badge.dataset.state=gate.ok?'pass':'warn';
@@ -283,6 +315,12 @@ function refreshFinalCheck(root){
   if(btn){
     btn.disabled=!gate.ok;
     btn.title=gate.ok?'Save the verified finished production DNA.':(gate.failed[0]?.detail||'Complete the final production check first.');
+  }
+  if(recover){
+    const canRecover=recoveryEligible(gate);
+    recover.hidden=!canRecover;
+    recover.disabled=!canRecover;
+    recover.title=canRecover?'Recover Approved Memory snapshots from this already-completed 100% production.':'Recovery is available only when Approved Memory is the remaining blocker.';
   }
   return gate;
 }
@@ -342,10 +380,17 @@ function render(){
   }
   placeRoot(root);
   const profile=activeProfile();
-  root.innerHTML='<div style="display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap"><div><span class="audit-label">LD PRODUCTION DNA ENGINE</span><strong style="display:block;font-size:17px;margin-top:3px">Extract → Recreate → Polish → Validate</strong><p class="dna-summary" style="margin:6px 0 0;color:#9aa7b6;font-size:12px"></p></div><button type="button" class="primary dna-optimize" disabled>🧬 Save Finished Production DNA</button></div><div class="dna-final-check"><div class="dna-final-head"><span class="audit-label">FINAL PRODUCTION CHECK</span><strong class="dna-final-badge">Checking…</strong></div><div class="dna-final-list"></div></div><p class="dna-status" style="margin:10px 0 0;font-size:12px;color:#b8c4d1"></p><p style="margin:7px 0 0;font-size:11px;color:#8fa0b2">Save DNA only after the production is verified. The check protects Approved Memory, audit signatures, project locks, progression, Ending and Thumbnail rules before the finished cinematic DNA is captured for future episodes.</p>';
+  root.innerHTML='<div style="display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap"><div><span class="audit-label">LD PRODUCTION DNA ENGINE</span><strong style="display:block;font-size:17px;margin-top:3px">Extract → Recreate → Polish → Validate</strong><p class="dna-summary" style="margin:6px 0 0;color:#9aa7b6;font-size:12px"></p></div><div class="dna-actions"><button type="button" class="ghost dna-recover" hidden>♻️ Recover Approved Memory</button><button type="button" class="primary dna-optimize" disabled>🧬 Save Finished Production DNA</button></div></div><div class="dna-final-check"><div class="dna-final-head"><span class="audit-label">FINAL PRODUCTION CHECK</span><strong class="dna-final-badge">Checking…</strong></div><div class="dna-final-list"></div></div><p class="dna-status" style="margin:10px 0 0;font-size:12px;color:#b8c4d1"></p><p style="margin:7px 0 0;font-size:11px;color:#8fa0b2">Save DNA only after the production is verified. The check protects Approved Memory, audit signatures, project locks, progression, Ending and Thumbnail rules before the finished cinematic DNA is captured for future episodes.</p>';
   root.querySelector('.dna-summary').textContent=summarize(profile);
   const status=root.querySelector('.dna-status');
   status.textContent=profile?'DNA profile active. New prompts can inherit the approved technique safely.':'No finished production DNA saved yet.';
+  const recover=root.querySelector('.dna-recover');
+  recover.addEventListener('click',function(){
+    const result=recoverApprovedMemory();
+    status.textContent=result.message;
+    refreshFinalCheck(root);
+    window.LDFinalPackage?.refresh?.();
+  });
   const button=root.querySelector('.dna-optimize');
   button.addEventListener('click',function(){
     const gate=refreshFinalCheck(root);
@@ -360,7 +405,7 @@ function render(){
   if(!document.getElementById('ldDnaGateStyles')){
     const style=document.createElement('style');
     style.id='ldDnaGateStyles';
-    style.textContent='.dna-final-check{margin:12px 0 8px;padding:11px;border:1px solid rgba(124,92,255,.45);border-radius:12px;background:rgba(124,92,255,.06)}.dna-final-head{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}.dna-final-badge{font-size:12px}.dna-final-badge[data-state="pass"]{color:#65c28d}.dna-final-badge[data-state="warn"]{color:#f0b35f}.dna-final-list{display:grid;gap:5px;margin-top:9px}.dna-check-row{display:flex;gap:8px;justify-content:space-between;align-items:flex-start;font-size:11px}.dna-check-row span{font-weight:700}.dna-check-row small{max-width:58%;text-align:right;opacity:.78}.dna-optimize:disabled{opacity:.45;cursor:not-allowed}@media(max-width:560px){.dna-check-row{display:block}.dna-check-row small{display:block;max-width:none;text-align:left;margin:2px 0 0 22px}}';
+    style.textContent='.dna-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.dna-actions button{min-width:210px}.dna-final-check{margin:12px 0 8px;padding:11px;border:1px solid rgba(124,92,255,.45);border-radius:12px;background:rgba(124,92,255,.06)}.dna-final-head{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}.dna-final-badge{font-size:12px}.dna-final-badge[data-state="pass"]{color:#65c28d}.dna-final-badge[data-state="warn"]{color:#f0b35f}.dna-final-list{display:grid;gap:5px;margin-top:9px}.dna-check-row{display:flex;gap:8px;justify-content:space-between;align-items:flex-start;font-size:11px}.dna-check-row span{font-weight:700}.dna-check-row small{max-width:58%;text-align:right;opacity:.78}.dna-optimize:disabled{opacity:.45;cursor:not-allowed}@media(max-width:560px){.dna-check-row{display:block}.dna-check-row small{display:block;max-width:none;text-align:left;margin:2px 0 0 22px}}';
     document.head.appendChild(style);
   }
 }
@@ -375,7 +420,8 @@ window.LDProductionDNA={
   evaluateFinalProduction:evaluateFinalProduction,
   refreshFinalCheck:refreshFinalCheck,
   applyCurrent:applyCurrent,
-  render:render
+  render:render,
+  recoverApprovedMemory:recoverApprovedMemory
 };
 render();
 function queueFinalCheck(){setTimeout(function(){refreshFinalCheck();},80);}
