@@ -1,6 +1,6 @@
 /* LD AUTO v3.40.4 — title-driven shared setting + cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.40.1-character-diversity-v1';
+const T2V_POLICY_VERSION='3.40.6-sf-p2-surface-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -511,6 +511,7 @@ function cameraDirector(stage,scientific){
  return (map[n]||map[6])+' Maintain one lens family and coherent perspective for the whole 10 seconds. No zoom pumping, fisheye, random orbit, camera teleportation, viewpoint reset, wall pass-through or unmotivated shake.';
 }
 function weatherContinuityLock(stage){
+ if(stage==='P2'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current()))return 'WEATHER + ATMOSPHERE CONTINUITY LOCK: Keep the same visible light, weather and ground condition as P1 when established. If P1 does not establish a detail, leave it unspecified; do not invent wind, rain or an ominous atmospheric change. The 1906 street is intact and quiet before perceptible shaking in P3.';
  var prev=previousApprovedContinuity(stage);
  var bridge=prev?'\nPREVIOUS APPROVED PANEL CONTINUITY REFERENCE: '+prev:'';
  return 'WEATHER + ATMOSPHERE CONTINUITY LOCK:\nWeather is story continuity, not decoration. Preserve cloud direction, wind direction, light direction, visibility, precipitation state, ground wetness/dust state and atmospheric density from the preceding story beat unless the current panel explicitly requires a change. Any change must evolve progressively on-screen, never reset abruptly. Storm buildup must darken / thicken / intensify progressively; aftermath may ease only when the story position supports it. Keep foreground, midground and background atmosphere layered so the primary subject and hazard remain readable.'+bridge;
