@@ -1,6 +1,6 @@
 /* LD AUTO v3.40.4 — title-driven shared setting + cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.40.7-sf-p2-audit-consistency-v1';
+const T2V_POLICY_VERSION='3.40.8-sf-p2-no-voice-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -442,11 +442,11 @@ function sanFrancisco1906P2(stage){
    approved:false,
    scientific:false,
    scene:'A calm, historically appropriate San Francisco street in 1906 before the first perceptible shaking. Show intact facades, period street details and a few distinct adult residents in ordinary movement. The camera observes the everyday city from a different angle and sublocation than P1. The fault stress is explained only by the narration; it is invisible in this surface-level scene. No underground cutaway, visible fault line, shaking, window rattling, falling objects, cracks, smoke, fire or destruction yet.',
-   narrative:'Stress builds along the fault as locked sections of the crust resist movement beneath the surface. This is explanatory narration only; no invisible mechanism appears on screen.',
+   narrative:'The earthquake source remains unseen. Show ordinary pre-event life only.',
    timing:'0.0–2.0s: Establish the intact 1906 San Francisco street at human height with one clear foreground scale reference and ordinary adult movement.\n2.0–7.0s: Continue a restrained lateral camera move through the same street, showing normal period architecture and distinct adults without an earthquake cue.\n7.0–10.0s: Hold the intact pre-event setting and end before P3 begins perceptible shaking.',
    camera:'One coherent surface-level lateral move in a historically appropriate street, visually distinct from P1. No scientific cutaway or unsupported subsurface view.',
    physics:'Fault stress is described in the narration and remains invisible. Preserve stable buildings and objects. No premonitory shaking, rattling, structural damage or fire in P2.',
-   audio:'Ordinary quiet 1906 street ambience synchronized with visible activity only. No underground rumble, rock strain, deep-earth vibration, music or voiceover.',
+   audio:'SOUND EFFECTS ONLY: quiet ordinary 1906 street ambience synchronized with visible activity. ABSOLUTE SILENCE FROM HUMAN VOICES: no narrator, dialogue, spoken words, whispers, singing, vocal reactions, lip-sync or speech synthesis. Do not read the panel narration aloud. No underground rumble, rock strain, deep-earth vibration or music.',
    extraNegative:'No underground or subsurface visualization; no diagram, fault cross-section, cracks, tremor, dramatic rumble, fire, collapse or premature disaster imagery.'
  };
 }
@@ -526,7 +526,7 @@ function subjectObjectLock(){
  return 'SUBJECT + OBJECT PERSISTENCE LOCK:\nWithin this shot, each adult keeps the same face, age, hair, clothing, body proportions and accessories from first frame to last. Buildings, windows, roofs, poles, trees, fences, vehicles and large debris preserve geometry and identity unless visibly altered by a physical event. Across panels, reuse a recurring adult only when continuity context establishes that it is the same person; otherwise do not invent false character continuity.';
 }
 function audioDirector(stage){
- if(isSanFrancisco1906P2(stage))return 'PROFESSIONAL CINEMATIC AUDIO MIX: quiet ordinary street ambience from visible, era-appropriate activity only. Maintain a stable soundscape throughout. No tension rise, peak, low rumble, rock strain, deep-earth vibration, dramatic impact, alarm, music or voiceover.';
+ if(isSanFrancisco1906P2(stage))return 'PROFESSIONAL CINEMATIC AUDIO MIX: sound effects only, quiet ordinary street ambience from visible activity. No human voices of any kind, narrator, speech, dialogue, singing, whispering or lip-sync. Maintain a stable soundscape. No tension rise, peak, rumble, rock strain, dramatic impact, alarm or music.';
  var n=stageNumber(stage);
  var phase=n<=2?'quiet tension with restrained ambience':n<=5?'rising environmental pressure with selective impacts':n<=8?'powerful hazard sound with controlled dynamic peaks':n===9?'post-impact atmosphere with space, distant detail and natural decay':n<=12?'human-scale ambience with restrained work / movement sounds':'quiet recovery / reflective ambience';
  return 'PROFESSIONAL CINEMATIC AUDIO MIX:\nAudio phase: '+phase+'. Use natural, scene-specific sound only unless music or dialogue is explicitly requested. Hierarchy: primary environmental hazard/ambience first, secondary environment second, occasional physically motivated impacts third, subtle human movement/reaction last. No repetitive identical impact loop, constant metallic clanging, random cinematic boom, camera whoosh, high-pitched continuous screech, artificial bass hit, unsupported explosion, or modern siren/alarm. Keep dynamic range: quieter tension → rising pressure → peak → natural decay when appropriate. Every major audible event must have a visible cause and occur in sync with the image.';
@@ -664,7 +664,7 @@ function build(card){
    +'\n\n'+lock()
    +'\n\n'+progressionLock(stage,special)
    +'\n\nPANEL SCENE:\n'+scene
-   +'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(special&&special.narrative?special.narrative:(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.'))
+   +'\n\nNARRATIVE CONTEXT — not spoken, not on screen:\n'+(isSanFrancisco1906P2(stage)?'Do not include any narration text or spoken explanation in this video. Fault stress is invisible and will be narrated separately during editing.':(special&&special.narrative?special.narrative:(card.querySelector('.narration').value.trim()||'Follow this panel scene only; do not invent narration or statistics.')))
    +'\n\nTIMING:\n'+timing
    +'\n\n'+cinematicMasterLock(stage,scientific)
    +'\n\nCAMERA:\n'+(special&&special.camera?(special.camera+' '+camera):camera)
