@@ -1,6 +1,6 @@
 /* LD AUTO v3.40.4 — title-driven shared setting + cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.40.8-sf-p2-no-voice-v1';
+const T2V_POLICY_VERSION='3.40.9-sf-p3-visible-onset-v1';
 function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -450,8 +450,22 @@ function sanFrancisco1906P2(stage){
    extraNegative:'No underground or subsurface visualization; no diagram, fault cross-section, cracks, tremor, dramatic rumble, fire, collapse or premature disaster imagery.'
  };
 }
+function sanFrancisco1906P3(stage){
+ if(stage!=='P3'||!/\bSan Francisco Earthquake\b/i.test(current())||!/\b1906\b/.test(current()))return null;
+ return {
+   approved:false,
+   scientific:false,
+   scene:'First clearly perceptible earthquake shaking on a historically appropriate San Francisco street in 1906. Begin with a visible tremor within the first half-second: a hanging sign sways, windowpanes visibly rattle and dust shakes from an intact facade. A few distinct adults stop, lose balance slightly and brace against stable surfaces. The camera remains at human height and follows their immediate reaction. The street and buildings stay standing; this is the first danger beat, not the major collapse.',
+   narrative:'The first shaking reaches the city. This context is for visual direction only and is never spoken in the generated video.',
+   timing:'0.0–1.0s: One clear tremor begins immediately. The sign swings, windows visibly rattle and adults notice the movement.\n1.0–4.0s: Shaking intensifies enough for adults to brace and for loose lightweight objects to slide or fall naturally. Keep facades standing.\n4.0–8.0s: The same sustained shaking continues visibly through the street, sign, windows, ground-level objects and human balance. The camera moves purposefully at human height.\n8.0–10.0s: End on a strong, readable early-earthquake jolt without a major structural failure; P4 and later panels carry stronger destruction.',
+   camera:'A human-height three-quarter street view with one controlled forward or lateral move. Show adults and multiple physical earthquake cues together. No static stillness, random cuts or extreme camera shake.',
+   physics:'One sustained developing earthquake begins visibly within 0.5 seconds. Objects rattle, sway or fall only from the shaking; adults react with believable balance. No giant chasm, building collapse, fire, citywide devastation or peak-disaster imagery yet.',
+   audio:'Sound effects only: visible window rattles, moving fixtures, loose objects and short nonverbal reactions synchronized with the shaking. No narration, dialogue, spoken words, music or invented deep-earth sound.',
+   extraNegative:'No voiceover, spoken narration, lip-sync, major collapse, flames, instant citywide ruin or invisible earthquake.'
+ };
+}
 function eventPanel(stage){
- return sanFrancisco1906P2(stage)||triStateTornadoPanel(stage)||rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
+ return sanFrancisco1906P2(stage)||sanFrancisco1906P3(stage)||triStateTornadoPanel(stage)||rockyMountainLocustPanel(stage)||rockyMountainLocustLatePanel(stage)||nargisPanel(stage)||lituyaCause(stage);
 }
 function progression(stage,special){
  if(special)return null;
