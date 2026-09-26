@@ -1,4 +1,4 @@
-/* LD AUTO v3.39.4 — persistent Smart Continue target + ready-for-approval state. */
+/* LD AUTO v3.39.5 — persistent current-panel viewport restore on app return. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -351,6 +351,31 @@ function restoreSmartSession(){
   }
   return target;
 }
+let lastHiddenAt=0;
+let viewportRestoreTimer=null;
+function currentSessionCard(){
+  const cards=[...stages.querySelectorAll('.stage-card')].filter(eligible);
+  if(!cards.length)return null;
+  const session=readSmartSession();
+  const remembered=session?.targetStage?cards.find(card=>card.dataset.stage===session.targetStage):null;
+  if(remembered&&!stageDone(remembered))return remembered;
+  return firstIncompleteCard(cards)||remembered||currentCard();
+}
+function restoreCurrentPanelViewport(options={}){
+  clearTimeout(viewportRestoreTimer);
+  const delay=Number.isFinite(options.delay)?options.delay:140;
+  viewportRestoreTimer=setTimeout(()=>{
+    restoreSmartSession();
+    const card=currentSessionCard();
+    if(!card)return;
+    setOpen(card,{scroll:false});
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      card.scrollIntoView({behavior:options.smooth?'smooth':'auto',block:'start'});
+      updateTargetLabel();
+    }));
+  },delay);
+}
+
 function stopPhase(){
   if(phaseTimer){clearInterval(phaseTimer);phaseTimer=null;}
 }
@@ -833,6 +858,21 @@ window.addEventListener('ld:production-built',()=>{
     refreshApiCostCounter();
   },180);
 });
+
+// Keep the user's current production panel on-screen after switching to Flow or another app/tab.
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    lastHiddenAt=Date.now();
+    const card=currentCard();
+    if(card)writeSmartSession({targetStage:card.dataset.stage||''});
+    return;
+  }
+  if(Date.now()-lastHiddenAt>=300)restoreCurrentPanelViewport({delay:120});
+});
+window.addEventListener('pageshow',()=>restoreCurrentPanelViewport({delay:180}));
+window.addEventListener('focus',()=>{
+  if(lastHiddenAt&&Date.now()-lastHiddenAt>=300)restoreCurrentPanelViewport({delay:100});
+});
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     mount();
@@ -849,5 +889,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.39.4',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()})};
+window.LDSmartContinue={version:'3.39.5',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()})};
 })();
