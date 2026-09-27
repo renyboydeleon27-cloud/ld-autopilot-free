@@ -855,11 +855,41 @@ function adjacentSceneLock(stage){
  return 'PANEL SCENE IDENTITY LOCK: Give '+stage+' its own primary place, camera angle, foreground action and cast. The prior panel P'+(n-1)+' used '+(sceneLocationKey(prior)||'its established setting')+' and '+(sceneActionKey(prior)||'its established action')+'. Keep historical continuity while changing the visual setup where the narrative permits. Never repeat a wall-bracing foreground adult, identical street corner, camera axis or background layout with only different faces. The current PANEL SCENE and event-specific timing have priority over this variety rule.';
 }
 function signature(card){var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=window.LDDisasterProgression?.version||'';return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
+function sanFranciscoP11AnimePrompt(card){
+ var narration=clean(card.querySelector('.narration')?.value)||'Temporary camps and emergency aid appear as people face displacement.';
+ var custom=String(card.dataset.videoScene||'');
+ var scene=/^SMART RANDOM CHOICE — PRIMARY LOCATION:|^PRIMARY LOCATION:/.test(custom)
+  ? 'Use the selected P11 relief location: '+custom.replace(/^SMART RANDOM CHOICE — /,'')+' Keep the aid handoff and human displacement as the only focal action.'
+  : 'At a temporary 1906 San Francisco relief camp, two distinct adults complete one visible handoff of a small bundle of provisions beside period canvas shelters and a rough wooden table. One other adult waits with an empty container. Damaged city buildings remain far in the background. Exactly three foreground adults, each with a different face, hair and historically plausible clothing.';
+ var result='VIDEO PROMPT — EXACTLY 10 SECONDS\\n'+current()+' · P11\\n\\n'
+  +absoluteStyleLock()+'\\n\\n'
+  +'P11 2D ANIME FRAME LOCK: Every frame MUST look like a drawn and animated black-and-white historical anime panel: visible ink contours around faces, hands, fabric and buildings; deliberately drawn anime facial features; clean grayscale cel shading and hand-painted 2D background planes. This applies to the first, middle and final frames, including every background person. Black-and-white film grain is subtle texture ON TOP OF THE DRAWING; never simulate photographic footage, camera-captured faces or natural photographic skin.\\n\\n'
+  +'TEXT-TO-VIDEO. Portrait 9:16. One uninterrupted 10-second shot in San Francisco, California, USA, 1906. No image reference.\\n\\n'
+  +'CHAPTER CONTINUITY LOCK: Same true black-and-white 2D anime world as the approved HOOK and P1–P10. 1906 clothing, simple relief supplies and period canvas shelter construction. Do not introduce modern agencies, vehicles or technology.\\n'
+  +'DISASTER-FAMILY PROGRESSION LOCK: P11 shows displacement and limited immediate aid after the quake. P10 street rescue has ended; P12 wider infrastructure consequences have not begun.\\n\\n'
+  +'PANEL SCENE:\\n'+scene+'\\n\\n'
+  +'NARRATIVE CONTEXT — not spoken, not on screen: '+narration+'\\n\\n'
+  +'TIMING: 0.0–2.0s: Show the 2D-drawn relief scene immediately with the bundle and hands visible. 2.0–7.0s: One careful handoff as the camera tracks sideways. 7.0–10.0s: The recipient steps aside; the third adult waits. No collapse or dramatic new disaster beat.\\n\\n'
+  +'MASTER CINEMATIC CONSISTENCY LOCK — HIGH PRIORITY: Keep the three faces, clothes, hands, bundle and shelter geometry consistent from first to last frame.\n'
+  +'MICRO-TRANSITION + MORPH CONTROL: The bundle stays in one pair of hands until it visibly transfers to the other; no object multiplication or face changes.\n'
+  +'CHARACTER DIVERSITY + ANTI-CLONE LOCK: Three distinct drawn adult faces and period outfits; no duplicate extras or photographic people.\n'
+  +'WEATHER + ATMOSPHERE CONTINUITY LOCK: Keep only light, visibility, ground and weather conditions established in P10; do not invent new atmospheric cues.\n'
+  +'DEBRIS + DAMAGE PHYSICS LOCK: Existing background damage remains stable. No new collapse, hovering objects or changing geometry.\n'
+  +'CINEMATIC CAMERA DIRECTOR: One gentle lateral track at human height. Retain inked linework and flat grayscale shading during movement.\n'
+  +'PROFESSIONAL CINEMATIC AUDIO MIX: Soft footsteps, cloth and the visible bundle/table contact only. No voice, dialogue, narration or music.\\n\\n'
+  +'CAMERA: One continuous lateral 2D animated camera move; no photographic lens artifacts or viewpoint cuts.\\n'
+  +'PHYSICS AND TIME: A single believable handoff. Every person and object remains stable across all 10 seconds.\\n'
+  +'AUDIO: Small visible object and movement SFX only; no voices or music.\\n'
+  +'NEGATIVE: No live action, photorealistic people, photographic skin, 3D CGI humans, grayscale film footage, newsreel capture, modern objects, captions, logos, or color.\\n'
+  +'STATUS: FOR TESTING — review the rendered animation before approval.';
+ return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,result):result;
+}
 function build(card){
  var scene=cleanSceneText(sceneFrom(card));
  if(!scene)throw Error('Add the panel scene description first.');
  if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
  var stage=card.dataset.stage;
+ if(stage==='P11'&&/\\bSan Francisco Earthquake\\b/i.test(current())&&/\\b1906\\b/.test(current())&&style()==='anime'&&colorMode()==='bw')return sanFranciscoP11AnimePrompt(card);
  var special=choiceSpecial(card,eventPanel(stage));
  if(special&&special.scene)scene=special.scene;
  scene=sanitizeSceneForStyle(scene);
@@ -921,7 +951,7 @@ function rebuildTextPrompt(card){
  syncGlobalControl();
  return text;
 }
-function valid(card){return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function valid(card){if(card.dataset.stage==='P11'&&/\\bSan Francisco Earthquake\\b/i.test(current())&&/\\b1906\\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
 function completionReady(card){
  if(!supports(card))return false;
  if(state(card).mode!=='text')return true;
@@ -1083,7 +1113,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.40.23',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.40.24',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea,.video-mode-controls select{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(event){panel();all();if(event.detail?.fresh)activateSmartDefault();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
