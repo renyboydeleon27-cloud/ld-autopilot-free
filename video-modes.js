@@ -711,8 +711,8 @@ function weatherContinuityLock(stage){
  var bridge=prev?'\nPREVIOUS APPROVED PANEL CONTINUITY REFERENCE: '+prev:'';
  return 'WEATHER + ATMOSPHERE CONTINUITY LOCK:\nWeather is story continuity, not decoration. Preserve only weather and atmosphere details visibly established by the preceding approved panel; if cloud direction, wind, light direction, visibility, precipitation, ground wetness or dust are not established, leave them unspecified and do not invent them. Any established change must evolve progressively on-screen, never reset abruptly. Storm buildup must darken / thicken / intensify progressively; aftermath may ease only when the story position supports it. Keep foreground, midground and background readable; add atmospheric layers only when visibly established or caused within this panel.'+bridge;
 }
-function transitionMorphLock(){
- if(/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&document.querySelector('.stage-card[data-stage="P13"]:not(.complete)'))return 'MICRO-TRANSITION + MORPH CONTROL: keep the P13 worker, one brick and fully assembled cart persistent. Show hand contact before the brick lifts, continuous lift, single release, then stillness. No morphing, pop-in, cut, new person, extra tool, sudden cart or wheel formation.';
+function transitionMorphLock(stage){
+ if(stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current()))return 'MICRO-TRANSITION + MORPH CONTROL: keep the P13 worker, one brick and fully assembled cart persistent. Show hand contact before the brick lifts, continuous lift, single release, then stillness. No morphing, pop-in, cut, new person, extra tool, sudden cart or wheel formation.';
  return 'MICRO-TRANSITION + MORPH CONTROL:\nAll state changes need visible physical intermediates. Wind builds before objects accelerate. People brace, turn, stumble or react before changing position. Structures flex / strain / detach before failure. Debris begins moving before reaching speed. Damage never reverses. No morph dissolve, hidden cut, snap transformation, pop-in, pop-out, teleportation, duplicate person, replacement face, changing clothing, changing body proportions, geometry melt, respawn, spontaneous repair or unexplained object multiplication. Large objects keep identity, scale and orientation until a visible force changes them.';
 }
 function subjectObjectLock(){
@@ -790,7 +790,7 @@ function antiClonePromptCompatible(text){
 function cinematicMasterLock(stage,scientific){
  return 'MASTER CINEMATIC CONSISTENCY LOCK — HIGH PRIORITY:\n'
   +intensityDirector(stage)+'\n'
-  +transitionMorphLock()+'\n'
+  +transitionMorphLock(stage)+'\n'
   +subjectObjectLock()+'\n'
   +characterDiversityLock(stage)+'\n'
   +weatherContinuityLock(stage)+'\n'
