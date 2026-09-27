@@ -219,7 +219,7 @@ function smartSceneItem(card){
 }
 function activateSmartDefault(){
  panelCards().forEach(function(card){
-  if(!sceneChoiceAllowed(card)||card.dataset.videoMode!=='text')return;
+  if(!sceneChoiceAllowed(card)||!ready())return;
   var item=smartSceneItem(card);if(!item)return;
   card.dataset.sceneChoice=String(item.index);
   card.dataset.videoScene='SMART RANDOM CHOICE — '+selectedScene(card,item.index);
@@ -227,7 +227,7 @@ function activateSmartDefault(){
   var picker=card.querySelector('.scene-choice');if(picker)picker.value='smart';
   card.dataset.textVideoPrompt='';card.dataset.textVideoSignature='';
   var text=card.querySelector('.text-video-prompt');if(text)text.value='';
-  if(ready()){try{rebuildTextPrompt(card);}catch(e){update(card);}}
+  if(card.dataset.videoMode==='text'){try{rebuildTextPrompt(card);}catch(e){update(card);}}
  });
  saveCurrent();
 }
@@ -254,7 +254,8 @@ function sceneChoiceAllowed(card){
 function choiceSpecial(card,special){
  if(!special||sceneChoiceIndex(card)===''||special.approved)return special;
  return {...special,scene:selectedScene(card,Number(sceneChoiceIndex(card))),
-  timing:'0.0–2.0s: Establish the selected place, cast and panel action immediately.\n2.0–7.0s: Follow the same event stage with physically coherent motion and no new unverified event fact.\n7.0–10.0s: Reveal one clear consequence appropriate to this panel, without replaying the preceding panel.',
+  narrative:'Follow only this panel’s approved narration and story stage visually; no spoken narration or invented historical claims.',
+  timing:card.dataset.stage==='P3'&&/San Francisco Earthquake/i.test(current())?'0.0–1.0s: Visible first quake tremor begins within 0.5 seconds in the selected place; adults notice moving fixtures.\\n1.0–7.0s: Sustained shaking rattles loose objects and adults brace naturally without peak collapse.\\n7.0–10.0s: Continue clear early shaking and stop before later-stage structural failure.':'0.0–2.0s: Establish the selected place, cast and panel action immediately.\n2.0–7.0s: Follow the same event stage with physically coherent motion and no new unverified event fact.\n7.0–10.0s: Reveal one clear consequence appropriate to this panel, without replaying the preceding panel.',
   camera:'One continuous grounded camera move suited to the selected location, distinct from the previous panel.',
   physics:'Use only the supported panel disaster beat, with plausible object motion, stable identities and no invented large-scale failure.',
   audio:'Only quiet audible effects from visible objects and movement at this location. No voices, music, unsupported wind, rumble or impact.',
@@ -796,6 +797,10 @@ function qualityPromptCompatible(text){
 function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanNarrationInstructions(value):String(value||'').trim();}
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[6]=clean(parts[6]);parts[7]=clean(parts[7]);return JSON.stringify(parts);}catch(e){return '';}}
 function pinScene(card){
+ if(String(card.dataset.videoScene||'').startsWith('SMART RANDOM CHOICE — ')){
+  var item=smartSceneItem(card);
+  if(item){card.dataset.sceneChoice=String(item.index);card.dataset.videoScene='SMART RANDOM CHOICE — '+selectedScene(card,item.index);var field=card.querySelector('.video-scene');if(field)field.value=card.dataset.videoScene;}
+ }
  var special=eventPanel(card.dataset.stage);
  if(special&&special.scene&&sceneChoiceIndex(card)===''){
    card.dataset.videoScene=clean(special.scene);
@@ -953,7 +958,7 @@ function decorate(card){if(!supports(card)||card.querySelector('.video-mode-cont
 // Restore the exact scene used by older saved text prompts before image helpers run.
 if(state(card).text&&!state(card).scene){try{var saved=JSON.parse(state(card).signature);if(Array.isArray(saved)&&typeof saved[4]==='string')card.dataset.videoScene=clean(saved[4]);}catch(e){}}
 
-var box=document.createElement('div');box.className='video-mode-controls';box.innerHTML='<p class="video-mode-status"></p><button type="button" class="ghost copy-active-video">Copy FULL Video Prompt</button><div class="text-video-fields"><label>Choose scene location before Smart Continue<select class="scene-choice"><option value="">Keep current scene</option></select></label><label>Panel scene description<textarea class="video-scene" rows="4"></textarea></label><button type="button" class="ghost build-text-video">Build / refresh Text-to-Video prompt</button><label>Text-to-Video prompt<textarea class="text-video-prompt" rows="10"></textarea></label><button type="button" class="ghost copy-text-video">Copy FULL Text-to-Video Prompt</button></div>';
+var box=document.createElement('div');box.className='video-mode-controls';box.innerHTML='<p class="video-mode-status"></p><button type="button" class="ghost copy-active-video">Copy FULL Video Prompt</button><div class="text-video-fields"><label>Choose scene location before Smart Continue<select class="scene-choice"><option value="">Keep current scene</option><option value="smart">✨ SMART RANDOM CHOICE</option></select></label><label>Panel scene description<textarea class="video-scene" rows="4"></textarea></label><button type="button" class="ghost build-text-video">Build / refresh Text-to-Video prompt</button><label>Text-to-Video prompt<textarea class="text-video-prompt" rows="10"></textarea></label><button type="button" class="ghost copy-text-video">Copy FULL Text-to-Video Prompt</button></div>';
 card.querySelector('.flow-wrap').before(box);
 var picker=box.querySelector('.scene-choice');
 availableScenes(card).forEach(function(item){var option=document.createElement('option');option.value=String(item.index);option.textContent=item.place;picker.appendChild(option);});
@@ -1078,7 +1083,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.40.22',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.40.23',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea,.video-mode-controls select{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(event){panel();all();if(event.detail?.fresh)activateSmartDefault();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
