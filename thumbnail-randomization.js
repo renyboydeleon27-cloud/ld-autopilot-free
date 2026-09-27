@@ -1,4 +1,4 @@
-/* LD AUTO v3.41.5 — 10-design thumbnail rotation + visual sample previews + anti-repeat */
+/* LD AUTO v3.41.6 — 10-design thumbnail rotation + visual sample previews + anti-repeat */
 (()=>{
 'use strict';
 const stages=document.getElementById('stages');if(!stages)return;
@@ -10,7 +10,7 @@ const layouts=[
  {id:'survivor',label:'1 · Survivor Close-Up',title:'SURVIVOR CLOSE-UP + DISASTER BEHIND',rule:'Use ONE dominant adult survivor or responder in a large chest-up or waist-up foreground portrait. Keep the face emotionally readable while the active disaster remains clearly visible behind and around the subject. Do not let the face cover the main hazard.'},
  {id:'trigger',label:'2 · Trigger Object',title:'TRIGGER OBJECT + IMPACT REVEAL',rule:'Make one event-relevant object or physical detail the strong foreground focal point while the disaster impact is clearly visible beyond it. The trigger object must be historically plausible and visually connected to the event; never invent a false causal fact.'},
  {id:'split',label:'3 · Split Tension',title:'CALM / IMPACT SPLIT TENSION',rule:'Create a two-zone composition with a quieter warning or pre-impact visual on one side and the disaster impact on the other, blended as one cinematic thumbnail rather than a literal comic-panel divider. Preserve one coherent historical scene.'},
- {id:'street',label:'4 · Street Chaos',title:'STREET-LEVEL CHAOS',rule:'Use an eye-level or slightly low street perspective with debris, damaged structures, environmental motion, and adult survival action. Make the viewer feel inside the event while keeping the main hazard readable at phone size.'},
+ {"id":"street","label":"4 · Looking Back — Escape","title":"LOOKING BACK — ESCAPE (APPROVED)","rule":"APPROVED DESIGN No. 4 — LOOKING BACK / ESCAPE. One adult woman on the RIGHT foreground, body in three-quarter turn moving toward the viewer while looking back over her shoulder toward the current disaster on the LEFT. Show her full head and expressive face, natural hands, historically appropriate clothing, and a small event-appropriate travel bag if plausible. Keep the main hazard and evacuation route clearly visible on the left with strong foreground, midground and background depth. FULL COLOR: vivid cool blue shadows contrasted with warm hazard lighting where physically appropriate; never invent fire for an event without fire. Historical Anime uses detailed mature 2D hand-inked graphic-novel rendering; otherwise preserve the selected production visual mode. For portrait 9:16 keep title, full head, location/year and branding inside the central safe area with generous sky above and expendable ground below; no edge-hugging lettering. Bold white headline, yellow hook strip, restrained red underline, small globe/open-book branding with LIVING DISASTER BOOK and REAL EVENTS. LASTING LESSONS. Adapt headline, hook text, architecture, terrain, hazard, clothing and props to CURRENT TOPIC only. The San Francisco 1906 image is a composition example, not scenery to reuse in unrelated disasters. No invented dates, casualty claims, modern objects, minors or gore."},
  {id:'scale',label:'5 · Epic Scale',title:'WIDE EPIC DISASTER SCALE',rule:'Make the disaster and environment dominate most of the frame. Use one smaller adult human or period object as scale reference. Prioritize the magnitude and geography of the event over a large face.'},
  {id:'threat',label:'6 · Foreground Threat',title:'FOREGROUND CHARACTER + MASSIVE THREAT',rule:'Place one adult character in the foreground, usually left or right third, reacting toward a massive hazard in the midground/background. Keep body angle, pose, arm position, and camera height distinct from recent thumbnails.'},
  {id:'rescue',label:'7 · Rescue Survival',title:'RESCUE / SURVIVAL FOCUS',rule:'Center the composition on a historically plausible rescue, sheltering, escape, or survival action by adults. Keep the disaster environment visible enough that the event is instantly identifiable. No gore or corpse-focused imagery.'},
@@ -19,7 +19,9 @@ const layouts=[
  {id:'symbol',label:'10 · Symbolic Punch',title:'SYMBOLIC DISASTER PUNCH',rule:'Use one simplified, instantly readable visual symbol of the current event—such as a giant wave wall, tornado funnel, burning skyline, cracked street, swarm-filled sky, floodline, or collapsing slope—paired with minimal but strong human scale. Keep it physically believable and event-specific.'}
 ];
 
+const approvedReferencePrompt="Create a high-impact Living Disaster Book thumbnail for San Francisco Earthquake & Fire — California, USA — 1906, portrait 9:16. APPROVED DESIGN No. 4: LOOKING BACK — ESCAPE. Full-color mature historical anime / graphic-novel illustration with detailed hand-inked outlines, electric blue smoke and shadows contrasted with orange-scarlet fire. One adult woman about 30 in the RIGHT foreground, moving toward the viewer in a three-quarter turn and looking back over her shoulder toward collapsing buildings on the LEFT. Full head and expressive face visible, dark pinned hair with loose strands, soot-marked high-neck ivory long-sleeved blouse, burgundy ankle-length walking skirt, small worn leather travel bag, historically appropriate to 1906. Natural anatomy and readable fear. On the left: collapsing period masonry, broken streetcar rails, rubble and small adult evacuees; strong depth into a burning San Francisco street. No fantasy chasm. Crop-safe composition: generous nonessential smoke above and rubble below; keep all lettering, full head and branding comfortably inset from every edge. White cracked headline: EARTHQUAKE. Yellow strip with black text: A CITY IN FLAMES. White location/year: SAN FRANCISCO • 1906, with restrained red underline. Centered lower branding with small globe/open-book icon: LIVING DISASTER BOOK. Tagline: REAL EVENTS. LASTING LESSONS. Bold mobile-readable typography. No modern objects, minors, gore, invented casualty figures, UI, watermark or clipped text. Finished thumbnail only.";
 const SAMPLE_DB='ld-thumbnail-design-samples-v1';
+const bundledSamples={street:'./assets/thumbnail-design-4-approved.png'};
 const sampleUrls=new Map();
 const sampleErrors=new Map();
 const samplePending=new Map();
@@ -91,14 +93,15 @@ async function loadSample(id){
  if(sampleUrls.has(id))return sampleUrls.get(id);
  if(!samplePending.has(id)){
   const task=(async()=>{
-   const stored=await readSample(id);
-   if(!stored)return null;
+   let stored;
+   try{stored=await readSample(id);}catch(err){if(!bundledSamples[id])throw err;}
+   if(!stored)return bundledSamples[id]||null;
    // Read legacy Blob/File records as well as self-contained JPEG data.
    const data=typeof stored==='string'?stored:await readImageData(stored);
    await decodeImage(data);
    if(!sampleUrls.has(id))sampleUrls.set(id,data);
    return sampleUrls.get(id);
-  })().finally(()=>samplePending.delete(id));
+  })().catch(err=>{if(bundledSamples[id])return bundledSamples[id];throw err;}).finally(()=>samplePending.delete(id));
   samplePending.set(id,task);
  }
  return samplePending.get(id);
@@ -112,7 +115,7 @@ function sampleError(preview,id,message){
 function showSample(card,id){
  const preview=card.querySelector('.thumb-design-sample');
  if(!preview)return;
- if(sampleErrors.has(id)){sampleError(preview,id,sampleErrors.get(id));return;}
+ if(sampleErrors.has(id)&&!bundledSamples[id]){sampleError(preview,id,sampleErrors.get(id));return;}
  loadSample(id).then(data=>{
   if(!data||!card.isConnected)return;
   const img=document.createElement('img');
@@ -247,7 +250,7 @@ function render(){
  let box=card.querySelector('.thumbnail-layout-chooser');
  if(!box){box=document.createElement('div');box.className='thumbnail-layout-chooser field-block';box.style.cssText='border:2px solid #ff3b30;border-radius:12px;padding:10px;margin:10px 0';body.prepend(box);}
  const t=topic(),cur=current(t),recent=readHistory();
- box.innerHTML='<div class="field-head"><label>Thumbnail Design · 10-Design Rotation</label></div><p style="margin:5px 0 9px;font-size:11px;color:#9aa7b6">Tap a layout label to select it. Tap the photo or Preview to see the full image. Use Add reference photo only to choose or replace a gallery picture. The photo is a visual sample saved in this browser; it is not automatically sent to the image generator. The generated thumbnail remains FULL COLOR.</p><div class="thumb-layout-buttons thumb-design-grid"></div><input type="file" class="thumb-sample-picker" accept="image/*" hidden aria-label="Choose design reference photo">';
+ box.innerHTML='<div class="field-head"><label>Thumbnail Design · 10-Design Rotation</label></div><p style="margin:5px 0 9px;font-size:11px;color:#9aa7b6">Tap a layout label to select it. Tap the photo or Preview to see the full image. Use Add reference photo only to choose or replace a gallery picture. No. 4 includes an approved built-in reference. Uploaded photos are saved in this browser; it is not automatically sent to the image generator. The generated thumbnail remains FULL COLOR.</p><div class="thumb-layout-buttons thumb-design-grid"></div><input type="file" class="thumb-sample-picker" accept="image/*" hidden aria-label="Choose design reference photo">';
  const picker=box.querySelector('.thumb-sample-picker');
  let pendingId='';
  picker.onchange=async()=>{
@@ -280,6 +283,11 @@ function render(){
    upload.onclick=()=>{pendingId=x.id;picker.click();};
    const previewBtn=document.createElement('button');previewBtn.type='button';previewBtn.className='thumb-sample-upload thumb-sample-preview';previewBtn.textContent='Preview';previewBtn.setAttribute('aria-label','Preview '+x.label);previewBtn.onclick=()=>openSamplePreview(x.id,fam,previewBtn);
    const group=document.createElement('div');group.className='thumb-design-item';wrap.replaceChild(group,b);group.append(b,previewBtn,upload);
+   if(x.id==='street'){
+    const copy=document.createElement('button');copy.type='button';copy.className='thumb-sample-upload';copy.textContent='Copy approved SF prompt';
+    copy.onclick=async()=>{try{await navigator.clipboard.writeText(approvedReferencePrompt);copy.textContent='Copied ✓';}catch{window.prompt('Copy approved San Francisco reference prompt:',approvedReferencePrompt);}};
+    group.append(copy);
+   }
  });
 }
 function sync(){setTimeout(()=>{apply();render();},80);setTimeout(()=>{apply();render();},260);}
@@ -291,8 +299,8 @@ window.addEventListener('load',sync);
 setTimeout(sync,300);
 if(!document.getElementById('ldThumbnailSampleStyles')){
  const style=document.createElement('style');style.id='ldThumbnailSampleStyles';
- style.textContent='.thumb-preview-dialog{box-sizing:border-box;width:min(94vw,900px);max-width:94vw;max-height:94vh;max-height:94dvh;margin:auto;padding:12px;border:1px solid #5a86ad;border-radius:12px;background:#111923;color:#fff;overflow:auto}.thumb-preview-dialog::backdrop{background:rgba(0,0,0,.85)}.thumb-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.thumb-preview-close{padding:10px 14px;background:#183958;color:#fff;border:1px solid #5a86ad;border-radius:8px;cursor:pointer}.thumb-preview-content img{display:block;width:100%;height:auto;max-height:72vh;max-height:72dvh;object-fit:contain}.thumb-preview-content svg{display:block;width:100%;max-height:65vh}.thumb-preview-status{font-size:12px;color:#bac8d7;margin:8px 0 0}.thumb-sample-preview{background:#245a88!important}.thumb-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.thumb-design-item{min-width:0;display:flex;flex-direction:column;gap:4px}.thumb-design-card{display:flex!important;flex-direction:column;align-items:stretch!important;gap:5px!important;padding:7px!important;text-align:left!important;min-width:0!important}.thumb-design-card.selected{outline:2px solid #ff3b30;background:rgba(255,59,48,.08)}.thumb-design-sample{display:block;width:100%;overflow:hidden;border-radius:8px;background:#202833}.thumb-design-sample svg,.thumb-design-sample img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}.thumb-sample-upload{width:100%;border:1px solid #5a86ad;border-radius:7px;padding:7px 4px;background:#183958;color:#e8f5ff;font-size:10px;font-weight:700;cursor:pointer}.thumb-design-label{font-size:11px;font-weight:800;line-height:1.2}.thumb-design-meta{font-size:9px;opacity:.65}@media(min-width:720px){.thumb-design-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}';
+ style.textContent='.thumb-preview-dialog{box-sizing:border-box;width:min(94vw,900px);max-width:94vw;max-height:94vh;max-height:94dvh;margin:auto;padding:12px;border:1px solid #5a86ad;border-radius:12px;background:#111923;color:#fff;overflow:auto}.thumb-preview-dialog::backdrop{background:rgba(0,0,0,.85)}.thumb-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.thumb-preview-close{padding:10px 14px;background:#183958;color:#fff;border:1px solid #5a86ad;border-radius:8px;cursor:pointer}.thumb-preview-content img{display:block;width:100%;height:auto;max-height:72vh;max-height:72dvh;object-fit:contain}.thumb-preview-content svg{display:block;width:100%;max-height:65vh}.thumb-preview-status{font-size:12px;color:#bac8d7;margin:8px 0 0}.thumb-sample-preview{background:#245a88!important}.thumb-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.thumb-design-item{min-width:0;display:flex;flex-direction:column;gap:4px}.thumb-design-card{display:flex!important;flex-direction:column;align-items:stretch!important;gap:5px!important;padding:7px!important;text-align:left!important;min-width:0!important}.thumb-design-card.selected{outline:2px solid #ff3b30;background:rgba(255,59,48,.08)}.thumb-design-sample{display:block;width:100%;overflow:hidden;border-radius:8px;background:#202833}.thumb-design-sample svg,.thumb-design-sample img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:contain}.thumb-sample-upload{width:100%;border:1px solid #5a86ad;border-radius:7px;padding:7px 4px;background:#183958;color:#e8f5ff;font-size:10px;font-weight:700;cursor:pointer}.thumb-design-label{font-size:11px;font-weight:800;line-height:1.2}.thumb-design-meta{font-size:9px;opacity:.65}@media(min-width:720px){.thumb-design-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}';
  document.head.appendChild(style);
 }
-window.LDThumbnailRandomization={version:'3.41.5',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
+window.LDThumbnailRandomization={version:'3.41.6',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
 })();
