@@ -1,4 +1,4 @@
-/* LD AUTO v3.41.1 — 10-design thumbnail rotation + visual sample previews + anti-repeat */
+/* LD AUTO v3.41.4 — 10-design thumbnail rotation + visual sample previews + anti-repeat */
 (()=>{
 'use strict';
 const stages=document.getElementById('stages');if(!stages)return;
@@ -21,6 +21,9 @@ const layouts=[
 
 const SAMPLE_DB='ld-thumbnail-design-samples-v1';
 const sampleUrls=new Map();
+const sampleErrors=new Map();
+const samplePending=new Map();
+const sampleSaving=new Set();
 let sampleDbPromise;
 function sampleDb(){
  if(!('indexedDB' in window))return Promise.reject(new Error('Image storage is unavailable in this browser.'));
@@ -40,24 +43,84 @@ async function readSample(id){
   req.onerror=()=>reject(req.error||new Error('Could not load reference photo.'));
  });
 }
-async function writeSample(id,file){
+function readImageData(file){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=()=>resolve(reader.result);
+  reader.onerror=()=>reject(new Error('Could not read this gallery file. Download it to your phone, then choose it again.'));
+  reader.onabort=()=>reject(new Error('Photo reading was interrupted. Choose it again.'));
+  reader.readAsDataURL(file);
+ });
+}
+function decodeImage(data){
+ return new Promise((resolve,reject)=>{
+  const img=new Image();
+  img.onload=()=>img.naturalWidth&&img.naturalHeight?resolve(img):reject(new Error('The photo is empty.'));
+  img.onerror=()=>reject(new Error('This photo cannot be opened. Choose a downloaded JPG, PNG or WebP image.'));
+  img.src=data;
+ });
+}
+async function prepareSample(file){
+ if(!file.size)throw new Error('The selected photo is empty. Download it to your phone and try again.');
+ const data=await readImageData(file);
+ const img=await decodeImage(data);
+ const scale=Math.min(1,1200/Math.max(img.naturalWidth,img.naturalHeight));
+ const canvas=document.createElement('canvas');
+ canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+ canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+ const ctx=canvas.getContext('2d');
+ if(!ctx)throw new Error('Image preview is unavailable in this browser.');
+ ctx.fillStyle='#202833';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.drawImage(img,0,0,canvas.width,canvas.height);
+ const normalized=canvas.toDataURL('image/jpeg',0.88);
+ await decodeImage(normalized);
+ return normalized;
+}
+async function writeSample(id,data){
  const db=await sampleDb();
  return new Promise((resolve,reject)=>{
-  const req=db.transaction('samples','readwrite').objectStore('samples').put(file,id);
-  req.onsuccess=()=>resolve();
-  req.onerror=()=>reject(req.error||new Error('Could not save reference photo.'));
+  const tx=db.transaction('samples','readwrite');
+  tx.objectStore('samples').put(data,id);
+  // Request success is not a committed save.
+  tx.oncomplete=()=>resolve();
+  tx.onerror=()=>reject(tx.error||new Error('Could not save reference photo.'));
+  tx.onabort=()=>reject(tx.error||new Error('Photo save was interrupted. Please try again.'));
  });
+}
+async function loadSample(id){
+ if(sampleUrls.has(id))return sampleUrls.get(id);
+ if(!samplePending.has(id)){
+  const task=(async()=>{
+   const stored=await readSample(id);
+   if(!stored)return null;
+   // Read legacy Blob/File records as well as self-contained JPEG data.
+   const data=typeof stored==='string'?stored:await readImageData(stored);
+   await decodeImage(data);
+   if(!sampleUrls.has(id))sampleUrls.set(id,data);
+   return sampleUrls.get(id);
+  })().finally(()=>samplePending.delete(id));
+  samplePending.set(id,task);
+ }
+ return samplePending.get(id);
+}
+function sampleError(preview,id,message){
+ sampleErrors.set(id,message);
+ preview.textContent='Photo unavailable — tap Add reference photo to select it again.';
+ preview.style.padding='12px';
+ preview.setAttribute('role','status');
 }
 function showSample(card,id){
  const preview=card.querySelector('.thumb-design-sample');
  if(!preview)return;
- const cached=sampleUrls.get(id);
- if(cached){preview.innerHTML='';const img=document.createElement('img');img.src=cached;img.alt='Saved design reference photo';preview.appendChild(img);return;}
- readSample(id).then(blob=>{
-  if(!blob||!card.isConnected||sampleUrls.has(id))return;
-  const url=URL.createObjectURL(blob);sampleUrls.set(id,url);
-  showSample(card,id);
- }).catch(()=>{});
+ if(sampleErrors.has(id)){sampleError(preview,id,sampleErrors.get(id));return;}
+ loadSample(id).then(data=>{
+  if(!data||!card.isConnected)return;
+  const img=document.createElement('img');
+  img.alt='Saved design reference photo';
+  img.onerror=()=>sampleError(preview,id,'Could not display the saved photo.');
+  img.src=data;
+  preview.replaceChildren(img);
+ }).catch(err=>{if(card.isConnected)sampleError(preview,id,err.message);});
 }
 function topic(){return document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'Untitled Disaster';}
 function key(t){return PREFIX+String(t).toLowerCase().replace(/\s+/g,' ').trim();}
@@ -163,13 +226,17 @@ function render(){
  picker.onchange=async()=>{
   const file=picker.files?.[0];const id=pendingId;picker.value='';pendingId='';
   if(!file||!id)return;
-  if(!file.type.startsWith('image/')){alert('Choose an image file.');return;}
+  if(file.type&&!file.type.startsWith('image/')){alert('Choose an image file.');return;}
+  if(sampleSaving.has(id))return;
+  sampleSaving.add(id);
   try{
-   await writeSample(id,file);
-   const oldUrl=sampleUrls.get(id);if(oldUrl)URL.revokeObjectURL(oldUrl);
-   sampleUrls.set(id,URL.createObjectURL(file));
+   const data=await prepareSample(file);
+   await writeSample(id,data);
+   sampleUrls.set(id,data);
+   sampleErrors.delete(id);
    render();
-  }catch(err){alert('Could not save photo: '+(err?.message||'storage error'));}
+  }catch(err){alert('Could not save photo: '+(err?.message||'storage error')+' Your previous saved sample has not been replaced.');}
+  finally{sampleSaving.delete(id);}
  };
  const wrap=box.querySelector('.thumb-layout-buttons');
  const fam=family(t);
@@ -199,5 +266,5 @@ if(!document.getElementById('ldThumbnailSampleStyles')){
  style.textContent='.thumb-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.thumb-design-item{min-width:0;display:flex;flex-direction:column;gap:4px}.thumb-design-card{display:flex!important;flex-direction:column;align-items:stretch!important;gap:5px!important;padding:7px!important;text-align:left!important;min-width:0!important}.thumb-design-card.selected{outline:2px solid #ff3b30;background:rgba(255,59,48,.08)}.thumb-design-sample{display:block;width:100%;overflow:hidden;border-radius:8px;background:#202833}.thumb-design-sample svg,.thumb-design-sample img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}.thumb-sample-upload{width:100%;border:1px solid #5a86ad;border-radius:7px;padding:7px 4px;background:#183958;color:#e8f5ff;font-size:10px;font-weight:700;cursor:pointer}.thumb-design-label{font-size:11px;font-weight:800;line-height:1.2}.thumb-design-meta{font-size:9px;opacity:.65}@media(min-width:720px){.thumb-design-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}';
  document.head.appendChild(style);
 }
-window.LDThumbnailRandomization={version:'3.41.3',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
+window.LDThumbnailRandomization={version:'3.41.4',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
 })();
