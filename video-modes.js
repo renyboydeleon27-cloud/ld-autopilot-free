@@ -156,9 +156,46 @@ const SCENE_BANK_50=[
  ['at a carriage stop','exterior'],['beside a street market','exterior'],['on an open work yard','exterior'],['at a farmyard if relevant locally','exterior'],['along an appropriate local footpath','exterior'],
  ['at a neighborhood intersection','exterior'],['at an open plaza if present locally','exterior'],['beside a period transport stop','exterior'],['along a residential lane','exterior'],['outside a station entrance if present locally','exterior']
 ];
+const SCENE_BANK_LATE=[
+ {stage:10,place:'at a damaged residential street where adults search for survivors',tag:'rescue'},
+ {stage:10,place:'outside a damaged home during a careful search',tag:'rescue'},
+ {stage:10,place:'at an accessible rescue staging point beside the damage',tag:'rescue'},
+ {stage:10,place:'beside a blocked route as responders clear a safe passage',tag:'rescue'},
+ {stage:10,place:'at a temporary first-aid area if treatment is narrated',tag:'medical'},
+ {stage:10,place:'inside a period-appropriate treatment room if medical care is narrated',tag:'medical'},
+ {stage:11,place:'at a temporary shelter for displaced residents',tag:'shelter'},
+ {stage:11,place:'inside a simple communal shelter if documented',tag:'shelter'},
+ {stage:11,place:'at a modest local relief distribution point',tag:'relief'},
+ {stage:11,place:'outside a damaged home as residents retrieve essentials',tag:'relief'},
+ {stage:11,place:'at a period-appropriate medical aid point if treatment is narrated',tag:'medical'},
+ {stage:12,place:'along a damaged neighborhood street showing wider consequences',tag:'general'},
+ {stage:12,place:'at a damaged transport route when the narration names transport',tag:'transport'},
+ {stage:12,place:'beside damaged public utilities when the narration names utilities',tag:'utilities'},
+ {stage:12,place:'at affected shops and workplaces when the narration names livelihoods',tag:'economy'},
+ {stage:12,place:'at affected farmland when the narration names crops or agriculture',tag:'agriculture'},
+ {stage:13,place:'at a cleared section of a still-damaged street',tag:'recovery'},
+ {stage:13,place:'outside a damaged home during cautious cleanup',tag:'recovery'},
+ {stage:13,place:'at a repairable public building during gradual cleanup',tag:'recovery'},
+ {stage:13,place:'at a damaged worksite during period-appropriate repairs',tag:'recovery'},
+ {stage:13,place:'at a recovering field when the narration names farming',tag:'agriculture'},
+ {stage:14,place:'on a quiet overlook of the affected community',tag:'legacy'},
+ {stage:14,place:'beside a surviving street facing the lasting damage',tag:'legacy'},
+ {stage:14,place:'at a community gathering place reflecting on the aftermath',tag:'legacy'},
+ {stage:14,place:'beside a slowly recovering landscape',tag:'legacy'}
+];
+function lateSceneFits(item,card){
+ var narration=String(card.querySelector('.narration')?.value||'').toLowerCase();
+ if(item.tag==='medical')return /injur|medical|treat|patient|hospital|clinic|care|wound/.test(narration);
+ if(item.tag==='transport')return /road|rail|bridge|transport|route|traffic/.test(narration);
+ if(item.tag==='utilities')return /power|electric|water supply|utility|utilities|pipeline/.test(narration);
+ if(item.tag==='economy')return /factor|business|shop|workplace|econom|livelihood|market/.test(narration);
+ if(item.tag==='agriculture')return /crop|farm|field|seed|plant|agricultur/.test(narration);
+ return true;
+}
 function sceneBankHash(value){var h=2166136261;for(var i=0;i<value.length;i++)h=Math.imul(h^value.charCodeAt(i),16777619);return h>>>0;}
 function availableScenes(card){
  var n=stageNumber(card.dataset.stage),fam=familyKey();
+ if(n>=10){return SCENE_BANK_LATE.map(function(row,i){return {place:row.place,kind:'late',index:SCENE_BANK_50.length+i,stage:row.stage,tag:row.tag};}).filter(function(row){return row.stage===n&&lateSceneFits(row,card);});}
  return SCENE_BANK_50.map(function(row,index){return {place:row[0],kind:row[1],index:index};}).filter(function(row){
   if(row.kind==='vehicle'&&(!/^19\d\d$|^20\d\d$/.test(String(continuity().year||''))||n>=6))return false;
   if((fam==='tsunami'||fam==='cyclone'||fam==='flood'||fam==='volcano'||fam==='wildfire')&&n>=4&&n<=8&&row.kind!=='exterior')return false;
@@ -170,7 +207,7 @@ function selectedScene(card,index){
  var item=availableScenes(card).find(function(row){return row.index===index;});
  if(!item)return '';
  var n=stageNumber(card.dataset.stage),beat=String(card.querySelector('.narration')?.value||'').trim();
- var phase=n<=2?'intact ordinary life before the disaster':n<=6?'the current panel’s established disaster stage':n<=8?'wider damage or a documented secondary hazard':n<=12?'the current panel’s aftermath or response':'the established closing beat';
+ var phase=n<=2?'intact ordinary life before the disaster':n<=6?'the current panel’s established disaster stage':n<=8?'wider damage or a documented secondary hazard':n===9?'the immediate aftermath':n===10?'rescue or emergency response supported by the narration':n===11?'relief, displacement or short-term human needs':n===12?'wider documented consequences':n===13?'gradual cleanup or recovery':'the event’s reflective closing beat';
  return 'PRIMARY LOCATION: '+item.place+', in '+cleanLocation(continuity().location)+', '+continuity().year+'. Depict '+phase+' with one readable action immediately. '+(beat?'PANEL NARRATIVE CONTEXT (never spoken): '+beat+' ':'')+'Use historically appropriate occupants, clothing, construction and objects for this exact place. Preserve the earthquake/disaster progression and previously established conditions. Do not invent unverified weather, dust, wind, transport or damage. One coherent camera move; distinct angle and cast from the previous panel. No speech, music, embedded text or modern objects.';
 }
 function sceneChoiceIndex(card){
@@ -178,7 +215,9 @@ function sceneChoiceIndex(card){
  if(saved!=='')return saved;
  var scene=String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'');
  var found=SCENE_BANK_50.findIndex(function(row){return scene.startsWith('PRIMARY LOCATION: '+row[0]+',');});
- return found<0?'':String(found);
+ if(found>=0)return String(found);
+ var later=SCENE_BANK_LATE.findIndex(function(row){return scene.startsWith('PRIMARY LOCATION: '+row.place+',');});
+ return later<0?'':String(SCENE_BANK_50.length+later);
 }
 function sceneChoiceAllowed(card){
  var special=eventPanel(card.dataset.stage);
@@ -196,7 +235,7 @@ function choiceSpecial(card,special){
 function rotatingScene(card){
  if(!supports(card)||state(card).scene||state(card).text||eventPanel(card.dataset.stage))return '';
  var n=stageNumber(card.dataset.stage),fam=familyKey();
- if(n===2||n>=13)return ''; // Mechanism and closing panels retain their established geography.
+ if(n===2)return ''; // Keep verified source/mechanism scenes anchored.
  var candidates=availableScenes(card);
  if(!candidates.length)return '';
  var key=current()+'|'+continuity().year+'|'+continuity().location;
@@ -204,7 +243,7 @@ function rotatingScene(card){
  var index=(offset+(n-1)*17)%candidates.length;
  var choice=candidates[index].place;
  var beat=String(card.querySelector('.narration')?.value||'').trim();
- var role=n<=2?'ordinary life before the disaster':n<=8?'the current panel’s disaster beat':n<=12?'the current panel’s aftermath or response':'the current panel’s established story beat';
+ var role=n<=2?'ordinary life before the disaster':n<=8?'the current panel’s disaster beat':n===9?'the immediate aftermath':n===10?'rescue and emergency response':n===11?'relief and short-term needs':n===12?'wider consequences':n===13?'gradual cleanup or recovery':'a reflective legacy beat';
  return 'SCENE BANK — unique panel setting: '+choice+', within '+cleanLocation(continuity().location)+', '+continuity().year+'. Stage only '+role+'. '+(beat?'Narrative context (never spoken in the generated video): '+beat+' ':'')+'Show the event-specific action only when physically plausible at this place and this point in the sequence. Keep historically valid architecture, transport, clothing and cast. If this venue does not exist at the documented event location or conflicts with the panel facts, use the nearest verified local equivalent. Do not add an unrelated disaster, unsupported specific damage or modern objects. Use a camera angle and foreground action distinct from adjacent panels.';
 }
 function sceneFrom(card){var existing=state(card).scene;if(existing)return existing;
@@ -1009,7 +1048,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.40.18',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.40.21',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea,.video-mode-controls select{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
