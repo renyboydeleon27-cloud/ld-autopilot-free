@@ -157,21 +157,45 @@ const SCENE_BANK_50=[
  ['at a neighborhood intersection','exterior'],['at an open plaza if present locally','exterior'],['beside a period transport stop','exterior'],['along a residential lane','exterior'],['outside a station entrance if present locally','exterior']
 ];
 function sceneBankHash(value){var h=2166136261;for(var i=0;i<value.length;i++)h=Math.imul(h^value.charCodeAt(i),16777619);return h>>>0;}
+function availableScenes(card){
+ var n=stageNumber(card.dataset.stage),fam=familyKey();
+ return SCENE_BANK_50.map(function(row,index){return {place:row[0],kind:row[1],index:index};}).filter(function(row){
+  if(row.kind==='vehicle'&&(!/^19\d\d$|^20\d\d$/.test(String(continuity().year||''))||n>=6))return false;
+  if((fam==='tsunami'||fam==='cyclone'||fam==='flood'||fam==='volcano'||fam==='wildfire')&&n>=4&&n<=8&&row.kind!=='exterior')return false;
+  if(fam==='insect'&&/tram|rail|waterfront|bridge|station|motor vehicle/.test(row.place))return false;
+  return true;
+ });
+}
+function selectedScene(card,index){
+ var item=availableScenes(card).find(function(row){return row.index===index;});
+ if(!item)return '';
+ var n=stageNumber(card.dataset.stage),beat=String(card.querySelector('.narration')?.value||'').trim();
+ var phase=n<=2?'intact ordinary life before the disaster':n<=6?'the current panel’s established disaster stage':n<=8?'wider damage or a documented secondary hazard':n<=12?'the current panel’s aftermath or response':'the established closing beat';
+ return 'PRIMARY LOCATION: '+item.place+', in '+cleanLocation(continuity().location)+', '+continuity().year+'. Depict '+phase+' with one readable action immediately. '+(beat?'PANEL NARRATIVE CONTEXT (never spoken): '+beat+' ':'')+'Use historically appropriate occupants, clothing, construction and objects for this exact place. Preserve the earthquake/disaster progression and previously established conditions. Do not invent unverified weather, dust, wind, transport or damage. One coherent camera move; distinct angle and cast from the previous panel. No speech, music, embedded text or modern objects.';
+}
+function sceneChoiceAllowed(card){
+ var special=eventPanel(card.dataset.stage);
+ return !card.querySelector('.done-toggle')?.checked&&(!special||!special.approved)&&card.dataset.stage!=='P2';
+}
+function choiceSpecial(card,special){
+ if(!special||!card.dataset.sceneChoice||special.approved)return special;
+ return {...special,scene:selectedScene(card,Number(card.dataset.sceneChoice)),
+  timing:'0.0–2.0s: Establish the selected place, cast and panel action immediately.\\n2.0–7.0s: Follow the same event stage with physically coherent motion and no new unverified event fact.\\n7.0–10.0s: Reveal one clear consequence appropriate to this panel, without replaying the preceding panel.',
+  camera:'One continuous grounded camera move suited to the selected location, distinct from the previous panel.',
+  physics:'Use only the supported panel disaster beat, with plausible object motion, stable identities and no invented large-scale failure.',
+  audio:'Only quiet audible effects from visible objects and movement at this location. No voices, music, unsupported wind, rumble or impact.',
+  extraNegative:'No duplicated cast, unverified weather, dust or invented historical facts.'};
+}
 function rotatingScene(card){
  if(!supports(card)||state(card).scene||state(card).text||eventPanel(card.dataset.stage))return '';
  var n=stageNumber(card.dataset.stage),fam=familyKey();
  if(n===2||n>=13)return ''; // Mechanism and closing panels retain their established geography.
- var candidates=SCENE_BANK_50.filter(function(row){
-  if(row[1]==='vehicle'&&(!/^19\d\d$|^20\d\d$/.test(String(continuity().year||''))||n>=6))return false;
-  if((fam==='tsunami'||fam==='cyclone'||fam==='flood'||fam==='volcano'||fam==='wildfire')&&n>=4&&n<=8&&row[1]!=='exterior')return false;
-  if(fam==='insect'&&/tram|rail|waterfront|bridge|station|motor vehicle/.test(row[0]))return false;
-  return true;
- });
+ var candidates=availableScenes(card);
  if(!candidates.length)return '';
  var key=current()+'|'+continuity().year+'|'+continuity().location;
  var offset=sceneBankHash(key)%candidates.length;
  var index=(offset+(n-1)*17)%candidates.length;
- var choice=candidates[index][0];
+ var choice=candidates[index].place;
  var beat=String(card.querySelector('.narration')?.value||'').trim();
  var role=n<=2?'ordinary life before the disaster':n<=8?'the current panel’s disaster beat':n<=12?'the current panel’s aftermath or response':'the current panel’s established story beat';
  return 'SCENE BANK — unique panel setting: '+choice+', within '+cleanLocation(continuity().location)+', '+continuity().year+'. Stage only '+role+'. '+(beat?'Narrative context (never spoken in the generated video): '+beat+' ':'')+'Show the event-specific action only when physically plausible at this place and this point in the sequence. Keep historically valid architecture, transport, clothing and cast. If this venue does not exist at the documented event location or conflicts with the panel facts, use the nearest verified local equivalent. Do not add an unrelated disaster, unsupported specific damage or modern objects. Use a camera angle and foreground action distinct from adjacent panels.';
@@ -699,7 +723,7 @@ function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanN
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[6]=clean(parts[6]);parts[7]=clean(parts[7]);return JSON.stringify(parts);}catch(e){return '';}}
 function pinScene(card){
  var special=eventPanel(card.dataset.stage);
- if(special&&special.scene){
+ if(special&&special.scene&&!card.dataset.sceneChoice){
    card.dataset.videoScene=clean(special.scene);
    var field=card.querySelector('.video-scene');
    if(field)field.value=card.dataset.videoScene;
@@ -845,7 +869,7 @@ function prompt(card){
 }
 function update(card){if(!supports(card))return;var mode=state(card).mode;
 card.querySelector('.flow-wrap').hidden=mode==='text';
-var panel=card.querySelector('.text-video-fields');if(panel)panel.hidden=mode!=='text';
+var panel=card.querySelector('.text-video-fields');if(panel)panel.hidden=mode!=='text';var picker=card.querySelector('.scene-choice');if(picker)picker.disabled=!sceneChoiceAllowed(card);
 var image=card.querySelector('.image-prompt').closest('.field-block');if(image)image.hidden=mode==='text';
 var workspace=card.querySelector('.image-workspace');if(workspace)workspace.hidden=mode==='text';
 var status=card.querySelector('.video-mode-status');var statusText=mode==='image'?'Use a starting image with the Image-to-Video prompt.':valid(card)?'Text-to-Video ready for testing · no starting image needed.':'Text-to-Video needs building or refresh. Copy FULL Video Prompt will rebuild it automatically.';if(status&&status.textContent!==statusText)status.textContent=statusText;
@@ -855,11 +879,29 @@ function decorate(card){if(!supports(card)||card.querySelector('.video-mode-cont
 // Restore the exact scene used by older saved text prompts before image helpers run.
 if(state(card).text&&!state(card).scene){try{var saved=JSON.parse(state(card).signature);if(Array.isArray(saved)&&typeof saved[4]==='string')card.dataset.videoScene=clean(saved[4]);}catch(e){}}
 
-var box=document.createElement('div');box.className='video-mode-controls';box.innerHTML='<p class="video-mode-status"></p><button type="button" class="ghost copy-active-video">Copy FULL Video Prompt</button><div class="text-video-fields"><label>Panel scene description<textarea class="video-scene" rows="4"></textarea></label><button type="button" class="ghost build-text-video">Build / refresh Text-to-Video prompt</button><label>Text-to-Video prompt<textarea class="text-video-prompt" rows="10"></textarea></label><button type="button" class="ghost copy-text-video">Copy FULL Text-to-Video Prompt</button></div>';
+var box=document.createElement('div');box.className='video-mode-controls';box.innerHTML='<p class="video-mode-status"></p><button type="button" class="ghost copy-active-video">Copy FULL Video Prompt</button><div class="text-video-fields"><label>Choose scene location before Smart Continue<select class="scene-choice"><option value="">Keep current scene</option></select></label><label>Panel scene description<textarea class="video-scene" rows="4"></textarea></label><button type="button" class="ghost build-text-video">Build / refresh Text-to-Video prompt</button><label>Text-to-Video prompt<textarea class="text-video-prompt" rows="10"></textarea></label><button type="button" class="ghost copy-text-video">Copy FULL Text-to-Video Prompt</button></div>';
 card.querySelector('.flow-wrap').before(box);
+var picker=box.querySelector('.scene-choice');
+availableScenes(card).forEach(function(item){var option=document.createElement('option');option.value=String(item.index);option.textContent=item.place;picker.appendChild(option);});
+picker.value=card.dataset.sceneChoice||'';
+picker.disabled=!sceneChoiceAllowed(card);
+picker.onchange=function(){
+ if(!sceneChoiceAllowed(card)){picker.value=card.dataset.sceneChoice||'';return showToast('This panel is approved or has a dedicated locked scene.');}
+ var chosen=picker.value;
+ if(!chosen)return;
+ var description=selectedScene(card,Number(chosen));if(!description)return;
+ card.dataset.sceneChoice=chosen;
+ card.dataset.videoScene=description;
+ scene.value=description;
+ card.dataset.textVideoPrompt='';card.dataset.textVideoSignature='';
+ var field=box.querySelector('.text-video-prompt');if(field)field.value='';
+ card.querySelector('.done-toggle').checked=false;
+ try{rebuildTextPrompt(card);showToast('Scene selected and prompt refreshed locally · no API call. Review before Smart Continue.');}
+ catch(e){showToast(e.message);update(card);saveCurrent();}
+};
 var scene=box.querySelector('.video-scene');scene.value=sceneFrom(card);if(!state(card).scene&&!state(card).text&&scene.value){card.dataset.videoScene=scene.value;}var text=box.querySelector('.text-video-prompt');text.value=state(card).text;
 
-scene.oninput=function(){card.dataset.videoScene=scene.value;card.querySelector('.done-toggle').checked=false;update(card);saveCurrent();};
+scene.oninput=function(){card.dataset.sceneChoice='';picker.value='';card.dataset.videoScene=scene.value;card.querySelector('.done-toggle').checked=false;update(card);saveCurrent();};
 text.oninput=function(){card.dataset.textVideoPrompt=text.value;card.querySelector('.done-toggle').checked=false;saveCurrent();};
 box.querySelector('.build-text-video').onclick=function(){generate(card);};
 box.querySelector('.copy-text-video').onclick=function(){try{copyText(prompt(card));}catch(e){showToast(e.message);}};
@@ -960,8 +1002,8 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.40.17',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
-var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
+window.LDVideoModes={version:'3.40.18',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea,.video-mode-controls select{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
 })();
