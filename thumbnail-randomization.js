@@ -190,7 +190,7 @@ function sync(){setTimeout(()=>{apply();render();},80);setTimeout(()=>{apply();r
 document.getElementById('buildBtn')?.addEventListener('click',sync);
 document.getElementById('generateAllBtn')?.addEventListener('click',sync);
 document.addEventListener('click',e=>{if(e.target.closest('.generate-template-btn')?.closest('.stage-card')?.dataset?.stage==='THUMBNAIL')sync();});
-new MutationObserver(()=>setTimeout(render,40)).observe(stages,{childList:true});
+new MutationObserver(records=>{if(records.some(record=>record.target===stages))setTimeout(render,40);}).observe(stages,{childList:true});
 window.addEventListener('load',sync);
 setTimeout(sync,300);
 if(!document.getElementById('ldThumbnailSampleStyles')){
