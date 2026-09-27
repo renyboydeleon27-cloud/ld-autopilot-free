@@ -37,6 +37,34 @@ function useHook(c){
   var note=h.querySelector('.stage-note');if(note)note.textContent='Active HOOK: '+c.title+' · '+c.status+' · text-to-video';
   setActive(c.id);render();toast(c.title+' selected');
 }
+function customKey(){return 'ld-auto-custom-hook-draft-v1:'+encodeURIComponent([topic(),format(),mode(),colorMode()].join('|'));}
+function customPrompt(idea){
+ var original=String(idea||'').trim();
+ var base='LIVING DISASTER BOOK — CREATOR HOOK DRAFT — '+topic()+'\\nEXACTLY 10 SECONDS. '+(format()==='longform'?'Landscape 16:9.':'Portrait 9:16.')+' Text-to-video. One coherent continuous shot unless the creator idea explicitly calls for a motivated transition.\\n\\nCREATOR IDEA — highest priority for scene and action (preserve the intended people, setting, trigger, movement and reveal):\\n'+original+'\\n\\nTIMING: 0.0–2.0s establish the idea and subjects immediately; 2.0–5.0s develop its visible trigger and cause; 5.0–10.0s follow through to its clearest disaster reveal or strongest final beat, as the idea allows. Keep a readable cause-and-effect chain and one camera path.\\n\\nHISTORICAL LOCK: Respect the selected event, year, location and disaster mechanism. Period-correct anatomy, clothing, interior or exterior setting, transport and objects. Preserve object count, character identity and physical continuity. Do not add invented historical specifics or a later disaster stage without support.\\n\\nAUDIO: Environmental effects only when visibly caused. No narration, spoken words, voices or music. No captions, titles, logos or watermark.\\n\\nSTATUS: CREATOR DRAFT — review the rendered hook before approving.';
+ var locked=window.LDVideoModes?.withLock?window.LDVideoModes.withLock(base):base;
+ return window.LDProductionDNA?.polishHookPrompt?window.LDProductionDNA.polishHookPrompt(locked):locked;
+}
+function mountCustom(root){
+ var wrap=document.createElement('div');wrap.className='hook-custom';
+ var label=document.createElement('label');label.textContent='Describe your hook';
+ var input=document.createElement('textarea');input.className='hook-custom-idea';input.rows=5;input.placeholder='Example: An adult combs their hair in front of a mirror. One quake jolt cracks the glass; the camera moves through the crack to the street impact.';
+ input.value=localStorage.getItem(customKey())||'';
+ input.addEventListener('input',function(){localStorage.setItem(customKey(),input.value);});
+ label.appendChild(input);wrap.appendChild(label);
+ var button=document.createElement('button');button.type='button';button.className='ghost';button.textContent='Use my hook idea · build prompt';
+ button.addEventListener('click',function(){
+  var idea=input.value.trim(),h=card();
+  if(!idea)return toast('Describe your hook first');
+  if(!h)return;
+  if(h.querySelector('.done-toggle')?.checked)return toast('Uncheck Done before replacing an approved HOOK');
+  if(!window.LDVideoModes?.withLock)return toast('Shared event setting is not ready yet');
+  var currentHook={id:'creator-draft',title:'My hook idea',status:'CREATOR DRAFT — review before approval',prompt:customPrompt(idea)};
+  useHook(currentHook);
+ });
+ wrap.appendChild(button);
+ var hint=document.createElement('p');hint.textContent='Your idea stays saved for this topic. Choose Use my hook idea before Smart Continue. Building this prompt makes no API call.';wrap.appendChild(hint);
+ root.appendChild(wrap);
+}
 function syncVisualMode(previousMode){
   var prior=getActiveRecord();
   var list=choices();
@@ -69,7 +97,7 @@ function syncColorMode(){
 function addStyles(){
   if(document.getElementById('hookChoiceStyles'))return;
   var s=document.createElement('style');s.id='hookChoiceStyles';
-  s.textContent='.hook-choice-system{margin:12px 0 16px;padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.035)}.hook-choice-head{margin-bottom:12px}.hook-choice-head h3{margin:0 0 4px;font-size:1rem}.hook-choice-head p{margin:0;opacity:.72;font-size:.84rem}.hook-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.hook-choice-card{padding:12px;border:1px solid rgba(255,255,255,.11);border-radius:14px;background:rgba(0,0,0,.12)}.hook-choice-card.active{outline:2px solid rgba(255,255,255,.32)}.hook-choice-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.hook-choice-badge{font-size:.68rem;font-weight:700;padding:4px 7px;border-radius:999px;background:rgba(255,255,255,.09)}.hook-choice-card h4{margin:0 0 6px;font-size:.95rem}.hook-choice-card p{margin:0 0 7px;font-size:.8rem;line-height:1.38;opacity:.84}.hook-choice-why{opacity:.66!important}.hook-choice-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.hook-choice-preview{margin-top:9px;width:100%;min-height:110px;font-size:.74rem;line-height:1.35}.hook-choice-empty{padding:12px;border:1px dashed rgba(255,255,255,.18);border-radius:12px;opacity:.72;font-size:.82rem}#locustLaundryHook{display:none!important}@media(max-width:760px){.hook-choice-grid{grid-template-columns:1fr}}';
+  s.textContent='.hook-custom{margin-top:16px;padding:14px;border:1px solid rgba(255,255,255,.2);border-radius:12px}.hook-custom label{display:block;font-weight:700}.hook-custom textarea{display:block;width:100%;min-height:110px;margin:8px 0 10px;box-sizing:border-box}.hook-custom p{font-size:.8rem;opacity:.75}.hook-choice-system{margin:12px 0 16px;padding:14px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.035)}.hook-choice-head{margin-bottom:12px}.hook-choice-head h3{margin:0 0 4px;font-size:1rem}.hook-choice-head p{margin:0;opacity:.72;font-size:.84rem}.hook-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.hook-choice-card{padding:12px;border:1px solid rgba(255,255,255,.11);border-radius:14px;background:rgba(0,0,0,.12)}.hook-choice-card.active{outline:2px solid rgba(255,255,255,.32)}.hook-choice-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.hook-choice-badge{font-size:.68rem;font-weight:700;padding:4px 7px;border-radius:999px;background:rgba(255,255,255,.09)}.hook-choice-card h4{margin:0 0 6px;font-size:.95rem}.hook-choice-card p{margin:0 0 7px;font-size:.8rem;line-height:1.38;opacity:.84}.hook-choice-why{opacity:.66!important}.hook-choice-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.hook-choice-preview{margin-top:9px;width:100%;min-height:110px;font-size:.74rem;line-height:1.35}.hook-choice-empty{padding:12px;border:1px dashed rgba(255,255,255,.18);border-radius:12px;opacity:.72;font-size:.82rem}#locustLaundryHook{display:none!important}@media(max-width:760px){.hook-choice-grid{grid-template-columns:1fr}}';
   document.head.appendChild(s);
 }
 function render(){
@@ -79,7 +107,7 @@ function render(){
   if(!root){root=document.createElement('section');root.id='hookChoiceSystem';root.className='hook-choice-system';var body=h.querySelector('.stage-body');if(body)body.prepend(root);}
   var list=choices();
   if(list.length)refreshStaleActive(list);
-  if(!list.length){root.innerHTML='<div class="hook-choice-head"><h3>Top 3 HOOK Choices</h3><p>Curated hook library</p></div><div class="hook-choice-empty">No curated Top 3 hook set for <strong>'+esc(topic())+'</strong> yet. The existing HOOK remains unchanged until this disaster family is tested.</div>';return;}
+  if(!list.length){root.innerHTML='<div class="hook-choice-head"><h3>Top 3 HOOK Choices</h3><p>Curated hook library</p></div><div class="hook-choice-empty">No curated Top 3 hook set for <strong>'+esc(topic())+'</strong> yet. The existing HOOK remains unchanged until this disaster family is tested.</div>';mountCustom(root);return;}
   var active=getActive();
   root.innerHTML='<div class="hook-choice-head"><h3>Top 3 HOOK Choices</h3><p>'+esc(topic())+' · '+(format()==='longform'?'16:9':'9:16')+' · '+(mode()==='real'?'Real Human':'Historical Anime')+' · '+(colorMode()==='bw'?'Black & White':'Color')+'</p></div><div class="hook-choice-grid"></div>';
   var selector=document.createElement('label');
@@ -99,6 +127,7 @@ function render(){
     el.querySelector('.preview-hook-btn').addEventListener('click',function(e){var ta=el.querySelector('.hook-choice-preview');if(ta){ta.remove();e.currentTarget.textContent='Preview';return;}ta=document.createElement('textarea');ta.className='hook-choice-preview';ta.readOnly=true;ta.value=c.prompt;el.appendChild(ta);e.currentTarget.textContent='Hide';});
     grid.appendChild(el);
   });
+  mountCustom(root);
 }
 var queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(function(){setTimeout(function(){queued=false;render();},120);});}
 window.addEventListener('load',schedule);
