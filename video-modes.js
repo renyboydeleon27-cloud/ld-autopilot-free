@@ -831,6 +831,7 @@ function sceneLocationKey(scene){
  var s=String(scene||'').toLowerCase().slice(0,520);
  var patterns=[
   ['waterfront',/waterfront|cargo pier|wharf|dockside|harbor quay/g],
+  ['courtyard',/courtyard|residential yard|home yard|backyard/g],
   ['residential interior',/(?:inside|interior).{0,45}(?:residence|home|bedroom|kitchen|dining room|apartment)/g],
   ['workplace interior',/(?:inside|interior).{0,45}(?:shop|market|workshop|factory)/g],
   ['street',/street|road|sidewalk|alley|building.corner|storefront|intersection/g],
