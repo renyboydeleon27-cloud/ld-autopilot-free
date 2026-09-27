@@ -5,7 +5,7 @@
   // Trim appended production instructions only in the compiled export; preserve source fields.
   function spokenText(value){
     const text=String(value||'').trim();
-    const marker=/(?:TEXT[- ]TO[- ]VIDEO HOOK\s*[—–-]|GLOBAL SCENE VARIETY LOCK:|LOCATION VARIETY LOCK:|DOCUMENTARY NARRATION POLISH LOCK:|(?:IMAGE|FLOW|ANIMATION) PROMPT\s*:|NARRATIVE CONTEXT\s*[—–-]|CREATE A CINEMATIC TEXT-TO-VIDEO HOOK)/i;
+    const marker=/(?:TEXT[- ]TO[- ]VIDEO HOOK\s*[—–-]|VIDEO PROMPT\s*[—–:-]|ABSOLUTE RENDERING MODE\s*[—–:-]|GLOBAL SCENE VARIETY LOCK:|LOCATION VARIETY LOCK:|DOCUMENTARY NARRATION POLISH LOCK:|(?:IMAGE|FLOW|ANIMATION) PROMPT\s*:|NARRATIVE CONTEXT\s*[—–-]|CREATE A CINEMATIC TEXT-TO-VIDEO HOOK)/i;
     const match=marker.exec(text);
     return (match?text.slice(0,match.index):text).trim();
   }
@@ -70,15 +70,16 @@
     const count=document.getElementById('masterNarrationCount');
     // Avoid resetting a manual selection while unrelated stage UI changes.
     if(ta&&document.activeElement!==ta&&ta.value!==compiled(false))ta.value=compiled(false);
-    const affected=[];
+    const affected=[],missing=[];
     stages.querySelectorAll('.stage-card').forEach(card=>{
       const stage=(card.dataset.stage||'').toUpperCase();
       if(stage==='ENDING'||stage==='THUMBNAIL')return;
       const raw=(card.querySelector('.narration')?.value||'').trim();
       if(raw!==spokenText(raw))affected.push(stage);
+      if(!spokenText(raw))missing.push(stage);
     });
     const notice=document.getElementById('masterNarrationNotice');
-    if(notice)notice.textContent=affected.length?'Production instructions excluded from export: '+affected.join(', ')+'. Review these narration fields; original text is unchanged.':'';
+    if(notice)notice.textContent=(affected.length?'Production instructions excluded from export: '+affected.join(', ')+'. Original fields unchanged. ':'')+(missing.length?'INCOMPLETE NARRATION — missing or prompt-only fields: '+missing.join(', ')+'. Restore spoken narration before voice generation.':'');
     if(count)count.textContent=`${rows.length} segment${rows.length===1?'':'s'}`;
   }
 
