@@ -187,7 +187,7 @@ function sceneChoiceAllowed(card){
 function choiceSpecial(card,special){
  if(!special||sceneChoiceIndex(card)===''||special.approved)return special;
  return {...special,scene:selectedScene(card,Number(sceneChoiceIndex(card))),
-  timing:'0.0–2.0s: Establish the selected place, cast and panel action immediately.\\n2.0–7.0s: Follow the same event stage with physically coherent motion and no new unverified event fact.\n7.0–10.0s: Reveal one clear consequence appropriate to this panel, without replaying the preceding panel.',
+  timing:'0.0–2.0s: Establish the selected place, cast and panel action immediately.\n2.0–7.0s: Follow the same event stage with physically coherent motion and no new unverified event fact.\n7.0–10.0s: Reveal one clear consequence appropriate to this panel, without replaying the preceding panel.',
   camera:'One continuous grounded camera move suited to the selected location, distinct from the previous panel.',
   physics:'Use only the supported panel disaster beat, with plausible object motion, stable identities and no invented large-scale failure.',
   audio:'Only quiet audible effects from visible objects and movement at this location. No voices, music, unsupported wind, rumble or impact.',
@@ -788,7 +788,7 @@ function build(card){
  if(!scene)throw Error('Add the panel scene description first.');
  if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
  var stage=card.dataset.stage;
- var special=eventPanel(stage);
+ var special=choiceSpecial(card,eventPanel(stage));
  if(special&&special.scene)scene=special.scene;
  scene=sanitizeSceneForStyle(scene);
  var familyProgression=progression(stage,special);
