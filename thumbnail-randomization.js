@@ -1,4 +1,4 @@
-/* LD AUTO v3.41.4 — 10-design thumbnail rotation + visual sample previews + anti-repeat */
+/* LD AUTO v3.41.5 — 10-design thumbnail rotation + visual sample previews + anti-repeat */
 (()=>{
 'use strict';
 const stages=document.getElementById('stages');if(!stages)return;
@@ -215,12 +215,39 @@ function apply(){
  const t=topic();const base=strip(ta.value);const next=base+'\n\n'+block(t);if(ta.value===next)return false;
  ta.value=next;ta.dataset.thumbnailRandomization='v3.41.0-10-designs';fire(ta);return true;
 }
+
+function openSamplePreview(id,fam,opener){
+ const layout=layouts.find(x=>x.id===id);if(!layout)return;
+ document.querySelector('.thumb-preview-dialog')?.close();
+ const dialog=document.createElement('dialog');
+ dialog.className='thumb-preview-dialog';
+ dialog.setAttribute('aria-label',layout.label+' full image preview');
+ const header=document.createElement('div');header.className='thumb-preview-head';
+ const title=document.createElement('strong');title.textContent=layout.label;
+ const close=document.createElement('button');close.type='button';close.className='thumb-preview-close';close.textContent='Close ✕';close.setAttribute('aria-label','Close image preview');
+ const content=document.createElement('div');content.className='thumb-preview-content';
+ const status=document.createElement('p');status.className='thumb-preview-status';status.setAttribute('role','status');status.textContent='Loading preview…';
+ header.append(title,close);dialog.append(header,content,status);document.body.appendChild(dialog);
+ close.onclick=()=>dialog.close();
+ dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();});
+ dialog.addEventListener('close',()=>{dialog.remove();if(opener?.isConnected)opener.focus();},{once:true});
+ dialog.showModal();close.focus();
+ loadSample(id).then(data=>{
+  if(!dialog.open)return;
+  if(!data){content.innerHTML=sampleSvg(id,fam);status.textContent='Layout example. Use Add reference photo to save your own sample.';return;}
+  const img=document.createElement('img');img.alt=layout.label+' — full saved reference photo';
+  img.onload=()=>{status.textContent='Full image · sample reference';};
+  img.onerror=()=>{content.replaceChildren();status.textContent='Could not open this photo. Close preview and use Add reference photo to select it again.';};
+  img.src=data;content.replaceChildren(img);
+ }).catch(()=>{if(dialog.open)status.textContent='Could not open this saved photo. Close preview and use Add reference photo to select it again.';});
+}
+
 function render(){
  const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]');const body=card?.querySelector('.stage-body');if(!card||!body)return;
  let box=card.querySelector('.thumbnail-layout-chooser');
  if(!box){box=document.createElement('div');box.className='thumbnail-layout-chooser field-block';box.style.cssText='border:2px solid #ff3b30;border-radius:12px;padding:10px;margin:10px 0';body.prepend(box);}
  const t=topic(),cur=current(t),recent=readHistory();
- box.innerHTML='<div class="field-head"><label>Thumbnail Design · 10-Design Rotation</label></div><p style="margin:5px 0 9px;font-size:11px;color:#9aa7b6">Tap a layout label to select it. Tap its sample image or Add reference photo to choose a gallery picture for that design. The photo is a visual sample saved in this browser; it is not automatically sent to the image generator. The generated thumbnail remains FULL COLOR.</p><div class="thumb-layout-buttons thumb-design-grid"></div><input type="file" class="thumb-sample-picker" accept="image/*" hidden aria-label="Choose design reference photo">';
+ box.innerHTML='<div class="field-head"><label>Thumbnail Design · 10-Design Rotation</label></div><p style="margin:5px 0 9px;font-size:11px;color:#9aa7b6">Tap a layout label to select it. Tap the photo or Preview to see the full image. Use Add reference photo only to choose or replace a gallery picture. The photo is a visual sample saved in this browser; it is not automatically sent to the image generator. The generated thumbnail remains FULL COLOR.</p><div class="thumb-layout-buttons thumb-design-grid"></div><input type="file" class="thumb-sample-picker" accept="image/*" hidden aria-label="Choose design reference photo">';
  const picker=box.querySelector('.thumb-sample-picker');
  let pendingId='';
  picker.onchange=async()=>{
@@ -246,12 +273,13 @@ function render(){
    b.innerHTML='<span class="thumb-design-sample">'+sampleSvg(x.id,fam)+'</span><span class="thumb-design-label">'+x.label+(x.id===cur.id?' ✓':'')+'</span><span class="thumb-design-meta">'+(recent.includes(x.id)&&x.id!==cur.id?'Recently used':'Tap to select')+'</span>';
    if(x.id===cur.id)b.classList.add('selected');
    b.onclick=()=>{choose(t,x.id);apply();render();};
-   b.querySelector('.thumb-design-sample').onclick=e=>{e.stopPropagation();pendingId=x.id;picker.click();};
+   b.querySelector('.thumb-design-sample').onclick=e=>{e.stopPropagation();openSamplePreview(x.id,fam,b);};
    wrap.appendChild(b);
    showSample(b,x.id);
    const upload=document.createElement('button');upload.type='button';upload.className='thumb-sample-upload';upload.textContent='Add reference photo';upload.setAttribute('aria-label','Choose gallery photo for '+x.label);
    upload.onclick=()=>{pendingId=x.id;picker.click();};
-   const group=document.createElement('div');group.className='thumb-design-item';wrap.replaceChild(group,b);group.append(b,upload);
+   const previewBtn=document.createElement('button');previewBtn.type='button';previewBtn.className='thumb-sample-upload thumb-sample-preview';previewBtn.textContent='Preview';previewBtn.setAttribute('aria-label','Preview '+x.label);previewBtn.onclick=()=>openSamplePreview(x.id,fam,previewBtn);
+   const group=document.createElement('div');group.className='thumb-design-item';wrap.replaceChild(group,b);group.append(b,previewBtn,upload);
  });
 }
 function sync(){setTimeout(()=>{apply();render();},80);setTimeout(()=>{apply();render();},260);}
@@ -263,8 +291,8 @@ window.addEventListener('load',sync);
 setTimeout(sync,300);
 if(!document.getElementById('ldThumbnailSampleStyles')){
  const style=document.createElement('style');style.id='ldThumbnailSampleStyles';
- style.textContent='.thumb-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.thumb-design-item{min-width:0;display:flex;flex-direction:column;gap:4px}.thumb-design-card{display:flex!important;flex-direction:column;align-items:stretch!important;gap:5px!important;padding:7px!important;text-align:left!important;min-width:0!important}.thumb-design-card.selected{outline:2px solid #ff3b30;background:rgba(255,59,48,.08)}.thumb-design-sample{display:block;width:100%;overflow:hidden;border-radius:8px;background:#202833}.thumb-design-sample svg,.thumb-design-sample img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}.thumb-sample-upload{width:100%;border:1px solid #5a86ad;border-radius:7px;padding:7px 4px;background:#183958;color:#e8f5ff;font-size:10px;font-weight:700;cursor:pointer}.thumb-design-label{font-size:11px;font-weight:800;line-height:1.2}.thumb-design-meta{font-size:9px;opacity:.65}@media(min-width:720px){.thumb-design-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}';
+ style.textContent='.thumb-preview-dialog{box-sizing:border-box;width:min(94vw,900px);max-width:94vw;max-height:94vh;max-height:94dvh;margin:auto;padding:12px;border:1px solid #5a86ad;border-radius:12px;background:#111923;color:#fff;overflow:auto}.thumb-preview-dialog::backdrop{background:rgba(0,0,0,.85)}.thumb-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.thumb-preview-close{padding:10px 14px;background:#183958;color:#fff;border:1px solid #5a86ad;border-radius:8px;cursor:pointer}.thumb-preview-content img{display:block;width:100%;height:auto;max-height:72vh;max-height:72dvh;object-fit:contain}.thumb-preview-content svg{display:block;width:100%;max-height:65vh}.thumb-preview-status{font-size:12px;color:#bac8d7;margin:8px 0 0}.thumb-sample-preview{background:#245a88!important}.thumb-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.thumb-design-item{min-width:0;display:flex;flex-direction:column;gap:4px}.thumb-design-card{display:flex!important;flex-direction:column;align-items:stretch!important;gap:5px!important;padding:7px!important;text-align:left!important;min-width:0!important}.thumb-design-card.selected{outline:2px solid #ff3b30;background:rgba(255,59,48,.08)}.thumb-design-sample{display:block;width:100%;overflow:hidden;border-radius:8px;background:#202833}.thumb-design-sample svg,.thumb-design-sample img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}.thumb-sample-upload{width:100%;border:1px solid #5a86ad;border-radius:7px;padding:7px 4px;background:#183958;color:#e8f5ff;font-size:10px;font-weight:700;cursor:pointer}.thumb-design-label{font-size:11px;font-weight:800;line-height:1.2}.thumb-design-meta{font-size:9px;opacity:.65}@media(min-width:720px){.thumb-design-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}';
  document.head.appendChild(style);
 }
-window.LDThumbnailRandomization={version:'3.41.4',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
+window.LDThumbnailRandomization={version:'3.41.5',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
 })();
