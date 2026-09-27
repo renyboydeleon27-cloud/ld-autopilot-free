@@ -157,7 +157,7 @@ function render(){
  let box=card.querySelector('.thumbnail-layout-chooser');
  if(!box){box=document.createElement('div');box.className='thumbnail-layout-chooser field-block';box.style.cssText='border:2px solid #ff3b30;border-radius:12px;padding:10px;margin:10px 0';body.prepend(box);}
  const t=topic(),cur=current(t),recent=readHistory();
- box.innerHTML='<div class="field-head"><label>Thumbnail Design · 10-Design Rotation</label></div><p style="margin:5px 0 9px;font-size:11px;color:#9aa7b6">Tap a card to select a layout. Tap Add reference photo to choose a picture from your gallery for that design. The photo is a visual sample saved in this browser; it is not automatically sent to the image generator. The generated thumbnail remains FULL COLOR.</p><div class="thumb-layout-buttons thumb-design-grid"></div><input type="file" class="thumb-sample-picker" accept="image/*" hidden aria-label="Choose design reference photo">';
+ box.innerHTML='<div class="field-head"><label>Thumbnail Design · 10-Design Rotation</label></div><p style="margin:5px 0 9px;font-size:11px;color:#9aa7b6">Tap a layout label to select it. Tap its sample image or Add reference photo to choose a gallery picture for that design. The photo is a visual sample saved in this browser; it is not automatically sent to the image generator. The generated thumbnail remains FULL COLOR.</p><div class="thumb-layout-buttons thumb-design-grid"></div><input type="file" class="thumb-sample-picker" accept="image/*" hidden aria-label="Choose design reference photo">';
  const picker=box.querySelector('.thumb-sample-picker');
  let pendingId='';
  picker.onchange=async()=>{
@@ -179,6 +179,7 @@ function render(){
    b.innerHTML='<span class="thumb-design-sample">'+sampleSvg(x.id,fam)+'</span><span class="thumb-design-label">'+x.label+(x.id===cur.id?' ✓':'')+'</span><span class="thumb-design-meta">'+(recent.includes(x.id)&&x.id!==cur.id?'Recently used':'Tap to select')+'</span>';
    if(x.id===cur.id)b.classList.add('selected');
    b.onclick=()=>{choose(t,x.id);apply();render();};
+   b.querySelector('.thumb-design-sample').onclick=e=>{e.stopPropagation();pendingId=x.id;picker.click();};
    wrap.appendChild(b);
    showSample(b,x.id);
    const upload=document.createElement('button');upload.type='button';upload.className='thumb-sample-upload';upload.textContent='Add reference photo';upload.setAttribute('aria-label','Choose gallery photo for '+x.label);
@@ -198,5 +199,5 @@ if(!document.getElementById('ldThumbnailSampleStyles')){
  style.textContent='.thumb-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.thumb-design-item{min-width:0;display:flex;flex-direction:column;gap:4px}.thumb-design-card{display:flex!important;flex-direction:column;align-items:stretch!important;gap:5px!important;padding:7px!important;text-align:left!important;min-width:0!important}.thumb-design-card.selected{outline:2px solid #ff3b30;background:rgba(255,59,48,.08)}.thumb-design-sample{display:block;width:100%;overflow:hidden;border-radius:8px;background:#202833}.thumb-design-sample svg,.thumb-design-sample img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}.thumb-sample-upload{width:100%;border:1px solid #5a86ad;border-radius:7px;padding:7px 4px;background:#183958;color:#e8f5ff;font-size:10px;font-weight:700;cursor:pointer}.thumb-design-label{font-size:11px;font-weight:800;line-height:1.2}.thumb-design-meta{font-size:9px;opacity:.65}@media(min-width:720px){.thumb-design-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}';
  document.head.appendChild(style);
 }
-window.LDThumbnailRandomization={version:'3.41.2',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
+window.LDThumbnailRandomization={version:'3.41.3',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
 })();
