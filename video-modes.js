@@ -144,7 +144,40 @@ function withLock(prompt){
  if(!ready())return base;
  return absoluteStyleLock()+'\n\n'+base+'\n\n'+(universalHookDna()?universalHookDna()+'\n\n':'')+lock();
 }
+const SCENE_BANK_50=[
+ ['inside a modest family kitchen','interior'],['inside a small dining room','interior'],['inside a private bedroom','interior'],['inside a washroom','interior'],['inside a sitting room','interior'],
+ ['inside a home hallway','interior'],['inside a stair landing','interior'],['inside a boarding house room','interior'],['inside a neighborhood shop','interior'],['inside a period market stall','interior'],
+ ['inside a tailor workshop','interior'],['inside a carpenter workshop','interior'],['inside a bakery workroom','interior'],['inside a school room','interior'],['inside a small hotel lobby','interior'],
+ ['inside a railway waiting room','interior'],['inside a station office','interior'],['inside a warehouse','interior'],['inside a factory workroom','interior'],['inside a horse-drawn carriage','vehicle'],
+ ['inside a period tram carriage','vehicle'],['inside a passenger rail carriage','vehicle'],['inside a period motor vehicle if documented for the year and place','vehicle'],['inside a home entryway','interior'],['inside a public building corridor','interior'],
+ ['at a residential street corner','exterior'],['at a market street','exterior'],['at a town square','exterior'],['at a rail crossing','exterior'],['beside a station platform','exterior'],
+ ['at a waterfront landing if present locally','exterior'],['along a period bridge approach if present locally','exterior'],['outside a modest house','exterior'],['in a shared courtyard','exterior'],['in a small garden','exterior'],
+ ['at a workshop yard','exterior'],['beside a warehouse loading area','exterior'],['on a neighborhood sidewalk','exterior'],['at an alley opening','exterior'],['outside a public building','exterior'],
+ ['at a carriage stop','exterior'],['beside a street market','exterior'],['on an open work yard','exterior'],['at a farmyard if relevant locally','exterior'],['along an appropriate local footpath','exterior'],
+ ['at a neighborhood intersection','exterior'],['at an open plaza if present locally','exterior'],['beside a period transport stop','exterior'],['along a residential lane','exterior'],['outside a station entrance if present locally','exterior']
+];
+function sceneBankHash(value){var h=2166136261;for(var i=0;i<value.length;i++)h=Math.imul(h^value.charCodeAt(i),16777619);return h>>>0;}
+function rotatingScene(card){
+ if(!supports(card)||state(card).scene||state(card).text||eventPanel(card.dataset.stage))return '';
+ var n=stageNumber(card.dataset.stage),fam=familyKey();
+ if(n===2||n>=13)return ''; // Mechanism and closing panels retain their established geography.
+ var candidates=SCENE_BANK_50.filter(function(row){
+  if(row[1]==='vehicle'&&(!/^19\d\d$|^20\d\d$/.test(String(continuity().year||''))||n>=6))return false;
+  if((fam==='tsunami'||fam==='cyclone'||fam==='flood'||fam==='volcano'||fam==='wildfire')&&n>=4&&n<=8&&row[1]!=='exterior')return false;
+  if(fam==='insect'&&/tram|rail|waterfront|bridge|station|motor vehicle/.test(row[0]))return false;
+  return true;
+ });
+ if(!candidates.length)return '';
+ var key=current()+'|'+continuity().year+'|'+continuity().location;
+ var offset=sceneBankHash(key)%candidates.length;
+ var index=(offset+(n-1)*17)%candidates.length;
+ var choice=candidates[index][0];
+ var beat=String(card.querySelector('.narration')?.value||'').trim();
+ var role=n<=2?'ordinary life before the disaster':n<=8?'the current panel’s disaster beat':n<=12?'the current panel’s aftermath or response':'the current panel’s established story beat';
+ return 'SCENE BANK — unique panel setting: '+choice+', within '+cleanLocation(continuity().location)+', '+continuity().year+'. Stage only '+role+'. '+(beat?'Narrative context (never spoken in the generated video): '+beat+' ':'')+'Show the event-specific action only when physically plausible at this place and this point in the sequence. Keep historically valid architecture, transport, clothing and cast. If this venue does not exist at the documented event location or conflicts with the panel facts, use the nearest verified local equivalent. Do not add an unrelated disaster, unsupported specific damage or modern objects. Use a camera angle and foreground action distinct from adjacent panels.';
+}
 function sceneFrom(card){var existing=state(card).scene;if(existing)return existing;
+var variant=rotatingScene(card);if(variant)return variant;
 var image=card.querySelector('.image-prompt').value||'';
 image=image.replace(/ERA-AWARE CAPTURE LOCK:[\s\S]*?END ERA LOCK\.?/gi,'');
 // The opening scene description precedes the renderer/style locks in existing packs.
@@ -824,7 +857,7 @@ if(state(card).text&&!state(card).scene){try{var saved=JSON.parse(state(card).si
 
 var box=document.createElement('div');box.className='video-mode-controls';box.innerHTML='<p class="video-mode-status"></p><button type="button" class="ghost copy-active-video">Copy FULL Video Prompt</button><div class="text-video-fields"><label>Panel scene description<textarea class="video-scene" rows="4"></textarea></label><button type="button" class="ghost build-text-video">Build / refresh Text-to-Video prompt</button><label>Text-to-Video prompt<textarea class="text-video-prompt" rows="10"></textarea></label><button type="button" class="ghost copy-text-video">Copy FULL Text-to-Video Prompt</button></div>';
 card.querySelector('.flow-wrap').before(box);
-var scene=box.querySelector('.video-scene');scene.value=sceneFrom(card);var text=box.querySelector('.text-video-prompt');text.value=state(card).text;
+var scene=box.querySelector('.video-scene');scene.value=sceneFrom(card);if(!state(card).scene&&!state(card).text&&scene.value){card.dataset.videoScene=scene.value;}var text=box.querySelector('.text-video-prompt');text.value=state(card).text;
 
 scene.oninput=function(){card.dataset.videoScene=scene.value;card.querySelector('.done-toggle').checked=false;update(card);saveCurrent();};
 text.oninput=function(){card.dataset.textVideoPrompt=text.value;card.querySelector('.done-toggle').checked=false;saveCurrent();};
@@ -927,7 +960,7 @@ var c=continuity();['year','location','details'].forEach(function(k){var field=b
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.40.13',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.40.17',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(){panel();all();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
