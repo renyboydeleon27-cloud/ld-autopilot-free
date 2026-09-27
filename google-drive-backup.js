@@ -73,7 +73,10 @@ function ensureUi(){
    audit.appendChild(setup);
  }
  setup.querySelector('.drive-origin').textContent=location.origin;
- setup.querySelector('.drive-client-id').value=clientId();
+ const clientInput=setup.querySelector('.drive-client-id');
+ if(clientInput && !clientInput.matches(':focus') && !clientInput.value.trim()){
+   clientInput.value=clientId();
+ }
 
  if(!document.getElementById('driveBackupStyles')){
    const style=document.createElement('style');
@@ -271,8 +274,9 @@ function handleError(err){
 }
 
 function saveClientId(){
- const ui=ensureUi();if(!ui)return;
- const input=ui.setup.querySelector('.drive-client-id');
+ const setup=document.getElementById('driveBackupSetup');
+ if(!setup)return;
+ const input=setup.querySelector('.drive-client-id');
  const value=String(input?.value||'').trim();
  if(!value){
    localStorage.removeItem(CLIENT_KEY);
@@ -285,6 +289,7 @@ function saveClientId(){
  }
  localStorage.setItem(CLIENT_KEY,value);
  tokenClient=null;accessToken='';tokenExpiresAt=0;
+ if(input)input.value=value;
  status('Client ID saved. Tap Connect Google Drive or Save backup to Drive.');
  toast('Google Drive setup saved');
 }
