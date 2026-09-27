@@ -861,26 +861,26 @@ function sanFranciscoP11AnimePrompt(card){
  var scene=/^SMART RANDOM CHOICE — PRIMARY LOCATION:|^PRIMARY LOCATION:/.test(custom)
   ? 'Use the selected P11 relief location: '+custom.replace(/^SMART RANDOM CHOICE — /,'')+' Keep the aid handoff and human displacement as the only focal action.'
   : 'At a temporary 1906 San Francisco relief camp, two distinct adults complete one visible handoff of a small bundle of provisions beside period canvas shelters and a rough wooden table. One other adult waits with an empty container. Damaged city buildings remain far in the background. Exactly three foreground adults, each with a different face, hair and historically plausible clothing.';
- var result='VIDEO PROMPT — EXACTLY 10 SECONDS\\n'+current()+' · P11\\n\\n'
-  +absoluteStyleLock()+'\\n\\n'
-  +'P11 2D ANIME FRAME LOCK: Every frame MUST look like a drawn and animated black-and-white historical anime panel: visible ink contours around faces, hands, fabric and buildings; deliberately drawn anime facial features; clean grayscale cel shading and hand-painted 2D background planes. This applies to the first, middle and final frames, including every background person. Black-and-white film grain is subtle texture ON TOP OF THE DRAWING; never simulate photographic footage, camera-captured faces or natural photographic skin.\\n\\n'
-  +'TEXT-TO-VIDEO. Portrait 9:16. One uninterrupted 10-second shot in San Francisco, California, USA, 1906. No image reference.\\n\\n'
-  +'CHAPTER CONTINUITY LOCK: Same true black-and-white 2D anime world as the approved HOOK and P1–P10. 1906 clothing, simple relief supplies and period canvas shelter construction. Do not introduce modern agencies, vehicles or technology.\\n'
-  +'DISASTER-FAMILY PROGRESSION LOCK: P11 shows displacement and limited immediate aid after the quake. P10 street rescue has ended; P12 wider infrastructure consequences have not begun.\\n\\n'
-  +'PANEL SCENE:\\n'+scene+'\\n\\n'
-  +'NARRATIVE CONTEXT — not spoken, not on screen: '+narration+'\\n\\n'
-  +'TIMING: 0.0–2.0s: Show the 2D-drawn relief scene immediately with the bundle and hands visible. 2.0–7.0s: One careful handoff as the camera tracks sideways. 7.0–10.0s: The recipient steps aside; the third adult waits. No collapse or dramatic new disaster beat.\\n\\n'
+ var result='VIDEO PROMPT — EXACTLY 10 SECONDS\n'+current()+' · P11\n\n'
+  +absoluteStyleLock()+'\n\n'
+  +'P11 2D ANIME FRAME LOCK: Every frame MUST look like a drawn and animated black-and-white historical anime panel: visible ink contours around faces, hands, fabric and buildings; deliberately drawn anime facial features; clean grayscale cel shading and hand-painted 2D background planes. This applies to the first, middle and final frames, including every background person. Black-and-white film grain is subtle texture ON TOP OF THE DRAWING; never simulate photographic footage, camera-captured faces or natural photographic skin.\n\n'
+  +'TEXT-TO-VIDEO. Portrait 9:16. One uninterrupted 10-second shot in San Francisco, California, USA, 1906. No image reference.\n\n'
+  +'CHAPTER CONTINUITY LOCK: Same true black-and-white 2D anime world as the approved HOOK and P1–P10. 1906 clothing, simple relief supplies and period canvas shelter construction. Do not introduce modern agencies, vehicles or technology.\n'
+  +'DISASTER-FAMILY PROGRESSION LOCK: P11 shows displacement and limited immediate aid after the quake. P10 street rescue has ended; P12 wider infrastructure consequences have not begun.\n\n'
+  +'PANEL SCENE:\n'+scene+'\n\n'
+  +'NARRATIVE CONTEXT — not spoken, not on screen: '+narration+'\n\n'
+  +'TIMING: 0.0–2.0s: Show the 2D-drawn relief scene immediately with the bundle and hands visible. 2.0–7.0s: One careful handoff as the camera tracks sideways. 7.0–10.0s: The recipient steps aside; the third adult waits. No collapse or dramatic new disaster beat.\n\n'
   +'MASTER CINEMATIC CONSISTENCY LOCK — HIGH PRIORITY: Keep the three faces, clothes, hands, bundle and shelter geometry consistent from first to last frame.\n'
   +'MICRO-TRANSITION + MORPH CONTROL: The bundle stays in one pair of hands until it visibly transfers to the other; no object multiplication or face changes.\n'
   +'CHARACTER DIVERSITY + ANTI-CLONE LOCK: Three distinct drawn adult faces and period outfits; no duplicate extras or photographic people.\n'
   +'WEATHER + ATMOSPHERE CONTINUITY LOCK: Keep only light, visibility, ground and weather conditions established in P10; do not invent new atmospheric cues.\n'
   +'DEBRIS + DAMAGE PHYSICS LOCK: Existing background damage remains stable. No new collapse, hovering objects or changing geometry.\n'
   +'CINEMATIC CAMERA DIRECTOR: One gentle lateral track at human height. Retain inked linework and flat grayscale shading during movement.\n'
-  +'PROFESSIONAL CINEMATIC AUDIO MIX: Soft footsteps, cloth and the visible bundle/table contact only. No voice, dialogue, narration or music.\\n\\n'
-  +'CAMERA: One continuous lateral 2D animated camera move; no photographic lens artifacts or viewpoint cuts.\\n'
-  +'PHYSICS AND TIME: A single believable handoff. Every person and object remains stable across all 10 seconds.\\n'
-  +'AUDIO: Small visible object and movement SFX only; no voices or music.\\n'
-  +'NEGATIVE: No live action, photorealistic people, photographic skin, 3D CGI humans, grayscale film footage, newsreel capture, modern objects, captions, logos, or color.\\n'
+  +'PROFESSIONAL CINEMATIC AUDIO MIX: Soft footsteps, cloth and the visible bundle/table contact only. No voice, dialogue, narration or music.\n\n'
+  +'CAMERA: One continuous lateral 2D animated camera move; no photographic lens artifacts or viewpoint cuts.\n'
+  +'PHYSICS AND TIME: A single believable handoff. Every person and object remains stable across all 10 seconds.\n'
+  +'AUDIO: Small visible object and movement SFX only; no voices or music.\n'
+  +'NEGATIVE: No live action, photorealistic people, photographic skin, 3D CGI humans, grayscale film footage, newsreel capture, modern objects, captions, logos, or color.\n'
   +'STATUS: FOR TESTING — review the rendered animation before approval.';
  return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,result):result;
 }
@@ -889,7 +889,7 @@ function build(card){
  if(!scene)throw Error('Add the panel scene description first.');
  if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
  var stage=card.dataset.stage;
- if(stage==='P11'&&/\\bSan Francisco Earthquake\\b/i.test(current())&&/\\b1906\\b/.test(current())&&style()==='anime'&&colorMode()==='bw')return sanFranciscoP11AnimePrompt(card);
+ if(stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw')return sanFranciscoP11AnimePrompt(card);
  var special=choiceSpecial(card,eventPanel(stage));
  if(special&&special.scene)scene=special.scene;
  scene=sanitizeSceneForStyle(scene);
@@ -951,7 +951,7 @@ function rebuildTextPrompt(card){
  syncGlobalControl();
  return text;
 }
-function valid(card){if(card.dataset.stage==='P11'&&/\\bSan Francisco Earthquake\\b/i.test(current())&&/\\b1906\\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function valid(card){if(card.dataset.stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
 function completionReady(card){
  if(!supports(card))return false;
  if(state(card).mode!=='text')return true;
