@@ -173,14 +173,21 @@ function selectedScene(card,index){
  var phase=n<=2?'intact ordinary life before the disaster':n<=6?'the current panel’s established disaster stage':n<=8?'wider damage or a documented secondary hazard':n<=12?'the current panel’s aftermath or response':'the established closing beat';
  return 'PRIMARY LOCATION: '+item.place+', in '+cleanLocation(continuity().location)+', '+continuity().year+'. Depict '+phase+' with one readable action immediately. '+(beat?'PANEL NARRATIVE CONTEXT (never spoken): '+beat+' ':'')+'Use historically appropriate occupants, clothing, construction and objects for this exact place. Preserve the earthquake/disaster progression and previously established conditions. Do not invent unverified weather, dust, wind, transport or damage. One coherent camera move; distinct angle and cast from the previous panel. No speech, music, embedded text or modern objects.';
 }
+function sceneChoiceIndex(card){
+ var saved=String(card.dataset.sceneChoice||'');
+ if(saved!=='')return saved;
+ var scene=String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'');
+ var found=SCENE_BANK_50.findIndex(function(row){return scene.startsWith('PRIMARY LOCATION: '+row[0]+',');});
+ return found<0?'':String(found);
+}
 function sceneChoiceAllowed(card){
  var special=eventPanel(card.dataset.stage);
  return !card.querySelector('.done-toggle')?.checked&&(!special||!special.approved)&&card.dataset.stage!=='P2';
 }
 function choiceSpecial(card,special){
- if(!special||!card.dataset.sceneChoice||special.approved)return special;
- return {...special,scene:selectedScene(card,Number(card.dataset.sceneChoice)),
-  timing:'0.0–2.0s: Establish the selected place, cast and panel action immediately.\\n2.0–7.0s: Follow the same event stage with physically coherent motion and no new unverified event fact.\\n7.0–10.0s: Reveal one clear consequence appropriate to this panel, without replaying the preceding panel.',
+ if(!special||sceneChoiceIndex(card)===''||special.approved)return special;
+ return {...special,scene:selectedScene(card,Number(sceneChoiceIndex(card))),
+  timing:'0.0–2.0s: Establish the selected place, cast and panel action immediately.\\n2.0–7.0s: Follow the same event stage with physically coherent motion and no new unverified event fact.\n7.0–10.0s: Reveal one clear consequence appropriate to this panel, without replaying the preceding panel.',
   camera:'One continuous grounded camera move suited to the selected location, distinct from the previous panel.',
   physics:'Use only the supported panel disaster beat, with plausible object motion, stable identities and no invented large-scale failure.',
   audio:'Only quiet audible effects from visible objects and movement at this location. No voices, music, unsupported wind, rumble or impact.',
@@ -723,7 +730,7 @@ function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanN
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[6]=clean(parts[6]);parts[7]=clean(parts[7]);return JSON.stringify(parts);}catch(e){return '';}}
 function pinScene(card){
  var special=eventPanel(card.dataset.stage);
- if(special&&special.scene&&!card.dataset.sceneChoice){
+ if(special&&special.scene&&sceneChoiceIndex(card)===''){
    card.dataset.videoScene=clean(special.scene);
    var field=card.querySelector('.video-scene');
    if(field)field.value=card.dataset.videoScene;
@@ -760,8 +767,8 @@ function sceneVarietyIssue(card){
  if(n<2)return '';
  var previous=document.querySelector('.stage-card[data-stage="P'+(n-1)+'"]');
  if(!previous)return '';
- var now=eventPanel(stage)?.scene||String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim();
- var before=eventPanel('P'+(n-1))?.scene||String(previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||'').trim();
+ var now=sceneChoiceIndex(card)!==''?String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'').trim():(eventPanel(stage)?.scene||String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim());
+ var before=sceneChoiceIndex(previous)!==''?String(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||'').trim():(eventPanel('P'+(n-1))?.scene||String(previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||'').trim());
  if(!now||!before)return '';
  var a=sceneLocationKey(now),b=sceneLocationKey(before),actionA=sceneActionKey(now),actionB=sceneActionKey(before);
  var sanFrancisco=/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current());
@@ -772,7 +779,7 @@ function sceneVarietyIssue(card){
 function adjacentSceneLock(stage){
  var n=stageNumber(stage);if(n<2)return '';
  var previous=document.querySelector('.stage-card[data-stage="P'+(n-1)+'"]');
- var prior=previous&&(eventPanel('P'+(n-1))?.scene||previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||'');
+ var prior=previous&&(sceneChoiceIndex(previous)!==''?(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||''):(eventPanel('P'+(n-1))?.scene||previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||''));
  return 'PANEL SCENE IDENTITY LOCK: Give '+stage+' its own primary place, camera angle, foreground action and cast. The prior panel P'+(n-1)+' used '+(sceneLocationKey(prior)||'its established setting')+' and '+(sceneActionKey(prior)||'its established action')+'. Keep historical continuity while changing the visual setup where the narrative permits. Never repeat a wall-bracing foreground adult, identical street corner, camera axis or background layout with only different faces. The current PANEL SCENE and event-specific timing have priority over this variety rule.';
 }
 function signature(card){var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=window.LDDisasterProgression?.version||'';return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
@@ -883,7 +890,7 @@ var box=document.createElement('div');box.className='video-mode-controls';box.in
 card.querySelector('.flow-wrap').before(box);
 var picker=box.querySelector('.scene-choice');
 availableScenes(card).forEach(function(item){var option=document.createElement('option');option.value=String(item.index);option.textContent=item.place;picker.appendChild(option);});
-picker.value=card.dataset.sceneChoice||'';
+picker.value=sceneChoiceIndex(card);
 picker.disabled=!sceneChoiceAllowed(card);
 picker.onchange=function(){
  if(!sceneChoiceAllowed(card)){picker.value=card.dataset.sceneChoice||'';return showToast('This panel is approved or has a dedicated locked scene.');}
