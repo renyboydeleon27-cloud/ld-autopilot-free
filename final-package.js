@@ -16,6 +16,7 @@ function safeName(value){
   return clean(value||'living-disaster').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'living-disaster';
 }
 function stageOrder(){
+  if(window.ldStoryEpisode)return Array.from(document.querySelectorAll('#stages .stage-card'),c=>c.dataset.stage);
   return ['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING','THUMBNAIL'];
 }
 function selectedTitle(){
