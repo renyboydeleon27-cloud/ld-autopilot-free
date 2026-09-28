@@ -25,7 +25,7 @@
   }
   function validState(state){return !!(state&&state.topic&&state.stages&&typeof state.stages==='object');}
   function projectStats(state){
-    const expected=state?.format==='longform'?31:17;
+    const expected=state?.storyEpisode?Object.keys(state.stages||{}).length:state?.format==='longform'?31:17;
     const items=state?.stages?Object.values(state.stages):[];
     const done=items.filter(x=>x&&x.done).length;
     return {done,total:expected,percent:expected?Math.round(done/expected*100):0};
