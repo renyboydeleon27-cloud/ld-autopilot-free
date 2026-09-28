@@ -68,6 +68,7 @@ function colorMode(){
   return visualMode()==='real'?'bw':'color';
 }
 function eligible(card){
+  if(window.ldStoryEpisode&&card)return /^P[1-9]\d*$/.test(card.dataset.stage||'');
   return !!card&&/^(HOOK|P(?:[1-9]|1[0-4])|ENDING|THUMBNAIL)$/.test(card.dataset.stage||'');
 }
 function currentCard(){
@@ -134,6 +135,7 @@ function approvedSnapshot(card){
   const continuity=window.ldVideoContinuity||{};
   return {
     version:'1.0',
+    storyVoice:card?.dataset?.storyVoice||'none',storyFocus:card?.dataset?.storyFocus||'auto',
     stage:card?.dataset?.stage||'',
     topic:topic(),
     format:format(),
@@ -271,6 +273,7 @@ function auditCacheKey(payload){
 }
 function readinessSignature(card){
   if(!card)return '';
+  if(window.LDStoryModes?.enabled()&&card.dataset.videoMode==='text'&&/^P[1-9]\d*$/.test(card.dataset.stage))return 'fiction|'+promptHash(JSON.stringify([window.LDStoryModes.polishKey(card),card.dataset.textVideoPrompt||'',card.dataset.videoScene||'']));
   const stage=card.dataset.stage||'';
   const mode=card.dataset.videoMode||window.LDProjectLocks?.videoMode?.()||'image';
   const continuity=window.ldVideoContinuity||{};
@@ -582,25 +585,18 @@ async function fixPanel(card,payload){
 async function prepareFiction(card){
  const stage=card.dataset.stage||'';
  if(stage==='ENDING'||stage==='THUMBNAIL')return prepareImageStage(card);
- const narration=card.querySelector('.narration');
- if(narration&&!narration.value.trim()){
-  narration.value=window.LDStoryModes.narration(stage,topic());
-  narration.dispatchEvent(new Event('input',{bubbles:true}));
- }
+ const mode=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode||card.dataset.videoMode||'image';
+ if(mode!=='text')return prepareImageToVideo(card);
  if(stage==='HOOK')return prepareHook(card);
- const locked=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode;
- const mode=locked==='text'||locked==='image'?locked:(card.dataset.videoMode||'image');
- if(card.dataset.videoMode!==mode)window.LDVideoModes?.setAllMode?.(mode);
- if(mode==='text'){
-  const prompt=window.LDVideoModes?.prompt?.(card);
-  if(!prompt)throw new Error('This story panel needs a video prompt.');
-  const copied=await copyText(prompt);
-  markSmartReady(card);
-  buttonLabel(approveLabel(card));
-  status('🟡 '+stage+' STORY PROMPT READY · LOCAL CHECK · 0 API calls'+(copied?' · copied automatically':'')+'. Review the generated clip, then approve.','pass');
-  return;
- }
- return prepareImageToVideo(card);
+ if(card.dataset.videoMode!=='text')window.LDVideoModes?.setAllMode?.('text');
+ status('Preparing a 10-second scene from your narration and story continuity…','working');
+ const polished=await window.LDStoryModes.polish(card);
+ const prompt=window.LDVideoModes?.prompt?.(card);
+ if(!prompt)throw new Error('This story scene needs a video prompt.');
+ const copied=await copyText(prompt);
+ markSmartReady(card);
+ buttonLabel(approveLabel(card));
+ status('🟡 '+stage+' STORY PROMPT READY · '+(polished?'AI polished':'saved polish reused')+(copied?' · copied automatically':'')+'. Generate in Flow, review the clip, then approve.','pass');
 }
 async function prepareHook(card){
   let choices=window.LDStoryModes?.enabled()?[]:(window.LDHookChoiceSystem?.choices?.()||[]);
