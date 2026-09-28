@@ -60,6 +60,7 @@ ANTI-REPETITION LOCK: Each stage must differ meaningfully from nearby stages in 
   function fire(el){el.dispatchEvent(new Event('input',{bubbles:true}));}
 
   function applyCard(card){
+ if(window.LDStoryModes?.enabled())return false;
     const stage=stageName(card);
     if(!stage||stage==='ENDING'||stage==='THUMBNAIL')return false;
     const el=card.querySelector('.image-prompt');
