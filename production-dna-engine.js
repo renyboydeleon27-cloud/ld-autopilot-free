@@ -372,6 +372,7 @@ function placeRoot(root){
   document.querySelector('main')?.appendChild(root);
 }
 function render(){
+  if(window.LDStoryModes?.enabled()){document.getElementById('productionDnaEngine')?.remove();return;}
   let root=document.getElementById('productionDnaEngine');
   if(!root){
     root=document.createElement('section');
