@@ -1,7 +1,7 @@
 {
-  "name": "LD Autopilot Free",
-  "short_name": "LD Auto",
-  "description": "Mobile-first Living Disaster Book production manager.",
+  "name": "NER Studio",
+  "short_name": "NER Studio",
+  "description": "Mobile story production studio for disasters, AI dramas, and anime adventures.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
