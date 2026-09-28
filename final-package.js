@@ -24,6 +24,7 @@ function selectedTitle(){
 function defaultDescription(){
   const t=topic();
   if(!t)return '';
+  if(window.LDStoryModes?.enabled())return 'A '+window.LDStoryModes.label()+' story titled '+t+'.\n\nCreated with NER Studio.';
   return 'A Living Disaster Book historical disaster short about '+t+'.\n\nThank you for watching. Like, share, and subscribe for more stories from the Living Disaster Book.';
 }
 function meta(){
@@ -71,10 +72,15 @@ function stageData(stage){
   };
 }
 function gate(){
+  if(window.LDStoryModes?.enabled()){
+    const cards=[...stages.querySelectorAll('.stage-card')];const ok=cards.length>0&&cards.every(card=>card.querySelector('.done-toggle')?.checked);
+    return {ok,checks:[{label:'Story panels complete',ok,detail:ok?'All stages marked Done.':'Finish all story stages before export.'}],failed:ok?[]:[{detail:'Finish all story stages before export.'}]};
+  }
   const result=window.LDProductionDNA?.evaluateFinalProduction?.();
   return result&&typeof result==='object'?result:{ok:false,failed:[{detail:'Final Production Check is not available.'}]};
 }
 function dnaSavedForCurrent(){
+  if(window.LDStoryModes?.enabled())return true;
   const p=window.LDProductionDNA?.activeProfile?.();
   return !!p&&clean(p.sourceTopic)===topic();
 }
@@ -127,7 +133,7 @@ function stageText(s){
 }
 function buildText(){
   const p=buildObject();
-  const title='LIVING DISASTER BOOK — FINAL PRODUCTION PACKAGE';
+  const title=(window.LDStoryModes?.enabled()?'NER STUDIO':'LIVING DISASTER BOOK')+' — FINAL PRODUCTION PACKAGE';
   const parts=[
     title,
     'TOPIC: '+p.topic,
