@@ -31,6 +31,7 @@
   }
 
   function syncCard(card){
+ if(window.LDStoryModes?.enabled())return false;
     const stage=card?.dataset?.stage;
     if(!stage||stage==='THUMBNAIL')return false;
     if(stage==='ENDING')return syncEnding(card);
