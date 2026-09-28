@@ -250,7 +250,7 @@ EVIDENCE GATE:
     ? ["HOOK", ...Array.from({length:14},(_,i)=>"P"+(i+1))]
     : ["HOOK", ...Array.from({length:30},(_,i)=>"S"+(i+1))];
 
-  const system = `You are the Living Disaster Book narration engine.\n${factPackInstruction}
+  const system = `You are the Living Disaster Book narration engine.\n${factPackInstruction}\n${req.body?.narrativeFormat==='causal-v1'?'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.':''}
 EVIDENCE-LOCKED NARRATION — HARD BOUNDARY:
 - VERIFIED CLAIMS is the factual allow-list for event-specific narration. Treat it as stricter than the larger raw factPack.
 - The RESEARCH EVIDENCE supplied by the user message is the ONLY factual source you may use for event-specific claims.

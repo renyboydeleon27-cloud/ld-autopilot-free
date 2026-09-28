@@ -228,8 +228,8 @@
     const narration=card.querySelector('.narration'),image=card.querySelector('.image-prompt'),flow=card.querySelector('.flow-prompt');
     let changed=false;
     if(stage!=='ENDING'&&stage!=='THUMBNAIL'&&narration&&(overwrite||!narration.value.trim())){narration.value=narrationTemplate(stage);fireInput(narration);changed=true;}
-    if(image&&(overwrite||!image.value.trim())){image.value=imageTemplate(stage,role);fireInput(image);changed=true;}
-    if(stage!=='ENDING'&&stage!=='THUMBNAIL'&&flow&&(overwrite||!flow.value.trim())){flow.value=flowTemplate(stage);fireInput(flow);changed=true;}
+    if(image&&(overwrite||!image.value.trim())){image.value=window.LDStoryFormat?.decorate(imageTemplate(stage,role),stage,isShorts()?'shorts':'longform')||imageTemplate(stage,role);fireInput(image);changed=true;}
+    if(stage!=='ENDING'&&stage!=='THUMBNAIL'&&flow&&(overwrite||!flow.value.trim())){flow.value=window.LDStoryFormat?.decorate(flowTemplate(stage),stage,isShorts()?'shorts':'longform')||flowTemplate(stage);fireInput(flow);changed=true;}
     return changed;
   }
 

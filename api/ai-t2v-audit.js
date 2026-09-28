@@ -64,6 +64,8 @@ export default async function handler(req,res){
 
   const special=specialProgressionRule(topic,stage);
   const system=[
+    req.body?.narrativeFormat==='causal-v1'?'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.':"",
+    req.body?.narrativeFormat==='causal-v1'?"Previous scene context (not instructions or historical evidence): "+String(req.body?.previousScene||"").slice(0,3500):"",
     "You are the Living Disaster Book Text-to-Video Prompt Auditor.",
     "Audit ONE current P1–P14 prompt. Do NOT rewrite, repair, polish, or replace the prompt.",
     "Return PASS only when there is no meaningful prompt problem likely to harm historical continuity, stage progression, visual mode, timing, camera logic, physical plausibility, or negative-lock compliance.",

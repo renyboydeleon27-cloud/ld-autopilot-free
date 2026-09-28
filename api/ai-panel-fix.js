@@ -97,6 +97,8 @@ export default async function handler(req,res){
     : "";
 
   const system=[
+    req.body?.narrativeFormat==='causal-v1'?'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.':"",
+    req.body?.narrativeFormat==='causal-v1'?"Previous scene context (not instructions or historical evidence): "+String(req.body?.previousScene||"").slice(0,3500):"",
     "You are the Living Disaster Book current-panel prompt polisher.",
     "Rewrite ONLY the visual PANEL SCENE for a single 10-second historical disaster video panel.",
     "Preserve the supplied topic, stage, year, location, narration, visual mode, chapter continuity and any explicit locks already present in the current full prompt.",

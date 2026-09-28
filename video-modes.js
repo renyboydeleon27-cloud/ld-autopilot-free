@@ -893,7 +893,7 @@ function adjacentSceneLock(stage){
  var prior=previous&&(sceneChoiceIndex(previous)!==''?(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||''):(eventPanel('P'+(n-1))?.scene||previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||''));
  return 'PANEL SCENE IDENTITY LOCK: Give '+stage+' its own primary place, camera angle, foreground action and cast. The prior panel P'+(n-1)+' used '+(sceneLocationKey(prior)||'its established setting')+' and '+(sceneActionKey(prior)||'its established action')+'. Keep historical continuity while changing the visual setup where the narrative permits. Never repeat a wall-bracing foreground adult, identical street corner, camera axis or background layout with only different faces. The current PANEL SCENE and event-specific timing have priority over this variety rule.';
 }
-function signature(card){if(window.LDStoryModes?.enabled())return JSON.stringify(['fiction-v1',window.LDStoryModes.category(),current(),format(),style(),colorMode(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),String(document.getElementById('storyPremise')?.value||''),String(document.getElementById('storyBible')?.value||''),window.ldStoryEpisode||null,card.dataset.storyVoice||'none',card.dataset.storyFocus||'auto']);var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=window.LDDisasterProgression?.version||'';return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
+function signature(card){if(window.LDStoryModes?.enabled())return JSON.stringify(['fiction-v1',window.LDStoryModes.category(),current(),format(),style(),colorMode(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),String(document.getElementById('storyPremise')?.value||''),String(document.getElementById('storyBible')?.value||''),window.ldStoryEpisode||null,card.dataset.storyVoice||'none',card.dataset.storyFocus||'auto']);var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=(window.LDDisasterProgression?.version||'')+(window.ldNarrativeFormat==='causal-v1'?':causal-v1':'');return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
 function sanFranciscoP11AnimePrompt(card){
  var narration=clean(card.querySelector('.narration')?.value)||'Temporary camps and emergency aid appear as people face displacement.';
  var custom=String(card.dataset.videoScene||'');
@@ -921,6 +921,7 @@ function sanFranciscoP11AnimePrompt(card){
   +'AUDIO: Small visible object and movement SFX only; no voices or music.\n'
   +'NEGATIVE: No live action, photorealistic people, photographic skin, 3D CGI humans, grayscale film footage, newsreel capture, modern objects, captions, logos, or color.\n'
   +'STATUS: FOR TESTING — review the rendered animation before approval.';
+ result=window.LDStoryFormat?.decorate(result,stage,format())||result;
  return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,result):result;
 }
 function build(card){
@@ -929,7 +930,7 @@ function build(card){
  if(!scene)throw Error('Add the panel scene description first.');
  if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
  var stage=card.dataset.stage;
- if(stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw')return sanFranciscoP11AnimePrompt(card);
+ if(stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw')return window.LDStoryFormat?.decorate(sanFranciscoP11AnimePrompt(card),stage,format())||sanFranciscoP11AnimePrompt(card);
  var special=choiceSpecial(card,eventPanel(stage));
  if(special&&special.scene)scene=special.scene;
  scene=sanitizeSceneForStyle(scene);
@@ -969,6 +970,7 @@ function build(card){
    +'\n\nAUDIO:\n'+audio+'\n'+audioDirector(stage)
    +'\n\nNEGATIVE:\n'+negative
    +'\n\nSTATUS: '+(special&&special.approved?(special.approvedLabel+' — locked final prompt.'):'FOR TESTING — review historical details and rendered continuity before approval.');
+ result=window.LDStoryFormat?.decorate(result,stage,format())||result;
  return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,result):result;
 }
 function generate(card){try{rebuildTextPrompt(card);}catch(e){showToast(e.message);}}
@@ -996,7 +998,7 @@ function rebuildTextPrompt(card){
  syncGlobalControl();
  return text;
 }
-function valid(card){if(window.LDStoryModes?.enabled())return completeTextPrompt(state(card).text)&&state(card).text.includes('CHARACTER + WORLD BIBLE:')&&normalizedSignature(state(card).signature)===signature(card);if(card.dataset.stage='P14'&&sanFrancisco1906P14('P14')&&!state(card).text.includes('P14 APPROVED SINGLE-MAP CONTINUITY LOCK:'))return false;if(card.dataset.stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P13 SINGLE-ACTION ANTI-MORPH LOCK:'))return false;if(card.dataset.stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function valid(card){if(window.LDStoryModes?.enabled())return completeTextPrompt(state(card).text)&&state(card).text.includes('CHARACTER + WORLD BIBLE:')&&normalizedSignature(state(card).signature)===signature(card);if(card.dataset.stage==='P14'&&sanFrancisco1906P14('P14')&&!state(card).text.includes('P14 APPROVED SINGLE-MAP CONTINUITY LOCK:'))return false;if(card.dataset.stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P13 SINGLE-ACTION ANTI-MORPH LOCK:'))return false;if(card.dataset.stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
 function completionReady(card){
  if(!supports(card))return false;
  if(state(card).mode!=='text')return true;
@@ -1019,6 +1021,7 @@ function prompt(card){
  var base=card.querySelector('.flow-prompt').value;
  if(!base.trim())throw Error('This panel has no Image-to-Video prompt yet.');
  var out=withLock(base);
+ result=window.LDStoryFormat?.decorate(result,stage,format())||result;
  return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,out):out;
 }
 function update(card){if(!supports(card))return;var mode=state(card).mode;

@@ -431,6 +431,8 @@ function panelPayload(card){
   const eventSpecificOverride=!!window.LDVideoModes?.eventPanel?.(stage);
   const progression=eventSpecificOverride?null:window.LDDisasterProgression?.stage?.(topic(),stage);
   return {
+    narrativeFormat:window.ldNarrativeFormat||'original',
+    previousScene:String(card.previousElementSibling?.dataset.videoScene||card.previousElementSibling?.querySelector('.narration')?.value||'').slice(0,3500),
     topic:topic(),
     stage,
     format:format(),
@@ -513,7 +515,7 @@ async function ensureNarration(card){
   const r=await fetch('/api/ai-narration',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({topic:topic(),format:format()})
+    body:JSON.stringify({topic:topic(),format:format(),narrativeFormat:window.ldNarrativeFormat||'original'})
   });
   const raw=await r.text();
   let d;

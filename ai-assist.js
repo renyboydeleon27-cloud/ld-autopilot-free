@@ -79,6 +79,8 @@ function panelPayload(card){
   const sceneField=card.querySelector('.video-scene');
   const promptField=card.querySelector('.text-video-prompt');
   return {
+    narrativeFormat:window.ldNarrativeFormat||'original',
+    previousScene:String(card.previousElementSibling?.dataset.videoScene||card.previousElementSibling?.querySelector('.narration')?.value||'').slice(0,3500),
     topic:getTopic(),
     stage:card.dataset.stage||'',
     format:document.getElementById('format')?.value||'shorts',
@@ -246,7 +248,7 @@ function mount(){
     const format=document.getElementById('format')?.value||'shorts';
     btn.disabled=true;out.textContent='✨ Generating historically grounded narration…';
     try{
-      const r=await fetch('/api/ai-narration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,format})});
+      const r=await fetch('/api/ai-narration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,format,narrativeFormat:window.ldNarrativeFormat||'original'})});
       const d=await r.json();
       if(!r.ok||!d.ok){
         if(Array.isArray(d.unsupportedClaims)&&d.unsupportedClaims.length){

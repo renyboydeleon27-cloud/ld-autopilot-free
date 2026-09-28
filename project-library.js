@@ -31,7 +31,7 @@
     return {done,total:expected,percent:expected?Math.round(done/expected*100):0};
   }
   function displayName(p){return p.name||p.state?.topic||'Untitled project';}
-  function formatLabel(state){const kind=state?.category==='drama'?'AI Drama · ':state?.category==='fantasy'?'Anime Adventure Fantasy · ':'';return kind+(state?.format==='longform'?'Longform 16:9':'Shorts 9:16');}
+  function formatLabel(state){const kind=state?.category==='drama'?'AI Drama · ':state?.category==='fantasy'?'Anime Adventure Fantasy · ':'';return kind+(window.LDStoryFormat?window.LDStoryFormat.label(state?.narrativeFormat)+' · ':'')+(state?.format==='longform'?'Longform 16:9':'Shorts 9:16');}
   function prettyTime(iso){
     if(!iso)return 'Saved locally';
     const d=new Date(iso);if(Number.isNaN(d.getTime()))return 'Saved locally';
@@ -80,7 +80,7 @@
     if(!project||!state)return false;
     const pt=(project.state?.topic||project.name||'').trim();
     const st=(state.topic||'').trim();
-    return !!pt&&!!st&&pt===st&&project.state?.format===state.format&&(project.state?.category||'disaster')===(state.category||'disaster');
+    return !!pt&&!!st&&pt===st&&project.state?.format===state.format&&(project.state?.narrativeFormat||'original')===(state.narrativeFormat||'original')&&(project.state?.category||'disaster')===(state.category||'disaster');
   }
   function syncCurrent(forceNew=false,renderAfter=true){
     if(switchingProject)return;
@@ -112,7 +112,7 @@
     if(!lib.projects.length&&validState(core)){
       const id=uid();lib.projects.push({id,name:core.topic,state:core,createdAt:core.updatedAt||new Date().toISOString(),updatedAt:core.updatedAt||new Date().toISOString()});writeLibrary(lib);setActive(id);
     }else if(lib.projects.length&&!activeId()){
-      const match=validState(core)?lib.projects.find(p=>p.state?.topic===core.topic&&p.state?.format===core.format):null;
+      const match=validState(core)?lib.projects.find(p=>p.state?.topic===core.topic&&p.state?.format===core.format&&(p.state?.narrativeFormat||'original')===(core.narrativeFormat||'original')):null;
       if(match)setActive(match.id);
     }
   }
@@ -131,7 +131,7 @@
     if(clearlyCorrupted&&window.LDCore?.loadProductionState){
       // Previous sync bug could leave the card name correct while its internal state belonged to another topic.
       // For untouched 0%-complete projects, safely rebuild from the visible project title.
-      const repaired={version:'2.0',topic:cardTopic,format:p.state?.format||'shorts',stages:{},updatedAt:new Date().toISOString()};
+      const repaired={version:'2.0',topic:cardTopic,format:p.state?.format||'shorts',narrativeFormat:p.state?.narrativeFormat||'original',stages:{},updatedAt:new Date().toISOString()};
       localStorage.setItem(CORE_KEY,JSON.stringify(repaired));
       setActive(id);
       window.LDCore.loadProductionState(repaired);
@@ -219,7 +219,7 @@
     const stageNav=document.getElementById('stageNav');
 
     if(topic){topic.value='';topic.focus();}
-    if(format)format.value='shorts';
+    if(format)format.value='shorts';window.LDStoryFormat?.reset();
     const premise=document.getElementById('storyPremise');if(premise)premise.value='';const bible=document.getElementById('storyBible');if(bible)bible.value='';const storySetup=document.getElementById('storySetup');if(storySetup)storySetup.hidden=true;const topicLabel=document.getElementById('topicLabel');if(topicLabel)topicLabel.textContent='Disaster topic';
     const category=document.getElementById('productionCategory');if(category)category.value='disaster';window.ldProductionCategory='disaster';
     if(stages)stages.innerHTML='';
