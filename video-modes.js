@@ -1,7 +1,7 @@
 /* LD AUTO v3.40.4 — title-driven shared setting + cinematic consistency + controlled character diversity / anti-clone system. */
 (function(){'use strict';
 const T2V_POLICY_VERSION='3.40.12-panel-scene-identity-v1';
-function supports(card){return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
+function supports(card){if(window.ldStoryEpisode)return /^P[1-9]\d*$/.test(card.dataset.stage);return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
 function colorMode(){var locked=window.LDProjectLocks?.colorMode?.()||window.ldProjectLocks?.colorMode;if(locked==='bw'||locked==='color')return locked;return style()==='real'?'bw':'color';}
@@ -893,7 +893,7 @@ function adjacentSceneLock(stage){
  var prior=previous&&(sceneChoiceIndex(previous)!==''?(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||''):(eventPanel('P'+(n-1))?.scene||previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||''));
  return 'PANEL SCENE IDENTITY LOCK: Give '+stage+' its own primary place, camera angle, foreground action and cast. The prior panel P'+(n-1)+' used '+(sceneLocationKey(prior)||'its established setting')+' and '+(sceneActionKey(prior)||'its established action')+'. Keep historical continuity while changing the visual setup where the narrative permits. Never repeat a wall-bracing foreground adult, identical street corner, camera axis or background layout with only different faces. The current PANEL SCENE and event-specific timing have priority over this variety rule.';
 }
-function signature(card){if(window.LDStoryModes?.enabled())return JSON.stringify(['fiction-v1',window.LDStoryModes.category(),current(),format(),style(),colorMode(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),String(document.getElementById('storyPremise')?.value||''),String(document.getElementById('storyBible')?.value||'')]);var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=window.LDDisasterProgression?.version||'';return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
+function signature(card){if(window.LDStoryModes?.enabled())return JSON.stringify(['fiction-v1',window.LDStoryModes.category(),current(),format(),style(),colorMode(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),String(document.getElementById('storyPremise')?.value||''),String(document.getElementById('storyBible')?.value||''),window.ldStoryEpisode||null]);var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=window.LDDisasterProgression?.version||'';return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
 function sanFranciscoP11AnimePrompt(card){
  var narration=clean(card.querySelector('.narration')?.value)||'Temporary camps and emergency aid appear as people face displacement.';
  var custom=String(card.dataset.videoScene||'');
