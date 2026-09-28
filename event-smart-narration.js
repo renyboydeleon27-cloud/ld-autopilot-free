@@ -67,6 +67,7 @@
   }
 
   function applyEventNarration(){
+    if(window.LDStoryModes?.enabled())return false;
     const pack=EVENT_PACKS[normalizeTopicKey(topicEl.value)];
     if(!pack)return false;
     let changed=false;
