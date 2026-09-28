@@ -80,7 +80,7 @@
     if(!project||!state)return false;
     const pt=(project.state?.topic||project.name||'').trim();
     const st=(state.topic||'').trim();
-    return !!pt&&!!st&&pt===st&&project.state?.format===state.format;
+    return !!pt&&!!st&&pt===st&&project.state?.format===state.format&&(project.state?.category||'disaster')===(state.category||'disaster');
   }
   function syncCurrent(forceNew=false){
     if(switchingProject)return;
@@ -220,6 +220,7 @@
 
     if(topic){topic.value='';topic.focus();}
     if(format)format.value='shorts';
+    const category=document.getElementById('productionCategory');if(category)category.value='disaster';window.ldProductionCategory='disaster';
     if(stages)stages.innerHTML='';
     if(projectTitle)projectTitle.textContent='No production yet';
     if(stageCount)stageCount.textContent='0';
