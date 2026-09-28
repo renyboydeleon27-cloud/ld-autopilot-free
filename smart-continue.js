@@ -579,8 +579,31 @@ async function fixPanel(card,payload){
   field.dispatchEvent(new Event('change',{bubbles:true}));
   return {...d,scene:safeScene};
 }
+async function prepareFiction(card){
+ const stage=card.dataset.stage||'';
+ if(stage==='ENDING'||stage==='THUMBNAIL')return prepareImageStage(card);
+ if(stage==='HOOK')return prepareHook(card);
+ const narration=card.querySelector('.narration');
+ if(narration&&!narration.value.trim()){
+  narration.value=window.LDStoryModes.narration(stage,topic());
+  narration.dispatchEvent(new Event('input',{bubbles:true}));
+ }
+ const locked=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode;
+ const mode=locked==='text'||locked==='image'?locked:(card.dataset.videoMode||'image');
+ if(card.dataset.videoMode!==mode)window.LDVideoModes?.setAllMode?.(mode);
+ if(mode==='text'){
+  const prompt=window.LDVideoModes?.prompt?.(card);
+  if(!prompt)throw new Error('This story panel needs a video prompt.');
+  const copied=await copyText(prompt);
+  markSmartReady(card);
+  buttonLabel(approveLabel(card));
+  status('🟡 '+stage+' STORY PROMPT READY · LOCAL CHECK · 0 API calls'+(copied?' · copied automatically':'')+'. Review the generated clip, then approve.','pass');
+  return;
+ }
+ return prepareImageToVideo(card);
+}
 async function prepareHook(card){
-  let choices=window.LDHookChoiceSystem?.choices?.()||[];
+  let choices=window.LDStoryModes?.enabled()?[]:(window.LDHookChoiceSystem?.choices?.()||[]);
   const flow=card.querySelector('.flow-prompt');
   if(!flow?.value.trim()&&choices.length){
     window.LDHookChoiceSystem.useHook(choices[0]);
@@ -703,6 +726,7 @@ async function prepare(card){
   buttonLabel('🚀 SMART CONTINUE');
 
   const stage=card.dataset.stage;
+  if(window.LDStoryModes?.enabled())return prepareFiction(card);
   if(stage==='HOOK')return prepareHook(card);
   if(stage==='ENDING'||stage==='THUMBNAIL')return prepareImageStage(card);
 
