@@ -184,6 +184,7 @@
   }
 
   function enhanceAll(preserveSaved=false){
+ if(window.LDStoryModes?.enabled())return false;
     const t=topic();
     if(!t)return;
     const ctx=inferContext(t);
