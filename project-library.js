@@ -31,7 +31,7 @@
     return {done,total:expected,percent:expected?Math.round(done/expected*100):0};
   }
   function displayName(p){return p.name||p.state?.topic||'Untitled project';}
-  function formatLabel(state){return state?.format==='longform'?'Longform 16:9':'Shorts 9:16';}
+  function formatLabel(state){const kind=state?.category==='drama'?'AI Drama · ':state?.category==='fantasy'?'Anime Adventure Fantasy · ':'';return kind+(state?.format==='longform'?'Longform 16:9':'Shorts 9:16');}
   function prettyTime(iso){
     if(!iso)return 'Saved locally';
     const d=new Date(iso);if(Number.isNaN(d.getTime()))return 'Saved locally';
