@@ -37,7 +37,7 @@ function hydrateContinuityFromTitle(){
  return next;
 }
 function continuity(){var c=Object.assign(defaults(current()),window.ldVideoContinuity||{});if(/\bSan Francisco Earthquake\b/i.test(current())&&/^California,\s*USA$/i.test(String(c.location||'').trim()))c.location='San Francisco, California, USA';return c;}
-function ready(){var c=continuity();return /^\d{4}$/.test(c.year)&&!!c.location.trim();}
+function ready(){if(window.LDStoryModes?.enabled())return true;var c=continuity();return /^\d{4}$/.test(c.year)&&!!c.location.trim();}
 function monochromeRequired(){return colorMode()==='bw';}
 function generatedVisualDna(){
  var c=continuity();
@@ -85,6 +85,7 @@ function textOnlyAccuracyLock(){
  return 'TEXT-ONLY ACCURACY LOCK:\nThis production does not rely on an image or photo reference. Visual accuracy must come from the locked event year, location, approved narration facts, disaster-family progression, event-specific panel locks and the current panel role.\nClothing, architecture, streets, homes, tools, transport, crops, terrain, vegetation, utilities, signs, infrastructure and technology must remain historically appropriate to the event year and location.\nNever invent a specific historical fact merely to make the scene more dramatic. Never introduce a later disaster stage early. Do not copy visual geography, people or event-specific facts from another production.';
 }
 function lock(){
+ if(window.LDStoryModes?.enabled())return window.LDStoryModes.identity();
  var c=continuity();
  var location=cleanLocation(c.location)||'UNCONFIRMED — specify the chapter location';
  return 'CHAPTER CONTINUITY LOCK:\nEvent: '+current()+'.\nEvent year: '+(c.year||'UNCONFIRMED')+'.\nMain location: '+location+'.\n'+effectiveVisualDna()+'\nThe auto visual DNA controls the shared chapter rendering language and is generated from Visual Style + Color Treatment + event year + main location. Clothing, architecture, crops, terrain, transport, utilities, tools and technology must match this event and location. Use the same chapter visual world from HOOK through P14, with distinct sublocations and camera views. P1 returns to normal life before the event; later panels follow their own historical time and narrative beat. Recovery or wider-impact panels may change date or location only when explicitly established by that panel. Never carry peak destruction into a pre-disaster scene. Keep recurring adult appearance and wardrobe consistent when adults are present. No invented historical facts.'+(textOnlyAccuracyLock()?'\n'+textOnlyAccuracyLock():'')+'\nEND CHAPTER CONTINUITY LOCK.';
@@ -127,6 +128,7 @@ function sanitizeSceneForStyle(value){
  return cleanSceneText(s);
 }
 function promptStyleCompatible(text){
+ if(window.LDStoryModes?.enabled())return !/\bCHAPTER CONTINUITY LOCK:\s*Event:/i.test(String(text||''));
  var s=String(text||'');
  if(style()==='anime'){
    var affirmative=/ABSOLUTE RENDERING MODE[^\n]*2D HISTORICAL ANIME ONLY/i.test(s)
@@ -140,6 +142,7 @@ function promptStyleCompatible(text){
  return affirmativeReal&&!oppositeAnime;
 }
 function withLock(prompt){
+ if(window.LDStoryModes?.enabled())return String(prompt||'');
  var base=stripColorConflicts(stripLock(prompt));
  if(!ready())return base;
  return absoluteStyleLock()+'\n\n'+base+'\n\n'+(universalHookDna()?universalHookDna()+'\n\n':'')+lock();
@@ -248,6 +251,7 @@ function sceneChoiceIndex(card){
  return later<0?'':String(SCENE_BANK_50.length+later);
 }
 function sceneChoiceAllowed(card){
+ if(window.LDStoryModes?.enabled())return false;
  var special=eventPanel(card.dataset.stage);
  return !card.querySelector('.done-toggle')?.checked&&(!special||!special.approved)&&card.dataset.stage!=='P2';
 }
@@ -262,6 +266,7 @@ function choiceSpecial(card,special){
   extraNegative:'No duplicated cast, unverified weather, dust or invented historical facts.'};
 }
 function rotatingScene(card){
+ if(window.LDStoryModes?.enabled())return '';
  if(!supports(card)||state(card).scene||state(card).text||eventPanel(card.dataset.stage))return '';
  var n=stageNumber(card.dataset.stage),fam=familyKey();
  if(n===2)return ''; // Keep verified source/mechanism scenes anchored.
@@ -868,6 +873,7 @@ function sceneActionKey(scene){
  return '';
 }
 function sceneVarietyIssue(card){
+ if(window.LDStoryModes?.enabled())return '';
  var stage=card?.dataset?.stage||'',n=stageNumber(stage);
  if(n<2)return '';
  var previous=document.querySelector('.stage-card[data-stage="P'+(n-1)+'"]');
@@ -887,7 +893,7 @@ function adjacentSceneLock(stage){
  var prior=previous&&(sceneChoiceIndex(previous)!==''?(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||''):(eventPanel('P'+(n-1))?.scene||previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||''));
  return 'PANEL SCENE IDENTITY LOCK: Give '+stage+' its own primary place, camera angle, foreground action and cast. The prior panel P'+(n-1)+' used '+(sceneLocationKey(prior)||'its established setting')+' and '+(sceneActionKey(prior)||'its established action')+'. Keep historical continuity while changing the visual setup where the narrative permits. Never repeat a wall-bracing foreground adult, identical street corner, camera axis or background layout with only different faces. The current PANEL SCENE and event-specific timing have priority over this variety rule.';
 }
-function signature(card){var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=window.LDDisasterProgression?.version||'';return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
+function signature(card){if(window.LDStoryModes?.enabled())return JSON.stringify(['fiction-v1',window.LDStoryModes.category(),current(),format(),style(),colorMode(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value)]);var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=window.LDDisasterProgression?.version||'';return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
 function sanFranciscoP11AnimePrompt(card){
  var narration=clean(card.querySelector('.narration')?.value)||'Temporary camps and emergency aid appear as people face displacement.';
  var custom=String(card.dataset.videoScene||'');
@@ -918,6 +924,7 @@ function sanFranciscoP11AnimePrompt(card){
  return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,result):result;
 }
 function build(card){
+ if(window.LDStoryModes?.enabled())return window.LDStoryModes.video(card,current(),format(),style(),colorMode());
  var scene=cleanSceneText(sceneFrom(card));
  if(!scene)throw Error('Add the panel scene description first.');
  if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
@@ -970,6 +977,11 @@ function completeTextPrompt(text){
  return s.includes('VIDEO PROMPT — EXACTLY 10 SECONDS')&&s.includes('PANEL SCENE:')&&s.includes('TIMING:')&&s.includes('CAMERA:')&&s.includes('PHYSICS AND TIME:')&&s.includes('AUDIO:')&&s.includes('NEGATIVE:');
 }
 function rebuildTextPrompt(card){
+ if(window.LDStoryModes?.enabled()){
+  var text=build(card);card.dataset.textVideoPrompt=text;card.dataset.textVideoSignature=signature(card);
+  var field=card.querySelector('.text-video-prompt');if(field)field.value=text;
+  saveCurrent();update(card);syncGlobalControl();return text;
+ }
  pinScene(card);
  var text=build(card);
  if(!promptStyleCompatible(text))throw Error('Visual-style lock mismatch. Rebuild the panel prompt before approval.');
@@ -984,7 +996,7 @@ function rebuildTextPrompt(card){
  syncGlobalControl();
  return text;
 }
-function valid(card){if(card.dataset.stage==='P14'&&sanFrancisco1906P14('P14')&&!state(card).text.includes('P14 APPROVED SINGLE-MAP CONTINUITY LOCK:'))return false;if(card.dataset.stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P13 SINGLE-ACTION ANTI-MORPH LOCK:'))return false;if(card.dataset.stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function valid(card){if(window.LDStoryModes?.enabled())return completeTextPrompt(state(card).text)&&state(card).text.includes('CHARACTER + WORLD BIBLE:')&&normalizedSignature(state(card).signature)===signature(card);if(card.dataset.stage='P14'&&sanFrancisco1906P14('P14')&&!state(card).text.includes('P14 APPROVED SINGLE-MAP CONTINUITY LOCK:'))return false;if(card.dataset.stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P13 SINGLE-ACTION ANTI-MORPH LOCK:'))return false;if(card.dataset.stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
 function completionReady(card){
  if(!supports(card))return false;
  if(state(card).mode!=='text')return true;
@@ -1140,14 +1152,14 @@ function hardResetVisualMode(){
  return rebuilt;
 }
 function globalControl(){var root=document.getElementById('productionVideoMethod');if(!root){root=document.createElement('section');root.id='productionVideoMethod';root.className='video-mode-controls';root.innerHTML='<h3>Video method · P1–P14</h3><div class="production-video-buttons" role="group" aria-label="Video method for all panels"><button type="button" class="ghost" data-method="image" aria-pressed="false">Image-to-Video</button><button type="button" class="ghost" data-method="text" aria-pressed="false">Text-to-Video</button></div><p class="production-video-status" role="status"></p><p>One choice applies to every panel. Both prompt versions stay saved.</p>';var setup=document.getElementById('buildBtn').closest('section');setup.after(root);root.querySelectorAll('[data-method]').forEach(function(button){button.onclick=function(){setAllMode(button.dataset.method);};});}syncGlobalControl();}
-function panel(){globalControl();var old=document.getElementById('chapterVideoContext');if(old)old.remove();if(!document.querySelector('.stage-card'))return;
+function panel(){globalControl();var old=document.getElementById('chapterVideoContext');if(old)old.remove();if(!document.querySelector('.stage-card'))return;if(window.LDStoryModes?.enabled()){all();return;}
 hydrateContinuityFromTitle();
 var box=document.createElement('section');box.id='chapterVideoContext';box.className='video-mode-controls';box.innerHTML='<h3>HOOK → P14 shared setting</h3><p>Event year and Main location are auto-filled from a project title written as <strong>Event — Location — Year</strong>. Shared Visual DNA then applies automatically from HOOK through P14. You can still edit the fields manually, and saved/manual values are never overwritten.</p><label>Event year<input class="video-year" inputmode="numeric" maxlength="4"></label><label>Main location<input class="video-location" placeholder="e.g. San Francisco, California, USA"></label><label>Auto visual DNA<textarea class="video-auto-dna" rows="6" readonly aria-readonly="true"></textarea></label><details class="video-advanced"><summary>Advanced override (optional)</summary><label>Custom continuity details<textarea class="video-details" rows="3" placeholder="Only add special recurring character, wardrobe, building, terrain or palette details when needed."></textarea></label></details><button type="button" class="ghost build-missing-video">Build / refresh Text-to-Video prompts (P1–P14)</button><p>New prompts are for testing. Review the scene details; prompts cannot guarantee identical faces across separate generated clips.</p>';
 var c=continuity();['year','location','details'].forEach(function(k){var field=box.querySelector('.video-'+k);field.value=c[k]||'';field.oninput=function(){window.ldVideoContinuity=continuity();window.ldVideoContinuity[k]=field.value;refreshAutoDnaUi(box);all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();};});refreshAutoDnaUi(box);
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.40.31',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.42.0',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea,.video-mode-controls select{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card[data-video-mode="text"] .copy-active-video,.stage-card[data-video-mode="text"] .copy-text-video{background:#249746!important;border:1px solid #54cb6c!important;color:#fff!important;font-weight:700;box-shadow:0 2px 8px rgba(22,143,61,.22)}.stage-card[data-video-mode="text"] .copy-active-video:hover,.stage-card[data-video-mode="text"] .copy-text-video:hover{background:#1c7d39!important}.stage-card[data-video-mode="text"] .copy-active-video:focus-visible,.stage-card[data-video-mode="text"] .copy-text-video:focus-visible{outline:3px solid #b6efc0;outline-offset:2px}.text-prompt-details{margin:10px 0 4px;border:0;padding:0}.text-prompt-details summary{display:inline-flex;align-items:center;justify-content:center;width:auto;box-sizing:border-box;min-height:38px;padding:7px 13px;border:1px solid #4c8cd0;border-radius:8px;background:#174d87;color:#fff;cursor:pointer;font-size:.86rem;font-weight:600;text-align:center;list-style:none}.text-prompt-details summary::marker{content:none}.text-prompt-details summary::-webkit-details-marker{display:none}.text-prompt-details summary:hover{background:#1d609f}.text-prompt-details summary:focus-visible{outline:3px solid #a9d5ff;outline-offset:2px}.text-prompt-details[open] label{margin-top:14px}.text-prompt-details[open] .text-video-prompt{height:72vh;min-height:380px;resize:vertical}.text-prompt-details:not([open]) .text-video-prompt{display:none}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(event){panel();all();if(event.detail?.fresh)activateSmartDefault();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
