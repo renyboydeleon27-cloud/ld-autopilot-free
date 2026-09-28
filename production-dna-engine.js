@@ -145,6 +145,7 @@ function dnaLines(profile,stage){
   return lines;
 }
 function polishPrompt(cardOrStage,prompt){
+  if(window.LDStoryModes?.enabled())return String(prompt||'');
   const profile=activeProfile();
   const base=stripOldLock(prompt);
   if(!profile||!base)return base;
