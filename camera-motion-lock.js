@@ -18,6 +18,7 @@ const plans={
 };
 function stageName(card){return (card.dataset.stage||card.querySelector('.stage-name')?.textContent||'').trim().toUpperCase().replace(/^P0?/,'P');}
 function apply(){
+ if(window.LDStoryModes?.enabled())return false;
  document.querySelectorAll('.stage-card').forEach(card=>{
   const st=stageName(card); if(!(st in plans))return;
   // The chosen HOOK has its own timed camera choreography; T2V panels use the cinematic director in video-modes.js.
