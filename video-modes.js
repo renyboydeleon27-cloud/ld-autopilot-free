@@ -832,7 +832,7 @@ function qualityPromptCompatible(text){
    &&s.includes('DEBRIS + DAMAGE PHYSICS LOCK:');
 }
 function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanNarrationInstructions(value):String(value||'').trim();}
-function normalizedSignature(value){try{var parts=JSON.parse(value);if(parts[0]!==T2V_POLICY_VERSION)return '';parts[6]=clean(parts[6]);parts[7]=clean(parts[7]);return JSON.stringify(parts);}catch(e){return '';}}
+function normalizedSignature(value){try{var parts=JSON.parse(value);if(window.LDStoryModes?.enabled())return parts[0]==='fiction-v1'?JSON.stringify(parts):'';if(parts[0]!==T2V_POLICY_VERSION)return '';parts[6]=clean(parts[6]);parts[7]=clean(parts[7]);return JSON.stringify(parts);}catch(e){return '';}}
 function pinScene(card){
  if(String(card.dataset.videoScene||'').startsWith('SMART RANDOM CHOICE — ')){
   var item=smartSceneItem(card);
