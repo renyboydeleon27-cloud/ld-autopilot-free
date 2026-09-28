@@ -36,6 +36,7 @@
   function appendOnce(text,marker,rule){return text.includes(marker)?text:`${text.trim()}\n\n${rule}`.trim();}
 
   function enforce(){
+    if(window.LDStoryModes?.enabled())return false;
     // The Top 3 Hook Choice System owns the HOOK when enabled. Legacy survival rules must not rewrite it after Smart Continue marks it ready.
     if(window.LD_HOOK_CHOICES_ENABLED)return false;
     const card=stages.querySelector('.stage-card[data-stage="HOOK"]');
