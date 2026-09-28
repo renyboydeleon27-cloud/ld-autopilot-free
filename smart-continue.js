@@ -582,12 +582,12 @@ async function fixPanel(card,payload){
 async function prepareFiction(card){
  const stage=card.dataset.stage||'';
  if(stage==='ENDING'||stage==='THUMBNAIL')return prepareImageStage(card);
- if(stage==='HOOK')return prepareHook(card);
  const narration=card.querySelector('.narration');
  if(narration&&!narration.value.trim()){
   narration.value=window.LDStoryModes.narration(stage,topic());
   narration.dispatchEvent(new Event('input',{bubbles:true}));
  }
+ if(stage==='HOOK')return prepareHook(card);
  const locked=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode;
  const mode=locked==='text'||locked==='image'?locked:(card.dataset.videoMode||'image');
  if(card.dataset.videoMode!==mode)window.LDVideoModes?.setAllMode?.(mode);
