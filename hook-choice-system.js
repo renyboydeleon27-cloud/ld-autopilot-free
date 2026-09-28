@@ -101,6 +101,7 @@ function addStyles(){
   document.head.appendChild(s);
 }
 function render(){
+  if(window.LDStoryModes?.enabled()){document.getElementById('hookChoiceSystem')?.remove();return;}
   addStyles();var old=document.getElementById('locustLaundryHook');if(old)old.remove();
   var h=card();if(!h){var x=document.getElementById('hookChoiceSystem');if(x)x.remove();return;}
   var root=document.getElementById('hookChoiceSystem');
