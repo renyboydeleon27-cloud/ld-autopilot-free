@@ -61,6 +61,7 @@ ${COLOR_OVERRIDE}: the THUMBNAIL is ALWAYS FULL COLOR, even when the main produc
   }
 
   function apply(){
+    if(window.LDStoryModes?.enabled())return false;
     const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]');
     const prompt=card?.querySelector('.image-prompt');
     if(!prompt)return false;
