@@ -56,7 +56,7 @@
     return state;
   }
   function render(){
-    const lib=readLibrary();const current=activeId();
+    const source=readLibrary();const lib={...source,projects:source.projects.filter(p=>(p.state?.category||'disaster')==='disaster')};const current=activeId();
     countEl.textContent=`${lib.projects.length} project${lib.projects.length===1?'':'s'}`;
     listEl.innerHTML='';
     if(!lib.projects.length){
@@ -84,7 +84,7 @@
   }
   function syncCurrent(forceNew=false){
     if(switchingProject)return;
-    const state=readCore();if(!validState(state))return;
+    const state=readCore();if(!validState(state)||(state.category||'disaster')!=='disaster')return;
     const lib=readLibrary();let id=forceNew?'':activeId();
     let p=id?lib.projects.find(x=>x.id===id):null;
 
