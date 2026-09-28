@@ -22,6 +22,7 @@ function upsertQuality(el){
  return true;
 }
 function polish(){
+ if(window.LDStoryModes?.enabled())return false;
  const lockedMode=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode||'';
  document.querySelectorAll('.stage-card').forEach(card=>{
   const stage=(card.dataset.stage||card.querySelector('.stage-name')?.textContent||'').trim().toUpperCase();
