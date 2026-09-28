@@ -220,6 +220,7 @@
 
     if(topic){topic.value='';topic.focus();}
     if(format)format.value='shorts';
+    const premise=document.getElementById('storyPremise');if(premise)premise.value='';const bible=document.getElementById('storyBible');if(bible)bible.value='';const storySetup=document.getElementById('storySetup');if(storySetup)storySetup.hidden=true;const topicLabel=document.getElementById('topicLabel');if(topicLabel)topicLabel.textContent='Disaster topic';
     const category=document.getElementById('productionCategory');if(category)category.value='disaster';window.ldProductionCategory='disaster';
     if(stages)stages.innerHTML='';
     if(projectTitle)projectTitle.textContent='No production yet';
