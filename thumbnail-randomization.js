@@ -216,6 +216,7 @@ function sampleSvg(layoutId,fam){
 }
 function fire(el){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
 function apply(){
+ if(window.LDStoryModes?.enabled())return false;
  const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]');const ta=card?.querySelector('.image-prompt');if(!ta)return false;
  const t=topic();const base=strip(ta.value);const next=base+'\n\n'+block(t);if(ta.value===next)return false;
  ta.value=next;ta.dataset.thumbnailRandomization='v3.41.0-10-designs';fire(ta);return true;
@@ -248,6 +249,7 @@ function openSamplePreview(id,fam,opener){
 }
 
 function render(){
+ if(window.LDStoryModes?.enabled()){document.querySelector('.thumbnail-layout-chooser')?.remove();return;}
  const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]');const body=card?.querySelector('.stage-body');if(!card||!body)return;
  let box=card.querySelector('.thumbnail-layout-chooser');
  if(!box){box=document.createElement('div');box.className='thumbnail-layout-chooser field-block';box.style.cssText='border:2px solid #ff3b30;border-radius:12px;padding:10px;margin:10px 0';body.prepend(box);}
