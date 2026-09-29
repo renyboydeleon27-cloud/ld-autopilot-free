@@ -141,11 +141,23 @@ function promptStyleCompatible(text){
  var oppositeAnime=/(?:^|\n)\s*(?:Serious 2D historical graphic[- ]novel\/anime animation|AUTO VISUAL DNA — MONOCHROME HISTORICAL ANIME)/im.test(s);
  return affirmativeReal&&!oppositeAnime;
 }
+function childHookException(prompt){
+ var s=String(prompt||'');
+ if(!/THIS HOOK REQUIRES ONE CHILD CHARACTER|FINAL PRIORITY REMINDER:[\s\S]*child/i.test(s))return '';
+ return [
+  'TOPIC-SPECIFIC CHILD HOOK EXCEPTION — FINAL PRIORITY:',
+  'For this HOOK only, every inherited adult-only or adult-anatomy instruction is overridden.',
+  'The required subject is ONE clearly young child approximately 7–9 years old with child body proportions, youthful face and period-appropriate child winter clothing.',
+  'Do not age-up, mature, replace or transform the child into a teenager or adult.',
+  'This exception applies only to the HOOK and does not change the adult-character rule for P1–P14 unless another panel explicitly says otherwise.'
+ ].join('\\n');
+}
 function withLock(prompt){
  if(window.LDStoryModes?.enabled())return String(prompt||'');
  var base=stripColorConflicts(stripLock(prompt));
  if(!ready())return base;
- return absoluteStyleLock()+'\n\n'+base+'\n\n'+(universalHookDna()?universalHookDna()+'\n\n':'')+lock();
+ var childException=childHookException(base);
+ return absoluteStyleLock()+'\n\n'+base+'\n\n'+(universalHookDna()?universalHookDna()+'\n\n':'')+lock()+(childException?'\n\n'+childException:'');
 }
 const SCENE_BANK_50=[
  ['inside a modest family kitchen','interior'],['inside a small dining room','interior'],['inside a private bedroom','interior'],['inside a washroom','interior'],['inside a sitting room','interior'],
