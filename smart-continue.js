@@ -554,6 +554,41 @@ function migrateStaleWellingtonP7(){
   showToast('Wellington P7 stale scene reset · rebuild P7 before continuing.');
   return true;
 }
+function migrateStaleWellingtonP10(){
+  if(!isWellington1910())return false;
+  const card=stages.querySelector('.stage-card[data-stage="P10"]');
+  if(!card)return false;
+  const prompt=String(card.querySelector('.text-video-prompt')?.value||card.dataset.textVideoPrompt||'');
+  const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
+  const alreadyNew=prompt.includes('P10 2D ANIME FRAME LOCK — HIGHEST PRIORITY:')&&scene.includes('EXACTLY THREE distinct adult rescuers');
+  if(alreadyNew)return false;
+  const done=card.querySelector('.done-toggle');
+  if(done)done.checked=false;
+  card.dataset.approvalRevoked='1';
+  delete card.dataset.smartReady;
+  delete card.dataset.smartReadySignature;
+  card.dataset.textVideoPrompt='';
+  card.dataset.textVideoSignature='';
+  card.dataset.sceneChoice='';
+  const special=window.LDWellingtonAvalanche1910?.panel?.(topic(),'P10');
+  if(special?.scene){
+    card.dataset.videoScene=special.scene;
+    const sceneField=card.querySelector('.video-scene');
+    if(sceneField)sceneField.value=special.scene;
+  }
+  const p10Narration=window.LDWellingtonAvalanche1910?.narration?.(topic(),'P10')||'';
+  if(p10Narration){
+    const nar=card.querySelector('.narration');
+    if(nar)nar.value=p10Narration;
+  }
+  const textField=card.querySelector('.text-video-prompt');
+  if(textField)textField.value='';
+  if(window.LDProjectLocks?.videoMode?.()==='text')window.LDVideoModes?.ensureTextMode?.(card);
+  window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:'P10',ready:false,signature:''}}));
+  writeSmartSession({targetStage:'P10',pending:null});
+  showToast('Wellington P10 anime lock updated · rebuild P10 before approval.');
+  return true;
+}
 function isRocky1874(){
   const t=topic().toLowerCase();
   return t.includes('rocky mountain locust')&&t.includes('1874');
@@ -1060,6 +1095,7 @@ window.addEventListener('ld:production-built',()=>{
     migrateLegacyNarrations();
     migrateStaleWellingtonP5();
     migrateStaleWellingtonP7();
+    migrateStaleWellingtonP10();
     restoreSmartSession();
     scheduleTargetUpdate();
     refreshApiCostCounter();
@@ -1095,9 +1131,10 @@ if(document.readyState==='loading'){
     migrateLegacyNarrations();
     migrateStaleWellingtonP5();
     migrateStaleWellingtonP7();
+    migrateStaleWellingtonP10();
     restoreSmartSession();
   },280);
 }
 
-window.LDSmartContinue={version:'3.49.6',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.49.7',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
