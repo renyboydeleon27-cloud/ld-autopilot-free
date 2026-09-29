@@ -152,7 +152,8 @@ function approvedSnapshot(card){
     videoScene:String(card?.querySelector('.video-scene')?.value||card?.dataset?.videoScene||''),
     textVideoPrompt:String(card?.querySelector('.text-video-prompt')?.value||card?.dataset?.textVideoPrompt||''),
     textVideoSignature:String(card?.dataset?.textVideoSignature||''),
-    auditSignature:String(card?.dataset?.smartReadySignature||'')
+    auditSignature:String(card?.dataset?.smartReadySignature||''),
+    continuityCanon:window.LDContinuityEngine?.snapshot?.(card)||null
   };
 }
 function saveApprovedMemory(card,options={}){
@@ -1002,5 +1003,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.46.3',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.48.0',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
