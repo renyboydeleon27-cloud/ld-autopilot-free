@@ -1,4 +1,4 @@
-/* LD AUTO Continuity Engine v1.0.1 — coordinated T2V consistency system for P1–P14. */
+/* LD AUTO Continuity Engine v1.0.2 — coordinated T2V consistency system + event-aware hard transitions. */
 (function(){'use strict';
 
 function topic(){
@@ -65,6 +65,10 @@ function physicsBible(stage){
 }
 function panelHandoff(stage){
   const prev=previousStage(stage);
+  const t=topic().toLowerCase();
+  if(t.includes('wellington avalanche')&&t.includes('1910')&&stage==='P4'){
+    return 'PANEL HANDOFF MEMORY — WELLINGTON P4 HARD TRANSITION: P4 intentionally changes from the prior human/interior scene to the outdoor upper mountain release zone. Do NOT carry forward P3 people, faces, clothing, room geometry, kitchen objects, windows, furniture, stove, lamp, indoor damage, or interior atmosphere. Carry forward only chapter-level year/region, strict black-and-white 2D anime rendering, and outdoor environmental canon that is independently established. P4 starts with ZERO PEOPLE on the loaded mountain slope.';
+  }
   if(!prev)return 'PANEL HANDOFF MEMORY: P1 establishes the normal physical world. No earlier panel may be invented as visual history.';
   const snap=approved(prev);
   if(!snap)return 'PANEL HANDOFF MEMORY: No approved '+prev+' handoff is available. Preserve only project-level canon and do not invent continuity from an unapproved prior panel.';
@@ -170,7 +174,7 @@ function episodeCanonPreview(){
   return '10-SYSTEM CONTINUITY ENGINE ACTIVE:\n1 Shot Bible / Camera Grammar\n2 Disaster Physics Bible\n3 Panel Handoff Memory\n4 Anchor Object System\n5 Lighting Continuity Bible\n6 Damage Memory / No-Reset Rule\n7 Cinematic Intensity Curve\n8 Motion Budget\n9 First-Frame / Last-Frame Lock\n10 Approved Canon Panel';
 }
 window.LDContinuityEngine=Object.freeze({
-  version:'1.0.1',promptBlock,snapshot,episodeCanonPreview,cameraGrammar,physicsBible,panelHandoff,
+  version:'1.0.2',promptBlock,snapshot,episodeCanonPreview,cameraGrammar,physicsBible,panelHandoff,
   anchorObjectSystem,lightingBible,damageMemory,intensityCurve,motionBudget,frameLock
 });
 })();
