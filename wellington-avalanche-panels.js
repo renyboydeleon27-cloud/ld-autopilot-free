@@ -3,7 +3,7 @@
    Approved visual reference: 1000268865.mp4 */
 (function(){'use strict';
 
-const VERSION='1.0.2';
+const VERSION='1.0.3';
 const APPROVED_P4_REFERENCE='1000268865.mp4';
 
 function matches(topic){
@@ -36,6 +36,7 @@ function stageRole(stage){return ROLES[stage]||'';}
 function narration(topic,stage){
   if(!matches(topic))return '';
   if(stage==='P4')return 'After days of heavy snow and worsening weather, the snowpack destabilized, and a massive slab broke loose above Wellington.';
+  if(stage==='P5')return 'The avalanche accelerated down the mountainside, gathering speed and mass as it raced toward the railway area below.';
   if(stage==='P6')return 'The avalanche struck the stranded trains at Wellington, sweeping rail cars from the tracks and down the mountainside.';
   return '';
 }
@@ -87,6 +88,20 @@ function chapterDna(topic,stage){
 
 function panel(topic,stage){
   if(!matches(topic))return null;
+  if(stage==='P5'){
+    return {
+      approved:false,
+      lockedScene:true,
+      scientific:false,
+      scene:'Continue outdoors on the same Wellington mountain system established by approved P4. No people are visible. The released avalanche is already moving downslope; do NOT replay the crown fracture or slab breakaway. Show the dense granular snow mass accelerating along the established downhill path, growing wider and heavier as additional loose snow is entrained. Dark conifers and rugged terrain provide scale. The railway corridor may appear far below or in the distance only as destination context, but the avalanche must NOT contact trains, tracks, buildings, bridges or people yet. Keep the dense snow body readable with restrained secondary powder.',
+      narrative:'P5 is the acceleration-and-growth bridge between P4 release and P6 railway impact. The avalanche is already in motion, gains speed and mass, and ends before any train or infrastructure contact. Narration is added separately during editing and must never be spoken in the generated video.',
+      timing:'0.0–2.0s: Begin with the already-released dense avalanche moving downhill in the same established direction as P4; no new crown fracture and no reset to an intact slope.\n2.0–6.5s: The avalanche accelerates and grows as loose snow is entrained. Dense granular snow remains terrain-coupled; conifers and slope features provide scale.\n6.5–9.0s: Increase speed, width and visual mass while preserving the same downhill path. Keep powder secondary and the dense snow body clearly readable.\n9.0–10.0s: End with the avalanche clearly approaching the lower railway area but BEFORE any contact with trains, tracks, buildings, bridges or people.',
+      camera:'One continuous grounded low-to-mid diagonal tracking shot following the avalanche downhill from a safe offset. Preserve the same slope direction and mountain geometry established by P4. Use controlled forward/downhill movement with readable foreground, midground and background depth. No orbit, drone transition, random zoom, teleportation, viewpoint reset or excessive shake.',
+      physics:'The avalanche is already fragmented from P4 and must remain a dense, granular, gravity-driven snow flow. It gains speed and mass by entraining loose snow along the path. No new slab-release event, no giant rigid ice plates, no glacier-calving look, no rockslide behavior, no floating chunks, no reverse motion, no explosion, no smoke plume and no early whiteout. Trees react only when physically contacted. The avalanche must NOT hit railway infrastructure in P5.',
+      audio:'Natural winter wind, dense snow friction, low terrain-coupled avalanche rumble and physically caused snow/tree contact only. ABSOLUTE NO VOICE-OVER, NO narrator, NO speech, NO dialogue, NO announcements, NO prompt reading and NO music.',
+      extraNegative:'NO people. NO human characters. NO bakery. NO kitchen. NO workroom. NO interior scene. NO crown-fracture replay. NO fresh slab breakaway. NO train impact. NO track impact. NO building impact. NO bridge impact. NO settlement destruction. NO modern objects. NO giant ice blocks. NO concrete-like snow plates. NO smoke-like powder. NO giant powder wall. NO explosion. NO fireball. NO floating debris. NO color. NO sepia. NO text. NO subtitles. NO logos. NO watermark. NO gore.'
+    };
+  }
   if(stage==='P6'){
     return {
       approved:false,
