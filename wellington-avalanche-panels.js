@@ -3,7 +3,7 @@
    Approved visual reference: 1000268865.mp4 */
 (function(){'use strict';
 
-const VERSION='1.0.1';
+const VERSION='1.0.2';
 const APPROVED_P4_REFERENCE='1000268865.mp4';
 
 function matches(topic){
@@ -36,6 +36,7 @@ function stageRole(stage){return ROLES[stage]||'';}
 function narration(topic,stage){
   if(!matches(topic))return '';
   if(stage==='P4')return 'After days of heavy snow and worsening weather, the snowpack destabilized, and a massive slab broke loose above Wellington.';
+  if(stage==='P6')return 'The avalanche struck the stranded trains at Wellington, sweeping rail cars from the tracks and down the mountainside.';
   return '';
 }
 
@@ -85,9 +86,25 @@ function chapterDna(topic,stage){
 }
 
 function panel(topic,stage){
-  if(!matches(topic)||stage!=='P4')return null;
+  if(!matches(topic))return null;
+  if(stage==='P6'){
+    return {
+      approved:false,
+      lockedScene:true,
+      scientific:false,
+      scene:'At the snow-covered Wellington railway area in 1910, show the stranded period passenger and mail train cars on the mountain track below the established avalanche path. No people are required in frame. The dense granular avalanche arrives from uphill with the same downhill direction and snow material established by P4–P5. The moving snow physically contacts the train cars and railway area, then pushes and displaces cars from the track under overwhelming mass and momentum. Keep the train geometry, wheels, couplers, track alignment, mountain terrain and conifers readable long enough for the impact to be understood. This is the PRIMARY IMPACT panel. Do not substitute roads, homes, a generic village, a bridge-dominant composition or an unrelated settlement.',
+      narrative:'P6 is the true primary Wellington railway/train impact. The avalanche reaches the stranded trains and physically displaces rail cars. Narration is added separately during editing and must never be spoken in the generated video.',
+      timing:'0.0–2.0s: Establish the stranded period train cars and snow-covered railway zone with the dense avalanche already approaching from the established uphill direction; keep train and track geometry clear.\n2.0–6.5s: The dense terrain-following avalanche makes direct physical contact with the railway/train zone. Snow strikes the cars progressively; wheels, couplers and car bodies react only after contact.\n6.5–9.0s: The snow mass pushes and displaces rail cars from the track area with believable inertia and gravity. Cars may tilt, shift or begin moving downslope only as the avalanche physically forces them.\n9.0–10.0s: End on the strongest readable impact state with displaced rail cars, dense moving snow and damaged railway context still visually coherent. Do not jump ahead to the quiet aftermath or rescue phase.',
+      camera:'One continuous grounded low-to-mid three-quarter view along the railway zone, looking partly uphill so the avalanche approach and train impact remain readable in the same shot. Use a restrained forward/lateral tracking move with strong foreground-midground-background depth. No orbit, drone transition, cut, teleport, extreme shake or viewpoint reset.',
+      physics:'This is a dense snow-avalanche impact, not an explosion. The avalanche remains terrain-coupled, granular and gravity-driven with secondary restrained powder. Train cars have heavy inertia and move only after direct snow contact. Wheels, bogies, couplers, rails, timber and car bodies keep stable geometry until physically bent, displaced or obscured. No floating cars, instant disappearance, train duplication, spontaneous derailment before contact, giant rigid ice plates, smoke behavior, fireball, blast wave or fantasy force.',
+      audio:'Natural winter wind, dense avalanche rumble, snow friction, rail and timber strain, wheel/rail scraping, coupler impacts and physically synchronized train-car movement only. ABSOLUTE NO VOICE-OVER, NO narrator, NO speech, NO dialogue, NO announcements, NO prompt reading and NO music.',
+      extraNegative:'NO forced human characters. NO children. NO generic homes or village as the main target. NO road-only impact. NO bridge-dominant composition. NO modern train. NO diesel locomotive. NO automobiles. NO modern rescue equipment. NO explosion. NO fireball. NO smoke-like avalanche. NO giant powder wall hiding the train before contact. NO giant ice blocks. NO concrete-like snow plates. NO floating rail cars. NO train duplication. NO teleporting cars. NO instant disappearance. NO gore. NO color. NO sepia. NO text. NO subtitles. NO logos. NO watermark.'
+    };
+  }
+  if(stage!=='P4')return null;
   return {
     approved:true,
+    lockedScene:true,
     approvedLabel:'FINAL APPROVED MASTER — WELLINGTON P4 · REF '+APPROVED_P4_REFERENCE,
     scientific:false,
     scene:'Upper snowy mountainside above Wellington, Washington, in 1910. No people are visible. Begin on one coherent, heavily loaded natural snow slope with dark conifers and rugged terrain providing scale. One long irregular crown fracture opens across the upper snowpack. The broad slab below it releases under gravity, remains cohesive only briefly, then rapidly fragments into irregular compressed snow chunks and a dense granular avalanche that stays close to the terrain. The moving snow gains early downhill momentum but stops this panel before reaching trains, railway structures, buildings, people, or the final impact zone. Keep powder minor and secondary to the clearly visible dense snow body.',
