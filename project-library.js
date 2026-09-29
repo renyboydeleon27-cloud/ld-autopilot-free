@@ -248,8 +248,19 @@
   let timer;
   function scheduleSync(delay=220,renderAfter=true){clearTimeout(timer);timer=setTimeout(()=>syncCurrent(false,renderAfter),delay);}
   // app.js emits this only after the core state has actually been written.
-  // This avoids cloning and rewriting the full project library on every keystroke.
-  window.addEventListener('ld:core-state-saved',()=>scheduleSync(220,true));
+  // When the app is backgrounding, write the library copy synchronously so Android cannot
+  // kill the page during the old delayed-sync window.
+  window.addEventListener('ld:core-state-saved',()=>{
+    if(document.hidden){clearTimeout(timer);syncCurrent(false,false);return;}
+    scheduleSync(220,true);
+  });
+  function flushCurrent(){
+    if(switchingProject)return;
+    clearTimeout(timer);
+    syncCurrent(false,false);
+  }
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)flushCurrent();});
+  window.addEventListener('pagehide',flushCurrent);
 
   buildBtn?.addEventListener('click',()=>{
     const pendingNew=localStorage.getItem(NEW_PROJECT_KEY)==='1';
@@ -277,4 +288,5 @@
   if(!freshNewProject)migrateLegacy();
   render();
   if(!freshNewProject)setTimeout(()=>syncCurrent(),200);
+  window.LDProjectLibrary=Object.freeze({syncCurrent,flushCurrent,activeId});
 })();
