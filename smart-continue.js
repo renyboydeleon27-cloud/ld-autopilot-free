@@ -1,4 +1,4 @@
-/* LD AUTO v3.40.3 — Approved Memory recovery + full-prompt audit + completed-production Final Audit routing. */
+/* LD AUTO v3.46.3 — persistent Approved stamps + saved Smart Continue approval state. */
 (()=>{'use strict';
 
 const stages=document.getElementById('stages');
@@ -177,7 +177,11 @@ function saveApprovedMemory(card,options={}){
   return snapshot;
 }
 function clearSmartState(){
-  stages.querySelectorAll('.stage-card').forEach(c=>delete c.dataset.smartReady);
+  stages.querySelectorAll('.stage-card').forEach(c=>{
+    delete c.dataset.smartReady;
+    delete c.dataset.smartReadySignature;
+  });
+  window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:'',ready:false,signature:''}}));
 }
 async function copyText(value){
   try{await navigator.clipboard.writeText(String(value||''));return true;}
@@ -317,6 +321,7 @@ function markSmartReady(card){
     targetStage:card.dataset.stage||'',
     pending:{stage:card.dataset.stage||'',signature,readyAt:new Date().toISOString()}
   });
+  window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:card.dataset.stage||'',ready:true,signature}}));
 }
 function clearCardSmartReady(card){
   if(!card)return;
@@ -325,6 +330,7 @@ function clearCardSmartReady(card){
   delete card.dataset.smartReadySignature;
   const session=readSmartSession();
   if(session?.pending?.stage===stage)writeSmartSession({pending:null});
+  window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage,ready:false,signature:''}}));
 }
 function smartReadyStillCurrent(card){
   return card?.dataset?.smartReady==='1'
@@ -364,6 +370,18 @@ function restoreSmartSession(){
       return card;
     }
     writeSmartSession({pending:null});
+  }
+
+  const persistedReady=cards.find(card=>!stageDone(card)&&card.dataset.smartReady==='1'&&card.dataset.smartReadySignature&&card.dataset.smartReadySignature===readinessSignature(card));
+  if(persistedReady){
+    target=persistedReady;
+    const signature=persistedReady.dataset.smartReadySignature;
+    writeSmartSession({targetStage:persistedReady.dataset.stage||'',pending:{stage:persistedReady.dataset.stage||'',signature,readyAt:new Date().toISOString()}});
+    setOpen(persistedReady,{scroll:false});
+    buttonLabel(approveLabel(persistedReady));
+    status('🟡 '+persistedReady.dataset.stage+' READY FOR APPROVAL · restored from saved project state. If the Flow result is okay, press '+approveLabel(persistedReady)+'.','pass');
+    updateTargetLabel();
+    return persistedReady;
   }
 
   if(target){
@@ -984,5 +1002,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.40.3',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.46.3',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
