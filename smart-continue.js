@@ -661,6 +661,13 @@ async function prepareImageToVideo(card){
   status(card.dataset.stage+' IMAGE-TO-VIDEO READY'+(copied?' · Flow prompt copied automatically':'')+'. Review the Flow result, then press this same button again.','pass');
 }
 async function prepareTextToVideo(card){
+  // Project-level Text-to-Video lock must win over stale per-panel UI/state.
+  if(window.LDVideoModes?.ensureTextMode&&!window.LDVideoModes.ensureTextMode(card)){
+    throw new Error('Text-to-Video mode could not be synchronized for '+(card.dataset.stage||'this panel')+'.');
+  }
+  if((card.dataset.videoMode||'')!=='text'){
+    card.dataset.videoMode='text';
+  }
   // Run free scene-identity checks before narration or audit API calls.
   const sceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
   if(sceneIssue)throw new Error(sceneIssue);
@@ -1003,5 +1010,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.48.0',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.49.4',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
