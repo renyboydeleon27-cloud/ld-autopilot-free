@@ -478,6 +478,7 @@ function migrateStaleWellingtonP5(){
   if(!isWellington1910())return false;
   const card=stages.querySelector('.stage-card[data-stage="P5"]');
   if(!card)return false;
+  if(card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.('P5'))return false;
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim();
   const narration=String(card.querySelector('.narration')?.value||'').trim();
   const approved=window.ldApprovedMemory?.stages?.P5?.latest;
@@ -518,6 +519,7 @@ function migrateStaleWellingtonP7(){
   if(!isWellington1910())return false;
   const card=stages.querySelector('.stage-card[data-stage="P7"]');
   if(!card)return false;
+  if(card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.('P7'))return false;
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim();
   const narration=String(card.querySelector('.narration')?.value||'').trim();
   const approved=window.ldApprovedMemory?.stages?.P7?.latest;
@@ -558,6 +560,7 @@ function migrateStaleWellingtonP10(){
   if(!isWellington1910())return false;
   const card=stages.querySelector('.stage-card[data-stage="P10"]');
   if(!card)return false;
+  if(card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.('P10'))return false;
   const prompt=String(card.querySelector('.text-video-prompt')?.value||card.dataset.textVideoPrompt||'');
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
   const alreadyNew=prompt.includes('P10 2D ANIME FRAME LOCK — HIGHEST PRIORITY:')&&scene.includes('EXACTLY THREE distinct adult rescuers');
@@ -593,6 +596,7 @@ function migrateStaleWellingtonP11(){
   if(!isWellington1910())return false;
   const card=stages.querySelector('.stage-card[data-stage="P11"]');
   if(!card)return false;
+  if(card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.('P11'))return false;
   const prompt=String(card.querySelector('.text-video-prompt')?.value||card.dataset.textVideoPrompt||'');
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
   const alreadyNew=prompt.includes('P11 2D ANIME + OBJECT STABILITY LOCK — HIGHEST PRIORITY:')&&scene.includes('ALREADY wearing ONE plain blanket')&&scene.includes('small rigid rectangular wooden supply box');
@@ -1176,5 +1180,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.49.8',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.49.9',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
