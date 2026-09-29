@@ -1,8 +1,8 @@
-/* LD AUTO v3.36.2 — Disaster-family progression engine.
+/* LD AUTO v3.49.1 — Disaster-family progression engine + Wellington event-stage alignment.
    Story-position guidance only. Event-specific verified facts and locked event panels always win. */
 (()=>{'use strict';
 
-const VERSION='3.36.2-family-progression-v1';
+const VERSION='3.49.1-family-progression-v1';
 
 const COMMON_LATE={
   P9:{role:'Immediate aftermath · hazard has passed or shifted locally',rule:'Show the first readable aftermath appropriate to the event. Do not reset to peak impact and do not jump straight to full recovery.'},
@@ -246,16 +246,36 @@ function family(topic){
   for(const key of ORDER)if(FAMILIES[key].detect.test(t))return key;
   return 'generic';
 }
+function wellingtonOverride(topic,stageName){
+  const t=String(topic||'').toLowerCase(),s=String(stageName||'').toUpperCase();
+  if(!(t.includes('wellington avalanche')&&t.includes('1910')))return null;
+  const map={
+    P4:{role:'Snow slab releases · early dense downhill flow',rule:'Show one natural crown fracture, brief slab release, rapid fragmentation and early terrain-following snow flow. No people, train impact, bridge-dominant view or full destruction.'},
+    P5:{role:'Avalanche accelerates · mass grows downslope',rule:'Increase speed, dense granular flow and scale without replaying the P4 crown-fracture shot. Do not force people into the scene and reserve the true primary impact for P6.'},
+    P6:{role:'Primary avalanche impact · railway/train zone',rule:'Use the strongest physically coherent primary impact beat here, consistent with verified Wellington context. Do not turn snow into smoke, ice plates or an unsupported explosion.'},
+    P7:{role:'Peak immediate consequences · damage expands',rule:'Show distinct consequences after the primary impact without replaying the exact P6 composition. Preserve irreversible damage and deposited snow.'},
+    P8:{role:'Wider blocked access · continuing local danger',rule:'Broaden access, terrain and infrastructure consequences while transitioning away from peak moving-avalanche spectacle.'},
+    P9:{role:'Immediate aftermath · buried impact zone revealed',rule:'The main release has passed locally. Reveal the damaged snow-covered impact zone without a new major avalanche release or pristine reset.'},
+    P10:{role:'Search and rescue · unstable winter aftermath',rule:'Use human-scale purposeful rescue/search action where supported. Persistent snow deposits and damage remain; no silent reconstruction.'},
+    P11:{role:'Relief / displacement · urgent short-term needs',rule:'Show restrained human consequences and immediate needs without introducing modern rescue equipment or a new peak avalanche beat.'},
+    P12:{role:'Transport / access / community disruption',rule:'Show wider consequences to movement, infrastructure or community life while preserving the established post-avalanche world.'},
+    P13:{role:'Cleanup / stabilization · early recovery',rule:'Recovery changes the scene only through visible deliberate work. No instant full clearing or repaired landscape.'},
+    P14:{role:'Historical legacy · reflective winter aftermath',rule:'Close reflectively on the lasting event context or recovery state without introducing a new disaster beat.'}
+  };
+  return map[s]||null;
+}
 function stage(topic,stageName){
   const key=family(topic);
   const data=FAMILIES[key];
-  const item=data.stages[String(stageName||'').toUpperCase()]||null;
+  const stageKey=String(stageName||'').toUpperCase();
+  const eventItem=wellingtonOverride(topic,stageKey);
+  const item=eventItem||data.stages[stageKey]||null;
   if(!item)return null;
   return {
     version:VERSION,
     family:key,
-    familyLabel:data.label,
-    stage:String(stageName||'').toUpperCase(),
+    familyLabel:eventItem?'Wellington Avalanche — event master':data.label,
+    stage:stageKey,
     role:item.role,
     rule:item.rule,
     evidenceRule:'This is a story-position lock, not a fact source. Event-specific research, narration and approved event panels control factual details. If a named sub-hazard or response is not verified for this event, do not invent it.'
