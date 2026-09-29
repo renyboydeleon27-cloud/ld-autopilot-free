@@ -57,6 +57,16 @@ function choices(ctx){var family=Object.prototype.hasOwnProperty.call(data,ctx.f
    result.concept='One comb before mirror → tremor → mirror crack → camera through crack → forward earthquake destruction.';
    result.why='Approved black-and-white anime mirror hook with exactly one physical comb and synchronized reflection.';
  }
+ var wellington=/\bwellington\s+avalanche\b/i.test(ctx.topic||'')&&/\b1910\b/.test(ctx.topic||'');
+ if(family==='landslide'&&i===0&&wellington&&ctx.format!=='longform'&&window.LDWellingtonAvalancheHook&&window.LDWellingtonAvalancheHook.prompt){
+   result.prompt=window.LDWellingtonAvalancheHook.prompt();
+   result.status='RECOMMENDED — FOR TESTING';
+   result.source='Topic-specific';
+   result.rec=true;
+   result.title='Snowman Eye Transition';
+   result.concept='Child builds a snowman in clear weather → the valley suddenly darkens → child turns toward camera → camera rushes into one eye → pupil transition reveals the Wellington avalanche already roaring downhill.';
+   result.why='Creator-selected Wellington 1910 concept with a strict child-age override, mountain-behind-camera geography, delayed avalanche reveal and a distinctive eye transition.';
+ }
  var nargis=/\bcyclone\s+nargis\b/i.test(ctx.topic||'')&&/\b2008\b/.test(ctx.topic||'');
  if(family==='cyclone'&&i===0&&nargis&&ctx.mode==='real'&&ctx.format!=='longform'&&window.LDCycloneNargisHook&&window.LDCycloneNargisHook.prompt){
    result.prompt=window.LDCycloneNargisHook.prompt();
