@@ -3,7 +3,7 @@
    Approved visual reference: 1000268865.mp4 */
 (function(){'use strict';
 
-const VERSION='1.0.0';
+const VERSION='1.0.1';
 const APPROVED_P4_REFERENCE='1000268865.mp4';
 
 function matches(topic){
@@ -53,6 +53,17 @@ function audioLock(topic,stage){
   else if(n>=9&&n<=14)allowed='quiet winter ambience plus restrained physically visible rescue, cleanup, tool, timber, snow, clothing, footstep, or infrastructure sounds appropriate to the panel';
   return 'ABSOLUTE AUDIO LOCK — WELLINGTON P4–P14 — HIGHEST PRIORITY:\nENVIRONMENTAL / OBJECT SFX ONLY. Allowed: '+allowed+'. NO voice-over. NO narrator. NO spoken words. NO dialogue. NO off-screen speech. NO announcements. NO radio voice. NO whispering. NO chanting. NO singing. NO lyrics. NO human vocalization. NO synthetic voice. NO prompt reading. NO narration reading. NO music. Every audible event must have a visible or environmentally credible cause.';
 }
+function characterLock(topic,stage){
+  if(!matches(topic)||!activeStage(stage))return '';
+  const n=stageNumber(stage);
+  if(n===4||n===5){
+    return 'CHARACTER DIVERSITY + ANTI-CLONE LOCK: ZERO PEOPLE in this shot. No adults, children, silhouettes, distant figures, faces, hands, bodies, bystanders, rescuers, or human-shaped background forms may appear. Because no humans are permitted, do not inject a cast profile, crowd, wardrobe, or facial-animation requirement. Preserve the mountain, snow, trees, railway context when appropriate, and avalanche physics only.';
+  }
+  if(n>=6&&n<=8){
+    return 'CHARACTER DIVERSITY + ANTI-CLONE LOCK: Do NOT force humans into this panel. Show adults only when the panel scene genuinely requires them and their presence is historically and physically plausible. If any adult is visible, keep each person unmistakably hand-drawn 2D anime with one stable identity, front-facing or clean three-quarter face when the face matters, no complex head rotation, no duplicated extras, and no photoreal facial drift.';
+  }
+  return 'CHARACTER DIVERSITY + ANTI-CLONE LOCK: Use only the small number of adults required by the response, rescue, relief, recovery, or legacy scene. Keep every visible person unmistakably hand-drawn 2D historical anime with distinct face, age, hair, clothing and body proportions. When a face matters, prefer front-facing or clean three-quarter view; avoid back-of-head-to-face morphs and multi-angle head rotations. No cloned extras, duplicate silhouettes, changing identity, photographic skin, or live-action drift.';
+}
 
 function chapterDna(topic,stage){
   if(!matches(topic)||!activeStage(stage))return '';
@@ -98,6 +109,7 @@ window.LDWellingtonAvalanche1910=Object.freeze({
   narration,
   videoNarrativeContext,
   audioLock,
+  characterLock,
   chapterDna,
   panel,
   trialPolicy:'Default to one render per next panel. Use a three-video same-prompt trial only when a panel shows stage-logic, physics, continuity, anime-to-human drift, camera, environment, audio, morphing, or artifact problems; refine until a new master prompt is established.'
