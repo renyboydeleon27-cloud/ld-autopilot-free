@@ -47,6 +47,8 @@
   function smartNarration(stage){
     if(stage==='ENDING'||stage==='THUMBNAIL')return'';
     const t=topic(), ty=type();
+    const eventSpecific=window.LDWellingtonAvalanche1910?.narration?.(t,stage)||'';
+    if(eventSpecific)return eventSpecific;
     if(stage==='HOOK')return `${hooks[ty]} This was ${t}.`;
     const n=Number(stage.slice(1));
     if(formatEl?.value!=='longform'){
@@ -74,6 +76,16 @@
       const stage=card.dataset.stage;
       const box=card.querySelector('.narration');
       if(!box||stage==='ENDING'||stage==='THUMBNAIL')return;
+      if(stage==='P4'){
+        const wellingtonP4=window.LDWellingtonAvalanche1910?.narration?.(topic(),stage)||'';
+        const oldGeneric=shorts.landslide?.[3]||'';
+        if(wellingtonP4&&(!box.value.trim()||box.value.trim()===oldGeneric)){
+          box.value=wellingtonP4;
+          box.dispatchEvent(new Event('input',{bubbles:true}));
+          changed=true;
+          return;
+        }
+      }
       if(stage==='P9'&&type()==='earthquake'&&box.value.trim()===LEGACY_EARTHQUAKE_P9){
         box.value=smartNarration(stage);
         box.dispatchEvent(new Event('input',{bubbles:true}));
