@@ -3,7 +3,7 @@
    Approved visual reference: 1000268865.mp4 */
 (function(){'use strict';
 
-const VERSION='1.0.3';
+const VERSION='1.0.4';
 const APPROVED_P4_REFERENCE='1000268865.mp4';
 
 function matches(topic){
@@ -38,6 +38,7 @@ function narration(topic,stage){
   if(stage==='P4')return 'After days of heavy snow and worsening weather, the snowpack destabilized, and a massive slab broke loose above Wellington.';
   if(stage==='P5')return 'The avalanche accelerated down the mountainside, gathering speed and mass as it raced toward the railway area below.';
   if(stage==='P6')return 'The avalanche struck the stranded trains at Wellington, sweeping rail cars from the tracks and down the mountainside.';
+  if(stage==='P7')return 'Snow and wrecked rail cars filled the impact zone as the avalanche spread destruction across the Wellington railway area.';
   return '';
 }
 
@@ -100,6 +101,20 @@ function panel(topic,stage){
       physics:'The avalanche is already fragmented from P4 and must remain a dense, granular, gravity-driven snow flow. It gains speed and mass by entraining loose snow along the path. No new slab-release event, no giant rigid ice plates, no glacier-calving look, no rockslide behavior, no floating chunks, no reverse motion, no explosion, no smoke plume and no early whiteout. Trees react only when physically contacted. The avalanche must NOT hit railway infrastructure in P5.',
       audio:'Natural winter wind, dense snow friction, low terrain-coupled avalanche rumble and physically caused snow/tree contact only. ABSOLUTE NO VOICE-OVER, NO narrator, NO speech, NO dialogue, NO announcements, NO prompt reading and NO music.',
       extraNegative:'NO people. NO human characters. NO bakery. NO kitchen. NO workroom. NO interior scene. NO crown-fracture replay. NO fresh slab breakaway. NO train impact. NO track impact. NO building impact. NO bridge impact. NO settlement destruction. NO modern objects. NO giant ice blocks. NO concrete-like snow plates. NO smoke-like powder. NO giant powder wall. NO explosion. NO fireball. NO floating debris. NO color. NO sepia. NO text. NO subtitles. NO logos. NO watermark. NO gore.'
+    };
+  }
+  if(stage==='P7'){
+    return {
+      approved:false,
+      lockedScene:true,
+      scientific:false,
+      scene:'Remain outdoors in the Wellington railway disaster zone immediately after the P6 primary train impact. Show the same physical disaster world from a DISTINCT wider three-quarter viewpoint: displaced and partly buried period rail cars, damaged or obscured track sections, heavy avalanche deposits, broken railway timbers and snow-covered debris spread across the impact path. The main collision has already happened; do NOT replay a fresh train strike. Residual dense snow may still settle or push through gaps around the wreckage, but the visual focus is the expanded immediate consequence of the P6 impact. Keep the mountain slope, conifers, snow material and downhill direction coherent with P4–P6. ZERO PEOPLE in this P7 test shot so the disaster footprint remains the subject. No interior rooms, cabins, kitchens, workrooms or cleanup activity.',
+      narrative:'P7 shows the immediate expanded consequences of the P6 railway impact: displaced and partly buried rail cars, damaged track and heavy deposited snow across the same outdoor disaster zone. It is not a second train collision and not yet rescue or cleanup. Narration is added separately during editing and must never be spoken in the generated video.',
+      timing:'0.0–2.0s: Establish a wider outdoor view of the already-damaged railway impact zone. Displaced rail cars, heavy avalanche deposits and damaged track context are visible immediately; no fresh impact begins.\n2.0–6.0s: Reveal more of the consequence field with controlled camera movement: partly buried cars, snow-packed track, broken railway timbers and debris. Residual dense snow may continue settling or moving slowly through the wreckage only where physically plausible.\n6.0–9.0s: Broaden the scale of damage without introducing a new avalanche release or a second train strike. Preserve the same car identities, terrain geometry, deposited snow and downhill direction.\n9.0–10.0s: End on a strong readable wide consequence frame. Keep the scene in the immediate impact phase; do NOT transition into rescue, survivors, cleanup, shelter or quiet long-term aftermath.',
+      camera:'One continuous wider three-quarter railway-zone shot from a new camera position distinct from P6. Use a restrained lateral or slight forward reveal that exposes the expanded wreckage field while preserving readable foreground, midground and mountain background. No exact P6 camera-axis replay, no orbit, drone transition, cut, teleportation, zoom pumping or excessive shake.',
+      physics:'The P6 collision has already occurred. Rail cars remain displaced, tilted or partly buried according to the established damage state and do not reset to intact track positions. Deposited avalanche snow stays dense, granular and terrain-coupled. Any residual movement is slower settling or continued snow pressure around existing wreckage, not a new explosive impact. No spontaneous derailment, floating cars, duplicated cars, geometry melting, instant repair, smoke behavior, giant rigid ice plates or unexplained new destruction.',
+      audio:'Natural winter wind, settling snow, low residual avalanche rumble, timber/rail strain and occasional physically caused creaks or debris settling only. ABSOLUTE NO VOICE-OVER, NO narrator, NO speech, NO dialogue, NO announcements, NO prompt reading and NO music.',
+      extraNegative:'ZERO PEOPLE. NO adults. NO children. NO silhouettes. NO indoor room. NO cabin interior. NO kitchen. NO bakery. NO workroom. NO cleanup. NO rescue yet. NO fresh train impact. NO second collision. NO intact train reset. NO pristine tracks. NO generic village or homes as the main subject. NO bridge-dominant composition. NO modern train. NO diesel locomotive. NO automobiles. NO modern rescue equipment. NO explosion. NO fireball. NO smoke-like avalanche. NO giant powder wall. NO giant ice blocks. NO concrete-like snow plates. NO floating rail cars. NO train duplication. NO teleporting cars. NO instant repair. NO color. NO sepia. NO text. NO subtitles. NO logos. NO watermark. NO gore.'
     };
   }
   if(stage==='P6'){
