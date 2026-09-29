@@ -11,11 +11,42 @@
   const backupFileInput=document.getElementById('backupFileInput');
   if(!listEl||!countEl||!newBtn)return;
 
+  function compactState(state){
+    if(!state||typeof state!=='object'||Array.isArray(state))return state;
+    if(window.LDCore?.compactApprovedMemory){
+      return {...state,approvedMemory:window.LDCore.compactApprovedMemory(state.approvedMemory)};
+    }
+    if(!state.approvedMemory?.stages)return state;
+    const approved={...state.approvedMemory,version:'1.1',stages:{}};
+    for(const [stage,entry] of Object.entries(state.approvedMemory.stages||{})){
+      const x=entry?.latest;
+      if(!x)continue;
+      approved.stages[stage]={latest:{
+        version:'1.1',stage:x.stage||stage,topic:x.topic||state.topic||'',format:x.format||state.format||'',
+        approvedAt:x.approvedAt||'',narration:x.narration||'',videoMode:x.videoMode||'',visualStyle:x.visualStyle||'',
+        colorMode:x.colorMode||'',year:x.year||'',location:x.location||'',sharedDetails:x.sharedDetails||'',
+        videoScene:x.videoScene||'',textVideoSignature:x.textVideoSignature||'',auditSignature:x.auditSignature||'',
+        approvalMethod:x.approvalMethod||'',continuityCanon:x.continuityCanon||null
+      }};
+    }
+    return {...state,approvedMemory:approved};
+  }
+  function compactLibrary(lib){
+    if(!lib||typeof lib!=='object'||!Array.isArray(lib.projects))return {projects:[]};
+    return {...lib,projects:lib.projects.map(project=>({...project,state:compactState(project.state)}))};
+  }
   function readLibrary(){
-    try{return JSON.parse(localStorage.getItem(LIB_KEY)||'{"projects":[]}');}
+    try{return compactLibrary(JSON.parse(localStorage.getItem(LIB_KEY)||'{"projects":[]}'));}
     catch{return {projects:[]};}
   }
-  function writeLibrary(lib){localStorage.setItem(LIB_KEY,JSON.stringify(lib));}
+  function writeLibrary(lib){
+    const compact=compactLibrary(lib);
+    try{localStorage.setItem(LIB_KEY,JSON.stringify(compact));}
+    catch(error){
+      window.LDCore?.compactStorage?.();
+      localStorage.setItem(LIB_KEY,JSON.stringify(compact));
+    }
+  }
   function activeId(){return localStorage.getItem(ACTIVE_KEY)||'';}
   function setActive(id){if(id)localStorage.setItem(ACTIVE_KEY,id);else localStorage.removeItem(ACTIVE_KEY);}
   function uid(){return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;}
