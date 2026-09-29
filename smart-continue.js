@@ -589,6 +589,41 @@ function migrateStaleWellingtonP10(){
   showToast('Wellington P10 anime lock updated · rebuild P10 before approval.');
   return true;
 }
+function migrateStaleWellingtonP11(){
+  if(!isWellington1910())return false;
+  const card=stages.querySelector('.stage-card[data-stage="P11"]');
+  if(!card)return false;
+  const prompt=String(card.querySelector('.text-video-prompt')?.value||card.dataset.textVideoPrompt||'');
+  const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
+  const alreadyNew=prompt.includes('P11 2D ANIME + OBJECT STABILITY LOCK — HIGHEST PRIORITY:')&&scene.includes('ALREADY wearing ONE plain blanket')&&scene.includes('small rigid rectangular wooden supply box');
+  if(alreadyNew)return false;
+  const done=card.querySelector('.done-toggle');
+  if(done)done.checked=false;
+  card.dataset.approvalRevoked='1';
+  delete card.dataset.smartReady;
+  delete card.dataset.smartReadySignature;
+  card.dataset.textVideoPrompt='';
+  card.dataset.textVideoSignature='';
+  card.dataset.sceneChoice='';
+  const special=window.LDWellingtonAvalanche1910?.panel?.(topic(),'P11');
+  if(special?.scene){
+    card.dataset.videoScene=special.scene;
+    const sceneField=card.querySelector('.video-scene');
+    if(sceneField)sceneField.value=special.scene;
+  }
+  const p11Narration=window.LDWellingtonAvalanche1910?.narration?.(topic(),'P11')||'';
+  if(p11Narration){
+    const nar=card.querySelector('.narration');
+    if(nar)nar.value=p11Narration;
+  }
+  const textField=card.querySelector('.text-video-prompt');
+  if(textField)textField.value='';
+  if(window.LDProjectLocks?.videoMode?.()==='text')window.LDVideoModes?.ensureTextMode?.(card);
+  window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:'P11',ready:false,signature:''}}));
+  writeSmartSession({targetStage:'P11',pending:null});
+  showToast('Wellington P11 blanket-morph fix loaded · rebuild P11 before approval.');
+  return true;
+}
 function isRocky1874(){
   const t=topic().toLowerCase();
   return t.includes('rocky mountain locust')&&t.includes('1874');
@@ -1096,6 +1131,7 @@ window.addEventListener('ld:production-built',()=>{
     migrateStaleWellingtonP5();
     migrateStaleWellingtonP7();
     migrateStaleWellingtonP10();
+    migrateStaleWellingtonP11();
     restoreSmartSession();
     scheduleTargetUpdate();
     refreshApiCostCounter();
@@ -1122,6 +1158,9 @@ if(document.readyState==='loading'){
     setTimeout(()=>{
       migrateLegacyNarrations();
       migrateStaleWellingtonP5();
+      migrateStaleWellingtonP7();
+      migrateStaleWellingtonP10();
+      migrateStaleWellingtonP11();
       restoreSmartSession();
     },280);
   });
@@ -1132,9 +1171,10 @@ if(document.readyState==='loading'){
     migrateStaleWellingtonP5();
     migrateStaleWellingtonP7();
     migrateStaleWellingtonP10();
+    migrateStaleWellingtonP11();
     restoreSmartSession();
   },280);
 }
 
-window.LDSmartContinue={version:'3.49.7',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.49.8',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
