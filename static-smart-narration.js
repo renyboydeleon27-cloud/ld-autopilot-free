@@ -126,6 +126,16 @@
           return;
         }
       }
+      if(stage==='P11'){
+        const wellingtonP11=window.LDWellingtonAvalanche1910?.narration?.(topic(),stage)||'';
+        const oldGeneric=shorts.landslide?.[10]||'';
+        if(wellingtonP11&&(!box.value.trim()||box.value.trim()===oldGeneric)){
+          box.value=wellingtonP11;
+          box.dispatchEvent(new Event('input',{bubbles:true}));
+          changed=true;
+          return;
+        }
+      }
       if(stage==='P9'&&type()==='earthquake'&&box.value.trim()===LEGACY_EARTHQUAKE_P9){
         box.value=smartNarration(stage);
         box.dispatchEvent(new Event('input',{bubbles:true}));
