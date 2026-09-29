@@ -134,15 +134,13 @@ function saveDone(card){
 function approvedSnapshot(card){
   const continuity=window.ldVideoContinuity||{};
   return {
-    version:'1.0',
+    version:'1.1',
     storyVoice:card?.dataset?.storyVoice||'none',storyFocus:card?.dataset?.storyFocus||'auto',
     stage:card?.dataset?.stage||'',
     topic:topic(),
     format:format(),
     approvedAt:new Date().toISOString(),
     narration:String(card?.querySelector('.narration')?.value||''),
-    imagePrompt:String(card?.querySelector('.image-prompt')?.value||''),
-    flowPrompt:String(card?.querySelector('.flow-prompt')?.value||''),
     videoMode:String(card?.dataset?.videoMode||window.LDProjectLocks?.videoMode?.()||'image'),
     visualStyle:visualMode(),
     colorMode:colorMode(),
@@ -150,7 +148,6 @@ function approvedSnapshot(card){
     location:String(continuity.location||''),
     sharedDetails:String(continuity.details||''),
     videoScene:String(card?.querySelector('.video-scene')?.value||card?.dataset?.videoScene||''),
-    textVideoPrompt:String(card?.querySelector('.text-video-prompt')?.value||card?.dataset?.textVideoPrompt||''),
     textVideoSignature:String(card?.dataset?.textVideoSignature||''),
     auditSignature:String(card?.dataset?.smartReadySignature||''),
     continuityCanon:window.LDContinuityEngine?.snapshot?.(card)||null
@@ -167,11 +164,11 @@ function saveApprovedMemory(card,options={}){
     root={version:'1.0',topic:topic(),format:format(),stages:{}};
   }
   if(!root.stages||typeof root.stages!=='object'||Array.isArray(root.stages))root.stages={};
-  const previous=root.stages[stage];
   const snapshot={...approvedSnapshot(card),approvalMethod:String(options.method||'smart-continue')};
-  const history=Array.isArray(previous?.history)?previous.history.slice(-4):[];
-  if(previous?.latest)history.push(previous.latest);
-  root.stages[stage]={latest:snapshot,history:history.slice(-5)};
+  // The full prompt already lives in the stage state. Approved Memory keeps only the
+  // continuity/approval metadata needed by later panels, avoiding megabytes of duplicates.
+  root.version='1.1';
+  root.stages[stage]={latest:snapshot};
   root.updatedAt=snapshot.approvedAt;
   window.ldApprovedMemory=root;
   window.dispatchEvent(new CustomEvent('ld:approved-memory-saved',{detail:{stage,snapshot}}));
@@ -1180,5 +1177,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.49.9',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.49.10',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
