@@ -1,4 +1,4 @@
-/* LD AUTO Continuity Engine v1.0.2 — coordinated T2V consistency system + event-aware hard transitions. */
+/* LD AUTO Continuity Engine v1.0.3 — coordinated T2V consistency system + approval-aware handoffs. */
 (function(){'use strict';
 
 function topic(){
@@ -23,6 +23,12 @@ function family(){
   );
 }
 function approved(stage){
+  const card=document.querySelector('.stage-card[data-stage="'+stage+'"]');
+  if(card){
+    if(card.dataset.approvalRevoked==='1')return null;
+    const done=card.querySelector('.done-toggle');
+    if(done&&!done.checked)return null;
+  }
   return window.ldApprovedMemory?.stages?.[stage]?.latest||null;
 }
 function previousStage(stage){
@@ -174,7 +180,7 @@ function episodeCanonPreview(){
   return '10-SYSTEM CONTINUITY ENGINE ACTIVE:\n1 Shot Bible / Camera Grammar\n2 Disaster Physics Bible\n3 Panel Handoff Memory\n4 Anchor Object System\n5 Lighting Continuity Bible\n6 Damage Memory / No-Reset Rule\n7 Cinematic Intensity Curve\n8 Motion Budget\n9 First-Frame / Last-Frame Lock\n10 Approved Canon Panel';
 }
 window.LDContinuityEngine=Object.freeze({
-  version:'1.0.2',promptBlock,snapshot,episodeCanonPreview,cameraGrammar,physicsBible,panelHandoff,
+  version:'1.0.3',promptBlock,snapshot,episodeCanonPreview,cameraGrammar,physicsBible,panelHandoff,
   anchorObjectSystem,lightingBible,damageMemory,intensityCurve,motionBudget,frameLock
 });
 })();
