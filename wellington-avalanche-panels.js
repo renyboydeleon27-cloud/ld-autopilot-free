@@ -3,7 +3,7 @@
    Approved visual reference: 1000268865.mp4 */
 (function(){'use strict';
 
-const VERSION='1.0.4';
+const VERSION='1.0.5';
 const APPROVED_P4_REFERENCE='1000268865.mp4';
 
 function matches(topic){
@@ -39,6 +39,7 @@ function narration(topic,stage){
   if(stage==='P5')return 'The avalanche accelerated down the mountainside, gathering speed and mass as it raced toward the railway area below.';
   if(stage==='P6')return 'The avalanche struck the stranded trains at Wellington, sweeping rail cars from the tracks and down the mountainside.';
   if(stage==='P7')return 'Snow and wrecked rail cars filled the impact zone as the avalanche spread destruction across the Wellington railway area.';
+  if(stage==='P10')return 'Rescuers searched the buried Wellington railway area for survivors after the avalanche.';
   return '';
 }
 
@@ -101,6 +102,21 @@ function panel(topic,stage){
       physics:'The avalanche is already fragmented from P4 and must remain a dense, granular, gravity-driven snow flow. It gains speed and mass by entraining loose snow along the path. No new slab-release event, no giant rigid ice plates, no glacier-calving look, no rockslide behavior, no floating chunks, no reverse motion, no explosion, no smoke plume and no early whiteout. Trees react only when physically contacted. The avalanche must NOT hit railway infrastructure in P5.',
       audio:'Natural winter wind, dense snow friction, low terrain-coupled avalanche rumble and physically caused snow/tree contact only. ABSOLUTE NO VOICE-OVER, NO narrator, NO speech, NO dialogue, NO announcements, NO prompt reading and NO music.',
       extraNegative:'NO people. NO human characters. NO bakery. NO kitchen. NO workroom. NO interior scene. NO crown-fracture replay. NO fresh slab breakaway. NO train impact. NO track impact. NO building impact. NO bridge impact. NO settlement destruction. NO modern objects. NO giant ice blocks. NO concrete-like snow plates. NO smoke-like powder. NO giant powder wall. NO explosion. NO fireball. NO floating debris. NO color. NO sepia. NO text. NO subtitles. NO logos. NO watermark. NO gore.'
+    };
+  }
+  if(stage==='P10'){
+    return {
+      approved:false,
+      lockedScene:true,
+      scientific:false,
+      frameLock:'P10 2D ANIME FRAME LOCK — HIGHEST PRIORITY: Every frame, including the first, middle and final frame, MUST remain visibly hand-drawn 2D historical anime / graphic-novel art in strict true black-and-white grayscale. Every adult must have clear ink contours around face, eyes, nose, jaw, hair, hands, coat folds and boots; simplified illustrated skin planes; deliberate anime facial construction; grayscale cel shading; and painted 2D background layers. NEVER increase photographic facial detail during motion. NEVER render photographic skin pores, live-action lighting on faces, camera-captured humans, realistic photographic eyes, realistic beard stubble, glossy 3D humans, or documentary/newsreel-looking real people. A human that looks real at any frame is a failed render. Keep faces front-facing or clean three-quarter for most of the shot; no back-of-head-to-face turn, no full-profile-to-front morph, no complex head rotation.',
+      scene:'Outdoors in the damaged Wellington railway avalanche zone after the main impact, show EXACTLY THREE distinct adult rescuers conducting a careful search across deep deposited snow beside damaged or partly buried railway wreckage. All three adults are clearly hand-drawn 2D historical anime characters in 1910 winter clothing. Keep the lead rescuer in a stable clean three-quarter or near-front view while using a long wooden probe in the snow; the other two adults remain visually distinct and perform restrained purposeful search actions nearby. Preserve buried/displaced rail context, damaged track or railway timber, heavy snow deposits, conifers and the same mountain environment established by P6–P9. This is search/rescue after the avalanche, not a new impact and not cleanup or rebuilding.',
+      narrative:'P10 shows human-scale search and rescue in the buried Wellington railway zone after the avalanche. Exactly three adult rescuers perform one coherent search action. The Living Disaster Book narration is added separately during editing and must never be spoken in the generated video.',
+      timing:'0.0–2.0s: Establish EXACTLY THREE hand-drawn anime adult rescuers in the damaged outdoor railway avalanche zone. The lead rescuer is already in a stable three-quarter or near-front illustrated view holding a long wooden probe; buried railway wreckage and deep snow are readable behind them.\n2.0–6.5s: The lead rescuer presses the probe carefully into the snow while the other two adults perform restrained coordinated search actions. Faces, clothing, body proportions and linework remain unchanged. No one turns from back-of-head into a front face.\n6.5–9.0s: Continue the same purposeful search with small believable repositioning only. Preserve the deposited snow, damaged track/railway timber and wreckage state; no new avalanche impact and no cleanup transformation.\n9.0–10.0s: End on a readable search tableau with all three adults still unmistakably 2D anime, stable in identity and clothing, surrounded by the same damaged Wellington railway aftermath.',
+      camera:'One continuous human-height historical-anime shot with a restrained lateral or slight forward move. Keep the lead rescuer in a clean three-quarter or near-front view for most of the shot, while the other two remain readable without complex head rotation. Use one lens/perspective family and stable horizon. No orbit, no circling behind characters, no back-to-front reveal, no drone move, no random zoom, no teleportation and no excessive shake.',
+      physics:'Human motion is slow, deliberate and physically grounded in deep snow. The wooden probe moves only through visible hand/arm action. Boots compress snow naturally. Damaged railway objects and deposited avalanche snow remain fixed unless physically contacted. No new avalanche release, no fresh train impact, no floating debris, no spontaneous object movement, no instant repair and no geometry melt.',
+      audio:'Quiet winter wind, snow compression under boots, clothing movement, wooden probe contacting snow or buried debris, and restrained physically caused railway/timber creaks only. ABSOLUTE NO VOICE-OVER, NO narrator, NO spoken words, NO dialogue, NO calling, NO shouting, NO whispering, NO announcements, NO synthetic voice, NO prompt reading and NO music.',
+      extraNegative:'EXACTLY THREE ADULT RESCUERS ONLY. NO children. NO crowd. NO extra background people. NO live action. NO photorealistic humans. NO photographic skin. NO realistic camera-captured faces. NO newsreel-looking real people. NO 3D CGI humans. NO face morphing. NO identity swap. NO changing hair. NO changing coat. NO changing body proportions. NO back-of-head-to-face transformation. NO complex head spin. NO full-profile morph. NO duplicated rescuer. NO indoor room. NO kitchen. NO workroom. NO cleanup or rebuilding. NO new avalanche impact. NO explosion. NO smoke. NO modern rescue equipment. NO color. NO sepia. NO text. NO subtitles. NO logos. NO watermark. NO gore.'
     };
   }
   if(stage==='P7'){
