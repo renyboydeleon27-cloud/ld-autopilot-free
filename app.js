@@ -146,8 +146,20 @@ function legacyStageHasSavedWork(data,stage){
  return !!String(data.narration||'').trim()&&!!String(data.imagePrompt||'').trim()&&!!String(data.flowPrompt||'').trim();
 }
 function legacyManualDoneAllowed(card){
- if(card?.dataset?.legacyManualDone!=='1')return false;
- if(window.LDVideoModes?.supports?.(card)&&card.dataset.videoMode==='text')return !!window.LDVideoModes.legacyCompletionReady?.(card);
+ if(!card)return false;
+ const stage=card.dataset.stage||'';
+ const isSfP11=isSanFrancisco1906Topic(projectTitle?.textContent||topicEl?.value||'')&&stage==='P11';
+ if(window.LDVideoModes?.supports?.(card)&&card.dataset.videoMode==='text'){
+   const savedText=String(card.dataset.textVideoPrompt||card.querySelector('.text-video-prompt')?.value||'').trim();
+   const approvedP11=window.ldApprovedMemory?.stages?.P11?.latest;
+   // P11 was approved under an older San Francisco rule set. Preserve that exact saved
+   // T2V prompt instead of forcing the newer P11 frame-lock/signature onto old work.
+   if(isSfP11&&savedText&&card.querySelector('.narration')?.value.trim())return true;
+   if(isSfP11&&approvedP11&&card.querySelector('.narration')?.value.trim())return true;
+   if(card.dataset.legacyManualDone!=='1')return false;
+   return !!window.LDVideoModes.legacyCompletionReady?.(card);
+ }
+ if(card.dataset.legacyManualDone!=='1'&&!isSfP11)return false;
  return requiredReady(card);
 }
 function effectiveReady(card){
