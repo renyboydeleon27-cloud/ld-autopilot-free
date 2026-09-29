@@ -40,6 +40,7 @@ const backupFileInput=document.getElementById('backupFileInput');
 const STORE_KEY='ld-autopilot-free-v1';
 const DONE_SHADOW_KEY='ld-autopilot-free-done-shadow-v1';
 const APPROVAL_LEDGER_KEY='ld-autopilot-free-approval-ledger-v1';
+const PROJECT_LIBRARY_KEY='ld-autopilot-free-project-library-v1';
 const ACTIVE_PROJECT_KEY='ld-autopilot-free-active-project';
 let saveCurrentTimer=null;
 function shortsStages(){return ['HOOK',...Array.from({length:14},(_,i)=>`P${i+1}`),'ENDING','THUMBNAIL'];}
@@ -168,25 +169,98 @@ function seedDoneShadow(cards){
   if(card.querySelector('.done-toggle')?.checked)writeDoneShadow(card,true);
  }
 }
+function slimApprovedSnapshotForStorage(snap){
+ if(!snap||typeof snap!=='object')return null;
+ return {
+  version:'1.1',
+  storyVoice:String(snap.storyVoice||'none'),
+  storyFocus:String(snap.storyFocus||'auto'),
+  stage:String(snap.stage||''),
+  topic:String(snap.topic||''),
+  format:String(snap.format||''),
+  approvedAt:String(snap.approvedAt||''),
+  narration:String(snap.narration||''),
+  videoMode:String(snap.videoMode||''),
+  visualStyle:String(snap.visualStyle||''),
+  colorMode:String(snap.colorMode||''),
+  year:String(snap.year||''),
+  location:String(snap.location||''),
+  sharedDetails:String(snap.sharedDetails||''),
+  videoScene:String(snap.videoScene||''),
+  textVideoSignature:String(snap.textVideoSignature||''),
+  auditSignature:String(snap.auditSignature||''),
+  approvalMethod:String(snap.approvalMethod||''),
+  continuityCanon:snap.continuityCanon&&typeof snap.continuityCanon==='object'?snap.continuityCanon:null
+ };
+}
+function compactApprovedMemoryForStorage(root){
+ if(!root||typeof root!=='object'||Array.isArray(root))return root;
+ const out={...root,version:'1.1',stages:{}};
+ for(const [stage,entry] of Object.entries(root.stages||{})){
+  const latest=slimApprovedSnapshotForStorage(entry?.latest);
+  if(latest)out.stages[stage]={latest};
+ }
+ return out;
+}
+function compactLedgerObject(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))return {projects:{}};
+ const out={projects:{}};
+ const entries=Object.entries(value.projects||{}).sort((x,y)=>String(y[1]?.updatedAt||'').localeCompare(String(x[1]?.updatedAt||''))).slice(0,30);
+ for(const [id,record] of entries){
+  const stages={};
+  for(const [stage,item] of Object.entries(record?.stages||{})){
+   stages[stage]={approved:!!item?.approved,updatedAt:String(item?.updatedAt||'')};
+  }
+  out.projects[id]={stages,updatedAt:String(record?.updatedAt||'')};
+ }
+ return out;
+}
+function compactProjectStateForStorage(state){
+ if(!state||typeof state!=='object'||Array.isArray(state))return state;
+ const out={...state};
+ if(out.approvedMemory)out.approvedMemory=compactApprovedMemoryForStorage(out.approvedMemory);
+ return out;
+}
+function isStorageQuotaError(error){
+ return !!error&&(error.name==='QuotaExceededError'||error.name==='NS_ERROR_DOM_QUOTA_REACHED'||error.code===22||error.code===1014);
+}
+function compactLdLocalStorage(){
+ try{
+  const rawLedger=localStorage.getItem(APPROVAL_LEDGER_KEY);
+  if(rawLedger){
+   const compact=compactLedgerObject(JSON.parse(rawLedger));
+   localStorage.setItem(APPROVAL_LEDGER_KEY,JSON.stringify(compact));
+  }
+ }catch{}
+ try{
+  const rawCore=localStorage.getItem(STORE_KEY);
+  if(rawCore){
+   const core=compactProjectStateForStorage(JSON.parse(rawCore));
+   localStorage.setItem(STORE_KEY,JSON.stringify(core));
+  }
+ }catch{}
+ try{
+  const rawLib=localStorage.getItem(PROJECT_LIBRARY_KEY);
+  if(rawLib){
+   const lib=JSON.parse(rawLib);
+   if(lib&&Array.isArray(lib.projects)){
+    lib.projects=lib.projects.map(p=>({...p,state:compactProjectStateForStorage(p.state)}));
+    localStorage.setItem(PROJECT_LIBRARY_KEY,JSON.stringify(lib));
+   }
+  }
+ }catch{}
+}
 function readApprovalLedger(){
  try{
-  const value=JSON.parse(localStorage.getItem(APPROVAL_LEDGER_KEY)||'{"projects":{}}');
-  if(!value||typeof value!=='object'||Array.isArray(value))return {projects:{}};
-  value.projects=value.projects&&typeof value.projects==='object'&&!Array.isArray(value.projects)?value.projects:{};
+  const value=compactLedgerObject(JSON.parse(localStorage.getItem(APPROVAL_LEDGER_KEY)||'{"projects":{}}'));
   return value;
  }catch{return {projects:{}};}
 }
 function approvalLedgerSnapshot(card){
  return {
   stage:card?.dataset?.stage||'',
-  narration:String(card?.querySelector('.narration')?.value||''),
-  imagePrompt:String(card?.querySelector('.image-prompt')?.value||''),
-  flowPrompt:String(card?.querySelector('.flow-prompt')?.value||''),
   videoMode:String(card?.dataset?.videoMode||'image'),
-  textVideoPrompt:String(card?.dataset?.textVideoPrompt||''),
-  videoScene:String(card?.dataset?.videoScene||''),
-  textVideoSignature:String(card?.dataset?.textVideoSignature||''),
-  smartReadySignature:String(card?.dataset?.smartReadySignature||'')
+  textVideoSignature:String(card?.dataset?.textVideoSignature||'')
  };
 }
 function writeApprovalLedger(card,value){
@@ -203,7 +277,7 @@ function writeApprovalLedger(card,value){
  }
  const entries=Object.entries(root.projects).sort((x,y)=>String(y[1]?.updatedAt||'').localeCompare(String(x[1]?.updatedAt||'')));
  root.projects=Object.fromEntries(entries.slice(0,50));
- try{localStorage.setItem(APPROVAL_LEDGER_KEY,JSON.stringify(root));}catch{}
+ try{localStorage.setItem(APPROVAL_LEDGER_KEY,JSON.stringify(compactLedgerObject(root)));}catch(e){if(isStorageQuotaError(e)){compactLdLocalStorage();try{localStorage.setItem(APPROVAL_LEDGER_KEY,JSON.stringify(compactLedgerObject(root)));}catch{}}}
  card.dataset.approvalCommitted=value?'1':'';
 }
 function approvalLedgerEntry(stage){
@@ -342,16 +416,31 @@ function recoverAccidentalDoneReset(){
  recoverable.forEach(card=>{card.querySelector('.done-toggle').checked=true;refreshCard(card);});
  return recoverable.length;
 }
-function buildProduction(seed){if(seed&&['drama','fantasy'].includes(seed.category)&&!window.LDStoryModes){showToast('Open this project in its separate studio.');return;}seed=window.NERSerial?.prepare(seed)||seed;const requestedCategory=seed?(seed.category||'disaster'):(categoryEl?.value||'disaster');const category=['disaster','drama','fantasy'].includes(requestedCategory)?requestedCategory:'disaster';window.ldProductionCategory=category;window.ldNarrativeFormat=category==='disaster'?(window.LDStoryFormat?.normalize(seed?seed.narrativeFormat:document.getElementById('narrativeFormat')?.value)||'original'):'original';const narrativeSelect=document.getElementById('narrativeFormat');if(narrativeSelect){narrativeSelect.value=window.ldNarrativeFormat;narrativeSelect.disabled=true;}if(categoryEl)categoryEl.value=category;syncStorySetup();if(storyPremiseEl)storyPremiseEl.value=seed?.storyPremise||(!seed?storyPremiseEl.value:'');if(storyBibleEl)storyBibleEl.value=seed?.storyBible||(!seed?storyBibleEl.value:'');window.ldYoutubeTitle=typeof seed?.youtubeTitle==='string'?seed.youtubeTitle:null;window.ldFinalPackageMeta=seed?.finalPackageMeta&&typeof seed.finalPackageMeta==='object'&&!Array.isArray(seed.finalPackageMeta)?JSON.parse(JSON.stringify(seed.finalPackageMeta)):(window.ldFinalPackageMeta||{description:'',musicCredit:'',uploadNotes:''});window.ldVideoContinuity=seed?.videoContinuity||{};window.ldProjectLocks=seed?((Object.prototype.hasOwnProperty.call(seed,'projectLocks'))?seed.projectLocks:null):(window.ldProjectLocks||null);const topic=(seed?.topic||topicEl.value.trim()||(category==='disaster'?'Untitled Disaster':'Untitled Story'));const format=seed?.format||formatEl.value;const legacyApprovalCompat=legacyProjectApprovalCompat(seed,topic);const incomingApproved=seed?.approvedMemory&&typeof seed.approvedMemory==='object'&&!Array.isArray(seed.approvedMemory)?seed.approvedMemory:null;const sameApprovedTopic=!seed&&window.ldApprovedMemory&&window.ldApprovedMemory.topic===topic&&window.ldApprovedMemory.format===format&&window.ldApprovedMemory.category===category;window.ldApprovedMemory=incomingApproved?JSON.parse(JSON.stringify(incomingApproved)):(sameApprovedTopic?window.ldApprovedMemory:{version:'1.0',topic,format,category,stages:{}});const incomingApiUsage=seed?.apiUsage&&typeof seed.apiUsage==='object'&&!Array.isArray(seed.apiUsage)?seed.apiUsage:null;const sameUsageTopic=!seed&&window.ldApiUsage&&window.ldApiUsage.topic===topic&&window.ldApiUsage.format===format&&window.ldApiUsage.category===category;window.ldApiUsage=incomingApiUsage?JSON.parse(JSON.stringify(incomingApiUsage)):(sameUsageTopic?window.ldApiUsage:{version:'1.0',topic,format,category,priceSnapshot:'2026-09-25',currency:'USD',calls:0,inputTokens:0,cachedInputTokens:0,outputTokens:0,totalTokens:0,estimatedCostUsd:0,byModel:{}});topicEl.value=topic;formatEl.value=format;const names=window.ldStoryEpisode?Object.keys(seed?.stages||{}).filter(k=>/^P\d+$/.test(k)).sort((a,b)=>Number(a.slice(1))-Number(b.slice(1))):format==='shorts'?shortsStages():longformStages();const savedStages=seed?.stages||{};stagesEl.innerHTML='';names.forEach((name,index)=>{const node=tpl.content.firstElementChild.cloneNode(true);node.dataset.stage=name;node.querySelector('.stage-name').textContent=name;node.querySelector('.stage-title').textContent=stageTitle(name);node.querySelector('.scene-role').textContent=sceneRole(name,format,topic);const narration=node.querySelector('.narration');const imagePrompt=node.querySelector('.image-prompt');const flowPrompt=node.querySelector('.flow-prompt');const done=node.querySelector('.done-toggle');const flowWrap=node.querySelector('.flow-wrap');const narrationWrap=node.querySelector('.narration-wrap');const note=node.querySelector('.stage-note');const body=node.querySelector('.stage-body');const collapseBtn=node.querySelector('.collapse-btn');const data=savedStages[name]||{};node.dataset.legacyManualDone=legacyApprovalCompat&&legacyStageHasSavedWork(data,name)?'1':'';node.dataset.videoMode=data.videoMode==='text'?'text':'image';node.dataset.textVideoPrompt=cleanNarrationInstructions(data.textVideoPrompt);node.dataset.videoScene=cleanNarrationInstructions(data.videoScene);node.dataset.textVideoSignature=data.textVideoSignature||'';node.dataset.approvalRevoked=data.approvalRevoked?'1':'';node.dataset.approvalCommitted=data.approvalCommitted?'1':'';node.dataset.storyVoice=data.storyVoice||'none';node.dataset.storyFocus=data.storyFocus||'auto';node.dataset.storyPolishKey=data.storyPolishKey||'';node.dataset.smartReady=data.smartReady?'1':'';node.dataset.smartReadySignature=data.smartReadySignature||'';narration.value=cleanNarrationInstructions(data.narration);imagePrompt.value=cleanNarrationInstructions(data.imagePrompt)||(window.LDStoryFormat?.decorate(defaultImagePrompt(name,format,topic),name,format)||defaultImagePrompt(name,format,topic));flowPrompt.value=data.flowPrompt||(window.LDStoryFormat?.decorate(defaultFlowPrompt(name,format,topic),name,format)||defaultFlowPrompt(name,format,topic));done.checked=!!data.done||!!data.approvalCommitted;if(index===0){body.classList.remove('hidden');collapseBtn.textContent='Close';}if(name==='ENDING'||name==='THUMBNAIL'){narrationWrap.classList.add('hidden');flowWrap.classList.add('hidden');note.textContent='Illustration only · no animation prompt';}else note.textContent='Narration target ~8 seconds · animation target 10 seconds';[narration,imagePrompt,flowPrompt].forEach(el=>el.addEventListener('input',()=>{refreshCard(node);scheduleCurrentSave();}));done.addEventListener('change',event=>{if(!done.checked&&event.isTrusted){node.dataset.approvalRevoked='1';writeApprovalLedger(node,false);}if(done.checked)node.dataset.approvalRevoked='';const legacyRestore=done.checked&&legacyManualDoneAllowed(node);if(done.checked&&!requiredReady(node)&&!legacyRestore){if(window.LDVideoModes?.supports(node)&&node.dataset.videoMode==='text'){const fixed=window.LDVideoModes.completionReady?.(node);if(!fixed){done.checked=false;showToast(window.LDVideoModes.completionIssue?.(node)||'Complete the required Text-to-Video fields first.');}}else{done.checked=false;showToast('Complete the required fields first.');}}if(event.isTrusted&&done.checked&&(requiredReady(node)||legacyRestore)&&window.LDSmartContinue?.saveApprovedMemory)window.LDSmartContinue.saveApprovedMemory(node,{method:legacyRestore?'legacy-manual-done':'manual-done'});if(done.checked&&(event.isTrusted||window.ldApprovedMemory?.stages?.[node.dataset.stage]?.latest)){writeApprovalLedger(node,true);}writeDoneShadow(node,done.checked);refreshCard(node);saveCurrent();if(done.checked&&legacyRestore)showToast('Done restored · saved approved prompt preserved');});collapseBtn.addEventListener('click',()=>{const closed=body.classList.toggle('hidden');collapseBtn.textContent=closed?'Open':'Close';});node.querySelectorAll('.copy-btn').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.copy;const field=key==='narration'?narration:key==='imagePrompt'?imagePrompt:flowPrompt;try{copyText(key==='flowPrompt'&&window.LDVideoModes?window.LDVideoModes.prompt(node):field.value);}catch(e){showToast(e.message);}}));node.querySelector('.copy-package-btn').addEventListener('click',()=>{try{copyText(stagePackage(node));}catch(e){showToast(e.message);}});node.querySelector('.next-stage-btn').addEventListener('click',()=>scrollToCard(node.nextElementSibling));stagesEl.appendChild(node);});projectTitle.textContent=topic;modeText.textContent=(category==='disaster'?'':window.LDStoryModes.label()+' · ')+(format==='shorts'?'Shorts 9:16':'Longform 16:9');stageCount.textContent=names.length;updateJumpMenu();const builtCards=[...stagesEl.querySelectorAll('.stage-card')];seedApprovalLedger(builtCards);const recoveredLedger=recoverApprovalLedger(builtCards);const recoveredShadow=recoverDoneShadow(builtCards);const recoveredApproved=recoverAccidentalDoneReset();seedDoneShadow(builtCards);seedApprovalLedger(builtCards);const recoveredDone=recoveredLedger+recoveredShadow+recoveredApproved;updateStats();saveCurrent();if(recoveredDone)showToast('Recovered '+recoveredDone+' approved Done stage'+(recoveredDone===1?'':'s'));window.dispatchEvent(new CustomEvent('ld:production-built',{detail:{state:collectState(),fresh:!seed,recoveredDone}}));}
-function collectState(){const stages={};[...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{stages[card.dataset.stage]={narration:card.querySelector('.narration').value,imagePrompt:card.querySelector('.image-prompt').value,flowPrompt:card.querySelector('.flow-prompt').value,done:card.querySelector('.done-toggle').checked,videoMode:card.dataset.videoMode||'image',textVideoPrompt:card.dataset.textVideoPrompt||'',videoScene:card.dataset.videoScene||'',textVideoSignature:card.dataset.textVideoSignature||'',approvalRevoked:card.dataset.approvalRevoked==='1',approvalCommitted:ledgerSaysApproved(card),storyVoice:card.dataset.storyVoice||'none',storyFocus:card.dataset.storyFocus||'auto',storyPolishKey:card.dataset.storyPolishKey||'',smartReady:card.dataset.smartReady==='1',smartReadySignature:card.dataset.smartReadySignature||''};});return {version:'2.5',storyEpisode:window.ldStoryEpisode?JSON.parse(JSON.stringify(window.ldStoryEpisode)):null,category:window.ldProductionCategory||'disaster',narrativeFormat:window.ldNarrativeFormat||'original',storyPremise:storyPremiseEl?.value||'',storyBible:storyBibleEl?.value||'',youtubeTitle:window.ldYoutubeTitle??null,finalPackageMeta:window.ldFinalPackageMeta||{description:'',musicCredit:'',uploadNotes:''},videoContinuity:window.ldVideoContinuity||{},projectLocks:window.ldProjectLocks||null,approvedMemory:window.ldApprovedMemory||{version:'1.0',topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,stages:{}},apiUsage:window.ldApiUsage||{version:'1.0',topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,priceSnapshot:'2026-09-25',currency:'USD',calls:0,inputTokens:0,cachedInputTokens:0,outputTokens:0,totalTokens:0,estimatedCostUsd:0,byModel:{}},topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,stages,updatedAt:new Date().toISOString()};}
+function buildProduction(seed){if(seed&&['drama','fantasy'].includes(seed.category)&&!window.LDStoryModes){showToast('Open this project in its separate studio.');return;}seed=window.NERSerial?.prepare(seed)||seed;const requestedCategory=seed?(seed.category||'disaster'):(categoryEl?.value||'disaster');const category=['disaster','drama','fantasy'].includes(requestedCategory)?requestedCategory:'disaster';window.ldProductionCategory=category;window.ldNarrativeFormat=category==='disaster'?(window.LDStoryFormat?.normalize(seed?seed.narrativeFormat:document.getElementById('narrativeFormat')?.value)||'original'):'original';const narrativeSelect=document.getElementById('narrativeFormat');if(narrativeSelect){narrativeSelect.value=window.ldNarrativeFormat;narrativeSelect.disabled=true;}if(categoryEl)categoryEl.value=category;syncStorySetup();if(storyPremiseEl)storyPremiseEl.value=seed?.storyPremise||(!seed?storyPremiseEl.value:'');if(storyBibleEl)storyBibleEl.value=seed?.storyBible||(!seed?storyBibleEl.value:'');window.ldYoutubeTitle=typeof seed?.youtubeTitle==='string'?seed.youtubeTitle:null;window.ldFinalPackageMeta=seed?.finalPackageMeta&&typeof seed.finalPackageMeta==='object'&&!Array.isArray(seed.finalPackageMeta)?JSON.parse(JSON.stringify(seed.finalPackageMeta)):(window.ldFinalPackageMeta||{description:'',musicCredit:'',uploadNotes:''});window.ldVideoContinuity=seed?.videoContinuity||{};window.ldProjectLocks=seed?((Object.prototype.hasOwnProperty.call(seed,'projectLocks'))?seed.projectLocks:null):(window.ldProjectLocks||null);const topic=(seed?.topic||topicEl.value.trim()||(category==='disaster'?'Untitled Disaster':'Untitled Story'));const format=seed?.format||formatEl.value;const legacyApprovalCompat=legacyProjectApprovalCompat(seed,topic);const incomingApproved=seed?.approvedMemory&&typeof seed.approvedMemory==='object'&&!Array.isArray(seed.approvedMemory)?seed.approvedMemory:null;const sameApprovedTopic=!seed&&window.ldApprovedMemory&&window.ldApprovedMemory.topic===topic&&window.ldApprovedMemory.format===format&&window.ldApprovedMemory.category===category;window.ldApprovedMemory=compactApprovedMemoryForStorage(incomingApproved?JSON.parse(JSON.stringify(incomingApproved)):(sameApprovedTopic?window.ldApprovedMemory:{version:'1.1',topic,format,category,stages:{}}));const incomingApiUsage=seed?.apiUsage&&typeof seed.apiUsage==='object'&&!Array.isArray(seed.apiUsage)?seed.apiUsage:null;const sameUsageTopic=!seed&&window.ldApiUsage&&window.ldApiUsage.topic===topic&&window.ldApiUsage.format===format&&window.ldApiUsage.category===category;window.ldApiUsage=incomingApiUsage?JSON.parse(JSON.stringify(incomingApiUsage)):(sameUsageTopic?window.ldApiUsage:{version:'1.0',topic,format,category,priceSnapshot:'2026-09-25',currency:'USD',calls:0,inputTokens:0,cachedInputTokens:0,outputTokens:0,totalTokens:0,estimatedCostUsd:0,byModel:{}});topicEl.value=topic;formatEl.value=format;const names=window.ldStoryEpisode?Object.keys(seed?.stages||{}).filter(k=>/^P\d+$/.test(k)).sort((a,b)=>Number(a.slice(1))-Number(b.slice(1))):format==='shorts'?shortsStages():longformStages();const savedStages=seed?.stages||{};stagesEl.innerHTML='';names.forEach((name,index)=>{const node=tpl.content.firstElementChild.cloneNode(true);node.dataset.stage=name;node.querySelector('.stage-name').textContent=name;node.querySelector('.stage-title').textContent=stageTitle(name);node.querySelector('.scene-role').textContent=sceneRole(name,format,topic);const narration=node.querySelector('.narration');const imagePrompt=node.querySelector('.image-prompt');const flowPrompt=node.querySelector('.flow-prompt');const done=node.querySelector('.done-toggle');const flowWrap=node.querySelector('.flow-wrap');const narrationWrap=node.querySelector('.narration-wrap');const note=node.querySelector('.stage-note');const body=node.querySelector('.stage-body');const collapseBtn=node.querySelector('.collapse-btn');const data=savedStages[name]||{};node.dataset.legacyManualDone=legacyApprovalCompat&&legacyStageHasSavedWork(data,name)?'1':'';node.dataset.videoMode=data.videoMode==='text'?'text':'image';node.dataset.textVideoPrompt=cleanNarrationInstructions(data.textVideoPrompt);node.dataset.videoScene=cleanNarrationInstructions(data.videoScene);node.dataset.textVideoSignature=data.textVideoSignature||'';node.dataset.approvalRevoked=data.approvalRevoked?'1':'';node.dataset.approvalCommitted=data.approvalCommitted?'1':'';node.dataset.storyVoice=data.storyVoice||'none';node.dataset.storyFocus=data.storyFocus||'auto';node.dataset.storyPolishKey=data.storyPolishKey||'';node.dataset.smartReady=data.smartReady?'1':'';node.dataset.smartReadySignature=data.smartReadySignature||'';narration.value=cleanNarrationInstructions(data.narration);imagePrompt.value=cleanNarrationInstructions(data.imagePrompt)||(window.LDStoryFormat?.decorate(defaultImagePrompt(name,format,topic),name,format)||defaultImagePrompt(name,format,topic));flowPrompt.value=data.flowPrompt||(window.LDStoryFormat?.decorate(defaultFlowPrompt(name,format,topic),name,format)||defaultFlowPrompt(name,format,topic));done.checked=!!data.done||!!data.approvalCommitted;if(index===0){body.classList.remove('hidden');collapseBtn.textContent='Close';}if(name==='ENDING'||name==='THUMBNAIL'){narrationWrap.classList.add('hidden');flowWrap.classList.add('hidden');note.textContent='Illustration only · no animation prompt';}else note.textContent='Narration target ~8 seconds · animation target 10 seconds';[narration,imagePrompt,flowPrompt].forEach(el=>el.addEventListener('input',()=>{refreshCard(node);scheduleCurrentSave();}));done.addEventListener('change',event=>{if(!done.checked&&event.isTrusted){node.dataset.approvalRevoked='1';writeApprovalLedger(node,false);}if(done.checked)node.dataset.approvalRevoked='';const legacyRestore=done.checked&&legacyManualDoneAllowed(node);if(done.checked&&!requiredReady(node)&&!legacyRestore){if(window.LDVideoModes?.supports(node)&&node.dataset.videoMode==='text'){const fixed=window.LDVideoModes.completionReady?.(node);if(!fixed){done.checked=false;showToast(window.LDVideoModes.completionIssue?.(node)||'Complete the required Text-to-Video fields first.');}}else{done.checked=false;showToast('Complete the required fields first.');}}if(event.isTrusted&&done.checked&&(requiredReady(node)||legacyRestore)&&window.LDSmartContinue?.saveApprovedMemory)window.LDSmartContinue.saveApprovedMemory(node,{method:legacyRestore?'legacy-manual-done':'manual-done'});if(done.checked&&(event.isTrusted||window.ldApprovedMemory?.stages?.[node.dataset.stage]?.latest)){writeApprovalLedger(node,true);}writeDoneShadow(node,done.checked);refreshCard(node);saveCurrent();if(done.checked&&legacyRestore)showToast('Done restored · saved approved prompt preserved');});collapseBtn.addEventListener('click',()=>{const closed=body.classList.toggle('hidden');collapseBtn.textContent=closed?'Open':'Close';});node.querySelectorAll('.copy-btn').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.copy;const field=key==='narration'?narration:key==='imagePrompt'?imagePrompt:flowPrompt;try{copyText(key==='flowPrompt'&&window.LDVideoModes?window.LDVideoModes.prompt(node):field.value);}catch(e){showToast(e.message);}}));node.querySelector('.copy-package-btn').addEventListener('click',()=>{try{copyText(stagePackage(node));}catch(e){showToast(e.message);}});node.querySelector('.next-stage-btn').addEventListener('click',()=>scrollToCard(node.nextElementSibling));stagesEl.appendChild(node);});projectTitle.textContent=topic;modeText.textContent=(category==='disaster'?'':window.LDStoryModes.label()+' · ')+(format==='shorts'?'Shorts 9:16':'Longform 16:9');stageCount.textContent=names.length;updateJumpMenu();const builtCards=[...stagesEl.querySelectorAll('.stage-card')];seedApprovalLedger(builtCards);const recoveredLedger=recoverApprovalLedger(builtCards);const recoveredShadow=recoverDoneShadow(builtCards);const recoveredApproved=recoverAccidentalDoneReset();seedDoneShadow(builtCards);seedApprovalLedger(builtCards);const recoveredDone=recoveredLedger+recoveredShadow+recoveredApproved;updateStats();saveCurrent();if(recoveredDone)showToast('Recovered '+recoveredDone+' approved Done stage'+(recoveredDone===1?'':'s'));window.dispatchEvent(new CustomEvent('ld:production-built',{detail:{state:collectState(),fresh:!seed,recoveredDone}}));}
+function collectState(){const stages={};[...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{stages[card.dataset.stage]={narration:card.querySelector('.narration').value,imagePrompt:card.querySelector('.image-prompt').value,flowPrompt:card.querySelector('.flow-prompt').value,done:card.querySelector('.done-toggle').checked,videoMode:card.dataset.videoMode||'image',textVideoPrompt:card.dataset.textVideoPrompt||'',videoScene:card.dataset.videoScene||'',textVideoSignature:card.dataset.textVideoSignature||'',approvalRevoked:card.dataset.approvalRevoked==='1',approvalCommitted:ledgerSaysApproved(card),storyVoice:card.dataset.storyVoice||'none',storyFocus:card.dataset.storyFocus||'auto',storyPolishKey:card.dataset.storyPolishKey||'',smartReady:card.dataset.smartReady==='1',smartReadySignature:card.dataset.smartReadySignature||''};});return {version:'2.5',storyEpisode:window.ldStoryEpisode?JSON.parse(JSON.stringify(window.ldStoryEpisode)):null,category:window.ldProductionCategory||'disaster',narrativeFormat:window.ldNarrativeFormat||'original',storyPremise:storyPremiseEl?.value||'',storyBible:storyBibleEl?.value||'',youtubeTitle:window.ldYoutubeTitle??null,finalPackageMeta:window.ldFinalPackageMeta||{description:'',musicCredit:'',uploadNotes:''},videoContinuity:window.ldVideoContinuity||{},projectLocks:window.ldProjectLocks||null,approvedMemory:compactApprovedMemoryForStorage(window.ldApprovedMemory||{version:'1.1',topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,stages:{}}),apiUsage:window.ldApiUsage||{version:'1.0',topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,priceSnapshot:'2026-09-25',currency:'USD',calls:0,inputTokens:0,cachedInputTokens:0,outputTokens:0,totalTokens:0,estimatedCostUsd:0,byModel:{}},topic:projectTitle.textContent==='No production yet'?'':projectTitle.textContent,format:formatEl.value,stages,updatedAt:new Date().toISOString()};}
 function updateAudit(cards){if(!cards.length){auditCard.classList.add('hidden');return;}auditCard.classList.remove('hidden');const ready=cards.filter(effectiveReady);const incomplete=cards.filter(c=>!c.querySelector('.done-toggle').checked);const missingRequired=cards.filter(c=>!effectiveReady(c));requiredStatus.textContent=`${ready.length}/${cards.length} ready`;if(!incomplete.length){auditStatus.textContent='Audit passed';remainingStages.textContent='No remaining stages. All required fields are present and every stage is marked Done.';}else{auditStatus.textContent=`${incomplete.length} stage${incomplete.length===1?'':'s'} remaining`;const names=incomplete.map(c=>c.dataset.stage).join(', ');const missing=missingRequired.map(c=>c.dataset.stage);remainingStages.textContent=`Remaining: ${names}.${missing.length?` Missing required content: ${missing.join(', ')}.`:''}`;}}
 function updateStats(){const cards=[...stagesEl.querySelectorAll('.stage-card')];cards.forEach(refreshCard);const done=cards.filter(c=>c.querySelector('.done-toggle').checked).length;const percent=cards.length?Math.round(done/cards.length*100):0;doneCount.textContent=done;progressText.textContent=`${percent}%`;progressBar.style.width=`${percent}%`;progressLabel.textContent=cards.length?`${done} of ${cards.length} stages complete`:'No production yet';completeBanner.classList.toggle('hidden',!cards.length||done!==cards.length);updateAudit(cards);}
 function saveCurrent(){
  clearTimeout(saveCurrentTimer);saveCurrentTimer=null;
  updateStats();
  const state=collectState();
- localStorage.setItem(STORE_KEY,JSON.stringify(state));
+ const payload=JSON.stringify(state);
+ try{
+  localStorage.setItem(STORE_KEY,payload);
+ }catch(error){
+  if(!isStorageQuotaError(error))throw error;
+  compactLdLocalStorage();
+  try{
+   localStorage.setItem(STORE_KEY,payload);
+   showToast('Storage compacted automatically · project saved');
+  }catch(second){
+   console.error('LD AUTO storage quota still exceeded after safe compaction',second);
+   showToast('Local storage is full · project kept open, free space before closing');
+   return false;
+  }
+ }
  window.dispatchEvent(new CustomEvent('ld:core-state-saved',{detail:{topic:state.topic,format:state.format,category:state.category,updatedAt:state.updatedAt}}));
+ return true;
 }
 function scheduleCurrentSave(delay=360){
  clearTimeout(saveCurrentTimer);
@@ -370,4 +459,4 @@ jumpStage.addEventListener('change',()=>scrollToCard(stagesEl.querySelector(`[da
 nextIncompleteBtn.addEventListener('click',nextIncomplete);auditNextBtn.addEventListener('click',nextIncomplete);copyAllBtn.addEventListener('click',copyAllPackages);backupBtn.addEventListener('click',downloadBackup);importBackupBtn.addEventListener('click',()=>backupFileInput.click());backupFileInput.addEventListener('change',()=>importBackupFile(backupFileInput.files?.[0]));collapseAllBtn.addEventListener('click',()=>{[...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{card.querySelector('.stage-body').classList.add('hidden');card.querySelector('.collapse-btn').textContent='Open';});});window.addEventListener('ld:api-usage-updated',()=>{if(stagesEl.querySelector('.stage-card'))saveCurrent();});window.addEventListener('ld:approved-memory-saved',()=>{[...stagesEl.querySelectorAll('.stage-card')].forEach(refreshCard);scheduleCurrentSave(80);});window.addEventListener('ld:smart-ready-changed',()=>{if(stagesEl.querySelector('.stage-card'))scheduleCurrentSave(80);});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&stagesEl.querySelector('.stage-card'))saveCurrent();});
 window.addEventListener('pagehide',()=>{if(stagesEl.querySelector('.stage-card'))saveCurrent();});
-window.LDCore=Object.freeze({buildProduction,collectState,loadProductionState:(state)=>buildProduction(state),recoverAccidentalDoneReset,recoverDoneShadow,recoverApprovalLedger,isApprovalCommitted:(stage)=>{const card=stagesEl.querySelector('.stage-card[data-stage="'+stage+'"]');return card?ledgerSaysApproved(card):!!approvalLedgerEntry(stage)?.approved;},revokeApproval,revokeAllApprovals,commitApproval:(stage)=>{const card=stagesEl.querySelector('.stage-card[data-stage="'+stage+'"]');if(card)writeApprovalLedger(card,true);}});load();
+window.LDCore=Object.freeze({buildProduction,collectState,compactStorage:compactLdLocalStorage,compactApprovedMemory:compactApprovedMemoryForStorage,loadProductionState:(state)=>buildProduction(state),recoverAccidentalDoneReset,recoverDoneShadow,recoverApprovalLedger,isApprovalCommitted:(stage)=>{const card=stagesEl.querySelector('.stage-card[data-stage="'+stage+'"]');return card?ledgerSaysApproved(card):!!approvalLedgerEntry(stage)?.approved;},revokeApproval,revokeAllApprovals,commitApproval:(stage)=>{const card=stagesEl.querySelector('.stage-card[data-stage="'+stage+'"]');if(card)writeApprovalLedger(card,true);}});compactLdLocalStorage();load();
