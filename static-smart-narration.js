@@ -86,6 +86,16 @@
           return;
         }
       }
+      if(stage==='P5'){
+        const wellingtonP5=window.LDWellingtonAvalanche1910?.narration?.(topic(),stage)||'';
+        const oldGeneric=shorts.landslide?.[4]||'';
+        if(wellingtonP5&&(!box.value.trim()||box.value.trim()===oldGeneric)){
+          box.value=wellingtonP5;
+          box.dispatchEvent(new Event('input',{bubbles:true}));
+          changed=true;
+          return;
+        }
+      }
       if(stage==='P6'){
         const wellingtonP6=window.LDWellingtonAvalanche1910?.narration?.(topic(),stage)||'';
         const oldGeneric=shorts.landslide?.[5]||'';
