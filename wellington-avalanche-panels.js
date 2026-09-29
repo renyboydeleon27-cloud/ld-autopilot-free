@@ -3,7 +3,7 @@
    Approved visual reference: 1000268865.mp4 */
 (function(){'use strict';
 
-const VERSION='1.0.5';
+const VERSION='1.0.6';
 const APPROVED_P4_REFERENCE='1000268865.mp4';
 
 function matches(topic){
@@ -40,6 +40,7 @@ function narration(topic,stage){
   if(stage==='P6')return 'The avalanche struck the stranded trains at Wellington, sweeping rail cars from the tracks and down the mountainside.';
   if(stage==='P7')return 'Snow and wrecked rail cars filled the impact zone as the avalanche spread destruction across the Wellington railway area.';
   if(stage==='P10')return 'Rescuers searched the buried Wellington railway area for survivors after the avalanche.';
+  if(stage==='P11')return 'Survivors faced the immediate need for warmth, food, and shelter in the snowbound aftermath.';
   return '';
 }
 
@@ -102,6 +103,21 @@ function panel(topic,stage){
       physics:'The avalanche is already fragmented from P4 and must remain a dense, granular, gravity-driven snow flow. It gains speed and mass by entraining loose snow along the path. No new slab-release event, no giant rigid ice plates, no glacier-calving look, no rockslide behavior, no floating chunks, no reverse motion, no explosion, no smoke plume and no early whiteout. Trees react only when physically contacted. The avalanche must NOT hit railway infrastructure in P5.',
       audio:'Natural winter wind, dense snow friction, low terrain-coupled avalanche rumble and physically caused snow/tree contact only. ABSOLUTE NO VOICE-OVER, NO narrator, NO speech, NO dialogue, NO announcements, NO prompt reading and NO music.',
       extraNegative:'NO people. NO human characters. NO bakery. NO kitchen. NO workroom. NO interior scene. NO crown-fracture replay. NO fresh slab breakaway. NO train impact. NO track impact. NO building impact. NO bridge impact. NO settlement destruction. NO modern objects. NO giant ice blocks. NO concrete-like snow plates. NO smoke-like powder. NO giant powder wall. NO explosion. NO fireball. NO floating debris. NO color. NO sepia. NO text. NO subtitles. NO logos. NO watermark. NO gore.'
+    };
+  }
+  if(stage==='P11'){
+    return {
+      approved:false,
+      lockedScene:true,
+      scientific:false,
+      frameLock:'P11 2D ANIME + OBJECT STABILITY LOCK — HIGHEST PRIORITY: Every frame MUST remain visibly hand-drawn 2D historical anime / graphic-novel art in strict true black-and-white grayscale. Keep all adult faces, clothing, hands and body proportions illustrated with stable ink contours and grayscale cel shading from first to last frame. The survivor blanket is already fully wrapped around the shoulders in FRAME 1 and MUST remain the exact same blanket with the exact same size, folds, edge positions and shoulder placement for all 10 seconds. Nobody touches, unfolds, lifts, transfers, wraps, removes, reshapes or repositions the blanket. The blanket never becomes a bundle, shawl, coat, cape, towel or different object. Any frame in which the blanket changes identity or geometry is a failed render.',
+      scene:'Outdoors beside a simple temporary relief shelter in the snowbound Wellington aftermath, show EXACTLY THREE distinct adult characters in strict black-and-white 2D historical anime. Adult 1 is a displaced survivor seated or standing beside the shelter and is ALREADY wearing ONE plain blanket around the shoulders from the first frame. That blanket remains completely untouched and unchanged for the entire shot. Adult 2 is a relief worker who carries ONE small rigid rectangular wooden supply box with both hands and places that same box onto ONE fixed waist-high wooden bench beside the survivor. Adult 3 stands nearby in a stable three-quarter view, empty-handed, waiting quietly. Preserve deep deposited snow, damaged railway/timber context in the distance, conifers and the same winter world established by P9–P10. The only completed action is the wooden box being placed onto the bench. No blanket handoff, no wrapping action, no food being unpacked, no cleanup and no rebuilding.',
+      narrative:'P11 shows immediate human relief needs after the avalanche. A survivor is already wrapped in a fixed blanket while a relief worker places one rigid wooden supply box on a bench. The blanket is never handled. Narration is added separately during editing and must never be spoken in the generated video.',
+      timing:'0.0–2.0s: Establish EXACTLY THREE hand-drawn anime adults beside the temporary shelter. The survivor already wears the same blanket around the shoulders. The fixed wooden bench is empty. The relief worker already holds one small rectangular wooden supply box with both hands.\n2.0–6.5s: The relief worker takes a few restrained steps and lowers the SAME rigid wooden box toward the SAME fixed bench. The box keeps constant size, rectangular geometry and material. The survivor does not touch the blanket.\n6.5–8.5s: The wooden box makes visible contact with the bench and is released. It remains on the bench without changing shape, opening or multiplying.\n8.5–10.0s: Hold a calm readable relief tableau. The survivor still wears the exact same untouched blanket; the box remains stationary on the bench; Adult 3 remains empty-handed. No new action begins.',
+      camera:'One continuous human-height three-quarter shot with a restrained slight lateral or forward move. Keep all three adults readable without circling behind them. Keep the survivor mostly front-facing or clean three-quarter. Maintain one perspective and stable horizon. No cuts, orbit, back-to-front head reveal, zoom pumping, teleportation or excessive shake.',
+      physics:'The blanket is a static worn garment/object for the entire shot and has ZERO handling motion. Its folds and shoulder contact remain fixed except for tiny natural body breathing motion that does not alter its geometry. The wooden supply box is rigid, rectangular and constant in size; it moves only with the relief worker hands until it contacts the bench, then remains stationary. The bench never moves. No object morph, cloth transformation, pop-in, disappearance, duplication, hand penetration, geometry melt or spontaneous repositioning.',
+      audio:'Quiet winter wind, soft footsteps in snow, restrained clothing rustle and one small wooden contact sound when the supply box touches the bench only. ABSOLUTE NO VOICE-OVER, NO narrator, NO spoken words, NO dialogue, NO calling, NO whispering, NO announcements, NO synthetic voice, NO prompt reading and NO music.',
+      extraNegative:'EXACTLY THREE ADULTS ONLY. NO children. NO crowd. NO extra background people. NO live action. NO photorealistic humans. NO photographic skin. NO realistic camera-captured faces. NO 3D CGI humans. NO face morphing. NO identity swap. NO duplicated adults. NO blanket handoff. NO blanket transfer. NO blanket unfolding. NO blanket wrapping action. NO blanket removal. NO blanket growth. NO blanket shrink. NO blanket color or material change. NO blanket-to-clothing transformation. NO cloth bundle. NO shawl transformation. NO second blanket. NO object appearing from the blanket. NO food unpacking. NO box opening. NO box duplication. NO box morphing. NO indoor room. NO cleanup. NO rebuilding. NO new avalanche impact. NO modern relief equipment. NO color. NO sepia. NO text. NO subtitles. NO logos. NO watermark. NO gore.'
     };
   }
   if(stage==='P10'){
