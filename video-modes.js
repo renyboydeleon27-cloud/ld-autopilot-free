@@ -1,6 +1,6 @@
-/* LD AUTO v3.49.3 — Wellington validator compatibility + P4 handoff isolation + master DNA. */
+/* LD AUTO v3.49.4 — Wellington P6 T2V sync + dedicated impact master + validator compatibility. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.49.3-wellington-master-v1.0.1';
+const T2V_POLICY_VERSION='3.49.4-wellington-master-v1.0.2';
 function supports(card){if(window.ldStoryEpisode)return /^P[1-9]\d*$/.test(card.dataset.stage);return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
@@ -299,10 +299,10 @@ function sceneChoiceIndex(card){
 function sceneChoiceAllowed(card){
  if(window.LDStoryModes?.enabled())return false;
  var special=eventPanel(card.dataset.stage);
- return !card.querySelector('.done-toggle')?.checked&&(!special||!special.approved)&&card.dataset.stage!=='P2';
+ return !card.querySelector('.done-toggle')?.checked&&(!special||(!special.approved&&!special.lockedScene))&&card.dataset.stage!=='P2';
 }
 function choiceSpecial(card,special){
- if(!special||sceneChoiceIndex(card)===''||special.approved)return special;
+ if(!special||sceneChoiceIndex(card)===''||special.approved||special.lockedScene)return special;
  return {...special,scene:selectedScene(card,Number(sceneChoiceIndex(card))),
   narrative:'Follow only this panel’s approved narration and story stage visually; no spoken narration or invented historical claims.',
   timing:card.dataset.stage==='P3'&&/San Francisco Earthquake/i.test(current())?'0.0–1.0s: Visible first quake tremor begins within 0.5 seconds in the selected place; adults notice moving fixtures.\\n1.0–7.0s: Sustained shaking rattles loose objects and adults brace naturally without peak collapse.\\n7.0–10.0s: Continue clear early shaking and stop before later-stage structural failure.':'0.0–2.0s: Establish the selected place, cast and panel action immediately.\n2.0–7.0s: Follow the same event stage with physically coherent motion and no new unverified event fact.\n7.0–10.0s: Reveal one clear consequence appropriate to this panel, without replaying the preceding panel.',
@@ -1094,8 +1094,9 @@ function prompt(card){
  var base=card.querySelector('.flow-prompt').value;
  if(!base.trim())throw Error('This panel has no Image-to-Video prompt yet.');
  var out=withLock(base);
- result=window.LDStoryFormat?.decorate(result,stage,format())||result;
- return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,out):out;
+ var stage=card.dataset.stage;
+ var result=window.LDStoryFormat?.decorate(out,stage,format())||out;
+ return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,result):result;
 }
 function update(card){if(!supports(card))return;var mode=state(card).mode;
 card.querySelector('.flow-wrap').hidden=mode==='text';
@@ -1146,6 +1147,16 @@ function syncGlobalControl(){var root=document.getElementById('productionVideoMe
 var message=!cards.length?'Create or open a Shorts production to choose the video method.':mode==='mixed'?'This saved production has mixed methods. Choose one button to apply it to every panel.':(mode==='text'?'Text-to-Video':'Image-to-Video')+' is active for all '+cards.length+' panels.';
 if(pending)message+=' '+pending+' text prompts need building or refresh; check the shared setting below.';
 var status=root.querySelector('.production-video-status');if(status.textContent!==message)status.textContent=message;}
+function ensureTextMode(card){
+ if(!card||!supports(card))return false;
+ if(state(card).mode!=='text'){
+   card.dataset.videoMode='text';
+   card.querySelector('.done-toggle').checked=false;
+ }
+ update(card);
+ syncGlobalControl();
+ return state(card).mode==='text';
+}
 function setAllMode(mode){
  var locked=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode;
  if(window.ldProjectLocks?.locked&&locked&&mode!==locked){showToast('Video Mode is locked for this project.');return;}
@@ -1235,7 +1246,7 @@ var c=continuity();['year','location','details','environmentDetails'].forEach(fu
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.49.3',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,legacyCompletionReady:legacyCompletionReady,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,generatedEnvironmentBible:generatedEnvironmentBible,effectiveEnvironmentBible:effectiveEnvironmentBible,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.LDVideoModes={version:'3.49.4',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,legacyCompletionReady:legacyCompletionReady,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,ensureTextMode:ensureTextMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,generatedEnvironmentBible:generatedEnvironmentBible,effectiveEnvironmentBible:effectiveEnvironmentBible,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea,.video-mode-controls select{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card[data-video-mode="text"] .copy-active-video,.stage-card[data-video-mode="text"] .copy-text-video{background:#249746!important;border:1px solid #54cb6c!important;color:#fff!important;font-weight:700;box-shadow:0 2px 8px rgba(22,143,61,.22)}.stage-card[data-video-mode="text"] .copy-active-video:hover,.stage-card[data-video-mode="text"] .copy-text-video:hover{background:#1c7d39!important}.stage-card[data-video-mode="text"] .copy-active-video:focus-visible,.stage-card[data-video-mode="text"] .copy-text-video:focus-visible{outline:3px solid #b6efc0;outline-offset:2px}.text-prompt-details{margin:10px 0 4px;border:0;padding:0}.text-prompt-details summary{display:inline-flex;align-items:center;justify-content:center;width:auto;box-sizing:border-box;min-height:38px;padding:7px 13px;border:1px solid #4c8cd0;border-radius:8px;background:#174d87;color:#fff;cursor:pointer;font-size:.86rem;font-weight:600;text-align:center;list-style:none}.text-prompt-details summary::marker{content:none}.text-prompt-details summary::-webkit-details-marker{display:none}.text-prompt-details summary:hover{background:#1d609f}.text-prompt-details summary:focus-visible{outline:3px solid #a9d5ff;outline-offset:2px}.text-prompt-details[open] label{margin-top:14px}.text-prompt-details[open] .text-video-prompt{height:72vh;min-height:380px;resize:vertical}.text-prompt-details:not([open]) .text-video-prompt{display:none}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(event){panel();all();if(event.detail?.fresh)activateSmartDefault();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
