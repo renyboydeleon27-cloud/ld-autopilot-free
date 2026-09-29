@@ -138,6 +138,7 @@ function lockProject(){
     window.LDHookChoiceSystem?.syncColorMode?.();
   }
   if(hasProduction()&&(visualChanged||videoChanged||colorChanged)){
+    window.LDCore?.revokeAllApprovals?.();
     stages.querySelectorAll('.done-toggle').forEach(done=>{
       done.checked=false;
       done.dispatchEvent(new Event('change',{bubbles:true}));
