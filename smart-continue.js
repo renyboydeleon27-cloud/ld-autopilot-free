@@ -470,6 +470,50 @@ function panelPayload(card){
     progressionRule:String(progression?([progression.rule,progression.evidenceRule].filter(Boolean).join(' ')):'')
   };
 }
+function isWellington1910(){
+  const t=topic().toLowerCase();
+  return t.includes('wellington avalanche')&&t.includes('1910');
+}
+function migrateStaleWellingtonP5(){
+  if(!isWellington1910())return false;
+  const card=stages.querySelector('.stage-card[data-stage="P5"]');
+  if(!card)return false;
+  const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim();
+  const narration=String(card.querySelector('.narration')?.value||'').trim();
+  const approved=window.ldApprovedMemory?.stages?.P5?.latest;
+  const approvedScene=String(approved?.videoScene||approved?.continuityCanon?.scene||'').trim();
+  const combined=(scene+' '+approvedScene+' '+narration).toLowerCase();
+  const obviouslyStale=/bakery|workroom|kitchen|interior room|bread|oven|shop interior/.test(combined);
+  const missingAvalancheContext=!/(avalanche|snow|downslope|mountain|slope)/.test(combined);
+  if(!obviouslyStale&&!missingAvalancheContext)return false;
+
+  const done=card.querySelector('.done-toggle');
+  if(done)done.checked=false;
+  card.dataset.approvalRevoked='1';
+  delete card.dataset.smartReady;
+  delete card.dataset.smartReadySignature;
+  card.dataset.textVideoPrompt='';
+  card.dataset.textVideoSignature='';
+  card.dataset.sceneChoice='';
+  const special=window.LDWellingtonAvalanche1910?.panel?.(topic(),'P5');
+  if(special?.scene){
+    card.dataset.videoScene=special.scene;
+    const sceneField=card.querySelector('.video-scene');
+    if(sceneField)sceneField.value=special.scene;
+  }
+  const p5Narration=window.LDWellingtonAvalanche1910?.narration?.(topic(),'P5')||'';
+  if(p5Narration){
+    const nar=card.querySelector('.narration');
+    if(nar)nar.value=p5Narration;
+  }
+  const textField=card.querySelector('.text-video-prompt');
+  if(textField)textField.value='';
+  if(window.LDProjectLocks?.videoMode?.()==='text')window.LDVideoModes?.ensureTextMode?.(card);
+  window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:'P5',ready:false,signature:''}}));
+  writeSmartSession({targetStage:'P5',pending:null});
+  showToast('Wellington P5 stale scene reset · rebuild P5 before P6.');
+  return true;
+}
 function isRocky1874(){
   const t=topic().toLowerCase();
   return t.includes('rocky mountain locust')&&t.includes('1874');
@@ -974,6 +1018,7 @@ document.addEventListener('change',e=>{
 window.addEventListener('ld:production-built',()=>{
   setTimeout(()=>{
     migrateLegacyNarrations();
+    migrateStaleWellingtonP5();
     restoreSmartSession();
     scheduleTargetUpdate();
     refreshApiCostCounter();
@@ -999,6 +1044,7 @@ if(document.readyState==='loading'){
     mount();
     setTimeout(()=>{
       migrateLegacyNarrations();
+      migrateStaleWellingtonP5();
       restoreSmartSession();
     },280);
   });
@@ -1006,9 +1052,10 @@ if(document.readyState==='loading'){
   mount();
   setTimeout(()=>{
     migrateLegacyNarrations();
+    migrateStaleWellingtonP5();
     restoreSmartSession();
   },280);
 }
 
-window.LDSmartContinue={version:'3.49.4',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.49.5',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
