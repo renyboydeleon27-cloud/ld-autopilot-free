@@ -1,4 +1,4 @@
-/* LD AUTO Continuity Engine v1.0.0 — coordinated T2V consistency system for P1–P14. */
+/* LD AUTO Continuity Engine v1.0.1 — coordinated T2V consistency system for P1–P14. */
 (function(){'use strict';
 
 function topic(){
@@ -48,7 +48,13 @@ function physicsBible(stage){
   const common='DISASTER PHYSICS BIBLE: Motion must have visible cause, mass, inertia, gravity, resistance and direction. No hovering heavy debris, reverse motion without force, spontaneous explosions, instant repair, geometry melt, teleportation or fantasy energy.';
   const specific={
     earthquake:' Earthquake motion propagates through ground and structures; loose objects react before major failure, structural damage accumulates, and collapse follows load paths and gravity rather than exploding outward.',
-    landslide:' Snow, rock, soil or debris moves downslope under gravity. Dense material stays low and heavy; powder or dust is secondary to the moving mass. Trees or structures react only when physically contacted or shaken.',
+    avalanche:' Snow moves downslope under gravity with a dense basal flow and secondary powder suspension. Powder follows the moving snow mass and must not behave like smoke; trees and structures react only when physically contacted or shaken.',
+    landslide:' Rock, soil or debris moves downslope under gravity. Dense material stays low and heavy; dust is secondary to the moving mass. Trees or structures react only when physically contacted or shaken.',
+    volcano:' Eruption behavior follows gravity, pressure and documented volcanic processes. Ash, lava, pyroclastic material or ejecta must not be mixed arbitrarily; material scale and direction remain physically coherent.',
+    wildfire:' Fire spreads through available fuel with wind and terrain influence. Flame, smoke, embers and structural ignition evolve progressively; smoke does not behave like solid debris and burned areas do not reset.',
+    nuclear:' Depict only physically and historically supported blast, fire, structural or contamination-visible effects. No fantasy radiation glow, magical energy waves or unsupported instant biological changes.',
+    epidemic:' Human and environmental change is gradual and evidence-based. No visible instant infection transformation, fantasy particles, magical contagion clouds or impossible population changes.',
+    drought:' Drying, crop stress, dust and water scarcity develop progressively. Vegetation and soil conditions do not switch instantly between healthy and devastated states.',
     tsunami:' Water motion preserves gravity, depth, shoreline geometry and momentum. Rising or surging water pushes floating debris with the flow; water does not behave like smoke, a rigid wall or an explosive blast.',
     cyclone:' Wind, rain, surge and debris share one coherent directional system. Light material accelerates first; heavy structures fail progressively. Rain, flooding and wind effects evolve rather than appearing as unrelated effects.',
     tornado:' Rotational wind and inflow drive debris; lighter objects travel farther and higher than heavy objects. Damage follows the tornado path and does not appear everywhere at once.',
@@ -72,7 +78,13 @@ function anchorObjectSystem(){
   const fam=family();
   const anchors={
     earthquake:'period street/ground surface language, facade and roof construction family, utility poles or fixtures when established, recurring masonry/wood details',
-    landslide:'slope direction, snow/rock surface language, conifer/tree scale when established, railway or mountain infrastructure only when location-appropriate',
+    avalanche:'slope direction, snowpack appearance, conifer/tree scale when established, railway or mountain infrastructure only when location-appropriate',
+    landslide:'slope direction, rock/soil surface language, vegetation scale when established, roads or mountain infrastructure only when location-appropriate',
+    volcano:'volcanic slope silhouette, settlement/road scale, vegetation zones and recurring ash/lava terrain only when established',
+    wildfire:'terrain and vegetation pattern, road/fence/building material language, smoke direction and recurring burned/unburned boundaries',
+    nuclear:'street/building/infrastructure geometry, blast-damage state and recurring civil/industrial structures only when historically appropriate',
+    epidemic:'street/interior material language, clothing, public-space layout and recurring everyday objects appropriate to the era',
+    drought:'soil texture, field boundaries, water sources, crop/vegetation identity and rural infrastructure once established',
     tsunami:'shoreline profile, waterline/elevation cues, coastal construction language, vegetation, harbor/boat scale when established',
     cyclone:'regional roof/wall material language, road/ground condition, vegetation, drainage/coastal cues, recurring storm-exposed objects',
     tornado:'field/town scale, fences, utility structures, road surface, farm/building material language, horizon character',
@@ -158,7 +170,7 @@ function episodeCanonPreview(){
   return '10-SYSTEM CONTINUITY ENGINE ACTIVE:\n1 Shot Bible / Camera Grammar\n2 Disaster Physics Bible\n3 Panel Handoff Memory\n4 Anchor Object System\n5 Lighting Continuity Bible\n6 Damage Memory / No-Reset Rule\n7 Cinematic Intensity Curve\n8 Motion Budget\n9 First-Frame / Last-Frame Lock\n10 Approved Canon Panel';
 }
 window.LDContinuityEngine=Object.freeze({
-  version:'1.0.0',promptBlock,snapshot,episodeCanonPreview,cameraGrammar,physicsBible,panelHandoff,
+  version:'1.0.1',promptBlock,snapshot,episodeCanonPreview,cameraGrammar,physicsBible,panelHandoff,
   anchorObjectSystem,lightingBible,damageMemory,intensityCurve,motionBudget,frameLock
 });
 })();
