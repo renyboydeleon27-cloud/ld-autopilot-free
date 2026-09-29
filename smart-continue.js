@@ -9,6 +9,9 @@ if(!stages||!setup)return;
 let busy=false;
 const auditPassCache=new Map();
 let phaseTimer=null;
+let activePhaseStage='';
+let activeFetchController=null;
+let activeFetchStage='';
 
 const SMART_SESSION_PREFIX='ld-auto-smart-continue-session-v1:';
 function smartScope(){
@@ -108,8 +111,30 @@ function updateTargetLabel(){
     if(el.textContent!==text)el.textContent=text;
   });
 }
+function cancelStaleActiveRequest(nextStage){
+  const stage=String(nextStage||'');
+  if(!busy||!activeFetchController||!activeFetchStage||activeFetchStage===stage)return false;
+  try{activeFetchController.abort('target-change');}catch{}
+  activeFetchController=null;
+  activeFetchStage='';
+  stopPhase();
+  return true;
+}
+function stageOwnsSmartRun(card){
+  if(!card)return false;
+  const session=readSmartSession();
+  const target=String(session?.targetStage||'');
+  return !target||target===(card.dataset.stage||'');
+}
+function assertStageOwnsSmartRun(card){
+  if(stageOwnsSmartRun(card))return true;
+  const error=new Error('Smart Continue target changed. The old panel audit was cancelled.');
+  error.name='StaleSmartStage';
+  throw error;
+}
 function setOpen(card,options={}){
   if(!card)return;
+  cancelStaleActiveRequest(card.dataset.stage||'');
   stages.querySelectorAll('.stage-card').forEach(c=>{
     const body=c.querySelector('.stage-body'),btn=c.querySelector('.collapse-btn');
     if(!body||!btn)return;
@@ -127,9 +152,10 @@ function nextCard(card){
 }
 function saveDone(card){
   const done=card.querySelector('.done-toggle');
-  if(!done)return;
+  if(!done)return false;
   done.checked=true;
   done.dispatchEvent(new Event('change',{bubbles:true}));
+  return done.checked===true;
 }
 function approvedSnapshot(card){
   const continuity=window.ldVideoContinuity||{};
@@ -416,11 +442,18 @@ function restoreCurrentPanelViewport(options={}){
 
 function stopPhase(){
   if(phaseTimer){clearInterval(phaseTimer);phaseTimer=null;}
+  activePhaseStage='';
 }
 function startPhase(label,stage){
   stopPhase();
+  activePhaseStage=String(stage||'');
   const started=Date.now();
   const update=()=>{
+    const target=readSmartSession()?.targetStage||'';
+    if(target&&activePhaseStage&&target!==activePhaseStage){
+      stopPhase();
+      return;
+    }
     const sec=Math.max(0,Math.floor((Date.now()-started)/1000));
     buttonLabel('⏳ '+label+' '+stage+(sec?' · '+sec+'s':''));
   };
@@ -429,14 +462,28 @@ function startPhase(label,stage){
 }
 async function fetchWithTimeout(url,options,timeoutMs=80000){
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  const requestStage=activePhaseStage||String(readSmartSession()?.targetStage||'');
+  activeFetchController=controller;
+  activeFetchStage=requestStage;
+  const timer=setTimeout(()=>controller.abort('timeout'),timeoutMs);
   try{
     return await fetch(url,{...options,signal:controller.signal});
   }catch(e){
-    if(e?.name==='AbortError')throw new Error('AI request timed out. The current panel was preserved. Retry once, or review it and approve manually.');
+    if(e?.name==='AbortError'){
+      if(controller.signal.reason==='target-change'){
+        const stale=new Error('Smart Continue target changed. The old panel audit was cancelled.');
+        stale.name='StaleSmartStage';
+        throw stale;
+      }
+      throw new Error('AI request timed out. The current panel was preserved. Retry once, or review it and approve manually.');
+    }
     throw e;
   }finally{
     clearTimeout(timer);
+    if(activeFetchController===controller){
+      activeFetchController=null;
+      activeFetchStage='';
+    }
   }
 }
 function panelPayload(card){
@@ -816,6 +863,7 @@ async function prepareImageToVideo(card){
   status(card.dataset.stage+' IMAGE-TO-VIDEO READY'+(copied?' · Flow prompt copied automatically':'')+'. Review the Flow result, then press this same button again.','pass');
 }
 async function prepareTextToVideo(card){
+  assertStageOwnsSmartRun(card);
   // Project-level Text-to-Video lock must win over stale per-panel UI/state.
   if(window.LDVideoModes?.ensureTextMode&&!window.LDVideoModes.ensureTextMode(card)){
     throw new Error('Text-to-Video mode could not be synchronized for '+(card.dataset.stage||'this panel')+'.');
@@ -827,6 +875,7 @@ async function prepareTextToVideo(card){
   const sceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
   if(sceneIssue)throw new Error(sceneIssue);
   await ensureNarration(card);
+  assertStageOwnsSmartRun(card);
 
   const continuity=window.ldVideoContinuity||{};
   if(!/^\d{4}$/.test(String(continuity.year||''))||!String(continuity.location||'').trim()){
@@ -844,11 +893,13 @@ async function prepareTextToVideo(card){
   let payload=panelPayload(card);
   status('SMART CONTINUE · AI is auditing '+payload.stage+'…','working');
   let result=await audit(payload);
+  assertStageOwnsSmartRun(card);
 
   if(result.result!=='PASS'){
     const issues=Array.isArray(result.issues)?result.issues.join(' · '):'Prompt needs a fix.';
     status('SMART CONTINUE · Audit found an issue. Fixing the current panel automatically… '+issues,'working');
     await fixPanel(card,payload);
+    assertStageOwnsSmartRun(card);
     const rebuilt=window.LDVideoModes?.prompt?.(card);
     if(!rebuilt)throw new Error('The prompt could not be rebuilt after AI Fix.');
     const fixedSceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
@@ -857,6 +908,7 @@ async function prepareTextToVideo(card){
     status('SMART CONTINUE · Re-auditing after the automatic fix…','working');
     startPhase('RE-AUDITING',payload.stage);
     result=await audit(payload);
+    assertStageOwnsSmartRun(card);
   }
 
   if(result.result!=='PASS'){
@@ -880,6 +932,7 @@ async function prepareTextToVideo(card){
   if(auditCacheKey(finalPayload)!==auditedKey){
     status('SMART CONTINUE · Final prompt changed after rebuild. Verifying the exact final version…','working');
     const finalResult=await audit(finalPayload);
+    assertStageOwnsSmartRun(card);
     if(finalResult.result!=='PASS'){
       const issues=Array.isArray(finalResult.issues)&&finalResult.issues.length?finalResult.issues.join(' · '):finalResult.summary||'Review required.';
       throw new Error('Final prompt changed after audit and still needs review: '+issues);
@@ -959,6 +1012,7 @@ async function run(){
 
     let card=currentCard();
     if(!card)throw new Error('No production stage is available.');
+    writeSmartSession({targetStage:card.dataset.stage||'',pending:readSmartSession()?.pending||null});
     buttonLabel('⏳ CHECKING '+(card.dataset.stage||'CURRENT')+'…');
     status('SMART CONTINUE received · checking '+(card.dataset.stage||'current stage')+'…','working');
 
@@ -973,9 +1027,20 @@ async function run(){
         return;
       }
       const approvedStage=card.dataset.stage||'CURRENT';
+      if(!saveDone(card)){
+        clearCardSmartReady(card);
+        writeSmartSession({targetStage:approvedStage,pending:null});
+        setOpen(card,{scroll:false});
+        throw new Error(approvedStage+' could not be marked Done. SMART CONTINUE will stay on this panel and recheck it instead of moving forward.');
+      }
       saveApprovedMemory(card);
-      saveDone(card);
+      window.LDCore?.commitApproval?.(approvedStage);
       clearCardSmartReady(card);
+      if(!stageDone(card)){
+        writeSmartSession({targetStage:approvedStage,pending:null});
+        setOpen(card,{scroll:false});
+        throw new Error(approvedStage+' approval did not persist. The next panel was blocked to protect sequence order.');
+      }
       const next=nextCard(card);
       if(!next){
         showToast('Approved Memory Saved · '+approvedStage);
@@ -993,10 +1058,18 @@ async function run(){
     await prepare(card);
   }catch(e){
     stopPhase();
-    const failed=currentCard();
-    const stage=failed?.dataset?.stage||'CURRENT';
-    buttonLabel('⚠️ '+stage+' NEEDS REVIEW · TAP RETRY');
-    status('⚠️ '+stage+': '+String(e?.message||e),'error');
+    if(e?.name==='StaleSmartStage'){
+      const target=currentCard();
+      const stage=target?.dataset?.stage||'CURRENT';
+      buttonLabel('🚀 SMART CONTINUE');
+      status('↩️ Old panel audit cancelled · current target is '+stage+'.','working');
+      updateTargetLabel();
+    }else{
+      const failed=currentCard();
+      const stage=failed?.dataset?.stage||'CURRENT';
+      buttonLabel('⚠️ '+stage+' NEEDS REVIEW · TAP RETRY');
+      status('⚠️ '+stage+': '+String(e?.message||e),'error');
+    }
   }finally{
     stopPhase();
     busy=false;
@@ -1117,7 +1190,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   if(e.target.closest('#jumpStage')){
     const stage=String(e.target.value||'');
-    if(stage)writeSmartSession({targetStage:stage});
+    if(stage){cancelStaleActiveRequest(stage);writeSmartSession({targetStage:stage});}
     setTimeout(scheduleTargetUpdate,60);
     return;
   }
@@ -1177,5 +1250,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.49.10',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.49.11',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
