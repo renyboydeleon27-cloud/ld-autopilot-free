@@ -642,8 +642,14 @@ function migrateStaleWellingtonP11(){
   if(!card)return false;
   const prompt=String(card.querySelector('.text-video-prompt')?.value||card.dataset.textVideoPrompt||'');
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
+  const approvedScene=String(window.ldApprovedMemory?.stages?.P11?.latest?.videoScene||'');
+  const staleApproved=/wooden supply box|ALREADY wearing ONE plain blanket|blanket around the shoulders/i.test(approvedScene);
   const alreadyNew=prompt.includes('P11 OUTDOOR DISPLACEMENT LOCK — HIGHEST PRIORITY:')&&scene.includes('moving carefully through deep deposited snow')&&scene.includes('do NOT enter it in P11');
-  if(alreadyNew)return false;
+  if(alreadyNew&&!staleApproved)return false;
+  if(staleApproved&&window.ldApprovedMemory?.stages?.P11){
+    delete window.ldApprovedMemory.stages.P11;
+    window.dispatchEvent(new CustomEvent('ld:approved-memory-revoked',{detail:{stage:'P11',reason:'stale-wellington-p11-relief-scene'}}));
+  }
   const done=card.querySelector('.done-toggle');
   if(done)done.checked=false;
   card.dataset.approvalRevoked='1';
@@ -1288,5 +1294,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.49.12',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.49.13',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
