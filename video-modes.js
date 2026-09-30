@@ -1,12 +1,25 @@
-/* LD AUTO v3.49.6 — approved-prompt persistence + Wellington event masters. */
+/* LD AUTO v3.49.14 — Keep Current Scene state + visible Smart Continue confirmation. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.49.6-approved-persistence-v1';
+const T2V_POLICY_VERSION='3.49.14-keep-current-scene-v1';
+const SMART_SCENE_PREFIX='SMART RANDOM CHOICE — ';
+const KEEP_SCENE_PREFIX='KEEP CURRENT SCENE — ';
 function supports(card){if(window.ldStoryEpisode)return /^P[1-9]\d*$/.test(card.dataset.stage);return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
 function current(){return document.getElementById('projectTitle').textContent;}
 function style(){var locked=window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle;if(locked==='real'||locked==='anime')return locked;var selected=document.getElementById('visualMode')?.value;if(selected==='real'||selected==='anime')return selected;return localStorage.getItem('ld-auto-visual-mode-v1')==='real'?'real':'anime';}
 function colorMode(){var locked=window.LDProjectLocks?.colorMode?.()||window.ldProjectLocks?.colorMode;if(locked==='bw'||locked==='color')return locked;return style()==='real'?'bw':'color';}
 function format(){return document.getElementById('format').value;}
 function state(card){return {mode:card.dataset.videoMode||'image',text:card.dataset.textVideoPrompt||'',scene:card.dataset.videoScene||'',signature:card.dataset.textVideoSignature||''};}
+function stripSceneModePrefix(value){return String(value||'').replace(/^(?:SMART RANDOM CHOICE|KEEP CURRENT SCENE)\s*—\s*/i,'').trim();}
+function isKeepScene(card){return String(card?.dataset?.videoScene||card?.querySelector?.('.video-scene')?.value||'').startsWith(KEEP_SCENE_PREFIX);}
+function updateSceneChoiceStatus(card,message){
+ var el=card?.querySelector?.('.scene-choice-status');if(!el)return;
+ var raw=String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'');
+ if(message){el.textContent=message;return;}
+ if(raw.startsWith(KEEP_SCENE_PREFIX)){el.textContent='🔒 KEEP CURRENT SCENE ACTIVE · Smart Continue will preserve this scene description.';return;}
+ if(raw.startsWith(SMART_SCENE_PREFIX)){el.textContent='✨ SMART RANDOM CHOICE ACTIVE · Smart Continue will use the selected stage-matched scene.';return;}
+ var idx=sceneChoiceIndex(card);
+ el.textContent=idx!==''?'📍 SELECTED SCENE ACTIVE · Smart Continue will use this location.':'Scene mode not locked yet.';
+}
 function titleDefaults(topic){
  var raw=String(topic||'').trim();
  var year=(raw.match(/\b(?:1\d{3}|20\d{2}|2100)\b/)||[])[0]||'';
@@ -271,7 +284,7 @@ function activateSmartDefault(){
   if(!sceneChoiceAllowed(card)||!ready())return;
   var item=smartSceneItem(card);if(!item)return;
   card.dataset.sceneChoice=String(item.index);
-  card.dataset.videoScene='SMART RANDOM CHOICE — '+selectedScene(card,item.index);
+  card.dataset.videoScene=SMART_SCENE_PREFIX+selectedScene(card,item.index);
   var scene=card.querySelector('.video-scene');if(scene)scene.value=card.dataset.videoScene;
   var picker=card.querySelector('.scene-choice');if(picker)picker.value='smart';
   card.dataset.textVideoPrompt='';card.dataset.textVideoSignature='';
@@ -290,7 +303,9 @@ function selectedScene(card,index){
 function sceneChoiceIndex(card){
  var saved=String(card.dataset.sceneChoice||'');
  if(saved!=='')return saved;
- var scene=String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'').replace(/^SMART RANDOM CHOICE — /,'');
+ var rawScene=String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'');
+ if(rawScene.startsWith(KEEP_SCENE_PREFIX))return '';
+ var scene=stripSceneModePrefix(rawScene);
  var found=SCENE_BANK_50.findIndex(function(row){return scene.startsWith('PRIMARY LOCATION: '+row[0]+',');});
  if(found>=0)return String(found);
  var later=SCENE_BANK_LATE.findIndex(function(row){return scene.startsWith('PRIMARY LOCATION: '+row.place+',');});
@@ -302,7 +317,9 @@ function sceneChoiceAllowed(card){
  return !card.querySelector('.done-toggle')?.checked&&(!special||(!special.approved&&!special.lockedScene))&&card.dataset.stage!=='P2';
 }
 function choiceSpecial(card,special){
- if(!special||sceneChoiceIndex(card)===''||special.approved||special.lockedScene)return special;
+ if(!special)return special;
+ if(isKeepScene(card)&&!special.approved&&!special.lockedScene)return {...special,scene:stripSceneModePrefix(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'')};
+ if(sceneChoiceIndex(card)===''||special.approved||special.lockedScene)return special;
  return {...special,scene:selectedScene(card,Number(sceneChoiceIndex(card))),
   narrative:'Follow only this panel’s approved narration and story stage visually; no spoken narration or invented historical claims.',
   timing:card.dataset.stage==='P3'&&/San Francisco Earthquake/i.test(current())?'0.0–1.0s: Visible first quake tremor begins within 0.5 seconds in the selected place; adults notice moving fixtures.\\n1.0–7.0s: Sustained shaking rattles loose objects and adults brace naturally without peak collapse.\\n7.0–10.0s: Continue clear early shaking and stop before later-stage structural failure.':'0.0–2.0s: Establish the selected place, cast and panel action immediately.\n2.0–7.0s: Follow the same event stage with physically coherent motion and no new unverified event fact.\n7.0–10.0s: Reveal one clear consequence appropriate to this panel, without replaying the preceding panel.',
@@ -897,9 +914,15 @@ function qualityPromptCompatible(text){
 function clean(value){return window.ldCleanNarrationInstructions?window.ldCleanNarrationInstructions(value):String(value||'').trim();}
 function normalizedSignature(value){try{var parts=JSON.parse(value);if(window.LDStoryModes?.enabled())return parts[0]==='fiction-v1'?JSON.stringify(parts):'';if(parts[0]!==T2V_POLICY_VERSION)return '';parts[6]=clean(parts[6]);parts[7]=clean(parts[7]);return JSON.stringify(parts);}catch(e){return '';}}
 function pinScene(card){
- if(String(card.dataset.videoScene||'').startsWith('SMART RANDOM CHOICE — ')){
+ if(isKeepScene(card)){
+  var kept=String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'');
+  var keptField=card.querySelector('.video-scene');if(keptField&&keptField.value!==kept)keptField.value=kept;
+  updateSceneChoiceStatus(card);
+  return;
+ }
+ if(String(card.dataset.videoScene||'').startsWith(SMART_SCENE_PREFIX)){
   var item=smartSceneItem(card);
-  if(item){card.dataset.sceneChoice=String(item.index);card.dataset.videoScene='SMART RANDOM CHOICE — '+selectedScene(card,item.index);var field=card.querySelector('.video-scene');if(field)field.value=card.dataset.videoScene;}
+  if(item){card.dataset.sceneChoice=String(item.index);card.dataset.videoScene=SMART_SCENE_PREFIX+selectedScene(card,item.index);var field=card.querySelector('.video-scene');if(field)field.value=card.dataset.videoScene;}
  }
  var special=eventPanel(card.dataset.stage);
  if(special&&special.scene&&sceneChoiceIndex(card)===''){
@@ -941,8 +964,8 @@ function sceneVarietyIssue(card){
  if(n<2)return '';
  var previous=document.querySelector('.stage-card[data-stage="P'+(n-1)+'"]');
  if(!previous)return '';
- var now=sceneChoiceIndex(card)!==''?String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'').trim():(eventPanel(stage)?.scene||String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim());
- var before=sceneChoiceIndex(previous)!==''?String(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||'').trim():(eventPanel('P'+(n-1))?.scene||String(previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||'').trim());
+ var now=isKeepScene(card)?stripSceneModePrefix(card.dataset.videoScene||card.querySelector('.video-scene')?.value||''):(sceneChoiceIndex(card)!==''?String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'').trim():(eventPanel(stage)?.scene||String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim()));
+ var before=isKeepScene(previous)?stripSceneModePrefix(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||''):(sceneChoiceIndex(previous)!==''?String(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||'').trim():(eventPanel('P'+(n-1))?.scene||String(previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||'').trim()));
  if(!now||!before)return '';
  var a=sceneLocationKey(now),b=sceneLocationKey(before),actionA=sceneActionKey(now),actionB=sceneActionKey(before);
  var sanFrancisco=/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current());
@@ -956,15 +979,15 @@ function adjacentSceneLock(stage){
    return 'PANEL SCENE IDENTITY LOCK — WELLINGTON P4 HARD TRANSITION: P4 intentionally leaves the prior human/interior scene and moves to the outdoor upper mountain release zone. DO NOT carry forward any P3 kitchen, room, building interior, furniture, window, stove, lamp, adult, face, clothing, structural-damage layout or indoor object. Preserve only chapter-level year, region, strict black-and-white 2D anime rendering and any genuinely established outdoor environmental canon. P4 begins as a clean mountain-slope scene with ZERO PEOPLE.';
  }
  var previous=document.querySelector('.stage-card[data-stage="P'+(n-1)+'"]');
- var prior=previous&&(sceneChoiceIndex(previous)!==''?(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||''):(eventPanel('P'+(n-1))?.scene||previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||''));
+ var prior=previous&&(isKeepScene(previous)?stripSceneModePrefix(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||''):(sceneChoiceIndex(previous)!==''?(previous.dataset.videoScene||previous.querySelector('.video-scene')?.value||''):(eventPanel('P'+(n-1))?.scene||previous.querySelector('.video-scene')?.value||previous.dataset.videoScene||'')));
  return 'PANEL SCENE IDENTITY LOCK: Give '+stage+' its own primary place, camera angle, foreground action and cast. The prior panel P'+(n-1)+' used '+(sceneLocationKey(prior)||'its established setting')+' and '+(sceneActionKey(prior)||'its established action')+'. Keep historical continuity while changing the visual setup where the narrative permits. Never repeat a wall-bracing foreground adult, identical street corner, camera axis or background layout with only different faces. The current PANEL SCENE and event-specific timing have priority over this variety rule.';
 }
-function signature(card){if(window.LDStoryModes?.enabled())return JSON.stringify(['fiction-v1',window.LDStoryModes.category(),current(),format(),style(),colorMode(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),String(document.getElementById('storyPremise')?.value||''),String(document.getElementById('storyBible')?.value||''),window.ldStoryEpisode||null,card.dataset.storyVoice||'none',card.dataset.storyFocus||'auto']);var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=(window.LDDisasterProgression?.version||'')+(window.ldNarrativeFormat==='causal-v1'?':causal-v1':'');return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(sceneFrom(card)),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
+function signature(card){if(window.LDStoryModes?.enabled())return JSON.stringify(['fiction-v1',window.LDStoryModes.category(),current(),format(),style(),colorMode(),clean(stripSceneModePrefix(sceneFrom(card))),clean(card.querySelector('.narration').value),String(document.getElementById('storyPremise')?.value||''),String(document.getElementById('storyBible')?.value||''),window.ldStoryEpisode||null,card.dataset.storyVoice||'none',card.dataset.storyFocus||'auto']);var dna=window.LDProductionDNA?.signature?.()||'';var progressionVersion=(window.LDDisasterProgression?.version||'')+(window.ldNarrativeFormat==='causal-v1'?':causal-v1':'');return JSON.stringify([T2V_POLICY_VERSION,current(),format(),style(),colorMode(),continuity(),clean(stripSceneModePrefix(sceneFrom(card))),clean(card.querySelector('.narration').value),dna,progressionVersion]);}
 function sanFranciscoP11AnimePrompt(card){
  var narration=clean(card.querySelector('.narration')?.value)||'Temporary camps and emergency aid appear as people face displacement.';
- var custom=String(card.dataset.videoScene||'');
- var scene=/^SMART RANDOM CHOICE — PRIMARY LOCATION:|^PRIMARY LOCATION:/.test(custom)
-  ? 'Use the selected P11 relief location: '+custom.replace(/^SMART RANDOM CHOICE — /,'')+' Keep the aid handoff and human displacement as the only focal action.'
+ var custom=stripSceneModePrefix(card.dataset.videoScene||'');
+ var scene=/^PRIMARY LOCATION:/.test(custom)
+  ? 'Use the selected P11 relief location: '+custom+' Keep the aid handoff and human displacement as the only focal action.'
   : 'At a temporary 1906 San Francisco relief camp, two distinct adults complete one visible handoff of a small bundle of provisions beside period canvas shelters and a rough wooden table. One other adult waits with an empty container. Damaged city buildings remain far in the background. Exactly three foreground adults, each with a different face, hair and historically plausible clothing.';
  var result='VIDEO PROMPT — EXACTLY 10 SECONDS\n'+current()+' · P11\n\n'
   +absoluteStyleLock()+'\n\n'
@@ -994,7 +1017,7 @@ function sanFranciscoP11AnimePrompt(card){
 }
 function build(card){
  if(window.LDStoryModes?.enabled())return window.LDStoryModes.video(card,current(),format(),style(),colorMode());
- var scene=cleanSceneText(sceneFrom(card));
+ var scene=cleanSceneText(stripSceneModePrefix(sceneFrom(card)));
  if(!scene)throw Error('Add the panel scene description first.');
  if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
  var stage=card.dataset.stage;
@@ -1112,32 +1135,45 @@ function decorate(card){if(!supports(card)||card.querySelector('.video-mode-cont
 // Restore the exact scene used by older saved text prompts before image helpers run.
 if(state(card).text&&!state(card).scene){try{var saved=JSON.parse(state(card).signature);if(Array.isArray(saved)&&typeof saved[4]==='string')card.dataset.videoScene=clean(saved[4]);}catch(e){}}
 
-var box=document.createElement('div');box.className='video-mode-controls';box.innerHTML='<p class="video-mode-status"></p><button type="button" class="ghost copy-active-video">Copy FULL Video Prompt</button><div class="text-video-fields"><label>Choose scene location before Smart Continue<select class="scene-choice"><option value="">Keep current scene</option><option value="smart">✨ SMART RANDOM CHOICE</option></select></label><label>Panel scene description<textarea class="video-scene" rows="4"></textarea></label><button type="button" class="ghost build-text-video">Build / refresh Text-to-Video prompt</button><details class="text-prompt-details"><summary>View Full Prompt</summary><label>Full Text-to-Video prompt<textarea class="text-video-prompt" rows="20"></textarea></label></details><button type="button" class="ghost copy-text-video">Copy FULL Text-to-Video Prompt</button></div>';
+var box=document.createElement('div');box.className='video-mode-controls';box.innerHTML='<p class="video-mode-status"></p><button type="button" class="ghost copy-active-video">Copy FULL Video Prompt</button><div class="text-video-fields"><label>Choose scene location before Smart Continue<select class="scene-choice"><option value="">🔒 KEEP CURRENT SCENE</option><option value="smart">✨ SMART RANDOM CHOICE</option></select></label><p class="scene-choice-status" role="status"></p><label>Panel scene description<textarea class="video-scene" rows="4"></textarea></label><button type="button" class="ghost build-text-video">Build / refresh Text-to-Video prompt</button><details class="text-prompt-details"><summary>View Full Prompt</summary><label>Full Text-to-Video prompt<textarea class="text-video-prompt" rows="20"></textarea></label></details><button type="button" class="ghost copy-text-video">Copy FULL Text-to-Video Prompt</button></div>';
 card.querySelector('.flow-wrap').before(box);
 var promptDetails=box.querySelector('.text-prompt-details');promptDetails.addEventListener('toggle',function(){promptDetails.querySelector('summary').textContent=promptDetails.open?'Hide Full Prompt':'View Full Prompt';});
 var picker=box.querySelector('.scene-choice');
 availableScenes(card).forEach(function(item){var option=document.createElement('option');option.value=String(item.index);option.textContent=item.place;picker.appendChild(option);});
-picker.value=String(card.dataset.videoScene||'').startsWith('SMART RANDOM CHOICE — ')?'smart':sceneChoiceIndex(card);
+var savedScene=String(card.dataset.videoScene||'');
+picker.value=savedScene.startsWith(SMART_SCENE_PREFIX)?'smart':savedScene.startsWith(KEEP_SCENE_PREFIX)?'':sceneChoiceIndex(card);
 picker.disabled=!sceneChoiceAllowed(card);
 picker.onchange=function(){
  if(!sceneChoiceAllowed(card)){picker.value=card.dataset.sceneChoice||'';return showToast('This panel is approved or has a dedicated locked scene.');}
  var chosen=picker.value;
- if(!chosen)return;
+ if(!chosen){
+  var currentDescription=stripSceneModePrefix(scene.value||card.dataset.videoScene||eventPanel(card.dataset.stage)?.scene||sceneFrom(card));
+  if(!currentDescription)return showToast('No current scene description is available to keep.');
+  card.dataset.sceneChoice='';
+  card.dataset.videoScene=KEEP_SCENE_PREFIX+currentDescription;
+  scene.value=card.dataset.videoScene;
+  card.dataset.textVideoPrompt='';card.dataset.textVideoSignature='';
+  var keepPrompt=box.querySelector('.text-video-prompt');if(keepPrompt)keepPrompt.value='';
+  card.querySelector('.done-toggle').checked=false;
+  try{rebuildTextPrompt(card);updateSceneChoiceStatus(card,'🔒 KEEP CURRENT SCENE ACTIVE · Smart Continue will preserve this exact scene description.');showToast('✓ Keep Current Scene applied · prompt refreshed locally.');}
+  catch(e){updateSceneChoiceStatus(card);showToast(e.message);update(card);saveCurrent();}
+  return;
+ }
  var selected=chosen==='smart'?smartSceneItem(card):availableScenes(card).find(function(item){return item.index===Number(chosen);});
  if(!selected)return showToast('No historically suitable setting is available for this panel.');
- var description=(chosen==='smart'?'SMART RANDOM CHOICE — ':'')+selectedScene(card,selected.index);if(!description)return;
+ var description=(chosen==='smart'?SMART_SCENE_PREFIX:'')+selectedScene(card,selected.index);if(!description)return;
  card.dataset.sceneChoice=String(selected.index);
  card.dataset.videoScene=description;
  scene.value=description;
  card.dataset.textVideoPrompt='';card.dataset.textVideoSignature='';
  var field=box.querySelector('.text-video-prompt');if(field)field.value='';
  card.querySelector('.done-toggle').checked=false;
- try{rebuildTextPrompt(card);showToast('Scene selected and prompt refreshed locally · no API call. Review before Smart Continue.');}
+ try{rebuildTextPrompt(card);updateSceneChoiceStatus(card);showToast('Scene selected and prompt refreshed locally · no API call. Review before Smart Continue.');}
  catch(e){showToast(e.message);update(card);saveCurrent();}
 };
-var scene=box.querySelector('.video-scene');scene.value=sceneFrom(card);if(!state(card).scene&&!state(card).text&&scene.value){card.dataset.videoScene=scene.value;}var text=box.querySelector('.text-video-prompt');text.value=state(card).text;
+var scene=box.querySelector('.video-scene');scene.value=sceneFrom(card);if(!state(card).scene&&!state(card).text&&scene.value){card.dataset.videoScene=scene.value;}updateSceneChoiceStatus(card);var text=box.querySelector('.text-video-prompt');text.value=state(card).text;
 
-scene.oninput=function(){card.dataset.sceneChoice='';picker.value='';card.dataset.videoScene=scene.value;card.querySelector('.done-toggle').checked=false;update(card);saveCurrent();};
+scene.oninput=function(){card.dataset.sceneChoice='';picker.value='';card.dataset.videoScene=scene.value;card.querySelector('.done-toggle').checked=false;updateSceneChoiceStatus(card,'✏️ CUSTOM SCENE EDIT · Choose 🔒 KEEP CURRENT SCENE to lock it before Smart Continue.');update(card);saveCurrent();};
 text.oninput=function(){card.dataset.textVideoPrompt=text.value;card.querySelector('.done-toggle').checked=false;saveCurrent();};
 box.querySelector('.build-text-video').onclick=function(){generate(card);};
 box.querySelector('.copy-text-video').onclick=function(){try{copyText(prompt(card));}catch(e){showToast(e.message);}};
@@ -1258,8 +1294,8 @@ var c=continuity();['year','location','details','environmentDetails'].forEach(fu
 box.querySelector('.build-missing-video').onclick=function(){if(!ready())return showToast('Fill in the shared year and location first.');var refreshed=0;document.querySelectorAll('.stage-card').forEach(function(card){if(supports(card)&&!valid(card)){generate(card);refreshed++;}});syncGlobalControl();showToast(refreshed?refreshed+' Text-to-Video prompts built/refreshed.':'All Text-to-Video prompts are already current.');};
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
-window.LDVideoModes={version:'3.49.6',sceneVarietyIssue:sceneVarietyIssue,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,legacyCompletionReady:legacyCompletionReady,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,ensureTextMode:ensureTextMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,generatedEnvironmentBible:generatedEnvironmentBible,effectiveEnvironmentBible:effectiveEnvironmentBible,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
-var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea,.video-mode-controls select{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card[data-video-mode="text"] .copy-active-video,.stage-card[data-video-mode="text"] .copy-text-video{background:#249746!important;border:1px solid #54cb6c!important;color:#fff!important;font-weight:700;box-shadow:0 2px 8px rgba(22,143,61,.22)}.stage-card[data-video-mode="text"] .copy-active-video:hover,.stage-card[data-video-mode="text"] .copy-text-video:hover{background:#1c7d39!important}.stage-card[data-video-mode="text"] .copy-active-video:focus-visible,.stage-card[data-video-mode="text"] .copy-text-video:focus-visible{outline:3px solid #b6efc0;outline-offset:2px}.text-prompt-details{margin:10px 0 4px;border:0;padding:0}.text-prompt-details summary{display:inline-flex;align-items:center;justify-content:center;width:auto;box-sizing:border-box;min-height:38px;padding:7px 13px;border:1px solid #4c8cd0;border-radius:8px;background:#174d87;color:#fff;cursor:pointer;font-size:.86rem;font-weight:600;text-align:center;list-style:none}.text-prompt-details summary::marker{content:none}.text-prompt-details summary::-webkit-details-marker{display:none}.text-prompt-details summary:hover{background:#1d609f}.text-prompt-details summary:focus-visible{outline:3px solid #a9d5ff;outline-offset:2px}.text-prompt-details[open] label{margin-top:14px}.text-prompt-details[open] .text-video-prompt{height:72vh;min-height:380px;resize:vertical}.text-prompt-details:not([open]) .text-video-prompt{display:none}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
+window.LDVideoModes={version:'3.49.14',sceneVarietyIssue:sceneVarietyIssue,isKeepScene:isKeepScene,stripSceneModePrefix:stripSceneModePrefix,updateSceneChoiceStatus:updateSceneChoiceStatus,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,legacyCompletionReady:legacyCompletionReady,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,ensureTextMode:ensureTextMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,generatedEnvironmentBible:generatedEnvironmentBible,effectiveEnvironmentBible:effectiveEnvironmentBible,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea,.video-mode-controls select{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.scene-choice-status{margin:6px 0 10px!important;padding:8px 10px;border-radius:8px;background:rgba(36,151,70,.10);font-weight:700;opacity:1!important}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card[data-video-mode="text"] .copy-active-video,.stage-card[data-video-mode="text"] .copy-text-video{background:#249746!important;border:1px solid #54cb6c!important;color:#fff!important;font-weight:700;box-shadow:0 2px 8px rgba(22,143,61,.22)}.stage-card[data-video-mode="text"] .copy-active-video:hover,.stage-card[data-video-mode="text"] .copy-text-video:hover{background:#1c7d39!important}.stage-card[data-video-mode="text"] .copy-active-video:focus-visible,.stage-card[data-video-mode="text"] .copy-text-video:focus-visible{outline:3px solid #b6efc0;outline-offset:2px}.text-prompt-details{margin:10px 0 4px;border:0;padding:0}.text-prompt-details summary{display:inline-flex;align-items:center;justify-content:center;width:auto;box-sizing:border-box;min-height:38px;padding:7px 13px;border:1px solid #4c8cd0;border-radius:8px;background:#174d87;color:#fff;cursor:pointer;font-size:.86rem;font-weight:600;text-align:center;list-style:none}.text-prompt-details summary::marker{content:none}.text-prompt-details summary::-webkit-details-marker{display:none}.text-prompt-details summary:hover{background:#1d609f}.text-prompt-details summary:focus-visible{outline:3px solid #a9d5ff;outline-offset:2px}.text-prompt-details[open] label{margin-top:14px}.text-prompt-details[open] .text-video-prompt{height:72vh;min-height:380px;resize:vertical}.text-prompt-details:not([open]) .text-video-prompt{display:none}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(event){panel();all();if(event.detail?.fresh)activateSmartDefault();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
 })();
