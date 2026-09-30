@@ -1,8 +1,8 @@
-/* LD AUTO v3.49.1 — Disaster-family progression engine + Wellington event-stage alignment.
+/* LD AUTO v3.49.2 — Disaster-family progression engine + Wellington event-stage alignment.
    Story-position guidance only. Event-specific verified facts and locked event panels always win. */
 (()=>{'use strict';
 
-const VERSION='3.49.1-family-progression-v1';
+const VERSION='3.49.2-family-progression-v1';
 
 const COMMON_LATE={
   P9:{role:'Immediate aftermath · hazard has passed or shifted locally',rule:'Show the first readable aftermath appropriate to the event. Do not reset to peak impact and do not jump straight to full recovery.'},
@@ -257,8 +257,8 @@ function wellingtonOverride(topic,stageName){
     P8:{role:'Wider blocked access · continuing local danger',rule:'Broaden access, terrain and infrastructure consequences while transitioning away from peak moving-avalanche spectacle.'},
     P9:{role:'Immediate aftermath · buried impact zone revealed',rule:'The main release has passed locally. Reveal the damaged snow-covered impact zone without a new major avalanche release or pristine reset.'},
     P10:{role:'Search and rescue · unstable winter aftermath',rule:'Use human-scale purposeful rescue/search action where supported. Persistent snow deposits and damage remain; no silent reconstruction.'},
-    P11:{role:'Relief / displacement · urgent short-term needs',rule:'Show restrained human consequences and immediate needs without introducing modern rescue equipment or a new peak avalanche beat.'},
-    P12:{role:'Transport / access / community disruption',rule:'Show wider consequences to movement, infrastructure or community life while preserving the established post-avalanche world.'},
+    P11:{role:'Displacement · survivors move toward safety',rule:'Keep P11 outdoors. Show restrained relocation away from the buried railway zone through deep snow. Do not begin indoor shelter care, aid distribution, cleanup or rebuilding yet.'},
+    P12:{role:'Temporary shelter · warmth, care and relief',rule:'Move indoors to a protected railway refuge or temporary shelter. Focus on survivor warmth, simple care and support. Keep this clearly distinct from P11 outdoor displacement and P13 outdoor debris clearing.'},
     P13:{role:'Cleanup / stabilization · early recovery',rule:'Recovery changes the scene only through visible deliberate work. No instant full clearing or repaired landscape.'},
     P14:{role:'Historical legacy · reflective winter aftermath',rule:'Close reflectively on the lasting event context or recovery state without introducing a new disaster beat.'}
   };
