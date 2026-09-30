@@ -1,6 +1,6 @@
-/* LD AUTO v3.49.14 — Keep Current Scene state + visible Smart Continue confirmation. */
+/* LD AUTO v3.49.15 — stale Approved Memory guard + Wellington P12 handoff cleanup. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.49.14-keep-current-scene-v1';
+const T2V_POLICY_VERSION='3.49.15-stale-memory-guard-v1';
 const SMART_SCENE_PREFIX='SMART RANDOM CHOICE — ';
 const KEEP_SCENE_PREFIX='KEEP CURRENT SCENE — ';
 function supports(card){if(window.ldStoryEpisode)return /^P[1-9]\d*$/.test(card.dataset.stage);return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
@@ -739,18 +739,24 @@ function familyKey(){return window.LDDisasterProgression?.family?.(current())||'
 function previousStageName(stage){var n=stageNumber(stage);return n>1?'P'+(n-1):'';}
 function previousApprovedContinuity(stage){
  var prev=previousStageName(stage);if(!prev)return '';
- var snap=window.ldApprovedMemory?.stages?.[prev]?.latest;
  var card=document.querySelector('.stage-card[data-stage="'+prev+'"]');
- var scene=clean(snap?.videoScene||card?.querySelector('.video-scene')?.value||card?.dataset?.videoScene||'');
- var narration=clean(snap?.narration||card?.querySelector('.narration')?.value||'');
+ if(card){
+   if(card.dataset.approvalRevoked==='1')return '';
+   var done=card.querySelector('.done-toggle');
+   if(done&&!done.checked)return '';
+ }
+ var snap=window.ldApprovedMemory?.stages?.[prev]?.latest;
+ if(!snap)return '';
+ var scene=clean(snap.videoScene||'');
+ var narration=clean(snap.narration||'');
  var summary=[scene,narration].filter(Boolean).join(' ');
  if(!summary)return '';
  if(summary.length<=620)return summary;
-  var head=summary.slice(0,620);
-  var boundary=Math.max(head.lastIndexOf('. '),head.lastIndexOf('! '),head.lastIndexOf('? '));
-  if(boundary>=220)return head.slice(0,boundary+1).trim();
-  var space=head.lastIndexOf(' ');
-  return head.slice(0,space>220?space:620).trim()+'…';
+ var head=summary.slice(0,620);
+ var boundary=Math.max(head.lastIndexOf('. '),head.lastIndexOf('! '),head.lastIndexOf('? '));
+ if(boundary>=220)return head.slice(0,boundary+1).trim();
+ var space=head.lastIndexOf(' ');
+ return head.slice(0,space>220?space:620).trim()+'…';
 }
 function intensityDirector(stage){
  if(isSanFrancisco1906P2(stage))return 'INTENSITY: normal life only. Fault stress is invisible and explained by narration; show no warning sign, concern, shaking, ominous change, fire, damage or buildup before P3.';
