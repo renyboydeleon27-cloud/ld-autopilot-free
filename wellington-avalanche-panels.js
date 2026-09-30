@@ -1,10 +1,11 @@
 /* Wellington Avalanche — Washington, USA — 1910
-   Approved P4 master DNA and P4–P14 inheritance rules.
-   Approved visual reference: 1000268865.mp4 */
+   Approved P4 + P12 master DNA and P4–P14 inheritance rules.
+   Approved visual references: P4 1000268865.mp4 · P12 1000269411.mp4 */
 (function(){'use strict';
 
-const VERSION='1.0.6';
+const VERSION='1.0.7';
 const APPROVED_P4_REFERENCE='1000268865.mp4';
+const APPROVED_P12_REFERENCE='1000269411.mp4';
 
 function matches(topic){
   const t=String(topic||'').toLowerCase();
@@ -27,7 +28,7 @@ const ROLES={
   P9:'immediate aftermath; the avalanche has stopped or passed and the damaged snow-covered impact zone is revealed without a new major release',
   P10:'search and rescue in the unstable aftermath; human-scale purposeful action, persistent damage, and no reset to an intact world',
   P11:'relief, displacement, or urgent short-term human needs after the disaster; restrained action and persistent winter damage',
-  P12:'wider transport, infrastructure, access, and community consequences; no new peak-avalanche replay',
+  P12:'temporary shelter, survivor care, warmth, and immediate human relief inside a protected railway refuge; clearly distinct from P13 outdoor debris clearing',
   P13:'cleanup, recovery, or stabilization begins slowly; only deliberate work may change the accumulated damage state',
   P14:'reflective recovery and historical legacy; calm closure with the disaster-scarred environment still coherent'
 };
@@ -41,6 +42,7 @@ function narration(topic,stage){
   if(stage==='P7')return 'Snow and wrecked rail cars filled the impact zone as the avalanche spread destruction across the Wellington railway area.';
   if(stage==='P10')return 'Rescuers searched the buried Wellington railway area for survivors after the avalanche.';
   if(stage==='P11')return 'Survivors faced the immediate need for warmth, food, and shelter in the snowbound aftermath.';
+  if(stage==='P12')return 'Inside a temporary refuge, survivors received warmth, simple care, and support while the snowbound aftermath continued outside.';
   return '';
 }
 
@@ -120,6 +122,22 @@ function panel(topic,stage){
       extraNegative:'EXACTLY THREE ADULTS ONLY. NO children. NO crowd. NO extra background people. NO live action. NO photorealistic humans. NO photographic skin. NO realistic camera-captured faces. NO 3D CGI humans. NO face morphing. NO identity swap. NO duplicated adults. NO blanket handoff. NO blanket transfer. NO blanket unfolding. NO blanket wrapping action. NO blanket removal. NO blanket growth. NO blanket shrink. NO blanket color or material change. NO blanket-to-clothing transformation. NO cloth bundle. NO shawl transformation. NO second blanket. NO object appearing from the blanket. NO food unpacking. NO box opening. NO box duplication. NO box morphing. NO indoor room. NO cleanup. NO rebuilding. NO new avalanche impact. NO modern relief equipment. NO color. NO sepia. NO text. NO subtitles. NO logos. NO watermark. NO gore.'
     };
   }
+  if(stage==='P12'){
+    return {
+      approved:true,
+      lockedScene:true,
+      approvedLabel:'FINAL APPROVED MASTER — WELLINGTON P12 · REF '+APPROVED_P12_REFERENCE,
+      scientific:false,
+      frameLock:'P12 2D ANIME + SHELTER RELIEF LOCK — HIGHEST PRIORITY: Every frame MUST remain hand-drawn 2D historical anime / graphic-novel art in strict true black-and-white grayscale. Keep adult faces, clothing, hands and body proportions illustrated and stable from first to last frame. This panel is an INTERIOR TEMPORARY SHELTER / PROTECTED RAILWAY REFUGE scene. It must remain clearly different from P13, which is outdoor debris clearing. No shoveling is the main action. No live-action or photoreal drift. No visible text anywhere.',
+      scene:'Inside a simple temporary railway shelter or protected refuge during the Wellington Avalanche aftermath, show exhausted adult survivors and responders in a serious hand-drawn 2D historical anime scene. One weakened or lightly injured adult sits wrapped in a blanket while a responder provides simple care. Another adult offers a cup or small item of immediate relief, while a few other adults rest quietly in the background. Use a wooden 1910-era shelter interior, period winter clothing, blankets, lanterns, benches and simple historically appropriate objects. Through an open doorway or window, deep snow and winter conditions remain visible outside. The emotional focus is survival, warmth, exhaustion and human support after the avalanche. This is NOT outdoor cleanup and NOT a replay of rescue probing.',
+      narrative:'P12 focuses on temporary shelter, survivor care, warmth and immediate human relief after the avalanche. The snowy disaster environment remains visible outside, while P13 will move to outdoor debris clearing. Narration is added separately during editing and must never be spoken in the generated video.',
+      timing:'0.0–3.0s: Establish the temporary wooden shelter/refuge with several exhausted adult survivors and responders in period winter clothing. One adult is already seated and wrapped in a blanket while a responder stays nearby.\n3.0–6.5s: The camera moves slowly through the shelter. A responder offers a small cup or simple relief item, and another adult supports or checks a fatigued or lightly injured survivor. Keep all motion restrained and physically believable.\n6.5–10.0s: Settle on a calm human-relief tableau: the seated survivor remains supported, responders stay nearby, and snowy conditions are still visible through the doorway or window. End on quiet survival and support, not cleanup or rebuilding.',
+      camera:'One continuous slow human-height interior shot with a restrained forward or lateral move. Keep the scene intimate and readable, with foreground survivor care, midground responders and a glimpse of the snowy exterior for continuity. No cuts, orbit, drone move, random zoom, teleportation, back-of-head-to-face morph or excessive shake.',
+      physics:'Human motion is slow and grounded. Blankets, cups, benches, lanterns and clothing keep stable geometry and move only when physically handled. No object morphing, duplication, pop-in, disappearance, hand penetration or spontaneous repositioning. The wooden shelter remains fixed. Snow outside remains consistent with the established aftermath and does not reset to a pristine pre-disaster state.',
+      audio:'Quiet winter wind outside, muted interior movement, fabric rustle, soft footsteps, subtle wooden creaks and restrained object-contact sounds only. ABSOLUTE NO VOICE-OVER, NO narrator, NO spoken words, NO dialogue, NO whispering, NO announcements, NO synthetic voice, NO prompt reading and NO music.',
+      extraNegative:'NO TEXT OF ANY KIND. NO title. NO location label. NO year. NO captions. NO subtitles. NO readable generated signs. NO shoveling as the main action. NO outdoor debris-clearing focus. NO repeated P13 scene type. NO rescue-probe replay. NO new avalanche impact. NO smoke. NO fog effect. NO live action. NO photorealistic humans. NO photographic skin. NO 3D CGI humans. NO color. NO sepia. NO modern medical equipment. NO modern furniture. NO modern emergency gear. NO morphing. NO duplicate cloned people. NO extra limbs. NO malformed hands. NO gore.'
+    };
+  }
   if(stage==='P10'){
     return {
       approved:false,
@@ -182,6 +200,7 @@ function panel(topic,stage){
 window.LDWellingtonAvalanche1910=Object.freeze({
   version:VERSION,
   approvedP4Reference:APPROVED_P4_REFERENCE,
+  approvedP12Reference:APPROVED_P12_REFERENCE,
   matches,
   activeStage,
   stageRole,
