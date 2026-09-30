@@ -1,4 +1,4 @@
-/* LD AUTO Continuity Engine v1.0.3 — coordinated T2V consistency system + approval-aware handoffs. */
+/* LD AUTO Continuity Engine v1.0.4 — approval-aware handoffs + Wellington P12 deliberate location transition. */
 (function(){'use strict';
 
 function topic(){
@@ -74,6 +74,9 @@ function panelHandoff(stage){
   const t=topic().toLowerCase();
   if(t.includes('wellington avalanche')&&t.includes('1910')&&stage==='P4'){
     return 'PANEL HANDOFF MEMORY — WELLINGTON P4 HARD TRANSITION: P4 intentionally changes from the prior human/interior scene to the outdoor upper mountain release zone. Do NOT carry forward P3 people, faces, clothing, room geometry, kitchen objects, windows, furniture, stove, lamp, indoor damage, or interior atmosphere. Carry forward only chapter-level year/region, strict black-and-white 2D anime rendering, and outdoor environmental canon that is independently established. P4 starts with ZERO PEOPLE on the loaded mountain slope.';
+  }
+  if(t.includes('wellington avalanche')&&t.includes('1910')&&stage==='P12'){
+    return 'PANEL HANDOFF MEMORY — WELLINGTON P12 DELIBERATE LOCATION + CAST TRANSITION: P12 occurs after displaced survivors reach a populated temporary railway refuge. Carry forward only the established 1910 winter world, strict black-and-white 2D anime rendering, snowbound aftermath, weather/lighting family, and persistent disaster damage visible outside. DO NOT inherit P11 exact cast count, personal bundle, blanket, supply box, outdoor walking action, or object geometry as mandatory P12 anchors. The refuge may already contain additional distinct adult survivors and responders in frame 1 because P12 changes location to an occupied shelter. Do not depict those additional adults arriving or multiplying on-screen; they are established occupants of the new location from the opening frame. P12 is indoor warmth/care/relief; P13 returns outdoors for debris clearing.';
   }
   if(!prev)return 'PANEL HANDOFF MEMORY: P1 establishes the normal physical world. No earlier panel may be invented as visual history.';
   const snap=approved(prev);
