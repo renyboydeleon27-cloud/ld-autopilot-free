@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0d12">
   <title>LD Editor Lab</title>
-  <link rel="stylesheet" href="./styles.css?v=0.4.0">
+  <link rel="stylesheet" href="./styles.css?v=0.5.2">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.5.1</span></h1>
+        <h1>LD Editor Lab <span>v0.5.2</span></h1>
         <p class="sub">Standalone local video assembler. Imported media and project state are saved locally. Final renders save directly to your phone.</p>
       </div>
       <span class="pill safe">LOCAL · AUTO-SAVE · SELF-UPDATE</span>
@@ -37,11 +37,12 @@
     <section class="card hero">
       <div>
         <h2>Auto Assemble</h2>
-        <p>Import HOOK, P1–P14 and ENDING. Android imports are copied to private app storage so the project survives app restarts.</p>
+        <p>Import HOOK + P1–P14 as videos. ENDING is a photo locked to 5.0 seconds. Imported media and project state survive app restarts.</p>
       </div>
       <div class="hero-actions">
         <button id="clipPickerBtn" class="btn primary" type="button">Import video clips</button>
         <input id="clipInput" type="file" accept="video/*" multiple hidden>
+        <input id="endingImageInput" type="file" accept="image/*" hidden>
         <button id="clearBtn" class="btn ghost" type="button">Clear project</button>
       </div>
     </section>
@@ -60,7 +61,7 @@
       </div>
       <div class="ending-lock-box">
         <strong>ENDING FORMAT LOCK</strong>
-        <span>0.0–4.5s ending card + narration · 4.5–5.0s thumbnail hold · no narration in final 0.5s</span>
+        <span>ENDING photo holds 0.0–5.0s · narration allowed only 0.0–4.5s · thumbnail replaces it at 4.5–5.0s · no narration in final 0.5s</span>
         <div class="thumbnail-row">
           <button id="thumbnailPickerBtn" class="btn ghost" type="button">Import final thumbnail</button>
           <input id="thumbnailInput" type="file" accept="image/*" hidden>
@@ -77,8 +78,8 @@
     </section>
 
     <section class="stats">
-      <article class="stat"><span>Clips loaded</span><strong id="clipCount">0 / 16</strong></article>
-      <article class="stat"><span>Total video</span><strong id="totalDuration">0:00</strong></article>
+      <article class="stat"><span>Stages loaded</span><strong id="clipCount">0 / 16</strong></article>
+      <article class="stat"><span>Total timeline</span><strong id="totalDuration">0:00</strong></article>
       <article class="stat"><span>Missing</span><strong id="missingCount">16</strong></article>
       <article class="stat"><span>Status</span><strong id="readyStatus">Waiting</strong></article>
     </section>
@@ -165,6 +166,7 @@
       </div>
       <div class="preview-shell">
         <video id="previewVideo" playsinline preload="metadata"></video>
+        <img id="previewImage" class="preview-image" alt="" aria-hidden="true">
         <img id="thumbnailOverlay" class="thumbnail-overlay" alt="" aria-hidden="true">
         <div id="previewCaption" class="preview-caption"></div>
         <div id="previewPlaceholder" class="preview-placeholder">Import clips to preview</div>
@@ -205,6 +207,6 @@
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.4.0"></script>
+  <script src="./app.js?v=0.5.2"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 {
-  "version": "0.5.1",
-  "notes": "ENDING FORMAT LOCK: 5.0s ending, final thumbnail only from 4.5–5.0s, and no narration in the last 0.5s.",
+  "version": "0.5.2",
+  "notes": "ENDING now opens the photo gallery and uses a persistent 5-second image card. Final thumbnail remains only at 4.5–5.0 seconds with narration off. Also fixes stale app.js/styles.css cache versions.",
   "files": [
     {
       "name": "index.html",
