@@ -1,9 +1,12 @@
 (()=>{
 'use strict';
 
-const VERSION='0.3.0';
+const VERSION='0.3.1';
 // Keep the v0.2 key so existing projects migrate in place after APK update.
 const STORE='ld-editor-lab-project-v0.2';
+const EXPORT_DB='ld-editor-lab-export-db-v1';
+const EXPORT_STORE='exports';
+const EXPORT_KEY='last-render';
 const STAGES=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
 const TARGET={HOOK:10,ENDING:null};
 for(let i=1;i<=14;i++)TARGET['P'+i]=10;
@@ -50,6 +53,96 @@ function duplicateStages(){
   return dupes;
 }
 function safeJson(text,fallback=null){try{return JSON.parse(String(text||''));}catch{return fallback;}}
+
+function openExportDb(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window))return reject(new Error('Persistent browser storage is unavailable.'));
+    const req=indexedDB.open(EXPORT_DB,1);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(EXPORT_STORE))db.createObjectStore(EXPORT_STORE);
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error('Could not open persistent export storage.'));
+  });
+}
+async function putBrowserExport(blob,meta){
+  const db=await openExportDb();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readwrite');
+      tx.objectStore(EXPORT_STORE).put({
+        blob,
+        name:meta?.name||'LD-Editor-Lab-Final.webm',
+        mime:meta?.mime||blob.type||'video/webm',
+        size:Number(blob.size)||0,
+        savedAt:meta?.savedAt||new Date().toISOString()
+      },EXPORT_KEY);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Could not save rendered video.'));
+      tx.onabort=()=>reject(tx.error||new Error('Rendered video save was aborted.'));
+    });
+  }finally{db.close();}
+}
+async function getBrowserExport(){
+  const db=await openExportDb();
+  try{
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readonly');
+      const req=tx.objectStore(EXPORT_STORE).get(EXPORT_KEY);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>reject(req.error||new Error('Could not restore rendered video.'));
+    });
+  }finally{db.close();}
+}
+async function clearBrowserExport(){
+  if(!('indexedDB' in window))return;
+  const db=await openExportDb();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readwrite');
+      tx.objectStore(EXPORT_STORE).delete(EXPORT_KEY);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Could not clear saved render.'));
+    });
+  }finally{db.close();}
+}
+async function requestPersistentStorage(){
+  try{if(navigator.storage?.persist)await navigator.storage.persist();}catch{}
+}
+async function downloadBrowserExport(){
+  const rec=await getBrowserExport().catch(()=>null);
+  if(!rec?.blob)return alert('Saved render is unavailable. Please render the final video again.');
+  const name=rec.name||'LD-Editor-Lab-Final.webm';
+  const mime=rec.mime||rec.blob.type||'video/webm';
+  if(typeof window.showSaveFilePicker==='function'){
+    try{
+      const handle=await window.showSaveFilePicker({
+        suggestedName:name,
+        types:[{description:'WebM video',accept:{[mime]:['.webm']}}]
+      });
+      const writable=await handle.createWritable();
+      await writable.write(rec.blob);await writable.close();
+      $('exportStatus').textContent='Video saved. A persistent copy remains in LD Editor Lab.';
+      return;
+    }catch(e){if(e?.name==='AbortError')return;}
+  }
+  const url=URL.createObjectURL(rec.blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=name;a.rel='noopener';a.style.display='none';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  $('exportStatus').textContent='Download started. A persistent copy remains in LD Editor Lab.';
+}
+async function shareBrowserExport(){
+  const rec=await getBrowserExport().catch(()=>null);
+  if(!rec?.blob)return alert('Saved render is unavailable. Please render the final video again.');
+  const file=new File([rec.blob],rec.name||'LD-Editor-Lab-Final.webm',{type:rec.mime||rec.blob.type||'video/webm'});
+  try{
+    if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:file.name});return;}
+  }catch(e){if(e?.name==='AbortError')return;}
+  alert('Sharing is not supported here. Use Download rendered video instead.');
+}
 
 function serialItem(item){
   if(!item||!item.native)return null;
@@ -102,7 +195,7 @@ function restoreProject(){
   }
   if(data.narration?.native&&data.narration.url)state.narration=data.narration;
   if(data.music?.native&&data.music.url)state.music=data.music;
-  if(data.lastExport?.uri)state.lastExport=data.lastExport;
+  if(data.lastExport&&(data.lastExport.uri||data.lastExport.browserStored))state.lastExport=data.lastExport;
   if(data.volumes){
     $('narrationVol').value=Number.isFinite(Number(data.volumes.narration))?data.volumes.narration:1;
     $('musicVol').value=Number.isFinite(Number(data.volumes.music))?data.volumes.music:0.18;
@@ -136,6 +229,18 @@ async function hydrateRestored(){
   }
   setupAudioElement('narration');
   setupAudioElement('music');
+  if(!state.lastExport?.uri){
+    const stored=await getBrowserExport().catch(()=>null);
+    if(stored?.blob){
+      state.lastExport={
+        browserStored:true,
+        name:stored.name||'LD-Editor-Lab-Final.webm',
+        mime:stored.mime||stored.blob.type||'video/webm',
+        size:Number(stored.size||stored.blob.size)||0,
+        savedAt:stored.savedAt||new Date().toISOString()
+      };
+    }else if(state.lastExport?.browserStored){state.lastExport=null;}
+  }
   if(changed)saveProject();else saveProject(); // also migrates localStorage project into native backup
   render();showLastExport();
 }
@@ -328,18 +433,32 @@ function renderFilename(){
 }
 function showLastExport(){
   const wrap=$('downloadWrap');wrap.innerHTML='';
-  if(!state.lastExport?.uri)return;
-  const btn=document.createElement('button');btn.className='btn primary';btn.type='button';btn.textContent='Open saved video';
-  btn.onclick=()=>{
-    if(isNative()&&window.LDNative?.openMedia){
-      try{window.LDNative.openMedia(state.lastExport.uri,state.lastExport.mime||'video/webm');return;}catch{}
+  if(!state.lastExport)return;
+  if(state.lastExport.uri){
+    const btn=document.createElement('button');btn.className='btn primary';btn.type='button';btn.textContent='Open saved video';
+    btn.onclick=()=>{
+      if(isNative()&&window.LDNative?.openMedia){
+        try{window.LDNative.openMedia(state.lastExport.uri,state.lastExport.mime||'video/webm');return;}catch{}
+      }
+      alert('Saved video: '+(state.lastExport.name||state.lastExport.uri));
+    };
+    wrap.appendChild(btn);
+    const p=document.createElement('p');p.className='meta';
+    p.textContent='Saved: '+(state.lastExport.name||'final video')+' · Movies/LD Editor Lab';
+    wrap.appendChild(p);
+    return;
+  }
+  if(state.lastExport.browserStored){
+    const btn=document.createElement('button');btn.className='btn primary';btn.type='button';btn.textContent='Download rendered video';
+    btn.onclick=downloadBrowserExport;wrap.appendChild(btn);
+    if(typeof navigator.share==='function'){
+      const share=document.createElement('button');share.className='btn ghost';share.type='button';share.textContent='Share / Save video';
+      share.onclick=shareBrowserExport;wrap.appendChild(share);
     }
-    alert('Saved video: '+(state.lastExport.name||state.lastExport.uri));
-  };
-  wrap.appendChild(btn);
-  const p=document.createElement('p');p.className='meta';
-  p.textContent='Saved: '+(state.lastExport.name||'final video')+' · Movies/LD Editor Lab';
-  wrap.appendChild(p);
+    const p=document.createElement('p');p.className='meta';
+    p.textContent='Saved in app storage: '+(state.lastExport.name||'final video')+' · remains available after reopening the app';
+    wrap.appendChild(p);
+  }
 }
 async function renderExport(){
   if(STAGES.some(s=>!state.clips.has(s)))return alert('Load HOOK, P1–P14 and ENDING first.');
@@ -439,11 +558,13 @@ async function renderExport(){
       showLastExport();
     }else{
       const blob=new Blob(chunks,{type:mime});
-      if(state.exportUrl)URL.revokeObjectURL(state.exportUrl);
-      state.exportUrl=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=state.exportUrl;a.download=filename;a.textContent='Download rendered video';
-      $('downloadWrap').appendChild(a);$('exportProgress').style.width='100%';
-      $('exportStatus').textContent='Render complete · browser download ready.';
+      const savedAt=new Date().toISOString();
+      await putBrowserExport(blob,{name:filename,mime,savedAt});
+      if(state.exportUrl){URL.revokeObjectURL(state.exportUrl);state.exportUrl=null;}
+      state.lastExport={browserStored:true,name:filename,mime,size:blob.size,savedAt};
+      saveProject();$('exportProgress').style.width='100%';
+      $('exportStatus').textContent='Render complete · saved persistently. Tap Download rendered video.';
+      showLastExport();
     }
   }catch(e){
     try{if(rec.state!=='inactive')rec.stop();}catch{}
@@ -472,6 +593,8 @@ $('clearBtn').onclick=()=>{
   try{window.LDNative?.clearMedia?.();}catch{}
   try{window.LDNative?.clearProjectState?.();}catch{}
   try{localStorage.removeItem(STORE);}catch{}
+  clearBrowserExport().catch(()=>{});
+  if(state.exportUrl){URL.revokeObjectURL(state.exportUrl);state.exportUrl=null;}
   narrationAudio.removeAttribute('src');musicAudio.removeAttribute('src');preview.removeAttribute('src');
   placeholder.style.display='grid';$('previewStage').textContent='—';
   $('narrationMeta').textContent='No narrator loaded';$('musicMeta').textContent='No music loaded';
@@ -479,5 +602,5 @@ $('clearBtn').onclick=()=>{
   $('exportStatus').textContent='Ready when all required clips are loaded.';render();
 };
 
-restoreProject();applyVolumes();render();hydrateRestored();
+requestPersistentStorage();restoreProject();applyVolumes();render();hydrateRestored();
 })();

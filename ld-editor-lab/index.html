@@ -106,11 +106,11 @@
       <div class="section-head">
         <div>
           <p class="eyebrow">EXPORT</p>
-          <h2>Experimental Browser Render</h2>
+          <h2>Final Video Render</h2>
         </div>
-        <span class="pill experimental">EXPERIMENTAL</span>
+        <span class="pill experimental">PERSISTENT SAVE</span>
       </div>
-      <p class="muted">V0.3 renders portrait WebM and saves it directly to Movies/LD Editor Lab on Android. No temporary download-link step.</p>
+      <p class="muted">V0.3.1 saves completed renders directly to Movies/LD Editor Lab on Android. Browser fallback also keeps the latest final render in persistent app storage, so leaving and reopening the app does not erase it.</p>
       <div class="export-actions">
         <button id="exportBtn" class="btn primary" type="button">Render & Save video</button>
         <button id="cancelExportBtn" class="btn ghost" type="button" disabled>Cancel render</button>
@@ -130,6 +130,6 @@
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.3.0"></script>
+  <script src="./app.js?v=0.3.1"></script>
 </body>
 </html>
