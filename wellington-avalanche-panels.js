@@ -3,7 +3,7 @@
    Approved visual references: P4 1000268865.mp4 · P12 1000269411.mp4 */
 (function(){'use strict';
 
-const VERSION='1.0.9';
+const VERSION='1.1.0';
 const APPROVED_P4_REFERENCE='1000268865.mp4';
 const APPROVED_P12_REFERENCE='1000269411.mp4';
 
@@ -34,16 +34,28 @@ const ROLES={
 };
 function stageRole(stage){return ROLES[stage]||'';}
 
+const FINAL_NARRATION=Object.freeze({
+  HOOK:'',
+  P1:'By late February 1910, relentless snow buried Wellington, Washington, while railway workers fought to keep the mountain route open.',
+  P2:'Above the town, days of heavy snowfall left the mountain slopes overloaded and increasingly unstable.',
+  P3:'As snow continued to build, people watched the mountains anxiously while the stranded trains remained trapped nearby.',
+  P4:'Two Great Northern trains, a passenger train and a fast mail train, were stranded near Wellington as crews cleared snow.',
+  P5:'On February 28, rain and thunderstorms weakened the snowpack, and a massive slab broke loose on Windy Mountain.',
+  P6:'At about 1:42 a.m. on March 1, the avalanche slammed into the stranded trains with overwhelming force.',
+  P7:'Rail cars and locomotives were torn from the tracks, hurled downhill, and buried beneath snow and wreckage.',
+  P8:'The slide left Wellington isolated, with railway access buried and the mountain route blocked by snow and destruction.',
+  P9:'When the avalanche settled, the railway zone had become a field of shattered timber, buried cars, and deep snow.',
+  P10:'Wellington residents and railway workers rushed into the wreckage, probing the snow and searching for survivors.',
+  P11:'Those pulled free received immediate help and basic supplies while rescue work continued across the snowbound site.',
+  P12:'Inside shelter, survivors received warmth, rest, and simple care while the recovery effort continued outside.',
+  P13:'For days, crews dug through snow and debris, recovering victims and clearing the devastated railway area.',
+  P14:'Ninety-six people died, making Wellington the deadliest avalanche disaster in U.S. history. Great Northern later expanded snow-shed protection.',
+  ENDING:'Thank you for watching. Like, share, and subscribe.'
+});
+
 function narration(topic,stage){
   if(!matches(topic))return '';
-  if(stage==='P4')return 'After days of heavy snow and worsening weather, the snowpack destabilized, and a massive slab broke loose above Wellington.';
-  if(stage==='P5')return 'The avalanche accelerated down the mountainside, gathering speed and mass as it raced toward the railway area below.';
-  if(stage==='P6')return 'The avalanche struck the stranded trains at Wellington, sweeping rail cars from the tracks and down the mountainside.';
-  if(stage==='P7')return 'Snow and wrecked rail cars filled the impact zone as the avalanche spread destruction across the Wellington railway area.';
-  if(stage==='P10')return 'Rescuers searched the buried Wellington railway area for survivors after the avalanche.';
-  if(stage==='P11')return 'Displaced survivors moved away from the buried railway zone through deep snow while safer shelter was arranged nearby.';
-  if(stage==='P12')return 'Inside a temporary refuge, survivors received warmth, simple care, and support while the snowbound aftermath continued outside.';
-  return '';
+  return Object.prototype.hasOwnProperty.call(FINAL_NARRATION,stage)?FINAL_NARRATION[stage]:'';
 }
 
 function videoNarrativeContext(topic,stage){
@@ -201,6 +213,7 @@ window.LDWellingtonAvalanche1910=Object.freeze({
   version:VERSION,
   approvedP4Reference:APPROVED_P4_REFERENCE,
   approvedP12Reference:APPROVED_P12_REFERENCE,
+  finalNarration:FINAL_NARRATION,
   matches,
   activeStage,
   stageRole,
