@@ -308,6 +308,19 @@ STAGE ROLE LOCK — SHORTS P1-P14:
 - Do not force generic plate names or a simplified tectonic model when the event's mechanism is complex or uncertain.
 - Avoid the phrase "radiated toward"; prefer natural spoken wording such as "spread across the ocean" when scientifically appropriate.
 
+FINAL VIDEO-FLOW NARRATION QUALITY LOCK — LIVING DISASTER BOOK:
+- Treat narration as part of the edit, not as a generic summary. Every stage must sound written for that exact panel and its assigned place in the story.
+- Each panel gets ONE clear narrative job and ONE concrete forward-moving sentence whenever the evidence allows it.
+- Prefer specific nouns, active verbs, verified names, dates, locations, physical actions and consequences over vague phrases.
+- Never use filler such as "the story continues", "the disaster develops", "effects spread across the affected area", "conditions worsen", or generic "lessons were learned" language merely to fill time.
+- The narration must progress like a documentary: setup -> verified buildup/trigger -> escalation -> peak impact -> immediate aftermath -> rescue/human consequence -> recovery -> historically supported legacy.
+- Match the assigned visual/story beat. Do not narrate the next panel early and do not describe a previous panel again.
+- Keep lines compact and weighty: usually about 14-26 spoken words for a 10-second panel, but factual clarity outranks hitting a word count.
+- If verified evidence is sparse, use a shorter strong sentence rather than padding with generic disaster language.
+- P14 must close with a verified historical consequence, identity, change, or legacy when evidence supports one; never default to a generic preparedness slogan.
+- Repetition audit: adjacent panels must differ in subject, verb, information, and dramatic purpose.
+- Read every line aloud mentally before returning it. It must sound natural, cinematic, and solid at normal documentary pace.
+
 DOCUMENTARY NARRATION POLISH LOCK:
 - Write natural, human-sounding historical-documentary English for a general audience.
 - Prefer concrete cause-and-effect wording and short, speakable sentences over academic, bureaucratic, or textbook language.
