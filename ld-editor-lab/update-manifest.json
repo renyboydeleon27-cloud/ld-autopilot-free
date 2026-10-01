@@ -1,6 +1,6 @@
 {
-  "version": "0.5.0",
-  "notes": "Adds FULL AUTO CUT v1: stage timing, automatic cuts, transitions, subtitle timing, SFX mix, music ducking and export integration.",
+  "version": "0.5.1",
+  "notes": "ENDING FORMAT LOCK: 5.0s ending, final thumbnail only from 4.5–5.0s, and no narration in the last 0.5s.",
   "files": [
     {
       "name": "index.html",

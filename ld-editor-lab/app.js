@@ -1,20 +1,22 @@
 (()=>{
 'use strict';
 
-const VERSION='0.5.0';
+const VERSION='0.5.1';
 // Keep the v0.2 key so existing projects migrate in place after APK update.
 const STORE='ld-editor-lab-project-v0.2';
 const EXPORT_DB='ld-editor-lab-export-db-v1';
 const EXPORT_STORE='exports';
 const EXPORT_KEY='last-render';
+const THUMB_KEY='project-thumbnail';
 const STAGES=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
-const TARGET={HOOK:10,ENDING:null};
+const TARGET={HOOK:10,ENDING:5};
 for(let i=1;i<=14;i++)TARGET['P'+i]=10;
 
 const state={
   clips:new Map(),
   narration:null,
   music:null,
+  thumbnail:null,
   lastExport:null,
   apiTracker:{
     projectCostUsd:0,
@@ -246,7 +248,7 @@ function buildAutoCutPlan(){
     const item=state.clips.get(stage);
     if(!item)continue;
     const actual=Math.max(0,Number(item.duration)||0);
-    const target=stage==='ENDING'?10:(TARGET[stage]||actual);
+    const target=stage==='ENDING'?5:(TARGET[stage]||actual);
     const duration=target?Math.min(actual,target):actual;
     const mix=autoStageNumbers(stage);
     plan[stage]={
@@ -262,12 +264,14 @@ function buildAutoCutPlan(){
 function autoCutStagePlan(stage){return state.autoCut?.plan?.[stage]||null;}
 function effectiveDuration(stage,item){
   const actual=Math.max(0,Number(item?.duration)||0);
+  if(stage==='ENDING'&&actual>0)return Math.min(actual,5);
   if(!state.autoCut?.enabled)return actual;
   const planned=Number(autoCutStagePlan(stage)?.duration);
   return Number.isFinite(planned)&&planned>0?Math.min(actual||planned,planned):actual;
 }
 function autoCaptionAt(stage,time,duration){
   if(!state.autoCut?.enabled)return'';
+  if(stage==='ENDING'&&Number(time)>=4.5)return'';
   const chunks=state.autoCut?.captions?.[stage];
   if(!Array.isArray(chunks)||!chunks.length)return'';
   const d=Math.max(.1,Number(duration)||1);
@@ -283,7 +287,7 @@ function refreshAutoCutUi(){
   if(previewBtn)previewBtn.disabled=!ready;
   if(state.autoCut?.enabled){
     const captionStages=Object.keys(state.autoCut.captions||{}).length;
-    setAutoCutStatus('Auto Cut ready · '+fmt(totalDuration())+' · '+captionStages+' caption stage'+(captionStages===1?'':'s')+' · local engine FREE');
+    setAutoCutStatus('Auto Cut ready · ENDING locked 5.0s · thumbnail hold 4.5–5.0s · narrator off last 0.5s · '+captionStages+' caption stage'+(captionStages===1?'':'s')+' · local engine FREE');
   }else{
     setAutoCutStatus(ready?'Ready for one-tap Auto Cut.':'Load HOOK, P1–P14 and ENDING first.');
   }
@@ -305,7 +309,7 @@ function runFullAutoCut(previewAfter=false){
   recordApiUsage({feature:'auto_cut_local',featureLabel:'Auto Cut Engine',model:'Local v1',free:true});
   endApiGeneration();
   saveProject();render();refreshAutoCutUi();
-  setAutoCutStatus('Auto Cut built · cuts + transition timing + subtitle timing + SFX mix + music ducking · FREE local pass');
+  setAutoCutStatus('Auto Cut built · ENDING 5.0s · thumbnail last 0.5s · no narration last 0.5s · cuts + subtitles + SFX/music mix · FREE local pass');
   if(previewAfter)playAll();
 }
 function drawAutoTransition(ctx,stage,time,duration){
@@ -341,6 +345,7 @@ function updatePreviewCaption(){
   const item=state.clips.get(stage),dur=effectiveDuration(stage,item);
   const text=autoCaptionAt(stage,preview.currentTime,dur);
   el.textContent=text;el.style.display=text?'block':'none';
+  updateThumbnailOverlay();
 }
 window.LDRunFullAutoCut=runFullAutoCut;
 
@@ -424,6 +429,82 @@ async function clearBrowserExport(){
     });
   }finally{db.close();}
 }
+async function putProjectThumbnail(file){
+  const db=await openExportDb();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readwrite');
+      tx.objectStore(EXPORT_STORE).put({
+        blob:file,
+        name:file.name||'thumbnail',
+        mime:file.type||'image/jpeg',
+        size:Number(file.size)||0,
+        savedAt:new Date().toISOString()
+      },THUMB_KEY);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Could not save thumbnail.'));
+      tx.onabort=()=>reject(tx.error||new Error('Thumbnail save was aborted.'));
+    });
+  }finally{db.close();}
+}
+async function getProjectThumbnail(){
+  const db=await openExportDb();
+  try{
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readonly');
+      const req=tx.objectStore(EXPORT_STORE).get(THUMB_KEY);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>reject(req.error||new Error('Could not restore thumbnail.'));
+    });
+  }finally{db.close();}
+}
+async function clearProjectThumbnail(){
+  if(!('indexedDB' in window))return;
+  const db=await openExportDb();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readwrite');
+      tx.objectStore(EXPORT_STORE).delete(THUMB_KEY);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Could not clear thumbnail.'));
+    });
+  }finally{db.close();}
+}
+function updateThumbnailMeta(){
+  const el=$('thumbnailMeta');if(!el)return;
+  el.textContent=state.thumbnail?(state.thumbnail.name+' · final 0.5s'):'No thumbnail loaded';
+}
+async function setThumbnailFile(file){
+  if(!file||!String(file.type||'').startsWith('image/'))return alert('Please choose a thumbnail image.');
+  if(state.thumbnail?.objectUrl&&state.thumbnail.url)URL.revokeObjectURL(state.thumbnail.url);
+  const url=URL.createObjectURL(file);
+  state.thumbnail={name:file.name,mime:file.type,size:file.size,url,objectUrl:true,browserStored:true};
+  await putProjectThumbnail(file).catch(()=>{});
+  updateThumbnailMeta();saveProject();
+}
+function loadImageElement(url){
+  return new Promise((resolve,reject)=>{
+    if(!url)return resolve(null);
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=()=>reject(new Error('Could not load thumbnail image.'));
+    img.src=url;
+  });
+}
+function drawCover(ctx,img,x,y,w,h){
+  if(!img||!img.naturalWidth||!img.naturalHeight)return;
+  const s=Math.max(w/img.naturalWidth,h/img.naturalHeight);
+  const dw=img.naturalWidth*s,dh=img.naturalHeight*s;
+  ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);
+}
+function updateThumbnailOverlay(){
+  const img=$('thumbnailOverlay');if(!img)return;
+  const stage=STAGES[state.playIndex]||'';
+  const show=stage==='ENDING'&&preview.currentTime>=4.5&&state.thumbnail?.url;
+  if(show){if(img.src!==state.thumbnail.url)img.src=state.thumbnail.url;img.style.display='block';}
+  else img.style.display='none';
+}
+
 async function requestPersistentStorage(){
   try{if(navigator.storage?.persist)await navigator.storage.persist();}catch{}
 }
@@ -477,6 +558,7 @@ function projectPayload(){
     version:VERSION,clips,
     narration:serialItem(state.narration),
     music:serialItem(state.music),
+    thumbnail:state.thumbnail?{name:state.thumbnail.name||'thumbnail',mime:state.thumbnail.mime||'image/jpeg',size:Number(state.thumbnail.size)||0,browserStored:true}:null,
     lastExport:state.lastExport||null,
     apiTracker:state.apiTracker,
     autoCut:state.autoCut,
@@ -551,6 +633,19 @@ async function hydrateRestored(){
   }
   setupAudioElement('narration');
   setupAudioElement('music');
+  const thumbStored=await getProjectThumbnail().catch(()=>null);
+  if(thumbStored?.blob){
+    if(state.thumbnail?.objectUrl&&state.thumbnail.url)URL.revokeObjectURL(state.thumbnail.url);
+    state.thumbnail={
+      name:thumbStored.name||'thumbnail',
+      mime:thumbStored.mime||thumbStored.blob.type||'image/jpeg',
+      size:Number(thumbStored.size||thumbStored.blob.size)||0,
+      url:URL.createObjectURL(thumbStored.blob),
+      objectUrl:true,
+      browserStored:true
+    };
+  }
+  updateThumbnailMeta();
   if(!state.lastExport?.uri){
     const stored=await getBrowserExport().catch(()=>null);
     if(stored?.blob){
@@ -746,7 +841,9 @@ preview.addEventListener('timeupdate',()=>{
   }
   let elapsed=Math.min(preview.currentTime,stageDuration||preview.currentTime);
   for(let i=0;i<state.playIndex;i++)elapsed+=effectiveDuration(STAGES[i],state.clips.get(STAGES[i]));
-  const total=totalDuration();$('playTime').textContent=fmt(elapsed)+' / '+fmt(total);
+  const total=totalDuration();
+  if(stage==='ENDING'&&preview.currentTime>=4.5&&!narrationAudio.paused)narrationAudio.pause();
+  $('playTime').textContent=fmt(elapsed)+' / '+fmt(total);
   $('playProgress').style.width=(total?elapsed/total*100:0)+'%';
 });
 
@@ -839,12 +936,16 @@ async function renderExport(){
 
   state.exportAbort=false;$('cancelExportBtn').disabled=false;$('exportBtn').disabled=true;
   $('downloadWrap').innerHTML='';$('exportStatus').textContent='Preparing render & save…';$('exportProgress').style.width='0%';
+  const renderThumb=state.thumbnail?.url?await loadImageElement(state.thumbnail.url).catch(()=>null):null;
   let drawId=0,currentRenderStage='',currentRenderDuration=0;
   const draw=()=>{
     const vw=renderVideo.videoWidth||720,vh=renderVideo.videoHeight||1280;
     ctx.fillStyle='#000';ctx.fillRect(0,0,720,1280);
     const scale=Math.min(720/vw,1280/vh),w=vw*scale,h=vh*scale;
     ctx.drawImage(renderVideo,(720-w)/2,(1280-h)/2,w,h);
+    if(currentRenderStage==='ENDING'&&renderVideo.currentTime>=4.5&&renderThumb){
+      ctx.fillStyle='#000';ctx.fillRect(0,0,720,1280);drawCover(ctx,renderThumb,0,0,720,1280);
+    }
     if(state.autoCut?.enabled){
       drawAutoTransition(ctx,currentRenderStage,renderVideo.currentTime,currentRenderDuration);
       drawCaption(ctx,autoCaptionAt(currentRenderStage,renderVideo.currentTime,currentRenderDuration));
@@ -878,6 +979,7 @@ async function renderExport(){
         const tick=()=>{
           if(state.exportAbort){renderVideo.pause();resolve();return;}
           const local=Math.min(renderVideo.currentTime,stageDuration);
+          if(stage==='ENDING'&&local>=4.5&&narrEl&&!narrEl.paused)narrEl.pause();
           $('exportProgress').style.width=((elapsedBase+local)/total*100)+'%';
           if(renderVideo.ended||local>=stageDuration-.02){renderVideo.pause();resolve();return;}requestAnimationFrame(tick);
         };
@@ -935,6 +1037,8 @@ $('musicPickerBtn').onclick=()=>openPicker('music',false);
 $('clipInput').addEventListener('change',e=>addBrowserFiles(e.target.files));
 $('narrationInput').addEventListener('change',()=>setBrowserAudio($('narrationInput'),'narration'));
 $('musicInput').addEventListener('change',()=>setBrowserAudio($('musicInput'),'music'));
+if($('thumbnailPickerBtn'))$('thumbnailPickerBtn').onclick=()=>$('thumbnailInput')?.click();
+if($('thumbnailInput'))$('thumbnailInput').addEventListener('change',()=>setThumbnailFile($('thumbnailInput').files?.[0]));
 ['narrationVol','musicVol','clipVol','autoDuck'].forEach(id=>$(id).addEventListener('input',()=>{applyVolumes();saveProject();}));
 $('playAllBtn').onclick=playAll;$('stopBtn').onclick=stopPlayback;
 if($('autoCutBtn'))$('autoCutBtn').onclick=()=>runFullAutoCut(false);
@@ -946,6 +1050,8 @@ $('clearBtn').onclick=()=>{
   if(!confirm('Clear all clips, narrator and music saved in LD Editor Lab?'))return;
   stopPlayback();for(const x of state.clips.values())releaseItem(x,false);
   state.clips.clear();state.narration=null;state.music=null;state.lastExport=null;
+  if(state.thumbnail?.objectUrl&&state.thumbnail.url)URL.revokeObjectURL(state.thumbnail.url);
+  state.thumbnail=null;clearProjectThumbnail().catch(()=>{});
   state.autoCut=normalizeAutoCut(null);
   if($('autoCutScript'))$('autoCutScript').value='';
   state.apiTracker.projectCostUsd=0;
@@ -960,7 +1066,7 @@ $('clearBtn').onclick=()=>{
   narrationAudio.removeAttribute('src');musicAudio.removeAttribute('src');preview.removeAttribute('src');
   placeholder.style.display='grid';$('previewStage').textContent='—';
   $('narrationMeta').textContent='No narrator loaded';$('musicMeta').textContent='No music loaded';
-  $('clipInput').value='';$('narrationInput').value='';$('musicInput').value='';$('downloadWrap').innerHTML='';
+  $('clipInput').value='';$('narrationInput').value='';$('musicInput').value='';if($('thumbnailInput'))$('thumbnailInput').value='';updateThumbnailMeta();$('downloadWrap').innerHTML='';
   $('exportStatus').textContent='Ready when all required clips are loaded.';render();saveProject();
 };
 
