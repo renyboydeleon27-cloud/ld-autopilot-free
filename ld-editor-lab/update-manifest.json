@@ -1,6 +1,6 @@
 {
-  "version": "0.4.0",
-  "notes": "Adds in-app self-update support and persistent final-render fixes.",
+  "version": "0.4.1",
+  "notes": "Adds persistent API Credit Tracker with per-generation, session, project, lifetime and history totals.",
   "files": [
     {
       "name": "index.html",

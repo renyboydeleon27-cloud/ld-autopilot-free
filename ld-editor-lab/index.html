@@ -12,7 +12,7 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.4.0</span></h1>
+        <h1>LD Editor Lab <span>v0.4.1</span></h1>
         <p class="sub">Standalone local video assembler. Imported media and project state are saved locally. Final renders save directly to your phone.</p>
       </div>
       <span class="pill safe">LOCAL · AUTO-SAVE · SELF-UPDATE</span>
@@ -84,6 +84,33 @@
           <input id="clipVol" type="range" min="0" max="1" value="0.45" step="0.01">
           <label class="check"><input id="autoDuck" type="checkbox" checked> Duck music when narrator is loaded</label>
         </div>
+      </div>
+    </section>
+
+    <section class="card credit-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">API CREDIT TRACKER</p>
+          <h2>Generation Cost Monitor</h2>
+        </div>
+        <span class="pill safe">PERSISTENT HISTORY</span>
+      </div>
+      <p class="muted">Tracks LD Editor Lab AI usage per generation. FREE items stay at $0.00. Estimated charges are clearly marked EST.</p>
+      <div class="credit-grid">
+        <article class="credit-stat highlight"><span>This generation</span><strong id="apiThisGeneration">$0.000000</strong></article>
+        <article class="credit-stat"><span>Narrator voice</span><strong id="apiNarratorCost">$0.000000</strong></article>
+        <article class="credit-stat"><span>AI music</span><strong id="apiMusicCost">$0.000000</strong></article>
+        <article class="credit-stat"><span>AI SFX</span><strong id="apiSfxCost">$0.000000</strong></article>
+        <article class="credit-stat"><span>AI text / narration</span><strong id="apiTextCost">$0.000000</strong></article>
+        <article class="credit-stat"><span>This session</span><strong id="apiSessionCost">$0.000000</strong></article>
+        <article class="credit-stat"><span>Current project</span><strong id="apiProjectCost">$0.000000</strong></article>
+        <article class="credit-stat"><span>Lifetime LD Editor Lab</span><strong id="apiLifetimeCost">$0.000000</strong></article>
+      </div>
+      <div class="history-wrap">
+        <table class="usage-table">
+          <thead><tr><th>Date / time</th><th>Feature</th><th>Model</th><th>Usage</th><th>Cost</th></tr></thead>
+          <tbody id="apiHistoryBody"><tr><td colspan="5" class="muted">No paid generations yet.</td></tr></tbody>
+        </table>
       </div>
     </section>
 
