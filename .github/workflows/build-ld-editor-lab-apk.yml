@@ -58,6 +58,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LD-Editor-Lab-v0.4.0-APK
-          path: LD-Editor-Lab-v0.3.0.apk
+          path: LD-Editor-Lab-v0.4.0.apk
           if-no-files-found: error
           retention-days: 30
