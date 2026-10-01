@@ -80,7 +80,99 @@ function installAvailableUpdate(){
 
 function money(v){
   const n=Number(v)||0;
-  return '  if(!Number.isFinite(sec))return'—';
+  return '$'+n.toFixed(n>=1?4:6);
+}
+function normalizeApiTracker(raw){
+  const t=raw&&typeof raw==='object'?raw:{};
+  return {
+    projectCostUsd:Number(t.projectCostUsd)||0,
+    lifetimeCostUsd:Number(t.lifetimeCostUsd)||0,
+    lastGenerationCostUsd:Number(t.lastGenerationCostUsd)||0,
+    lastGenerationId:String(t.lastGenerationId||''),
+    history:Array.isArray(t.history)?t.history.slice(-100):[]
+  };
+}
+function latestGenerationEntries(){
+  const id=state.activeGenerationId||state.apiTracker.lastGenerationId;
+  if(!id)return [];
+  return state.apiTracker.history.filter(x=>x&&x.generationId===id);
+}
+function featureCost(entries,feature){
+  return entries.filter(x=>x.feature===feature).reduce((a,x)=>a+(Number(x.costUsd)||0),0);
+}
+function renderApiTracker(){
+  const t=state.apiTracker||normalizeApiTracker(null),entries=latestGenerationEntries();
+  const generationCost=state.activeGenerationId?state.activeGenerationCostUsd:t.lastGenerationCostUsd;
+  const put=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
+  put('apiThisGeneration',money(generationCost));
+  put('apiNarratorCost',money(featureCost(entries,'narrator_voice')));
+  put('apiMusicCost',money(featureCost(entries,'ai_music')));
+  put('apiSfxCost',money(featureCost(entries,'ai_sfx')));
+  put('apiTextCost',money(featureCost(entries,'text_narration')));
+  put('apiSessionCost',money(state.sessionCostUsd));
+  put('apiProjectCost',money(t.projectCostUsd));
+  put('apiLifetimeCost',money(t.lifetimeCostUsd));
+  const body=$('apiHistoryBody');if(!body)return;
+  body.innerHTML='';
+  const recent=[...t.history].reverse().slice(0,20);
+  if(!recent.length){
+    const tr=document.createElement('tr');tr.innerHTML='<td colspan="5" class="muted">No generations recorded yet.</td>';body.appendChild(tr);return;
+  }
+  for(const item of recent){
+    const tr=document.createElement('tr');
+    const badge=item.free?'<span class="cost-badge free">FREE</span>':'<span class="cost-badge paid">PAID</span>';
+    const tokenText=Number(item.totalTokens)>0?Number(item.totalTokens).toLocaleString()+' tok':'—';
+    tr.innerHTML='<td>'+escapeHtml(new Date(item.at).toLocaleString())+'</td><td>'+escapeHtml(item.featureLabel||item.feature||'AI')+'</td><td>'+escapeHtml(item.model||'—')+'</td><td>'+tokenText+'</td><td>'+badge+' '+money(item.costUsd)+(item.estimated?' <span class="muted">EST.</span>':'')+'</td>';
+    body.appendChild(tr);
+  }
+}
+function beginApiGeneration(label='FULL AUTO CUT'){
+  state.activeGenerationId='gen-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+  state.activeGenerationLabel=String(label||'Generation');
+  state.activeGenerationCostUsd=0;
+  renderApiTracker();saveProject();
+  return state.activeGenerationId;
+}
+function recordApiUsage(entry={}){
+  if(!state.activeGenerationId)beginApiGeneration(entry.generationLabel||entry.featureLabel||'Generation');
+  const free=entry.free===true||String(entry.billing||'').toUpperCase()==='FREE';
+  const cost=free?0:Math.max(0,Number(entry.costUsd)||0);
+  const rec={
+    id:'usage-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    generationId:state.activeGenerationId,
+    generationLabel:state.activeGenerationLabel,
+    at:new Date().toISOString(),
+    feature:String(entry.feature||'other'),
+    featureLabel:String(entry.featureLabel||entry.feature||'AI'),
+    model:String(entry.model||''),
+    inputTokens:Number(entry.inputTokens)||0,
+    outputTokens:Number(entry.outputTokens)||0,
+    totalTokens:Number(entry.totalTokens)||0,
+    costUsd:cost,
+    free,
+    estimated:entry.estimated===true
+  };
+  state.apiTracker.history.push(rec);state.apiTracker.history=state.apiTracker.history.slice(-100);
+  state.activeGenerationCostUsd+=cost;
+  state.sessionCostUsd+=cost;
+  state.apiTracker.projectCostUsd+=cost;
+  state.apiTracker.lifetimeCostUsd+=cost;
+  renderApiTracker();saveProject();
+  return rec;
+}
+function endApiGeneration(){
+  if(!state.activeGenerationId)return;
+  state.apiTracker.lastGenerationId=state.activeGenerationId;
+  state.apiTracker.lastGenerationCostUsd=state.activeGenerationCostUsd;
+  state.activeGenerationId='';state.activeGenerationLabel='';state.activeGenerationCostUsd=0;
+  renderApiTracker();saveProject();
+}
+window.LDBeginApiGeneration=beginApiGeneration;
+window.LDRecordApiUsage=recordApiUsage;
+window.LDEndApiGeneration=endApiGeneration;
+
+function fmt(sec){
+  if(!Number.isFinite(sec))return'—';
   const m=Math.floor(sec/60),s=Math.max(0,sec-m*60);
   return m+':'+s.toFixed(1).padStart(4,'0');
 }
