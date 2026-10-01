@@ -5,18 +5,34 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0d12">
   <title>LD Editor Lab</title>
-  <link rel="stylesheet" href="./styles.css?v=0.3.0">
+  <link rel="stylesheet" href="./styles.css?v=0.4.0">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.3.0</span></h1>
+        <h1>LD Editor Lab <span>v0.4.0</span></h1>
         <p class="sub">Standalone local video assembler. Imported media and project state are saved locally. Final renders save directly to your phone.</p>
       </div>
-      <span class="pill safe">LOCAL · AUTO-SAVE · NO API</span>
+      <span class="pill safe">LOCAL · AUTO-SAVE · SELF-UPDATE</span>
     </header>
+
+    <section class="card update-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">APP UPDATE</p>
+          <h2>Self-Update</h2>
+        </div>
+        <span class="pill safe">NO REINSTALL FOR WEB FIXES</span>
+      </div>
+      <p id="updateStatus" class="status">Checking installed version…</p>
+      <div class="export-actions">
+        <button id="checkUpdateBtn" class="btn ghost" type="button">Check for updates</button>
+        <button id="installUpdateBtn" class="btn primary" type="button" hidden>Update now</button>
+      </div>
+      <p class="muted">Future UI, renderer, save/download and workflow fixes can update inside the app. Only native Android-engine changes may require a new APK.</p>
+    </section>
 
     <section class="card hero">
       <div>
@@ -130,6 +146,6 @@
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.3.1"></script>
+  <script src="./app.js?v=0.4.0"></script>
 </body>
 </html>

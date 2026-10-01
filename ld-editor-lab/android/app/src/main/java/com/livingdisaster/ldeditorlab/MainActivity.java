@@ -25,10 +25,13 @@ import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -38,12 +41,19 @@ public class MainActivity extends Activity {
     private static final int NATIVE_PICK_REQUEST = 601;
     private static final String PREFS = "ld_editor_lab";
     private static final String PROJECT_STATE = "project_state";
+    private static final String ACTIVE_WEB_DIR = "active_web_dir";
+    private static final String ACTIVE_WEB_VERSION = "active_web_version";
+    private static final String BUNDLED_WEB_VERSION = "0.4.0";
+    private static final String UPDATE_MANIFEST_URL = "https://raw.githubusercontent.com/renyboydeleon27-cloud/ld-autopilot-free/main/ld-editor-lab/update-manifest.json";
+    private static final String UPDATE_HOST_PREFIX = "https://raw.githubusercontent.com/renyboydeleon27-cloud/ld-autopilot-free/";
 
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingNativeKind = "";
     private boolean pendingNativeMultiple = false;
     private File mediaDir;
+    private File webBundleRoot;
+    private volatile boolean updateCheckStarted = false;
 
     private OutputStream renderOutput;
     private Uri renderUri;
@@ -57,6 +67,8 @@ public class MainActivity extends Activity {
 
         mediaDir = new File(getFilesDir(), "ld_editor_media");
         if (!mediaDir.exists()) mediaDir.mkdirs();
+        webBundleRoot = new File(getFilesDir(), "ld_editor_web_bundles");
+        if (!webBundleRoot.exists()) webBundleRoot.mkdirs();
 
         webView = new WebView(this);
         setContentView(webView);
@@ -74,7 +86,16 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
 
         webView.addJavascriptInterface(new NativeBridge(), "LDNative");
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (!updateCheckStarted) {
+                    updateCheckStarted = true;
+                    checkForWebUpdateAsync();
+                }
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(
@@ -104,10 +125,34 @@ public class MainActivity extends Activity {
             }
         });
 
-        webView.loadUrl("file:///android_asset/index.html");
+        webView.loadUrl(startPageUrl());
     }
 
     public class NativeBridge {
+        @JavascriptInterface
+        public String getWebUpdateState() {
+            try {
+                JSONObject o = new JSONObject();
+                o.put("currentVersion", currentWebVersion());
+                o.put("bundledVersion", BUNDLED_WEB_VERSION);
+                o.put("nativeVersion", BuildConfig.VERSION_NAME);
+                o.put("selfUpdate", true);
+                return o.toString();
+            } catch (Exception e) {
+                return "{\"currentVersion\":\""+BUNDLED_WEB_VERSION+"\",\"selfUpdate\":true}";
+            }
+        }
+
+        @JavascriptInterface
+        public void checkWebUpdate() {
+            checkForWebUpdateAsync();
+        }
+
+        @JavascriptInterface
+        public void installWebUpdate() {
+            installWebUpdateAsync();
+        }
+
         @JavascriptInterface
         public void pickMedia(String kind, boolean multiple) {
             runOnUiThread(() -> {
@@ -241,6 +286,185 @@ public class MainActivity extends Activity {
                 }
             });
         }
+    }
+
+    private SharedPreferences prefs() {
+        return getSharedPreferences(PREFS, MODE_PRIVATE);
+    }
+
+    private boolean validWebBundle(File dir) {
+        return dir != null && dir.isDirectory()
+                && new File(dir, "index.html").isFile()
+                && new File(dir, "app.js").isFile()
+                && new File(dir, "styles.css").isFile();
+    }
+
+    private String startPageUrl() {
+        String dirName = prefs().getString(ACTIVE_WEB_DIR, "");
+        if (dirName != null && !dirName.isEmpty()) {
+            File dir = new File(webBundleRoot, dirName);
+            if (validWebBundle(dir)) return Uri.fromFile(new File(dir, "index.html")).toString();
+            prefs().edit().remove(ACTIVE_WEB_DIR).remove(ACTIVE_WEB_VERSION).apply();
+        }
+        return "file:///android_asset/index.html";
+    }
+
+    private String currentWebVersion() {
+        String dirName = prefs().getString(ACTIVE_WEB_DIR, "");
+        String version = prefs().getString(ACTIVE_WEB_VERSION, "");
+        if (dirName != null && !dirName.isEmpty() && version != null && !version.isEmpty()) {
+            File dir = new File(webBundleRoot, dirName);
+            if (validWebBundle(dir)) return version;
+        }
+        return BUNDLED_WEB_VERSION;
+    }
+
+    private int parseVersionPart(String value) {
+        if (value == null) return 0;
+        String digits = value.replaceFirst("[^0-9].*$", "");
+        try { return digits.isEmpty() ? 0 : Integer.parseInt(digits); } catch (Exception e) { return 0; }
+    }
+
+    private int compareVersions(String a, String b) {
+        String[] aa = (a == null ? "" : a).split("\\.");
+        String[] bb = (b == null ? "" : b).split("\\.");
+        int n = Math.max(aa.length, bb.length);
+        for (int i = 0; i < n; i++) {
+            int av = i < aa.length ? parseVersionPart(aa[i]) : 0;
+            int bv = i < bb.length ? parseVersionPart(bb[i]) : 0;
+            if (av != bv) return Integer.compare(av, bv);
+        }
+        return 0;
+    }
+
+    private boolean allowedUpdateUrl(String url) {
+        return url != null && url.startsWith(UPDATE_HOST_PREFIX);
+    }
+
+    private HttpURLConnection openUpdateConnection(String url) throws Exception {
+        if (!allowedUpdateUrl(url)) throw new Exception("Update source is not allowed.");
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.setConnectTimeout(12000);
+        conn.setReadTimeout(20000);
+        conn.setRequestProperty("User-Agent", "LD-Editor-Lab/" + BuildConfig.VERSION_NAME);
+        conn.setInstanceFollowRedirects(true);
+        return conn;
+    }
+
+    private String readUpdateText(String url) throws Exception {
+        HttpURLConnection conn = openUpdateConnection(url);
+        try {
+            int code = conn.getResponseCode();
+            if (code < 200 || code >= 300) throw new Exception("Update server returned " + code + ".");
+            try (InputStream in = new BufferedInputStream(conn.getInputStream());
+                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[32768]; int read;
+                while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+                return out.toString("UTF-8");
+            }
+        } finally { conn.disconnect(); }
+    }
+
+    private void downloadUpdateFile(String url, File target) throws Exception {
+        HttpURLConnection conn = openUpdateConnection(url);
+        try {
+            int code = conn.getResponseCode();
+            if (code < 200 || code >= 300) throw new Exception("Download failed with " + code + ".");
+            File parent = target.getParentFile(); if (parent != null && !parent.exists()) parent.mkdirs();
+            try (InputStream in = new BufferedInputStream(conn.getInputStream(), 65536);
+                 BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(target), 65536)) {
+                byte[] buffer = new byte[65536]; int read;
+                while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+            }
+            if (!target.isFile() || target.length() == 0) throw new Exception("Downloaded file is empty.");
+        } finally { conn.disconnect(); }
+    }
+
+    private JSONObject fetchUpdateManifest() throws Exception {
+        JSONObject manifest = new JSONObject(readUpdateText(UPDATE_MANIFEST_URL));
+        String version = manifest.optString("version", "").trim();
+        JSONArray files = manifest.optJSONArray("files");
+        if (version.isEmpty() || files == null || files.length() < 3) throw new Exception("Invalid update manifest.");
+        return manifest;
+    }
+
+    private void sendUpdateStatus(String status, String version, String message, String notes) {
+        try {
+            JSONObject o = new JSONObject();
+            o.put("status", status == null ? "" : status);
+            o.put("version", version == null ? "" : version);
+            o.put("message", message == null ? "" : message);
+            o.put("notes", notes == null ? "" : notes);
+            String js = "window.LDWebUpdateStatus&&window.LDWebUpdateStatus(" + o.toString() + ");";
+            runOnUiThread(() -> webView.evaluateJavascript(js, null));
+        } catch (Exception ignored) {}
+    }
+
+    private void checkForWebUpdateAsync() {
+        new Thread(() -> {
+            try {
+                JSONObject manifest = fetchUpdateManifest();
+                String remote = manifest.optString("version", "");
+                String notes = manifest.optString("notes", "");
+                String current = currentWebVersion();
+                if (compareVersions(remote, current) > 0) sendUpdateStatus("available", remote, "", notes);
+                else sendUpdateStatus("current", current, "", "");
+            } catch (Exception e) {
+                sendUpdateStatus("error", currentWebVersion(), e.getMessage(), "");
+            }
+        }, "ld-update-check").start();
+    }
+
+    private void deleteRecursive(File file) {
+        if (file == null || !file.exists()) return;
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) for (File child : children) deleteRecursive(child);
+        }
+        file.delete();
+    }
+
+    private void installWebUpdateAsync() {
+        new Thread(() -> {
+            File staging = null;
+            try {
+                JSONObject manifest = fetchUpdateManifest();
+                String version = manifest.optString("version", "").trim();
+                String notes = manifest.optString("notes", "");
+                if (compareVersions(version, currentWebVersion()) <= 0) {
+                    sendUpdateStatus("current", currentWebVersion(), "", "");
+                    return;
+                }
+                sendUpdateStatus("installing", version, "", notes);
+                String safeVersion = version.replaceAll("[^A-Za-z0-9._-]", "_");
+                staging = new File(webBundleRoot, ".tmp-" + safeVersion);
+                deleteRecursive(staging);
+                if (!staging.mkdirs() && !staging.isDirectory()) throw new Exception("Could not prepare update storage.");
+
+                JSONArray files = manifest.getJSONArray("files");
+                for (int i = 0; i < files.length(); i++) {
+                    JSONObject entry = files.getJSONObject(i);
+                    String name = entry.optString("name", "");
+                    String url = entry.optString("url", "");
+                    if (!name.matches("[A-Za-z0-9._-]+")) throw new Exception("Invalid update filename.");
+                    downloadUpdateFile(url, new File(staging, name));
+                }
+                if (!validWebBundle(staging)) throw new Exception("Update package is incomplete.");
+
+                File finalDir = new File(webBundleRoot, "bundle-" + safeVersion);
+                if (finalDir.exists()) deleteRecursive(finalDir);
+                if (!staging.renameTo(finalDir)) throw new Exception("Could not activate update.");
+                staging = null;
+                prefs().edit().putString(ACTIVE_WEB_DIR, finalDir.getName()).putString(ACTIVE_WEB_VERSION, version).apply();
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "LD Editor Lab updated to v" + version, Toast.LENGTH_LONG).show();
+                    webView.loadUrl(Uri.fromFile(new File(finalDir, "index.html")).toString());
+                });
+            } catch (Exception e) {
+                if (staging != null) deleteRecursive(staging);
+                sendUpdateStatus("error", currentWebVersion(), e.getMessage(), "");
+            }
+        }, "ld-update-install").start();
     }
 
     private synchronized void cancelRenderInternal() {

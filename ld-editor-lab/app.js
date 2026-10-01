@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='0.3.1';
+const VERSION='0.4.0';
 // Keep the v0.2 key so existing projects migrate in place after APK update.
 const STORE='ld-editor-lab-project-v0.2';
 const EXPORT_DB='ld-editor-lab-export-db-v1';
@@ -26,6 +26,46 @@ const $=id=>document.getElementById(id);
 const timeline=$('timeline'),preview=$('previewVideo'),placeholder=$('previewPlaceholder');
 const narrationAudio=$('narrationAudio'),musicAudio=$('musicAudio');
 const isNative=()=>!!window.LDNative&&typeof window.LDNative.pickMedia==='function';
+
+function setUpdateStatus(message){
+  const el=$('updateStatus');if(el)el.textContent=message;
+}
+function getNativeUpdateState(){
+  if(!isNative()||typeof window.LDNative?.getWebUpdateState!=='function')return null;
+  try{return safeJson(window.LDNative.getWebUpdateState(),null);}catch{return null;}
+}
+window.LDWebUpdateStatus=info=>{
+  info=info||{};
+  const check=$('checkUpdateBtn'),install=$('installUpdateBtn');
+  if(info.status==='available'){
+    setUpdateStatus('Update available · v'+(info.version||'?')+(info.notes?' · '+info.notes:''));
+    if(install){install.hidden=false;install.disabled=false;install.dataset.version=info.version||'';}
+    if(check)check.disabled=false;
+  }else if(info.status==='installing'){
+    setUpdateStatus('Installing v'+(info.version||'latest')+'… Keep the app open.');
+    if(check)check.disabled=true;if(install)install.disabled=true;
+  }else if(info.status==='current'){
+    setUpdateStatus('Up to date · v'+(info.version||VERSION));
+    if(install){install.hidden=true;install.disabled=true;}if(check)check.disabled=false;
+  }else if(info.status==='error'){
+    setUpdateStatus('Update check failed · '+(info.message||'Try again later.'));
+    if(check)check.disabled=false;if(install)install.disabled=false;
+  }
+};
+function checkForUpdates(){
+  if(!isNative()||typeof window.LDNative?.checkWebUpdate!=='function'){
+    setUpdateStatus('Browser build · updates arrive with the deployed site.');return;
+  }
+  const check=$('checkUpdateBtn');if(check)check.disabled=true;
+  setUpdateStatus('Checking for updates…');
+  try{window.LDNative.checkWebUpdate();}catch(e){window.LDWebUpdateStatus({status:'error',message:e.message});}
+}
+function installAvailableUpdate(){
+  if(!isNative()||typeof window.LDNative?.installWebUpdate!=='function')return;
+  const install=$('installUpdateBtn');if(install)install.disabled=true;
+  setUpdateStatus('Preparing update…');
+  try{window.LDNative.installWebUpdate();}catch(e){window.LDWebUpdateStatus({status:'error',message:e.message});}
+}
 
 function fmt(sec){
   if(!Number.isFinite(sec))return'—';
@@ -575,6 +615,13 @@ async function renderExport(){
     $('cancelExportBtn').disabled=true;$('exportBtn').disabled=STAGES.some(s=>!state.clips.has(s));
   }
 }
+
+const checkUpdateBtn=$('checkUpdateBtn'),installUpdateBtn=$('installUpdateBtn');
+if(checkUpdateBtn)checkUpdateBtn.onclick=checkForUpdates;
+if(installUpdateBtn)installUpdateBtn.onclick=installAvailableUpdate;
+const initialUpdateState=getNativeUpdateState();
+if(initialUpdateState?.currentVersion)setUpdateStatus('Installed v'+initialUpdateState.currentVersion+' · automatic update checks enabled');
+else if(!isNative())setUpdateStatus('Browser build · automatic native updates unavailable here.');
 
 $('clipPickerBtn').onclick=()=>openPicker('clips',true);
 $('narrationPickerBtn').onclick=()=>openPicker('narration',false);

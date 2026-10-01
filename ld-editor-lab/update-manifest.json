@@ -1,0 +1,18 @@
+{
+  "version": "0.4.0",
+  "notes": "Adds in-app self-update support and persistent final-render fixes.",
+  "files": [
+    {
+      "name": "index.html",
+      "url": "https://raw.githubusercontent.com/renyboydeleon27-cloud/ld-autopilot-free/main/ld-editor-lab/index.html"
+    },
+    {
+      "name": "styles.css",
+      "url": "https://raw.githubusercontent.com/renyboydeleon27-cloud/ld-autopilot-free/main/ld-editor-lab/styles.css"
+    },
+    {
+      "name": "app.js",
+      "url": "https://raw.githubusercontent.com/renyboydeleon27-cloud/ld-autopilot-free/main/ld-editor-lab/app.js"
+    }
+  ]
+}
