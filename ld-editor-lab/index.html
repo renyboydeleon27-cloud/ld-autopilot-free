@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0d12">
   <title>LD Editor Lab</title>
-  <link rel="stylesheet" href="./styles.css?v=0.2.0">
+  <link rel="stylesheet" href="./styles.css?v=0.3.0">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.2.0</span></h1>
-        <p class="sub">Standalone local video assembler. Imported media is saved inside the Android app.</p>
+        <h1>LD Editor Lab <span>v0.3.0</span></h1>
+        <p class="sub">Standalone local video assembler. Imported media and project state are saved locally. Final renders save directly to your phone.</p>
       </div>
-      <span class="pill safe">LOCAL · AUTO-SAVE</span>
+      <span class="pill safe">LOCAL · AUTO-SAVE · NO API</span>
     </header>
 
     <section class="card hero">
@@ -110,9 +110,9 @@
         </div>
         <span class="pill experimental">EXPERIMENTAL</span>
       </div>
-      <p class="muted">V0.2 still exports portrait WebM in-browser. Persistent project storage is the main upgrade in this build.</p>
+      <p class="muted">V0.3 renders portrait WebM and saves it directly to Movies/LD Editor Lab on Android. No temporary download-link step.</p>
       <div class="export-actions">
-        <button id="exportBtn" class="btn primary" type="button">Render final video</button>
+        <button id="exportBtn" class="btn primary" type="button">Render & Save video</button>
         <button id="cancelExportBtn" class="btn ghost" type="button" disabled>Cancel render</button>
       </div>
       <div class="progress"><div id="exportProgress"></div></div>
@@ -130,6 +130,6 @@
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.2.0"></script>
+  <script src="./app.js?v=0.3.0"></script>
 </body>
 </html>
