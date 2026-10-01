@@ -13,7 +13,8 @@
     if(/tornado|twister/.test(t))return {type:'TORNADO',hook:'WHEN THE WIND STRUCK',visuals:'a clearly visible tornado or violent rotating storm where event-appropriate, wind-driven debris, damaged buildings, bent vegetation and adult survival activity'};
     if(/cyclone|hurricane|typhoon/.test(t))return {type:'CYCLONE',hook:'WHEN THE STORM HIT',visuals:'violent wind and rain, storm surge or flooding where appropriate, damaged homes, bent vegetation, debris and adult survival activity'};
     if(/flood|dam failure|storm surge/.test(t))return {type:'FLOOD',hook:'WHEN THE WATER ROSE',visuals:'fast or deep floodwater, damaged roads and buildings, floating debris, stranded transport where historically appropriate, rescue or survival activity'};
-    if(/landslide|mudslide|avalanche|glacier collapse/.test(t))return {type:'LANDSLIDE',hook:'WHEN THE SLOPE COLLAPSED',visuals:'a large debris field or moving mass appropriate to the event, buried or damaged structures, blocked roads, unstable terrain and adult survival activity'};
+    if(/avalanche/.test(t))return {type:'AVALANCHE',hook:'WHEN THE SNOW BROKE LOOSE',visuals:'a massive snow avalanche or its immediate aftermath, deep deposited snow, buried or displaced railway infrastructure where event-appropriate, damaged timber, mountain terrain, conifers and adult survival or response activity'};
+    if(/landslide|mudslide|glacier collapse/.test(t))return {type:'LANDSLIDE',hook:'WHEN THE SLOPE COLLAPSED',visuals:'a large debris field or moving mass appropriate to the event, buried or damaged structures, blocked roads, unstable terrain and adult survival activity'};
     if(/wildfire|forest fire|firestorm/.test(t))return {type:'WILDFIRE',hook:'WHEN THE FIRE SPREAD',visuals:'flames, smoke, embers, burned or threatened structures, evacuation or firefighting activity and adult survival action'};
     if(/locust|insect|swarm/.test(t))return {type:'LOCUST CRISIS',hook:'WHEN THE SWARM ARRIVED',visuals:'dense airborne swarms, damaged crops, farmland, agricultural tools, worried adult farmers or response crews and strong environmental scale'};
     if(/black death|plague|epidemic|pandemic|disease/.test(t))return {type:'PLAGUE',hook:'WHEN THE DISEASE SPREAD',visuals:'historically appropriate streets, homes, caregivers or healers, period carts, records, tense adult crowds or empty streets and disease-era atmosphere without gore'};
@@ -22,12 +23,19 @@
     return {type:'DISASTER',hook:'WHEN DISASTER STRUCK',visuals:'the most recognizable physically believable hazard, damaged environment, adult survival response, debris or infrastructure effects specifically supported by the current topic'};
   }
 
-  function preservedContext(existing){
-    const text=existing||'';
+  function preservedContext(existing,topic){
+    const text=String(existing||'');
+    const current=String(topic||'').trim();
+    const prior=text.match(/CURRENT TOPIC\s*[“"]([^”"]+)[”"]/i)?.[1]?.trim()||'';
+    if(prior&&current&&prior.toLowerCase()!==current.toLowerCase())return '';
     const markers=['HISTORICAL CONTEXT LOCK:','FACT PACK:'];
     let at=-1;
     for(const m of markers){const i=text.indexOf(m);if(i>=0&&(at<0||i<at))at=i;}
-    return at>=0?text.slice(at).trim():'';
+    const context=at>=0?text.slice(at).trim():'';
+    if(!context)return '';
+    const currentLower=current.toLowerCase();
+    if(!/san francisco earthquake/i.test(currentLower)&&/san francisco[^\n.]{0,80}1906|1906[^\n.]{0,80}san francisco/i.test(context))return '';
+    return context;
   }
 
   function hasVerifiedDeaths(context){
@@ -44,7 +52,7 @@
   function buildPrompt(topic,format,existing){
     const ratio=format==='longform'?'landscape 16:9':'portrait 9:16';
     const theme=detectTheme(topic);
-    const context=preservedContext(existing);
+    const context=preservedContext(existing,topic);
     const showDeathBadge=hasVerifiedDeaths(context);
     const layout=format==='longform'
       ? 'LANDSCAPE SAFE LAYOUT: keep landscape 16:9. Inset all text at least 6% from edges. Use a compact title above the scene, a raised adult survivor at left/center with face and both hands visible, '+(showDeathBadge?'the verified-death curiosity badge at right, ':'no casualty badge, using the right side for visual breathing room, ')+'and an inset footer. Do not apply portrait vertical crop bands to longform.'
@@ -70,7 +78,7 @@ ${COLOR_OVERRIDE}: the THUMBNAIL is ALWAYS FULL COLOR, even when the main produc
     const next=buildPrompt(topic,format,prompt.value);
     if(prompt.value===next)return false;
     prompt.value=next;
-    prompt.dataset.thumbnailFormatLock='v3.41.0-color-override';
+    prompt.dataset.thumbnailFormatLock='v3.42.0-topic-isolation';
     fire(prompt);
     return true;
   }
@@ -89,7 +97,7 @@ ${COLOR_OVERRIDE}: the THUMBNAIL is ALWAYS FULL COLOR, even when the main produc
     const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]');
     const prompt=card?.querySelector('.image-prompt')?.value||'';
     if(!prompt.trim())return {ok:false,issue:'Thumbnail prompt is empty.',hasVerifiedDeaths:false};
-    const context=preservedContext(prompt);
+    const context=preservedContext(prompt,document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'');
     const deaths=hasVerifiedDeaths(context);
     const hasVerifiedBranch=/RIGHT-SIDE CURIOSITY BADGE:\s*verified casualty evidence is present/i.test(prompt);
     const hasOmitBranch=/CASUALTY BADGE RULE:\s*no verified positive death toll/i.test(prompt);
