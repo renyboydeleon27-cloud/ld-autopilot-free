@@ -5,6 +5,11 @@
   if(!stagesEl)return;
 
   function topic(){return (topicEl?.value||'this disaster').trim();}
+  function namedHistoricalTopic(){
+    const t=topic();
+    return !/^\s*(?:untitled disaster|this disaster)\s*$/i.test(t)&&/\b(?:17|18|19|20)\d{2}\b/.test(t);
+  }
+
   function type(){
     const s=topic().toLowerCase();
     if(/tsunami|tidal wave/.test(s))return'tsunami';
@@ -47,11 +52,20 @@
   function smartNarration(stage){
     if(stage==='ENDING'||stage==='THUMBNAIL')return'';
     const t=topic(), ty=type();
-    const eventSpecific=window.LDWellingtonAvalanche1910?.narration?.(t,stage)||'';
+    const wellington=window.LDWellingtonAvalanche1910;
+    if(wellington?.matches?.(t)){
+      // Wellington HOOK is intentionally silent; P1-P14 use the locked final-video narration.
+      if(stage==='HOOK')return '';
+      return wellington.narration?.(t,stage)||'';
+    }
+    const eventSpecific=wellington?.narration?.(t,stage)||'';
     if(eventSpecific)return eventSpecific;
     if(stage==='HOOK')return `${hooks[ty]} This was ${t}.`;
     const n=Number(stage.slice(1));
     if(formatEl?.value!=='longform'){
+      // Named historical events must go through the verified AI narration pipeline
+      // instead of receiving generic disaster-family filler.
+      if(namedHistoricalTopic())return '';
       const list=shorts[ty];
       if(list?.[n-1])return list[n-1];
       return `The story of ${t} continues as the disaster develops and its effects spread across the affected area.`;
@@ -76,6 +90,24 @@
       const stage=card.dataset.stage;
       const box=card.querySelector('.narration');
       if(!box||stage==='ENDING'||stage==='THUMBNAIL')return;
+      const wellington=window.LDWellingtonAvalanche1910;
+      if(wellington?.matches?.(topic())){
+        if(stage==='HOOK'){
+          if(box.value.trim()){
+            box.value='';
+            box.dispatchEvent(new Event('input',{bubbles:true}));
+            changed=true;
+          }
+          return;
+        }
+        const exact=wellington.narration?.(topic(),stage)||'';
+        if(exact&&box.value.trim()!==exact){
+          box.value=exact;
+          box.dispatchEvent(new Event('input',{bubbles:true}));
+          changed=true;
+        }
+        return;
+      }
       if(stage==='P4'){
         const wellingtonP4=window.LDWellingtonAvalanche1910?.narration?.(topic(),stage)||'';
         const oldGeneric=shorts.landslide?.[3]||'';
@@ -142,8 +174,21 @@
         changed=true;
         return;
       }
-      if(box.value.trim())return;
-      box.value=smartNarration(stage);
+      if(box.value.trim()){
+        if(namedHistoricalTopic()&&!card.querySelector('.done-toggle')?.checked&&/^P(?:[1-9]|1[0-4])$/.test(stage)){
+          const n=Number(stage.slice(1));
+          const generic=shorts[type()]?.[n-1]||'';
+          if(generic&&box.value.trim()===generic){
+            box.value='';
+            box.dispatchEvent(new Event('input',{bubbles:true}));
+            changed=true;
+          }
+        }
+        return;
+      }
+      const next=smartNarration(stage);
+      if(!next)return;
+      box.value=next;
       box.dispatchEvent(new Event('input',{bubbles:true}));
       changed=true;
     });
