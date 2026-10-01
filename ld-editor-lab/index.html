@@ -5,30 +5,28 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0d12">
   <title>LD Editor Lab</title>
-  <link rel="stylesheet" href="./styles.css?v=0.1.0">
+  <link rel="stylesheet" href="./styles.css?v=0.2.0">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.1.0</span></h1>
-        <p class="sub">Standalone local video assembler. No AI calls in this version.</p>
+        <h1>LD Editor Lab <span>v0.2.0</span></h1>
+        <p class="sub">Standalone local video assembler. Imported media is saved inside the Android app.</p>
       </div>
-      <span class="pill safe">LOCAL · CREDIT SAFE</span>
+      <span class="pill safe">LOCAL · AUTO-SAVE</span>
     </header>
 
     <section class="card hero">
       <div>
         <h2>Auto Assemble</h2>
-        <p>Upload HOOK, P1–P14 and ENDING. Files stay on this device and are not sent to the LD AUTO API.</p>
+        <p>Import HOOK, P1–P14 and ENDING. Android imports are copied to private app storage so the project survives app restarts.</p>
       </div>
       <div class="hero-actions">
-        <label class="btn primary">
-          Upload video clips
-          <input id="clipInput" type="file" accept="video/*" multiple hidden>
-        </label>
-        <button id="clearBtn" class="btn ghost" type="button">Clear session</button>
+        <button id="clipPickerBtn" class="btn primary" type="button">Import video clips</button>
+        <input id="clipInput" type="file" accept="video/*" multiple hidden>
+        <button id="clearBtn" class="btn ghost" type="button">Clear project</button>
       </div>
     </section>
 
@@ -45,19 +43,21 @@
           <p class="eyebrow">AUDIO</p>
           <h2>Narrator & Music</h2>
         </div>
-        <p class="muted">Optional for V1. Upload one full narrator track and one music track.</p>
+        <p class="muted">Narrator and music are also saved locally in the Android build.</p>
       </div>
       <div class="audio-grid">
         <div class="audio-box">
           <label>Narrator audio</label>
-          <input id="narrationInput" type="file" accept="audio/*">
+          <button id="narrationPickerBtn" class="btn ghost" type="button">Import narrator</button>
+          <input id="narrationInput" type="file" accept="audio/*" hidden>
           <span id="narrationMeta" class="meta">No narrator loaded</span>
           <label class="range-label">Narrator volume <output id="narrationVolOut">100%</output></label>
           <input id="narrationVol" type="range" min="0" max="1.5" value="1" step="0.05">
         </div>
         <div class="audio-box">
           <label>Background music</label>
-          <input id="musicInput" type="file" accept="audio/*">
+          <button id="musicPickerBtn" class="btn ghost" type="button">Import music</button>
+          <input id="musicInput" type="file" accept="audio/*" hidden>
           <span id="musicMeta" class="meta">No music loaded</span>
           <label class="range-label">Music volume <output id="musicVolOut">18%</output></label>
           <input id="musicVol" type="range" min="0" max="1" value="0.18" step="0.01">
@@ -92,7 +92,7 @@
       </div>
       <div class="preview-shell">
         <video id="previewVideo" playsinline preload="metadata"></video>
-        <div id="previewPlaceholder" class="preview-placeholder">Upload clips to preview</div>
+        <div id="previewPlaceholder" class="preview-placeholder">Import clips to preview</div>
       </div>
       <div class="transport">
         <button id="playAllBtn" class="btn primary" type="button">▶ Play full sequence</button>
@@ -110,7 +110,7 @@
         </div>
         <span class="pill experimental">EXPERIMENTAL</span>
       </div>
-      <p class="muted">V1 exports a portrait WebM directly in the browser. MP4 export and AI narration will be added later without touching LD AUTO.</p>
+      <p class="muted">V0.2 still exports portrait WebM in-browser. Persistent project storage is the main upgrade in this build.</p>
       <div class="export-actions">
         <button id="exportBtn" class="btn primary" type="button">Render final video</button>
         <button id="cancelExportBtn" class="btn ghost" type="button" disabled>Cancel render</button>
@@ -130,6 +130,6 @@
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.1.0"></script>
+  <script src="./app.js?v=0.2.0"></script>
 </body>
 </html>
