@@ -44,6 +44,7 @@ public class MainActivity extends Activity {
     private static final String ACTIVE_WEB_DIR = "active_web_dir";
     private static final String ACTIVE_WEB_VERSION = "active_web_version";
     private static final String BUNDLED_WEB_VERSION = "0.4.0";
+    private static final String NATIVE_APP_VERSION = "0.4.0";
     private static final String UPDATE_MANIFEST_URL = "https://raw.githubusercontent.com/renyboydeleon27-cloud/ld-autopilot-free/main/ld-editor-lab/update-manifest.json";
     private static final String UPDATE_HOST_PREFIX = "https://raw.githubusercontent.com/renyboydeleon27-cloud/ld-autopilot-free/";
 
@@ -135,7 +136,7 @@ public class MainActivity extends Activity {
                 JSONObject o = new JSONObject();
                 o.put("currentVersion", currentWebVersion());
                 o.put("bundledVersion", BUNDLED_WEB_VERSION);
-                o.put("nativeVersion", BuildConfig.VERSION_NAME);
+                o.put("nativeVersion", NATIVE_APP_VERSION);
                 o.put("selfUpdate", true);
                 return o.toString();
             } catch (Exception e) {
@@ -346,7 +347,7 @@ public class MainActivity extends Activity {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setConnectTimeout(12000);
         conn.setReadTimeout(20000);
-        conn.setRequestProperty("User-Agent", "LD-Editor-Lab/" + BuildConfig.VERSION_NAME);
+        conn.setRequestProperty("User-Agent", "LD-Editor-Lab/" + NATIVE_APP_VERSION);
         conn.setInstanceFollowRedirects(true);
         return conn;
     }
