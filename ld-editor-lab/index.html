@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d12">
+  <title>LD Editor Lab</title>
+  <link rel="stylesheet" href="./styles.css?v=0.1.0">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
+        <h1>LD Editor Lab <span>v0.1.0</span></h1>
+        <p class="sub">Standalone local video assembler. No AI calls in this version.</p>
+      </div>
+      <span class="pill safe">LOCAL · CREDIT SAFE</span>
+    </header>
+
+    <section class="card hero">
+      <div>
+        <h2>Auto Assemble</h2>
+        <p>Upload HOOK, P1–P14 and ENDING. Files stay on this device and are not sent to the LD AUTO API.</p>
+      </div>
+      <div class="hero-actions">
+        <label class="btn primary">
+          Upload video clips
+          <input id="clipInput" type="file" accept="video/*" multiple hidden>
+        </label>
+        <button id="clearBtn" class="btn ghost" type="button">Clear session</button>
+      </div>
+    </section>
+
+    <section class="stats">
+      <article class="stat"><span>Clips loaded</span><strong id="clipCount">0 / 16</strong></article>
+      <article class="stat"><span>Total video</span><strong id="totalDuration">0:00</strong></article>
+      <article class="stat"><span>Missing</span><strong id="missingCount">16</strong></article>
+      <article class="stat"><span>Status</span><strong id="readyStatus">Waiting</strong></article>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">AUDIO</p>
+          <h2>Narrator & Music</h2>
+        </div>
+        <p class="muted">Optional for V1. Upload one full narrator track and one music track.</p>
+      </div>
+      <div class="audio-grid">
+        <div class="audio-box">
+          <label>Narrator audio</label>
+          <input id="narrationInput" type="file" accept="audio/*">
+          <span id="narrationMeta" class="meta">No narrator loaded</span>
+          <label class="range-label">Narrator volume <output id="narrationVolOut">100%</output></label>
+          <input id="narrationVol" type="range" min="0" max="1.5" value="1" step="0.05">
+        </div>
+        <div class="audio-box">
+          <label>Background music</label>
+          <input id="musicInput" type="file" accept="audio/*">
+          <span id="musicMeta" class="meta">No music loaded</span>
+          <label class="range-label">Music volume <output id="musicVolOut">18%</output></label>
+          <input id="musicVol" type="range" min="0" max="1" value="0.18" step="0.01">
+        </div>
+        <div class="audio-box">
+          <label>Original clip audio</label>
+          <label class="range-label">Clip/SFX volume <output id="clipVolOut">45%</output></label>
+          <input id="clipVol" type="range" min="0" max="1" value="0.45" step="0.01">
+          <label class="check"><input id="autoDuck" type="checkbox" checked> Duck music when narrator is loaded</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">TIMELINE</p>
+          <h2>HOOK → P1–P14 → ENDING</h2>
+        </div>
+        <div class="legend"><span class="dot ok"></span>Loaded <span class="dot warn"></span>Missing / timing review</div>
+      </div>
+      <div id="timeline" class="timeline"></div>
+    </section>
+
+    <section class="card preview-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">PREVIEW</p>
+          <h2>Final Sequence Preview</h2>
+        </div>
+        <span id="previewStage" class="pill">—</span>
+      </div>
+      <div class="preview-shell">
+        <video id="previewVideo" playsinline preload="metadata"></video>
+        <div id="previewPlaceholder" class="preview-placeholder">Upload clips to preview</div>
+      </div>
+      <div class="transport">
+        <button id="playAllBtn" class="btn primary" type="button">▶ Play full sequence</button>
+        <button id="stopBtn" class="btn ghost" type="button">■ Stop</button>
+        <span id="playTime" class="time">0:00 / 0:00</span>
+      </div>
+      <div class="progress"><div id="playProgress"></div></div>
+    </section>
+
+    <section class="card export-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">EXPORT</p>
+          <h2>Experimental Browser Render</h2>
+        </div>
+        <span class="pill experimental">EXPERIMENTAL</span>
+      </div>
+      <p class="muted">V1 exports a portrait WebM directly in the browser. MP4 export and AI narration will be added later without touching LD AUTO.</p>
+      <div class="export-actions">
+        <button id="exportBtn" class="btn primary" type="button">Render final video</button>
+        <button id="cancelExportBtn" class="btn ghost" type="button" disabled>Cancel render</button>
+      </div>
+      <div class="progress"><div id="exportProgress"></div></div>
+      <p id="exportStatus" class="status">Ready when all required clips are loaded.</p>
+      <div id="downloadWrap"></div>
+    </section>
+
+    <section class="card future">
+      <p class="eyebrow">LATER UPGRADES</p>
+      <h2>Not enabled yet</h2>
+      <p>AI clip analyzer · auto narration from final clips · AI narrator voice · MP4 encoder · caption generator · smart scene cuts.</p>
+    </section>
+  </main>
+
+  <audio id="narrationAudio" preload="metadata"></audio>
+  <audio id="musicAudio" preload="metadata" loop></audio>
+  <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
+  <script src="./app.js?v=0.1.0"></script>
+</body>
+</html>
