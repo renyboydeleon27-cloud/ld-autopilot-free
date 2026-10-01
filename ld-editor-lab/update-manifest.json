@@ -1,6 +1,6 @@
 {
-  "version": "0.4.1",
-  "notes": "Adds persistent API Credit Tracker with per-generation, session, project, lifetime and history totals.",
+  "version": "0.5.0",
+  "notes": "Adds FULL AUTO CUT v1: stage timing, automatic cuts, transitions, subtitle timing, SFX mix, music ducking and export integration.",
   "files": [
     {
       "name": "index.html",
