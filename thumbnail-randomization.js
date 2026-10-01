@@ -1,4 +1,4 @@
-/* LD AUTO v3.42.1 — topic-isolated thumbnail designs + dedicated full T2I copy action */
+/* LD AUTO v3.42.2 — per-design Preview + Reference + Copy Prompt controls */
 (()=>{
 'use strict';
 const stages=document.getElementById('stages');if(!stages)return;
@@ -255,26 +255,7 @@ function render(){
  let box=card.querySelector('.thumbnail-layout-chooser');
  if(!box){box=document.createElement('div');box.className='thumbnail-layout-chooser field-block';box.style.cssText='border:2px solid #ff3b30;border-radius:12px;padding:10px;margin:10px 0';body.prepend(box);}
  const t=topic(),cur=current(t),recent=readHistory();
- box.innerHTML='<div class="field-head"><label>Thumbnail Design · 10-Design Rotation</label></div><p style="margin:5px 0 9px;font-size:11px;color:#9aa7b6">Tap a layout label to select it. Tap the photo or Preview to see the full image. Use Add reference photo only to choose or replace a gallery picture. Uploaded photos are saved in this browser and are reference previews only; they are not automatically sent to the image generator. The generated thumbnail remains FULL COLOR.</p><button type="button" class="thumb-copy-full-prompt">Copy FULL Text-to-Image Prompt</button><p class="thumb-copy-status" aria-live="polite"></p><div class="thumb-layout-buttons thumb-design-grid"></div><input type="file" class="thumb-sample-picker" accept="image/*" hidden aria-label="Choose design reference photo">';
- const copyFull=box.querySelector('.thumb-copy-full-prompt');
- const copyStatus=box.querySelector('.thumb-copy-status');
- if(copyFull)copyFull.onclick=async()=>{
-  window.LDThumbnailFormatLock?.apply?.();
-  apply();
-  const value=String(card.querySelector('.image-prompt')?.value||'').trim();
-  if(!value){
-   if(copyStatus)copyStatus.textContent='Thumbnail prompt is empty.';
-   return;
-  }
-  try{
-   await navigator.clipboard.writeText(value);
-   copyFull.textContent='Copied ✓';
-   if(copyStatus)copyStatus.textContent='Current '+t+' thumbnail prompt copied.';
-   setTimeout(()=>{if(copyFull?.isConnected)copyFull.textContent='Copy FULL Text-to-Image Prompt';},1400);
-  }catch{
-   window.prompt('Copy FULL Text-to-Image Prompt:',value);
-  }
- };
+ box.innerHTML='<div class="field-head"><label>Thumbnail Design · 10-Design Rotation</label></div><p style="margin:5px 0 9px;font-size:11px;color:#9aa7b6">Tap a layout label to select it. Each design has its own Preview, Add reference photo, and Copy Prompt controls. Uploaded photos are saved in this browser and are reference previews only; they are not automatically sent to the image generator. The generated thumbnail remains FULL COLOR.</p><div class="thumb-layout-buttons thumb-design-grid"></div><input type="file" class="thumb-sample-picker" accept="image/*" hidden aria-label="Choose design reference photo">';
  const picker=box.querySelector('.thumb-sample-picker');
  let pendingId='';
  picker.onchange=async()=>{
@@ -306,7 +287,23 @@ function render(){
    const upload=document.createElement('button');upload.type='button';upload.className='thumb-sample-upload';upload.textContent='Add reference photo';upload.setAttribute('aria-label','Choose gallery photo for '+x.label);
    upload.onclick=()=>{pendingId=x.id;picker.click();};
    const previewBtn=document.createElement('button');previewBtn.type='button';previewBtn.className='thumb-sample-upload thumb-sample-preview';previewBtn.textContent='Preview';previewBtn.setAttribute('aria-label','Preview '+x.label);previewBtn.onclick=()=>openSamplePreview(x.id,fam,previewBtn);
-   const group=document.createElement('div');group.className='thumb-design-item';wrap.replaceChild(group,b);group.append(b,previewBtn,upload);
+   const copyPrompt=document.createElement('button');copyPrompt.type='button';copyPrompt.className='thumb-sample-upload thumb-copy-prompt';copyPrompt.textContent='Copy Prompt';copyPrompt.setAttribute('aria-label','Copy full Text-to-Image prompt for '+x.label);
+   copyPrompt.onclick=async()=>{
+    choose(t,x.id);
+    window.LDThumbnailFormatLock?.apply?.();
+    apply();
+    const value=String(card.querySelector('.image-prompt')?.value||'').trim();
+    if(!value){alert('Thumbnail prompt is empty.');return;}
+    try{
+     await navigator.clipboard.writeText(value);
+     copyPrompt.textContent='Copied ✓';
+     setTimeout(()=>{if(copyPrompt?.isConnected)copyPrompt.textContent='Copy Prompt';},1400);
+    }catch{
+     window.prompt('Copy FULL Text-to-Image Prompt:',value);
+    }
+    render();
+   };
+   const group=document.createElement('div');group.className='thumb-design-item';wrap.replaceChild(group,b);group.append(b,previewBtn,upload,copyPrompt);
    if(x.id==='street'&&isSanFrancisco1906(t)){
     const copy=document.createElement('button');copy.type='button';copy.className='thumb-sample-upload';copy.textContent='Copy approved SF prompt';
     copy.onclick=async()=>{try{await navigator.clipboard.writeText(approvedReferencePrompt);copy.textContent='Copied ✓';}catch{window.prompt('Copy approved San Francisco reference prompt:',approvedReferencePrompt);}};
@@ -333,8 +330,8 @@ window.addEventListener('load',sync);
 setTimeout(sync,300);
 if(!document.getElementById('ldThumbnailSampleStyles')){
  const style=document.createElement('style');style.id='ldThumbnailSampleStyles';
- style.textContent='.thumb-copy-full-prompt{width:100%;margin:4px 0 5px;padding:13px 12px;border:1px solid #49c96d;border-radius:10px;background:#20a447;color:#fff;font-size:14px;font-weight:900;cursor:pointer}.thumb-copy-status{min-height:16px;margin:0 0 8px;font-size:10px;color:#9fd7ad}.thumb-preview-dialog{box-sizing:border-box;width:min(94vw,900px);max-width:94vw;max-height:94vh;max-height:94dvh;margin:auto;padding:12px;border:1px solid #5a86ad;border-radius:12px;background:#111923;color:#fff;overflow:auto}.thumb-preview-dialog::backdrop{background:rgba(0,0,0,.85)}.thumb-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.thumb-preview-close{padding:10px 14px;background:#183958;color:#fff;border:1px solid #5a86ad;border-radius:8px;cursor:pointer}.thumb-preview-content img{display:block;width:100%;height:auto;max-height:72vh;max-height:72dvh;object-fit:contain}.thumb-preview-content svg{display:block;width:100%;max-height:65vh}.thumb-preview-status{font-size:12px;color:#bac8d7;margin:8px 0 0}.thumb-sample-preview{background:#245a88!important}.thumb-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.thumb-design-item{min-width:0;display:flex;flex-direction:column;gap:4px}.thumb-design-card{display:flex!important;flex-direction:column;align-items:stretch!important;gap:5px!important;padding:7px!important;text-align:left!important;min-width:0!important}.thumb-design-card.selected{outline:2px solid #ff3b30;background:rgba(255,59,48,.08)}.thumb-design-sample{display:block;width:100%;overflow:hidden;border-radius:8px;background:#202833}.thumb-design-sample svg,.thumb-design-sample img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:contain}.thumb-sample-upload{width:100%;border:1px solid #5a86ad;border-radius:7px;padding:7px 4px;background:#183958;color:#e8f5ff;font-size:10px;font-weight:700;cursor:pointer}.thumb-design-label{font-size:11px;font-weight:800;line-height:1.2}.thumb-design-meta{font-size:9px;opacity:.65}@media(min-width:720px){.thumb-design-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}';
+ style.textContent='.thumb-preview-dialog{box-sizing:border-box;width:min(94vw,900px);max-width:94vw;max-height:94vh;max-height:94dvh;margin:auto;padding:12px;border:1px solid #5a86ad;border-radius:12px;background:#111923;color:#fff;overflow:auto}.thumb-preview-dialog::backdrop{background:rgba(0,0,0,.85)}.thumb-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.thumb-preview-close{padding:10px 14px;background:#183958;color:#fff;border:1px solid #5a86ad;border-radius:8px;cursor:pointer}.thumb-preview-content img{display:block;width:100%;height:auto;max-height:72vh;max-height:72dvh;object-fit:contain}.thumb-preview-content svg{display:block;width:100%;max-height:65vh}.thumb-preview-status{font-size:12px;color:#bac8d7;margin:8px 0 0}.thumb-sample-preview{background:#245a88!important}.thumb-copy-prompt{background:#1f9f45!important;border-color:#49c96d!important;color:#fff!important}.thumb-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.thumb-design-item{min-width:0;display:flex;flex-direction:column;gap:4px}.thumb-design-card{display:flex!important;flex-direction:column;align-items:stretch!important;gap:5px!important;padding:7px!important;text-align:left!important;min-width:0!important}.thumb-design-card.selected{outline:2px solid #ff3b30;background:rgba(255,59,48,.08)}.thumb-design-sample{display:block;width:100%;overflow:hidden;border-radius:8px;background:#202833}.thumb-design-sample svg,.thumb-design-sample img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:contain}.thumb-sample-upload{width:100%;border:1px solid #5a86ad;border-radius:7px;padding:7px 4px;background:#183958;color:#e8f5ff;font-size:10px;font-weight:700;cursor:pointer}.thumb-design-label{font-size:11px;font-weight:800;line-height:1.2}.thumb-design-meta{font-size:9px;opacity:.65}@media(min-width:720px){.thumb-design-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}';
  document.head.appendChild(style);
 }
-window.LDThumbnailRandomization={version:'3.42.1',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
+window.LDThumbnailRandomization={version:'3.42.2',layouts,current,choose,apply,render,family,readHistory,sampleSvg};
 })();
