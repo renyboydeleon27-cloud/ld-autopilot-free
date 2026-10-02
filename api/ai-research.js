@@ -163,6 +163,56 @@ const CURATED_EVENT_EVIDENCE = [
       {field:"significance.kansasGrasshopperYear",value:"Grasshopper Year",claim:"In Kansas, 1874 became known as the \"Grasshopper Year.\""},
       {field:"outbreak.broaderPeriod",value:"1873–1878",claim:"The Rocky Mountain locust swarms that shaped Great Plains memory extended across the 1873–1878 period."}
     ]
+  },
+  {
+    id:"wellington-avalanche-1910-loc",
+    matches:({topic,year})=>year===1910 && /wellington|stevens pass|train disaster/i.test(topic) && /avalanche|wellington/i.test(topic),
+    source:{
+      id:"loc-wellington-1910",
+      authority:"Library of Congress",
+      name:"Wellington, Washington Train Disaster — Chronicling America Research Guide",
+      url:"https://guides.loc.gov/chronicling-america-wellington-washington-train-disaster",
+      supports:["event identity","date","location","railroad chronology","repeated avalanches","passenger movement","impact","rescue chronology"],
+      confidence:"authoritative"
+    },
+    claims:[
+      {field:"event.year",value:1910,claim:"The Wellington avalanche disaster occurred in 1910."},
+      {field:"event.date",value:"1910-03-01",claim:"The avalanche struck Wellington on March 1, 1910."},
+      {field:"event.location",value:"Wellington, Washington, in the Cascade Mountains",claim:"The disaster occurred at Wellington, Washington, in the Cascades."},
+      {field:"event.country",value:"United States",claim:"Wellington, Washington, was in the United States."},
+      {field:"chronology.trainsHaltedPeriod",value:"February 23 to March 1, 1910",claim:"From February 23 through March 1, two trains were halted at Wellington by avalanches."},
+      {field:"chronology.trainTypes",value:"passenger and mail trains",claim:"The two halted trains included one carrying passengers and one carrying mail."},
+      {field:"hazard.repeatedAvalanches",value:"repeated avalanches",claim:"Repeated avalanches boxed the stranded trains in at Wellington before the final slide."},
+      {field:"chronology.passengersLeftForScenic",value:"February 28, 1910",claim:"On February 28, some passengers left Wellington and walked toward Scenic."},
+      {field:"impact.avalancheHit",value:"trains and Wellington",claim:"On March 1, an avalanche struck the trains and Wellington."},
+      {field:"response.rescueArrival",value:"March 2, 1910",claim:"Rescue groups reached the disaster area on March 2."},
+      {field:"response.recoveryWeeks",value:"weeks",claim:"Rescue crews spent weeks rescuing survivors, recovering victims, and clearing the railroad."}
+    ]
+  },
+  {
+    id:"wellington-avalanche-1910-usfs",
+    matches:({topic,year})=>year===1910 && /wellington|stevens pass|train disaster/i.test(topic) && /avalanche|wellington/i.test(topic),
+    source:{
+      id:"usfs-snow-avalanches-1961",
+      authority:"U.S. Forest Service / U.S. Department of Agriculture",
+      name:"Snow Avalanches: A Handbook of Forecasting and Control Measures, Agriculture Handbook No. 194",
+      url:"https://www.govinfo.gov/content/pkg/GOVPUB-A-PURL-gpo20603/pdf/GOVPUB-A-PURL-gpo20603.pdf",
+      supports:["Wellington event identity","Stevens Pass site","railroad avalanche paths","1910 winter conditions","impact","fatalities","property damage","railroad rerouting"],
+      confidence:"authoritative"
+    },
+    claims:[
+      {field:"event.year",value:1910,claim:"The Wellington slide disaster occurred in 1910."},
+      {field:"event.date",value:"1910-03-01",claim:"The Wellington slide disaster occurred on March 1, 1910."},
+      {field:"event.location",value:"Wellington in the Cascade Mountains of Washington near Stevens Pass",claim:"Wellington was in the Cascade Mountains of Washington near Stevens Pass."},
+      {field:"hazard.railGradeSlidePaths",value:"multiple avalanche paths crossed the old railroad grade",claim:"Multiple avalanche paths descended through timber and crossed the old railroad grade near Stevens Pass."},
+      {field:"hazard.denudedSlopes",value:"forest fires had denuded slopes above the railroad",claim:"An official report after the 1909–1910 winter noted that recent forest fires had denuded slopes above the railroad and created avalanche paths."},
+      {field:"hazard.weatherPatterns",value:"weather patterns led to severe avalanche conditions",claim:"A second official report described weather patterns that led to severe avalanche conditions during the 1909–1910 winter."},
+      {field:"impact.sweptIntoCanyon",value:"trains swept to bottom of canyon",claim:"The avalanche swept the snowbound trains into the bottom of a canyon."},
+      {field:"impact.fatalities",value:"more than 100 fatalities",claim:"The U.S. Forest Service handbook reports that the Wellington avalanche caused more than 100 fatalities."},
+      {field:"impact.propertyDamage",value:"about one million dollars",claim:"The U.S. Forest Service handbook reports about one million dollars in property damage from the Wellington disaster."},
+      {field:"aftermath.railroadRerouted",value:"railroad rerouted through a tunnel",claim:"After the disaster, the railroad was rerouted through a tunnel under the pass."},
+      {field:"aftermath.tunnelBypassedSlideArea",value:true,claim:"A tunnel was built to bypass the Wellington slide area."}
+    ]
   }
 ];
 
@@ -367,6 +417,7 @@ function classifyTopic(topic) {
   if (t.includes("tsunami")) return "tsunami";
   if (t.includes("earthquake") || t.includes("quake")) return "earthquake";
   if (t.includes("locust") || t.includes("insect") || t.includes("grasshopper")) return "insect";
+  if (t.includes("avalanche") || t.includes("snowslide") || t.includes("snow slide")) return "avalanche";
   return "general";
 }
 
