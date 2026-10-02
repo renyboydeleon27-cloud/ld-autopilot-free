@@ -211,6 +211,11 @@ function place(root){
   document.querySelector('main')?.appendChild(root);
 }
 function mount(){
+  // LD publishing uses the compact titles/description section; keep saved metadata and export API.
+  if(!window.LDStoryModes?.enabled()){
+    document.getElementById('ldFinalPackage')?.remove();
+    return;
+  }
   let root=document.getElementById('ldFinalPackage');
   if(!root){
     root=document.createElement('section');
