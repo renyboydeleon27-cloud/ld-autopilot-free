@@ -56,3 +56,5 @@ button,input{font:inherit}.app{width:min(1120px,100%);margin:auto;padding:18px 1
 .preview-transition{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:2;will-change:opacity}
 .preview-transition[data-mode="impact"]{background:#050505}
 .preview-caption{z-index:4}.thumbnail-overlay{z-index:3}
+
+.preview-caption{max-height:34%;overflow:hidden;white-space:normal}
