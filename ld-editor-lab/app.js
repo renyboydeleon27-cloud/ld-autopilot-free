@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='0.5.6';
+const VERSION='0.6.0';
 // Keep the v0.2 key so existing projects migrate in place after APK update.
 const STORE='ld-editor-lab-project-v0.2';
 const EXPORT_DB='ld-editor-lab-export-db-v1';
@@ -10,6 +10,7 @@ const EXPORT_KEY='last-render';
 const THUMB_KEY='project-thumbnail';
 const ENDING_IMAGE_KEY='ending-image';
 const AI_NARRATOR_KEY='generated-ai-narrator';
+const AI_NARRATOR_STAGES_KEY='generated-ai-narrator-stages';
 const AI_API_ORIGIN='https://ld-autopilot-free.vercel.app';
 const STAGES=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
 const TARGET={HOOK:10,ENDING:5};
@@ -18,6 +19,7 @@ for(let i=1;i<=14;i++)TARGET['P'+i]=10;
 const state={
   clips:new Map(),
   narration:null,
+  narrationStages:{},
   music:null,
   thumbnail:null,
   lastExport:null,
@@ -42,7 +44,8 @@ const state={
     transitionMs:360,
     autoNarrator:true,
     narratorVoice:'cedar',
-    narratorSourceKey:''
+    narratorSourceKey:'',
+    scriptMode:'auto'
   },
   playing:false,
   playIndex:0,
@@ -201,7 +204,8 @@ function normalizeAutoCut(raw){
     transitionMs:Number.isFinite(Number(a.transitionMs))?Math.max(280,Math.min(500,Number(a.transitionMs))):360,
     autoNarrator:a.autoNarrator!==false,
     narratorVoice:String(a.narratorVoice||'cedar'),
-    narratorSourceKey:String(a.narratorSourceKey||'')
+    narratorSourceKey:String(a.narratorSourceKey||''),
+    scriptMode:a.scriptMode==='manual'?'manual':'auto'
   };
 }
 function splitNarrationToStages(text){
