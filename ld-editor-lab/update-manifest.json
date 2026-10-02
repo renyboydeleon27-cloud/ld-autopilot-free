@@ -1,6 +1,6 @@
 {
-  "version": "0.5.5",
-  "notes": "True one-click Auto Cut: enter and save Project Topic once. If narration is blank, FULL AUTO CUT now generates fact-checked P1–P14 narration, a short ENDING line, AI narrator voice, subtitles, cuts, transitions and audio mix automatically.",
+  "version": "0.5.6",
+  "notes": "Makes Auto Cut transitions clearly visible in both Play All preview and final render. Uses 360ms cinematic fades for setup/aftermath and fast impact dips for high-intensity panels.",
   "files": [
     {
       "name": "index.html",

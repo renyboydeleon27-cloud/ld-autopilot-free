@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='0.5.5';
+const VERSION='0.5.6';
 // Keep the v0.2 key so existing projects migrate in place after APK update.
 const STORE='ld-editor-lab-project-v0.2';
 const EXPORT_DB='ld-editor-lab-export-db-v1';
@@ -39,7 +39,7 @@ const state={
     script:'',
     captions:{},
     plan:{},
-    transitionMs:160,
+    transitionMs:360,
     autoNarrator:true,
     narratorVoice:'cedar',
     narratorSourceKey:''
@@ -198,7 +198,7 @@ function normalizeAutoCut(raw){
     script:String(a.script||''),
     captions:a.captions&&typeof a.captions==='object'?a.captions:{},
     plan:a.plan&&typeof a.plan==='object'?a.plan:{},
-    transitionMs:Number.isFinite(Number(a.transitionMs))?Math.max(80,Math.min(400,Number(a.transitionMs))):160,
+    transitionMs:Number.isFinite(Number(a.transitionMs))?Math.max(280,Math.min(500,Number(a.transitionMs))):360,
     autoNarrator:a.autoNarrator!==false,
     narratorVoice:String(a.narratorVoice||'cedar'),
     narratorSourceKey:String(a.narratorSourceKey||'')
@@ -247,11 +247,11 @@ function buildAutoCaptions(script){
   return captions;
 }
 function autoStageNumbers(stage){
-  if(stage==='HOOK')return {clip:1.05,music:0.90,transition:'hard'};
+  if(stage==='HOOK')return {clip:1.05,music:0.90,transition:'impact'};
   if(stage==='ENDING')return {clip:0.55,music:0.65,transition:'fade'};
   const n=Number(String(stage).replace('P',''))||0;
   if(n<=3)return {clip:0.72,music:0.82,transition:'fade'};
-  if(n<=9)return {clip:1.18,music:1.14,transition:'hard'};
+  if(n<=9)return {clip:1.18,music:1.14,transition:'impact'};
   return {clip:0.82,music:0.78,transition:'fade'};
 }
 function buildAutoCutPlan(){
@@ -530,6 +530,7 @@ async function runFullAutoCut(previewAfter=false){
   if(btn)btn.disabled=true;if(previewBtn)previewBtn.disabled=true;
   state.autoCut.enabled=true;
   state.autoCut.builtAt=new Date().toISOString();
+  state.autoCut.transitionMs=360;
   state.projectTopic=topic||state.projectTopic;
   state.autoCut.autoNarrator=autoNarrator;
   state.autoCut.narratorVoice=voice;
@@ -554,7 +555,7 @@ async function runFullAutoCut(previewAfter=false){
     recordApiUsage({feature:'auto_cut_local',featureLabel:'Auto Cut Engine',model:'Local v1',free:true});
     endApiGeneration();
     saveProject();render();refreshAutoCutUi();
-    setAutoCutStatus('ONE CLICK complete · narration + AI voice '+(autoNarrator?'ready':'text only')+' · HOOK no voice · ENDING voice stops at 4.5s · cuts + subtitles + SFX/music mix ready');
+    setAutoCutStatus('ONE CLICK complete · narration + AI voice '+(autoNarrator?'ready':'text only')+' · visible cinematic transitions · HOOK no voice · ENDING voice stops at 4.5s · subtitles + SFX/music mix ready');
     if(previewAfter)playAll();
   }catch(e){
     endApiGeneration();saveProject();render();refreshAutoCutUi();
@@ -565,16 +566,36 @@ async function runFullAutoCut(previewAfter=false){
     if(previewBtn)previewBtn.disabled=STAGES.some(s=>!state.clips.has(s));
   }
 }
+function transitionFrame(stage,time,duration){
+  if(!state.autoCut?.enabled)return {alpha:0,mode:'none'};
+  const plan=autoCutStagePlan(stage);if(!plan)return {alpha:0,mode:'none'};
+  const t=Math.max(0,Number(time)||0),d=Math.max(.1,Number(duration)||1);
+  const fade=(state.autoCut.transitionMs||360)/1000;
+  const impact=Math.min(.20,Math.max(.12,fade*.48));
+  let alpha=0,mode='none';
+  const apply=(type,progress)=>{
+    if(type==='fade'){alpha=Math.max(alpha,Math.max(0,Math.min(1,progress))*.86);if(alpha>0)mode='fade';}
+    if(type==='impact'){alpha=Math.max(alpha,Math.max(0,Math.min(1,progress))*.72);if(alpha>0)mode='impact';}
+  };
+  if(plan.transitionIn==='fade'&&t<fade)apply('fade',1-t/fade);
+  if(plan.transitionOut==='fade'&&d-t<fade)apply('fade',1-Math.max(0,d-t)/fade);
+  if(plan.transitionIn==='impact'&&t<impact)apply('impact',1-t/impact);
+  if(plan.transitionOut==='impact'&&d-t<impact)apply('impact',1-Math.max(0,d-t)/impact);
+  return {alpha,mode};
+}
 function drawAutoTransition(ctx,stage,time,duration){
-  if(!state.autoCut?.enabled)return;
-  const plan=autoCutStagePlan(stage);if(!plan)return;
-  const t=Math.max(0,Number(time)||0),d=Math.max(.1,Number(duration)||1),fade=(state.autoCut.transitionMs||160)/1000;
-  let alpha=0;
-  if(plan.transitionIn==='fade'&&t<fade)alpha=Math.max(alpha,1-t/fade);
-  if(plan.transitionOut==='fade'&&d-t<fade)alpha=Math.max(alpha,1-Math.max(0,d-t)/fade);
-  if(alpha>0){
-    ctx.save();ctx.fillStyle='rgba(0,0,0,'+Math.min(.88,alpha*.88)+')';ctx.fillRect(0,0,720,1280);ctx.restore();
-  }
+  const fx=transitionFrame(stage,time,duration);if(fx.alpha<=0)return;
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,'+Math.min(.90,fx.alpha)+')';
+  ctx.fillRect(0,0,720,1280);
+  ctx.restore();
+}
+function updatePreviewTransition(){
+  const el=$('previewTransition');if(!el)return;
+  const stage=STAGES[state.playIndex]||'',item=state.clips.get(stage),duration=effectiveDuration(stage,item);
+  const fx=transitionFrame(stage,previewStageTime(),duration);
+  el.style.opacity=String(fx.alpha);
+  el.dataset.mode=fx.mode;
 }
 function drawCaption(ctx,text){
   if(!text)return;
@@ -1164,7 +1185,7 @@ function startImageStagePreview(stage,item){
   const tick=now=>{
     if(!state.playing||STAGES[state.playIndex]!==stage)return;
     state.imagePreviewTime=Math.min(duration,(now-started)/1000);
-    updatePreviewCaption();updateThumbnailOverlay();updatePreviewProgress();
+    updatePreviewCaption();updateThumbnailOverlay();updatePreviewTransition();updatePreviewProgress();
     if(stage==='ENDING'&&state.imagePreviewTime>=4.5&&!narrationAudio.paused)narrationAudio.pause();
     if(state.imagePreviewTime>=duration){advancePreview();return;}
     state.imagePreviewRaf=requestAnimationFrame(tick);
@@ -1181,12 +1202,12 @@ function showStage(stage,autoplay){
   if(isImageItem(item)){
     preview.pause();preview.removeAttribute('src');preview.style.display='none';
     if(pi){pi.src=item.url;pi.style.display='block';}
-    state.imagePreviewTime=0;applyVolumes();updatePreviewCaption();updateThumbnailOverlay();
+    state.imagePreviewTime=0;applyVolumes();updatePreviewCaption();updateThumbnailOverlay();updatePreviewTransition();
     if(autoplay)startImageStagePreview(stage,item);
   }else{
     cancelAnimationFrame(state.imagePreviewRaf);state.imagePreviewTime=0;
     if(pi)pi.style.display='none';preview.style.display='block';
-    preview.src=item.url;preview.currentTime=0;applyVolumes();updatePreviewCaption();updateThumbnailOverlay();
+    preview.src=item.url;preview.currentTime=0;applyVolumes();updatePreviewCaption();updateThumbnailOverlay();updatePreviewTransition();
     if(autoplay)preview.play().catch(()=>{});
   }
 }
@@ -1202,6 +1223,7 @@ function stopPlayback(){
   state.playing=false;preview.pause();narrationAudio.pause();musicAudio.pause();cancelAnimationFrame(state.imagePreviewRaf);state.imagePreviewTime=0;
   try{preview.currentTime=0;}catch{}
   updateThumbnailOverlay();
+  const fx=$('previewTransition');if(fx)fx.style.opacity='0';
   $('playProgress').style.width='0%';$('playTime').textContent='0:00 / '+fmt(totalDuration());
 }
 function advancePreview(){
@@ -1213,7 +1235,7 @@ preview.addEventListener('ended',advancePreview);
 preview.addEventListener('timeupdate',()=>{
   if(!state.playing)return;
   const stage=STAGES[state.playIndex],item=state.clips.get(stage),stageDuration=effectiveDuration(stage,item);
-  updatePreviewCaption();
+  updatePreviewCaption();updatePreviewTransition();
   if(state.autoCut?.enabled&&stageDuration>0&&preview.currentTime>=stageDuration-.04&&!preview.dataset.advancing){
     preview.dataset.advancing='1';preview.pause();advancePreview();return;
   }

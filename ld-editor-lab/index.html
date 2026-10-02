@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0d12">
   <title>LD Editor Lab</title>
-  <link rel="stylesheet" href="./styles.css?v=0.5.5">
+  <link rel="stylesheet" href="./styles.css?v=0.5.6">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.5.5</span></h1>
+        <h1>LD Editor Lab <span>v0.5.6</span></h1>
         <p class="sub">Standalone local video assembler. Imported media and project state are saved locally. Final renders save directly to your phone.</p>
       </div>
       <span class="pill safe">LOCAL · AUTO-SAVE · SELF-UPDATE</span>
@@ -57,7 +57,7 @@
       </div>
       <p class="muted">One tap now generates the AI narrator voice, builds subtitle timing, automatic cuts, cinematic transition timing, original-clip SFX mix, background-music ducking and export-ready audio balance.</p>
       <div class="auto-cut-flags">
-        <span class="mini-flag">✓ AI narrator</span><span class="mini-flag">✓ Auto cuts</span><span class="mini-flag">✓ Transitions</span><span class="mini-flag">✓ Subtitle timing</span><span class="mini-flag">✓ SFX mix</span><span class="mini-flag">✓ Music ducking</span><span class="mini-flag">✓ ENDING 5.0s</span><span class="mini-flag">✓ Thumbnail final 0.5s</span>
+        <span class="mini-flag">✓ AI narrator</span><span class="mini-flag">✓ Auto cuts</span><span class="mini-flag">✓ Visible transitions</span><span class="mini-flag">✓ Subtitle timing</span><span class="mini-flag">✓ SFX mix</span><span class="mini-flag">✓ Music ducking</span><span class="mini-flag">✓ ENDING 5.0s</span><span class="mini-flag">✓ Thumbnail final 0.5s</span>
       </div>
       <div class="ending-lock-box">
         <strong>ENDING FORMAT LOCK</strong>
@@ -191,6 +191,7 @@
         <video id="previewVideo" playsinline preload="metadata"></video>
         <img id="previewImage" class="preview-image" alt="" aria-hidden="true">
         <img id="thumbnailOverlay" class="thumbnail-overlay" alt="" aria-hidden="true">
+        <div id="previewTransition" class="preview-transition" aria-hidden="true"></div>
         <div id="previewCaption" class="preview-caption"></div>
         <div id="previewPlaceholder" class="preview-placeholder">Import clips to preview</div>
       </div>
@@ -230,6 +231,6 @@
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.5.5"></script>
+  <script src="./app.js?v=0.5.6"></script>
 </body>
 </html>
