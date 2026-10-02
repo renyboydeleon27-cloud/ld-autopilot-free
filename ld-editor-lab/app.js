@@ -291,6 +291,61 @@ function autoCaptionAt(stage,time,duration){
   const idx=Math.min(chunks.length-1,Math.floor(Math.max(0,Number(time)||0)/d*chunks.length));
   return chunks[idx]||'';
 }
+function narrationApiUrl(){
+  const protocol=String(location.protocol||'');
+  const host=String(location.hostname||'');
+  if((protocol==='https:'||protocol==='http:')&&!/github\.io$/i.test(host))return '/api/ai-narration';
+  return AI_API_ORIGIN+'/api/ai-narration';
+}
+function generatedStagesToScript(stages){
+  const lines=[];
+  for(let i=1;i<=14;i++){
+    const key='P'+i,txt=String(stages?.[key]||'').trim();
+    if(txt)lines.push(key+': '+txt);
+  }
+  lines.push('ENDING: Thank you for watching. Subscribe for more Living Disaster stories.');
+  return lines.join('\n');
+}
+function recordTextNarrationUsage(apiUsage){
+  const usage=apiUsage&&typeof apiUsage==='object'?apiUsage:{};
+  const models=Object.keys(usage.byModel||{});
+  recordApiUsage({
+    feature:'text_narration',featureLabel:'AI text / narration',
+    model:models.length?models.join(' + '):'gpt-5-mini',
+    inputTokens:Number(usage.inputTokens)||0,
+    outputTokens:Number(usage.outputTokens)||0,
+    totalTokens:Number(usage.totalTokens)||0,
+    costUsd:Number(usage.estimatedCostUsd)||0,
+    estimated:true
+  });
+}
+async function generateAutoNarrationScript(topic){
+  const cleanTopic=String(topic||'').trim();
+  if(!cleanTopic)throw new Error('Enter the Project Topic first so Auto Cut knows which disaster to narrate.');
+  setAutoCutStatus('Step 1/3 · researching and generating fact-checked narration…');
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),240000);
+  let response;
+  try{
+    response=await fetch(narrationApiUrl(),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic:cleanTopic,format:'shorts',narrativeFormat:'causal-v1'}),
+      signal:controller.signal
+    });
+  }catch(e){
+    if(e?.name==='AbortError')throw new Error('AI narration timed out. Please try again.');
+    throw new Error('Could not reach AI narration service: '+String(e?.message||e));
+  }finally{clearTimeout(timer);}
+  let data=null;try{data=await response.json();}catch{}
+  if(!response.ok||!data?.ok)throw new Error(data?.error||'AI narration generation failed.');
+  const script=generatedStagesToScript(data.stages);
+  if(!script.trim())throw new Error('AI narration returned no usable panel narration.');
+  recordTextNarrationUsage(data.apiUsage);
+  state.projectTopic=cleanTopic;state.autoCut.script=script;
+  if($('projectTopic'))$('projectTopic').value=cleanTopic;
+  if($('autoCutScript'))$('autoCutScript').value=script;
+  return script;
+}
+
 function narratorApiUrl(){
   const protocol=String(location.protocol||'');
   const host=String(location.hostname||'');
