@@ -116,3 +116,4 @@
   window.addEventListener('load',()=>setTimeout(refresh,500));
   setTimeout(refresh,250);
 })();
+(()=>{if(document.getElementById('ldFinalNarrationLoader'))return;const s=document.createElement('script');s.id='ldFinalNarrationLoader';s.src='smart-narration-continue.js?v=1.0.0';document.body.appendChild(s);})();
