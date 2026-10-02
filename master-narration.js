@@ -10,13 +10,26 @@
     return (match?text.slice(0,match.index):text).trim();
   }
 
+  function hookIsSilent(card){
+    if(!card||String(card.dataset.stage||'').toUpperCase()!=='HOOK')return false;
+    const corpus=[
+      card.querySelector('.flow-prompt')?.value,
+      card.querySelector('.text-video-prompt')?.value,
+      card.dataset.textVideoPrompt,
+      card.querySelector('.image-prompt')?.value,
+      card.querySelector('.scene-role')?.textContent,
+      card.dataset.videoScene
+    ].filter(Boolean).join('\n');
+    return /\bNO\s+(?:VOICE[- ]?OVER|VO|NARRATION)\b|\bSILENT\s+HOOK\b/i.test(corpus);
+  }
+
   function getNarration(){
     const rows=[];
     stages.querySelectorAll('.stage-card').forEach(card=>{
       const stage=(card.dataset.stage||card.querySelector('.stage-name')?.textContent||'').trim().toUpperCase();
+      if(stage==='THUMBNAIL')return;
       const narration=spokenText(card.querySelector('.narration')?.value);
       if(!narration)return;
-      if(stage==='ENDING'||stage==='THUMBNAIL')return;
       rows.push({stage,narration});
     });
     return rows;
@@ -25,8 +38,11 @@
   function compiled(withLabels=false){
     const rows=getNarration();
     const body=rows.map(x=>withLabels?`${x.stage}\n${x.narration}`:x.narration).join('\n\n');
-    const outro="Which living disaster should we uncover next? Thank you for watching. Like, share, and subscribe for more stories from Living Disaster Book.";
-    return body ? body+'\n\n'+(withLabels?'OUTRO\n':'')+outro : '';
+    const hasEnding=rows.some(x=>x.stage==='ENDING');
+    const fallbackEnding="Thank you for watching. Like, share, and subscribe for more stories from the Living Disaster Book.";
+    if(!body)return '';
+    if(hasEnding)return body;
+    return body+'\n\n'+(withLabels?'ENDING\n':'')+fallbackEnding;
   }
 
   function selectText(text){
@@ -59,7 +75,7 @@
   const section=document.createElement('section');
   section.id='masterNarrationCard';
   section.className='card';
-  section.innerHTML=`<div class="audit-head"><div><span class="audit-label">MASTER NARRATION</span><strong>Compiled voice-over script</strong><p class="library-sub">HOOK through the final narrated panel, combined in production order for easy copy to your voice lab.</p></div><span id="masterNarrationCount" class="audit-pill">0 segments</span></div><p id="masterNarrationNotice" role="status" class="library-sub"></p><div class="field-block" style="margin-top:12px"><textarea id="masterNarrationText" rows="12" readonly placeholder="Generate or enter narration in the production stages first."></textarea></div><div class="audit-actions" style="margin-top:10px"><button id="copyMasterNarrationBtn" class="primary" type="button">Copy master narration</button><button id="copyLabeledNarrationBtn" class="ghost small" type="button">Copy with stage labels</button><button id="selectMasterNarrationBtn" class="ghost small" type="button">Select text manually</button></div>`;
+  section.innerHTML=`<div class="audit-head"><div><span class="audit-label">MASTER NARRATION</span><strong>Compiled voice-over script</strong><p class="library-sub">HOOK through P1–P14 and the ENDING card, combined in production order for easy copy to your voice lab.</p></div><span id="masterNarrationCount" class="audit-pill">0 segments</span></div><p id="masterNarrationNotice" role="status" class="library-sub"></p><div class="field-block" style="margin-top:12px"><textarea id="masterNarrationText" rows="12" readonly placeholder="Generate or enter narration in the production stages first."></textarea></div><div class="audit-actions" style="margin-top:10px"><button id="copyMasterNarrationBtn" class="primary" type="button">Copy master narration</button><button id="copyLabeledNarrationBtn" class="ghost small" type="button">Copy with stage labels</button><button id="selectMasterNarrationBtn" class="ghost small" type="button">Select text manually</button></div>`;
 
   const pipeline=document.getElementById('pipelineSection');
   pipeline?.parentNode?.insertBefore(section,pipeline);
@@ -73,14 +89,18 @@
     const affected=[],missing=[];
     stages.querySelectorAll('.stage-card').forEach(card=>{
       const stage=(card.dataset.stage||'').toUpperCase();
-      if(stage==='ENDING'||stage==='THUMBNAIL')return;
+      if(stage==='THUMBNAIL')return;
       const raw=(card.querySelector('.narration')?.value||'').trim();
       if(raw!==spokenText(raw))affected.push(stage);
-      if(!spokenText(raw))missing.push(stage);
+      if(!spokenText(raw)&&!(stage==='HOOK'&&hookIsSilent(card)))missing.push(stage);
     });
     const notice=document.getElementById('masterNarrationNotice');
     if(notice)notice.textContent=(affected.length?'Production instructions excluded from export: '+affected.join(', ')+'. Original fields unchanged. ':'')+(missing.length?'INCOMPLETE NARRATION — missing or prompt-only fields: '+missing.join(', ')+'. Restore spoken narration before voice generation.':'');
-    if(count)count.textContent=`${rows.length} segment${rows.length===1?'':'s'}`;
+    if(count){
+      const hookCard=stages.querySelector('.stage-card[data-stage="HOOK"]');
+      const silentHook=hookIsSilent(hookCard);
+      count.textContent=`${rows.length} voice segment${rows.length===1?'':'s'}${silentHook?' · HOOK silent':''}`;
+    }
   }
 
   document.getElementById('copyMasterNarrationBtn')?.addEventListener('click',()=>copy(compiled(false)));
