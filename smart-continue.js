@@ -43,25 +43,6 @@ function allStagesDone(){
   const cards=eligibleCards();
   return cards.length>0&&cards.every(stageDone);
 }
-function narrationApproved(){
-  return !!window.LDNarrationApproval?.isApproved?.();
-}
-function syncFinalAuditAvailability(){
-  if(!allStagesDone())return;
-  const approved=narrationApproved();
-  const passed=!!window.LDFinalAudit?.isPassed?.();
-  smartButtons().forEach(btn=>{btn.disabled=false;});
-  if(passed){
-    buttonLabel('✅ FINAL AUDIT PASSED');
-    status('✅ FINAL AUDIT PASSED · Production verified and ready for backup.','pass');
-  }else if(approved){
-    buttonLabel('🔎 FINAL AUDIT');
-    status('✅ Smart Narration approved · Final Audit is ready.','pass');
-  }else{
-    buttonLabel('🔎 FINAL AUDIT');
-    status('🔒 FINAL AUDIT LOCKED · Approve Smart Narration first. Tap Final Audit to see the required step.','working');
-  }
-}
 
 function showToast(message){
   if(!toast)return;
@@ -386,8 +367,9 @@ function restoreSmartSession(){
   if(cards.every(stageDone)){
     writeSmartSession({targetStage:'',pending:null});
     clearSmartState();
+    buttonLabel('🔎 FINAL AUDIT');
+    status('✅ PRODUCTION COMPLETE · All stages are Done. Next step: Final Audit.','pass');
     updateTargetLabel();
-    syncFinalAuditAvailability();
     return null;
   }
 
@@ -1028,14 +1010,6 @@ async function prepare(card){
   return prepareImageToVideo(card);
 }
 function openFinalAudit(){
-  if(!narrationApproved()){
-    updateTargetLabel();
-    syncFinalAuditAvailability();
-    const master=document.getElementById('masterNarrationCard');
-    master?.scrollIntoView({behavior:'smooth',block:'start'});
-    showToast('Approve Smart Narration before Final Audit.');
-    return;
-  }
   writeSmartSession({targetStage:'',pending:null});
   clearSmartState();
   buttonLabel('🔎 FINAL AUDIT');
@@ -1140,8 +1114,7 @@ async function run(){
   }finally{
     stopPhase();
     busy=false;
-    if(allStagesDone())syncFinalAuditAvailability();
-    else smartButtons().forEach(b=>b.disabled=false);
+    smartButtons().forEach(b=>b.disabled=false);
   }
 }
 
@@ -1151,16 +1124,6 @@ document.addEventListener('click',e=>{
   if(!btn)return;
   e.preventDefault();
   run();
-});
-
-window.addEventListener('ld:narration-approval-changed',()=>{
-  updateTargetLabel();
-  if(allStagesDone())syncFinalAuditAvailability();
-});
-
-window.addEventListener('ld:final-audit-changed',()=>{
-  updateTargetLabel();
-  if(allStagesDone())syncFinalAuditAvailability();
 });
 
 function mountAdvanced(){
