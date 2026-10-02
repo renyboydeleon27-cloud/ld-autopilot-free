@@ -11,6 +11,40 @@
     });
   }
 
+  function hookIsSilent() {
+    const card = document.querySelector('#stages .stage-card[data-stage="HOOK"]');
+    if (!card) return false;
+    const corpus = [
+      card.querySelector('.flow-prompt')?.value,
+      card.querySelector('.text-video-prompt')?.value,
+      card.dataset.textVideoPrompt,
+      card.querySelector('.image-prompt')?.value,
+      card.querySelector('.scene-role')?.textContent,
+      card.dataset.videoScene
+    ].filter(Boolean).join('\n');
+    return /\bNO\s+(?:VOICE[- ]?OVER|VO|NARRATION)\b|\bSILENT\s+HOOK\b/i.test(corpus);
+  }
+
+  function narrationReady() {
+    const required = [...Array.from({ length: 14 }, (_, i) => 'P' + (i + 1)), 'ENDING'];
+    if (!hookIsSilent()) required.unshift('HOOK');
+    return required.every(stage => {
+      const card = document.querySelector('#stages .stage-card[data-stage="' + stage + '"]');
+      return !!String(card?.querySelector('.narration')?.value || '').trim();
+    });
+  }
+
+  function sendToNarration() {
+    const master = document.getElementById('masterNarrationCard');
+    master?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const toast = document.getElementById('toast');
+    if (toast) {
+      toast.textContent = 'Smart Narration is required before Final Audit.';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+  }
+
   function decorate() {
     const list = cards();
     list.forEach((card, index) => {
@@ -27,6 +61,10 @@
   }
 
   function openAudit() {
+    if (!narrationReady()) {
+      sendToNarration();
+      return;
+    }
     const audit = document.getElementById('auditCard');
     const banner = document.getElementById('completeBanner');
     const list = cards();
