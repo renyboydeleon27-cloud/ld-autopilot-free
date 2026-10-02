@@ -100,8 +100,17 @@ function currentCard(){
   if(open.length)return open[0];
   return cards[cards.length-1]||cards[0];
 }
+function narrationGateActive(){
+  const approval=window.LDNarrationApproval;
+  if(!approval||typeof approval.isApproved!=='function')return false;
+  // Preserve legacy/in-progress productions; Stage 0 gates only productions
+  // that have not completed any HOOK/P1-P14/ENDING/THUMBNAIL stage yet.
+  const cards=eligibleCards();
+  return !cards.some(stageDone)&&!approval.isApproved();
+}
 function currentTargetText(){
   if(allStagesDone())return 'CURRENT TARGET: FINAL AUDIT';
+  if(narrationGateActive())return 'CURRENT TARGET: NARRATION';
   const card=currentCard();
   return card?'CURRENT TARGET: '+(card.dataset.stage||'CURRENT'):'CURRENT TARGET: —';
 }
