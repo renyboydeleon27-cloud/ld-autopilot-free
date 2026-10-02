@@ -1482,9 +1482,11 @@ async function renderExport(){
   const renderVideo=document.createElement('video');renderVideo.playsInline=true;renderVideo.preload='auto';renderVideo.muted=false;
   const clipSource=ac.createMediaElementSource(renderVideo),clipGain=ac.createGain();clipSource.connect(clipGain).connect(master);
   const vols=currentAudioVolumes();clipGain.gain.value=vols.clip;
+  const stageNarrationMode=hasStageNarration();
   let narrEl=null,musicEl=null,musicGain=null;
-  if(state.narration){
-    narrEl=document.createElement('audio');narrEl.src=state.narration.url;narrEl.preload='auto';
+  if(stageNarrationMode||state.narration?.url){
+    narrEl=document.createElement('audio');narrEl.preload='auto';
+    if(!stageNarrationMode&&state.narration?.url)narrEl.src=state.narration.url;
     const src=ac.createMediaElementSource(narrEl),gain=ac.createGain();gain.gain.value=vols.narr;src.connect(gain).connect(master);
   }
   if(state.music){
@@ -1533,13 +1535,29 @@ async function renderExport(){
   };
 
   try{
-    await ac.resume();rec.start(1000);draw();if(narrEl){narrEl.pause();narrEl.currentTime=0;}musicEl?.play().catch(()=>{});
+    await ac.resume();rec.start(1000);draw();if(narrEl){narrEl.pause();try{narrEl.currentTime=0;}catch{}}musicEl?.play().catch(()=>{});
+    const waitNarrMeta=audio=>new Promise((resolve,reject)=>{
+      if(!audio||audio.readyState>=1)return resolve();
+      const ok=()=>resolve(),bad=()=>reject(new Error('Could not load panel narrator.'));
+      audio.addEventListener('loadedmetadata',ok,{once:true});audio.addEventListener('error',bad,{once:true});
+    });
     const total=totalDuration();let elapsedBase=0;
     for(const stage of STAGES){
       if(state.exportAbort)break;
       const item=state.clips.get(stage),stageDuration=effectiveDuration(stage,item);
       currentRenderStage=stage;currentRenderDuration=stageDuration;
-      if(stage==='P1'&&narrEl&&narrEl.paused)narrEl.play().catch(()=>{});
+      if(narrEl){
+        if(stageNarrationMode){
+          const seg=state.narrationStages[stage];
+          narrEl.pause();
+          if(seg?.url){
+            narrEl.src=seg.url;await waitNarrMeta(narrEl);try{narrEl.currentTime=0;}catch{}
+            narrEl.playbackRate=stageNarratorRate(stage,seg);narrEl.play().catch(()=>{});
+          }
+        }else if(stage==='HOOK'&&narrEl.paused){
+          try{narrEl.currentTime=0;}catch{};narrEl.playbackRate=1;narrEl.play().catch(()=>{});
+        }
+      }
       const plan=autoCutStagePlan(stage);
       if(state.autoCut?.enabled&&plan){
         clipGain.gain.setValueAtTime(Math.min(1.5,vols.clip*(Number(plan.clipFactor)||1)),ac.currentTime);
@@ -1581,6 +1599,7 @@ async function renderExport(){
           renderVideo.onerror=()=>reject(new Error('Could not render '+stage));tick();
         });
       }
+      if(stageNarrationMode)narrEl?.pause();
       elapsedBase+=stageDuration;
     }
 
