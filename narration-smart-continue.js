@@ -1,0 +1,228 @@
+/* NER Studio — Smart Continue Narration v1.0.0
+   Builds a final stage-aligned voice-over from the CURRENT approved production.
+   HOOK respects explicit NO VO / silent-hook locks. P1–P14 are rebuilt from the
+   verified narration API using the exact current visual/story context. ENDING
+   uses the locked Living Disaster Book CTA. */
+(()=>{'use strict';
+  const stages=document.getElementById('stages');
+  const masterCard=document.getElementById('masterNarrationCard');
+  if(!stages||!masterCard)return;
+
+  const ENDING_CTA='Thank you for watching. Like, share, and subscribe for more stories from the Living Disaster Book.';
+  const BACKUP_PREFIX='ner-studio-narration-backup-v1:';
+
+  function topic(){
+    return String(document.getElementById('topic')?.value||
+      document.getElementById('projectTitle')?.textContent||'').trim();
+  }
+  function format(){return document.getElementById('format')?.value||'shorts';}
+  function projectKey(){
+    const active=localStorage.getItem('ld-autopilot-free-active-project')||'';
+    return BACKUP_PREFIX+(active||[topic(),format()].join('|'));
+  }
+  function stageCard(stage){
+    return stages.querySelector('.stage-card[data-stage="'+stage+'"]');
+  }
+  function value(card,selector){
+    return String(card?.querySelector(selector)?.value||'').trim();
+  }
+  function hookIsSilent(card){
+    if(!card)return false;
+    const corpus=[
+      value(card,'.flow-prompt'),
+      value(card,'.text-video-prompt'),
+      card.dataset.textVideoPrompt||'',
+      value(card,'.image-prompt'),
+      card.querySelector('.scene-role')?.textContent||'',
+      card.dataset.videoScene||''
+    ].join('\n');
+    return /\bNO\s+(?:VOICE[- ]?OVER|VO|NARRATION)\b|\bSILENT\s+HOOK\b/i.test(corpus);
+  }
+  function detectSeconds(card){
+    const corpus=[
+      value(card,'.text-video-prompt'),
+      card?.dataset?.textVideoPrompt||'',
+      value(card,'.flow-prompt'),
+      card?.querySelector('.scene-role')?.textContent||''
+    ].join('\n');
+    const patterns=[
+      /EXACTLY\s+(\d+(?:\.\d+)?)\s*SECONDS?/i,
+      /DURATION\s*[:—–-]?\s*(?:EXACTLY\s*)?(\d+(?:\.\d+)?)\s*(?:SECONDS?|S\b)/i,
+      /\b(\d+(?:\.\d+)?)\s*[- ]SECOND\b/i
+    ];
+    for(const rx of patterns){
+      const m=rx.exec(corpus);
+      if(!m)continue;
+      const sec=Number(m[1]);
+      if(Number.isFinite(sec)&&sec>=1&&sec<=15)return sec;
+    }
+    return 10;
+  }
+  function stageContext(card){
+    const scene=String(card?.querySelector('.video-scene')?.value||card?.dataset?.videoScene||'').trim();
+    const t2v=String(card?.querySelector('.text-video-prompt')?.value||card?.dataset?.textVideoPrompt||'').trim();
+    const flow=value(card,'.flow-prompt');
+    const image=value(card,'.image-prompt');
+    return {
+      role:String(card?.querySelector('.scene-role')?.textContent||'').trim().slice(0,500),
+      scene:scene.slice(0,1800),
+      prompt:(t2v||flow||image).slice(0,2200)
+    };
+  }
+  function setNarration(card,text){
+    const field=card?.querySelector('.narration');
+    if(!field)return false;
+    field.value=String(text||'').trim();
+    field.dispatchEvent(new Event('input',{bubbles:true}));
+    field.dispatchEvent(new Event('change',{bubbles:true}));
+    return true;
+  }
+  function status(message,state=''){
+    const el=document.getElementById('ldNarrationSmartStatus');
+    if(!el)return;
+    el.textContent=message;
+    el.dataset.state=state;
+  }
+  function saveBackup(){
+    const data={topic:topic(),format:format(),savedAt:new Date().toISOString(),stages:{}};
+    ['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'].forEach(stage=>{
+      const field=stageCard(stage)?.querySelector('.narration');
+      if(field)data.stages[stage]=field.value||'';
+    });
+    try{localStorage.setItem(projectKey(),JSON.stringify(data));}catch{}
+  }
+  function restoreBackup(){
+    let data=null;
+    try{data=JSON.parse(localStorage.getItem(projectKey())||'null');}catch{}
+    if(!data?.stages)return false;
+    for(const [stage,text] of Object.entries(data.stages))setNarration(stageCard(stage),text);
+    window.dispatchEvent(new CustomEvent('ld:narration-smart-restored'));
+    return true;
+  }
+  function recordUsage(usage){
+    if(!usage||typeof usage!=='object'||!Number(usage.calls||0))return;
+    const root=window.ldApiUsage&&typeof window.ldApiUsage==='object'?window.ldApiUsage:{
+      version:'1.0',topic:topic(),format:format(),calls:0,inputTokens:0,cachedInputTokens:0,
+      outputTokens:0,totalTokens:0,estimatedCostUsd:0,byModel:{}
+    };
+    for(const k of ['calls','inputTokens','cachedInputTokens','outputTokens','totalTokens']){
+      root[k]=(Number(root[k])||0)+(Number(usage[k])||0);
+    }
+    root.estimatedCostUsd=Math.round(((Number(root.estimatedCostUsd)||0)+(Number(usage.estimatedCostUsd)||0))*1e8)/1e8;
+    root.priceSnapshot=usage.priceSnapshot||root.priceSnapshot||'';
+    root.updatedAt=new Date().toISOString();
+    window.ldApiUsage=root;
+    window.dispatchEvent(new CustomEvent('ld:api-usage-updated',{detail:{...root}}));
+  }
+
+  const controls=document.createElement('div');
+  controls.className='field-block';
+  controls.style.marginTop='12px';
+  controls.innerHTML=
+    '<div class="field-head"><label>Final narration Smart Continue</label></div>'+
+    '<p class="library-sub">Builds the final voice-over from the exact CURRENT HOOK and P1–P14 production flow. An explicit NO-VO HOOK stays silent. ENDING uses the locked channel CTA.</p>'+
+    '<button id="ldNarrationSmartBtn" class="primary" type="button" style="width:100%;margin-top:8px">🎙️ SMART CONTINUE NARRATION</button>'+
+    '<button id="ldNarrationUndoBtn" class="ghost small hidden" type="button" style="margin-top:8px">Undo narration polish</button>'+
+    '<p id="ldNarrationSmartStatus" class="library-sub" role="status" style="margin-top:8px">Ready.</p>';
+
+  const notice=document.getElementById('masterNarrationNotice');
+  notice?.parentNode?.insertBefore(controls,notice.nextSibling);
+
+  const btn=document.getElementById('ldNarrationSmartBtn');
+  const undo=document.getElementById('ldNarrationUndoBtn');
+
+  btn?.addEventListener('click',async()=>{
+    if(btn.disabled)return;
+    const currentTopic=topic();
+    if(!currentTopic){
+      status('Add the disaster topic first.','error');
+      return;
+    }
+
+    const hook=stageCard('HOOK');
+    const panels=Array.from({length:14},(_,i)=>'P'+(i+1));
+    const missing=panels.filter(stage=>!stageCard(stage));
+    if(missing.length){
+      status('Missing production stages: '+missing.join(', ')+'.','error');
+      return;
+    }
+
+    const silentHook=hookIsSilent(hook);
+    const productionStages={};
+    const targetStageSeconds={};
+
+    ['HOOK',...panels].forEach(stage=>{
+      const card=stageCard(stage);
+      if(!card)return;
+      productionStages[stage]=stageContext(card);
+      if(!(stage==='HOOK'&&silentHook))targetStageSeconds[stage]=detectSeconds(card);
+    });
+
+    saveBackup();
+    btn.disabled=true;
+    btn.textContent='🎙️ BUILDING FINAL NARRATION…';
+    status('Research-checking facts and matching every line to the current HOOK → P14 production flow…','working');
+
+    try{
+      const response=await fetch('/api/ai-narration',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          topic:currentTopic,
+          format:format(),
+          narrativeFormat:window.ldNarrativeFormat||'original',
+          skipStages:silentHook?['HOOK']:[],
+          targetStageSeconds,
+          productionStages
+        })
+      });
+      const raw=await response.text();
+      let data;
+      try{data=JSON.parse(raw);}
+      catch{throw new Error('Narration service returned an invalid response.');}
+      recordUsage(data.apiUsage);
+      if(!response.ok||!data.ok)throw new Error(data.error||('Narration HTTP '+response.status));
+
+      if(silentHook)setNarration(hook,'');
+      else {
+        if(!String(data.stages?.HOOK||'').trim())throw new Error('Final HOOK narration is missing.');
+        setNarration(hook,data.stages.HOOK);
+      }
+
+      for(const stage of panels){
+        const line=String(data.stages?.[stage]||'').trim();
+        if(!line)throw new Error('Final narration is missing for '+stage+'.');
+        setNarration(stageCard(stage),line);
+      }
+
+      const ending=stageCard('ENDING');
+      if(ending)setNarration(ending,ENDING_CTA);
+
+      undo?.classList.remove('hidden');
+      window.dispatchEvent(new CustomEvent('ld:narration-smart-complete',{
+        detail:{silentHook,topic:currentTopic,stages:silentHook?15:16}
+      }));
+      window.dispatchEvent(new Event('ld:production-built'));
+      status(
+        '✅ FINAL NARRATION READY · '+(silentHook?'HOOK kept silent · ':'HOOK narrated · ')+
+        'P1–P14 aligned · ENDING CTA added. Copy Master Narration when ready.',
+        'pass'
+      );
+    }catch(error){
+      restoreBackup();
+      status('Narration polish stopped safely: '+String(error?.message||error)+' Previous narration was restored.','error');
+    }finally{
+      btn.disabled=false;
+      btn.textContent='🎙️ SMART CONTINUE NARRATION';
+    }
+  });
+
+  undo?.addEventListener('click',()=>{
+    if(!restoreBackup()){
+      status('No narration backup is available for this project.','error');
+      return;
+    }
+    undo.classList.add('hidden');
+    status('Previous narration restored.','pass');
+  });
+})();
