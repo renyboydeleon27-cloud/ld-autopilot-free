@@ -422,6 +422,144 @@ async function clearGeneratedNarrator(){
     });
   }finally{db.close();}
 }
+async function putGeneratedNarratorStages(record){
+  const db=await openExportDb();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readwrite');
+      tx.objectStore(EXPORT_STORE).put(record,AI_NARRATOR_STAGES_KEY);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Could not save stage narrator.'));
+      tx.onabort=()=>reject(tx.error||new Error('Stage narrator save was aborted.'));
+    });
+  }finally{db.close();}
+}
+async function getGeneratedNarratorStages(){
+  const db=await openExportDb();
+  try{
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readonly');
+      const req=tx.objectStore(EXPORT_STORE).get(AI_NARRATOR_STAGES_KEY);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>reject(req.error||new Error('Could not restore stage narrator.'));
+    });
+  }finally{db.close();}
+}
+async function clearGeneratedNarratorStages(){
+  if(!('indexedDB' in window))return;
+  const db=await openExportDb();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readwrite');
+      tx.objectStore(EXPORT_STORE).delete(AI_NARRATOR_STAGES_KEY);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Could not clear stage narrator.'));
+    });
+  }finally{db.close();}
+}
+function releaseNarrationStages(){
+  for(const item of Object.values(state.narrationStages||{})){
+    if(item?.objectUrl&&item.url)URL.revokeObjectURL(item.url);
+  }
+  state.narrationStages={};
+}
+function hasStageNarration(){return Object.keys(state.narrationStages||{}).length>0;}
+function restoreNarrationStagesRecord(record){
+  releaseNarrationStages();
+  if(!record?.stages)return false;
+  const restored={};
+  for(const [stage,item] of Object.entries(record.stages)){
+    if(!item?.blob)continue;
+    restored[stage]={
+      stage,name:item.name||('LD-'+stage+'-Narrator.mp3'),mime:item.mime||item.blob.type||'audio/mpeg',
+      size:Number(item.size||item.blob.size)||0,duration:Number(item.duration)||0,model:item.model||record.model||'gpt-4o-mini-tts',
+      voice:item.voice||record.voice||'cedar',sourceKey:record.sourceKey||'',url:URL.createObjectURL(item.blob),objectUrl:true,
+      browserStored:true,generated:true
+    };
+  }
+  state.narrationStages=restored;
+  return Object.keys(restored).length>0;
+}
+function stageNarratorRate(stage,item){
+  const allowed=Number(narrationStageTargets()[stage])||effectiveDuration(stage,state.clips.get(stage));
+  const duration=Number(item?.duration)||0;
+  if(!duration||!allowed)return 1;
+  if(duration>allowed)return Math.min(1.18,Math.max(1,duration/allowed));
+  return 1;
+}
+async function fetchStageNarrator(stage,text,voice){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),180000);
+  let response;
+  try{
+    response=await fetch(narratorApiUrl(),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text,voice}),signal:controller.signal
+    });
+  }catch(e){
+    if(e?.name==='AbortError')throw new Error(stage+' narrator timed out.');
+    throw new Error(stage+' narrator failed: '+String(e?.message||e));
+  }finally{clearTimeout(timer);}
+  if(!response.ok){
+    let msg=stage+' narrator generation failed.';
+    try{const d=await response.json();if(d?.error)msg=d.error;}catch{}
+    throw new Error(msg);
+  }
+  const blob=arrayBufferToBlob(await response.arrayBuffer(),response.headers.get('Content-Type')||'audio/mpeg');
+  if(!blob.size)throw new Error(stage+' narrator returned empty audio.');
+  const url=URL.createObjectURL(blob),duration=await probeAudioDuration(url);URL.revokeObjectURL(url);
+  const inputTokens=Number(response.headers.get('X-LD-Input-Tokens'))||0;
+  const outputTokens=Number(response.headers.get('X-LD-Output-Tokens'))||0;
+  const totalTokens=Number(response.headers.get('X-LD-Total-Tokens'))||(inputTokens+outputTokens);
+  const hasUsage=inputTokens>0||outputTokens>0;
+  const cost=hasUsage?((inputTokens*0.60+outputTokens*12)/1000000):(duration/60*0.015);
+  return {stage,blob,name:'LD-'+stage+'-Narrator-'+voice+'.mp3',mime:blob.type||'audio/mpeg',size:blob.size,duration,
+    model:response.headers.get('X-LD-Model')||'gpt-4o-mini-tts',voice,inputTokens,outputTokens,totalTokens,cost,estimated:!hasUsage};
+}
+async function generateAiNarratorStages(script,voice){
+  const mapped=splitNarrationToStages(script);
+  const specs=STAGES.map(stage=>({stage,text:String(mapped[stage]||'').trim()})).filter(x=>x.text);
+  if(!specs.length)throw new Error('No stage narration text is available.');
+  const sourceKey=narratorSourceKey(script+'|'+narrationTimelineSignature(),voice);
+  if(hasStageNarration()&&state.autoCut.narratorSourceKey===sourceKey){
+    setNarratorAiStatus('Reusing saved panel-by-panel narrator · no new voice charge','ready');
+    return {reused:true,sourceKey};
+  }
+  const saved=await getGeneratedNarratorStages().catch(()=>null);
+  if(saved?.sourceKey===sourceKey&&restoreNarrationStagesRecord(saved)){
+    state.autoCut.narratorSourceKey=sourceKey;
+    setNarratorAiStatus('Reusing saved panel-by-panel narrator · no new voice charge','ready');
+    return {reused:true,sourceKey};
+  }
+  setNarratorAiStatus('Generating panel-by-panel AI narrator 0/'+specs.length+'…','busy');
+  const results=new Array(specs.length);let cursor=0,done=0;
+  const worker=async()=>{
+    while(true){
+      const i=cursor++;if(i>=specs.length)return;
+      results[i]=await fetchStageNarrator(specs[i].stage,specs[i].text,voice);
+      done++;setNarratorAiStatus('Generating panel-by-panel AI narrator '+done+'/'+specs.length+'…','busy');
+    }
+  };
+  await Promise.all(Array.from({length:Math.min(3,specs.length)},()=>worker()));
+  const stages={};
+  let inputTokens=0,outputTokens=0,totalTokens=0,cost=0,estimated=false;
+  for(const r of results){
+    stages[r.stage]={blob:r.blob,name:r.name,mime:r.mime,size:r.size,duration:r.duration,model:r.model,voice:r.voice};
+    inputTokens+=r.inputTokens;outputTokens+=r.outputTokens;totalTokens+=r.totalTokens;cost+=r.cost;estimated=estimated||r.estimated;
+  }
+  const record={sourceKey,voice,model:'gpt-4o-mini-tts',savedAt:new Date().toISOString(),stages};
+  await putGeneratedNarratorStages(record);
+  restoreNarrationStagesRecord(record);
+  releaseItem(state.narration);state.narration=null;
+  await clearGeneratedNarrator().catch(()=>{});
+  state.autoCut.narratorSourceKey=sourceKey;
+  $('narrationMeta').textContent='AI narrator · '+Object.keys(state.narrationStages).length+' synced stages · saved';
+  recordApiUsage({feature:'narrator_voice',featureLabel:'Narrator voice · panel synced',model:'gpt-4o-mini-tts',
+    inputTokens,outputTokens,totalTokens,costUsd:cost,estimated});
+  setNarratorAiStatus('AI narrator ready · '+Object.keys(state.narrationStages).length+' panel-synced stages · '+voice,'ready');
+  saveProject();
+  return {reused:false,sourceKey,costUsd:cost};
+}
+
 function probeAudioDuration(url){
   return new Promise((resolve,reject)=>{
     const a=document.createElement('audio');a.preload='metadata';
@@ -438,7 +576,8 @@ function syncNarratorControls(){
   const toggle=$('autoNarrator'),voice=$('narratorVoice');
   if(toggle)toggle.checked=state.autoCut.autoNarrator!==false;
   if(voice)voice.value=state.autoCut.narratorVoice||'cedar';
-  if(state.narration?.generated)setNarratorAiStatus('AI narrator ready · '+(state.narration.voice||'cedar')+' · '+fmt(state.narration.duration||0),'ready');
+  if(hasStageNarration())setNarratorAiStatus('AI narrator ready · '+Object.keys(state.narrationStages).length+' panel-synced stages · '+(state.autoCut.narratorVoice||'cedar'),'ready');
+  else if(state.narration?.generated)setNarratorAiStatus('AI narrator ready · '+(state.narration.voice||'cedar')+' · '+fmt(state.narration.duration||0),'ready');
   else if(toggle?.checked)setNarratorAiStatus('ON · narrator will generate with FULL AUTO CUT','paid');
   else setNarratorAiStatus('OFF · imported narrator only','');
 }
@@ -1179,7 +1318,7 @@ window.LDNativeFilesImported=(kind,items)=>{
 function currentAudioVolumes(){
   const narr=Number($('narrationVol').value),clip=Number($('clipVol').value);
   let music=Number($('musicVol').value);
-  if($('autoDuck').checked&&state.narration)music*=0.45;
+  if($('autoDuck').checked&&(state.narration||hasStageNarration()))music*=0.45;
   return{narr,music,clip};
 }
 function applyVolumes(){
