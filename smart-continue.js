@@ -49,12 +49,17 @@ function narrationApproved(){
 function syncFinalAuditAvailability(){
   if(!allStagesDone())return;
   const approved=narrationApproved();
-  buttonLabel('🔎 FINAL AUDIT');
-  smartButtons().forEach(btn=>{btn.disabled=!approved;});
-  if(approved){
-    status('✅ PRODUCTION COMPLETE · Smart Narration approved. Final Audit is ready.','pass');
+  const passed=!!window.LDFinalAudit?.isPassed?.();
+  smartButtons().forEach(btn=>{btn.disabled=false;});
+  if(passed){
+    buttonLabel('✅ FINAL AUDIT PASSED');
+    status('✅ FINAL AUDIT PASSED · Production verified and ready for backup.','pass');
+  }else if(approved){
+    buttonLabel('🔎 FINAL AUDIT');
+    status('✅ Smart Narration approved · Final Audit is ready.','pass');
   }else{
-    status('🔒 FINAL AUDIT LOCKED · Review and approve Smart Narration first. Final Audit remains the last step.','working');
+    buttonLabel('🔎 FINAL AUDIT');
+    status('🔒 FINAL AUDIT LOCKED · Approve Smart Narration first. Tap Final Audit to see the required step.','working');
   }
 }
 
@@ -1149,6 +1154,11 @@ document.addEventListener('click',e=>{
 });
 
 window.addEventListener('ld:narration-approval-changed',()=>{
+  updateTargetLabel();
+  if(allStagesDone())syncFinalAuditAvailability();
+});
+
+window.addEventListener('ld:final-audit-changed',()=>{
   updateTargetLabel();
   if(allStagesDone())syncFinalAuditAvailability();
 });
