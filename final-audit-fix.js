@@ -25,13 +25,8 @@
     return /\bNO\s+(?:VOICE[- ]?OVER|VO|NARRATION)\b|\bSILENT\s+HOOK\b/i.test(corpus);
   }
 
-  function narrationReady() {
-    const required = [...Array.from({ length: 14 }, (_, i) => 'P' + (i + 1)), 'ENDING'];
-    if (!hookIsSilent()) required.unshift('HOOK');
-    return required.every(stage => {
-      const card = document.querySelector('#stages .stage-card[data-stage="' + stage + '"]');
-      return !!String(card?.querySelector('.narration')?.value || '').trim();
-    });
+  function narrationApproved() {
+    return !!window.LDNarrationApproval?.isApproved?.();
   }
 
   function sendToNarration() {
@@ -39,7 +34,7 @@
     master?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     const toast = document.getElementById('toast');
     if (toast) {
-      toast.textContent = 'Smart Narration is required before Final Audit.';
+      toast.textContent = 'Review and approve Smart Narration before Final Audit.';
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 1800);
     }
@@ -54,14 +49,22 @@
     });
 
     const topNext = document.getElementById('nextIncompleteBtn');
-    if (topNext && allDone()) topNext.textContent = 'Final audit';
+    if (topNext && allDone()) {
+      topNext.textContent = 'Final audit';
+      topNext.disabled = !narrationApproved();
+      topNext.title = narrationApproved() ? '' : 'Approve Smart Narration first.';
+    }
 
     const auditNext = document.getElementById('auditNextBtn');
-    if (auditNext && allDone()) auditNext.textContent = 'Audit complete';
+    if (auditNext && allDone()) {
+      auditNext.textContent = narrationApproved() ? 'Audit complete' : 'Final audit locked';
+      auditNext.disabled = !narrationApproved();
+      auditNext.title = narrationApproved() ? '' : 'Approve Smart Narration first.';
+    }
   }
 
   function openAudit() {
-    if (!narrationReady()) {
+    if (!narrationApproved()) {
       sendToNarration();
       return;
     }
@@ -133,4 +136,6 @@
     setTimeout(decorate, 100);
     setTimeout(decorate, 500);
   });
+
+  window.addEventListener('ld:narration-approval-changed', decorate);
 })();
