@@ -64,6 +64,11 @@
   const pipeline=document.getElementById('pipelineSection');
   pipeline?.parentNode?.insertBefore(section,pipeline);
 
+  // Legacy compiled Master Narration card is retired from the visible workspace.
+  // Keep its DOM alive so Smart Narration Stage 0 can reuse the proven controls,
+  // state and compiled narration without duplicating the engine.
+  section.hidden=true;
+
   function refresh(){
     const rows=getNarration();
     const ta=document.getElementById('masterNarrationText');
