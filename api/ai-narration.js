@@ -338,31 +338,22 @@ HOOK PERFORMANCE LOCK:
 - Keep the strongest reveal for the disaster while remaining factually grounded.
 - P1-P14 should then progress chronologically without simply repeating the HOOK.
 
-STAGE ROLE LOCK — SHORTS P1-P14:
-- Plan the entire 15-stage story before writing any individual narration.
-- HOOK: immediate fact-safe curiosity/tension; do not explain the whole event. When verified weak-shaking evidence exists for a tsunami earthquake, it may be used as the contrast that opens the story.
-- P1: normal world, geography, exposed communities, and location context.
-- P2: relevant tectonic/geologic setup only; do not narrate tsunami travel or impact yet.
-- P3: the triggering earthquake/event itself.
-- P4: historically established unusual warning conditions or the gap between trigger and disaster; if a verified local observation exists, anchor it to that named location and do not generalize it to the entire coast.
-- P5: the next distinct verified local or physical development after P4. Do not invent a generation mechanism if one is not in evidence.
-- P6: the next distinct verified wave arrival/measurement or approach detail.
-- P7: verified peak coastal water-height/run-up evidence; do not turn one measurement into a coast-wide claim.
-- P8: verified houses destroyed/property-destruction evidence.
-- P9: verified additional property-damage evidence.
-- P10: verified fatalities, non-graphic.
-- P11: verified injuries or other distinct human-impact evidence.
-- P12: verified subsequent-wave sequence or immediate aftermath evidence; keep local observations local.
-- P13: verified scientific classification/source context, response, recovery, or documented historical consequence.
-- P14: concise closing callback to event identity/date/location; do not repeat casualty or damage figures.
-- Every panel owns one narrative job. Adjacent panels must not explain the same causal step.
-- HARD NO-REUSE RULE: before drafting, assign each important fact or idea to exactly one stage. Once a fact is the main point of a stage, it cannot be the main point, explanation, warning, consequence, or paraphrase in the immediately following stage.
-- Specifically, if P3 establishes unusually weak or limited felt shaking, P4 MUST NOT discuss weak shaking, lack of alarm, lack of warning from shaking, or the mismatch again. P4 must move to the next distinct verified event or condition.
-- If no separate verified P4 warning condition exists, advance the chronology to the next distinct causal step rather than filling P4 with a paraphrase.
-- Final audit: compare every adjacent pair (HOOK/P1, P1/P2 ... P13/P14). If two stages could be summarized by the same factual sentence, rewrite the later stage with new verified information.
-- If the event does not support one role with reliable facts, move forward to another distinct verified fact instead of inventing filler.
-- Do not force generic plate names or a simplified tectonic model when the event's mechanism is complex or uncertain.
-- Avoid the phrase "radiated toward"; prefer natural spoken wording such as "spread across the ocean" when scientifically appropriate.
+STAGE ROLE LOCK — SHORTS P1-P14 — EVENT-ADAPTIVE V2:
+- Plan the complete requested story arc before writing any individual narration line.
+- The exact STAGE EVIDENCE and APPROVED PRODUCTION STAGE CONTEXT define each panel's narrative job. Do not force tsunami, earthquake, cyclone, avalanche, fire, flood, or other hazard roles onto a different disaster type.
+- Treat the production flow as one continuous documentary story, not a collection of independent panel summaries.
+- For each stage, silently assign one role from this arc when supported: SETUP -> BUILDUP -> WARNING/INSTABILITY -> TRIGGER -> ESCALATION -> PEAK IMPACT -> IMMEDIATE CONSEQUENCE -> AFTERMATH -> RESCUE -> SURVIVAL/RELIEF -> RECOVERY -> HISTORICAL PAYOFF.
+- The role sequence is descriptive, not a license to invent facts. Skip or combine unsupported roles rather than manufacturing details.
+- Every panel owns ONE primary narrative job. Adjacent panels must advance time, cause/effect, location, human consequence, response, or historical meaning.
+- Use the previous and next requested stage as continuity context. A line should naturally hand the story forward without previewing facts assigned to the next stage.
+- HARD NO-REUSE RULE: assign each important fact or idea to one stage. Once used as a stage's main point, do not restate or paraphrase it as the main point of an adjacent stage.
+- REPETITION KILLER: adjacent lines should not begin with the same subject pattern or rely on the same main verb when a natural alternative is possible without changing factual meaning.
+- CAUSE/EFFECT BRIDGE: when two adjacent stage-evidence sets explicitly support a causal sequence, connect them naturally. Never infer a causal link that the evidence does not establish.
+- IMPACT MOMENT: use the strongest active, concrete wording at the verified peak-impact stage; do not spend the strongest language on setup panels.
+- AFTERMATH MOMENTUM: after peak impact, keep the story moving through distinct verified consequences, rescue, survival, recovery, or legacy instead of repeatedly describing destruction.
+- P14 is the historical payoff: use a verified consequence, significance, change, or legacy when available. Do not merely repeat the event identity, casualty count, or earlier damage unless the exact stage evidence leaves no stronger supported close.
+- Final continuity audit: compare every adjacent pair. If two lines could be summarized by the same factual sentence or feel interchangeable, rewrite the later one using its own stage evidence.
+- If a stage has sparse evidence, prefer one short, strong, natural sentence. Never borrow a fact from another stage to make the line fuller.
 
 FINAL VIDEO-FLOW NARRATION QUALITY LOCK — LIVING DISASTER BOOK:
 - Treat narration as part of the edit, not as a generic summary. Every stage must sound written for that exact panel and its assigned place in the story.
