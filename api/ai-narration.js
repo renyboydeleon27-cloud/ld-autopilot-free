@@ -104,6 +104,25 @@ export default async function handler(req, res) {
   const topic = String(req.body?.topic || "").trim().slice(0, 240);
   const format = req.body?.format === "longform" ? "longform" : "shorts";
   const requestedStage = String(req.body?.requestedStage || "").trim().toUpperCase();
+  const skipStages = new Set(
+    (Array.isArray(req.body?.skipStages) ? req.body.skipStages : [])
+      .map(x=>String(x||"").trim().toUpperCase())
+      .filter(x=>/^(HOOK|P(?:[1-9]|1[0-4]))$/.test(x))
+  );
+  const rawProductionStages = req.body?.productionStages && typeof req.body.productionStages === "object"
+    ? req.body.productionStages
+    : {};
+  const productionStages = {};
+  for (const [rawStage, rawValue] of Object.entries(rawProductionStages)) {
+    const stage=String(rawStage||"").trim().toUpperCase();
+    if(!/^(HOOK|P(?:[1-9]|1[0-4]))$/.test(stage)) continue;
+    const value=rawValue && typeof rawValue==="object" ? rawValue : {};
+    productionStages[stage]={
+      role:String(value.role||"").trim().slice(0,500),
+      scene:String(value.scene||"").trim().slice(0,1800),
+      prompt:String(value.prompt||"").trim().slice(0,2200)
+    };
+  }
   if (!topic) return res.status(400).json({ ok:false, error:"Please provide a disaster topic first." });
   if(requestedStage && format==="shorts" && !/^(HOOK|P(?:[1-9]|1[0-4]))$/.test(requestedStage)){
     return res.status(400).json({ok:false,error:"requestedStage must be HOOK or P1–P14 for Shorts."});
@@ -212,7 +231,7 @@ export default async function handler(req, res) {
   // This prevents spending generation/validator credits on a narration set that
   // the stage-scoped evidence validator would reject anyway.
   if(format==="shorts"){
-    const preflightStages=requestedStage?[requestedStage]:Object.keys(stageEvidence);
+    const preflightStages=(requestedStage?[requestedStage]:Object.keys(stageEvidence)).filter(stage=>!skipStages.has(stage));
     const missingStageEvidence=preflightStages
       .filter(stage=>!Array.isArray(stageEvidence[stage])||stageEvidence[stage].length===0);
     if(missingStageEvidence.length){
@@ -270,7 +289,7 @@ EVIDENCE GATE:
   const allStageNames = format === "shorts"
     ? ["HOOK", ...Array.from({length:14},(_,i)=>"P"+(i+1))]
     : ["HOOK", ...Array.from({length:30},(_,i)=>"S"+(i+1))];
-  const stageNames = requestedStage ? [requestedStage] : allStageNames;
+  const stageNames = (requestedStage ? [requestedStage] : allStageNames).filter(stage=>!skipStages.has(stage));
 
   const rawTiming=req.body?.targetStageSeconds&&typeof req.body.targetStageSeconds==="object"?req.body.targetStageSeconds:{};
   const timingTargets=Object.fromEntries(stageNames.map(stage=>{
@@ -386,6 +405,13 @@ A verified cause value of earthquake may become "The disaster began with an eart
 Keep sentences human, concrete, cinematic, and speakable. Do not add people, weather, warning signs, sensory details, rankings, comparisons, or causal mechanisms that are absent from VERIFIED CLAIMS.
 Do not pad a stage with metadata wording just to make it longer. If evidence is sparse, prefer a short natural sentence.
 
+FINAL APPROVED PANEL ALIGNMENT LOCK:
+- APPROVED PRODUCTION STAGE CONTEXT is the current NER Studio scene/prompt context for each requested stage.
+- Use it only to keep narration synchronized with the exact visual beat already built for that same stage.
+- Do not jump ahead, repeat the previous panel, or narrate a different action/location when the approved stage context establishes the current beat.
+- This production context is NOT a factual source. Event-specific claims still require that exact stage's STAGE EVIDENCE.
+- If the visual context contains unsupported specificity, stay visually compatible but state only facts allowed by STAGE EVIDENCE.
+
 Return ONLY valid JSON in exactly this shape:
 {"stages":{"HOOK":"...","P1":"..."}}
 Include every requested stage key exactly once and no markdown.`;
@@ -402,7 +428,7 @@ Include every requested stage key exactly once and no markdown.`;
         text:{format:{type:"json_schema",name:"narration_set",strict:true,schema:{type:"object",properties:{stages:{type:"object",properties:Object.fromEntries(stageNames.map(n=>[n,{type:"string"}])),required:stageNames,additionalProperties:false}},required:["stages"],additionalProperties:false}}},
         input:[
           {role:"system",content:[{type:"input_text",text:system}]},
-          {role:"user",content:[{type:"input_text",text:`Topic: ${topic}\nFormat: ${format}\nRequired stages: ${stageNames.join(", ")}\n${requestedStage?"Generate ONLY the requested narration stage. It must fit this exact stage and must not summarize later panels.":"Generate the complete narration set."}\n\nRESEARCH EVIDENCE (authoritative-source gate):\n${JSON.stringify({...evidenceForNarration,stageEvidence:Object.fromEntries(stageNames.map(s=>[s,stageEvidence[s]||[]]))})}\nUse this evidence as the factual boundary. If exactNumbersAllowed is false, do not state exact numerical claims from uncertain fields.`}]}
+          {role:"user",content:[{type:"input_text",text:`Topic: ${topic}\nFormat: ${format}\nRequired stages: ${stageNames.join(", ")}\n${requestedStage?"Generate ONLY the requested narration stage. It must fit this exact stage and must not summarize later panels.":"Generate the complete narration set."}\n\nAPPROVED PRODUCTION STAGE CONTEXT (alignment only; not a factual source):\n${JSON.stringify(productionStages)}\n\nRESEARCH EVIDENCE (authoritative-source gate):\n${JSON.stringify({...evidenceForNarration,stageEvidence:Object.fromEntries(stageNames.map(s=>[s,stageEvidence[s]||[]]))})}\nUse this evidence as the factual boundary. If exactNumbersAllowed is false, do not state exact numerical claims from uncertain fields.`}]}
         ],
         max_output_tokens: 8000
       })
