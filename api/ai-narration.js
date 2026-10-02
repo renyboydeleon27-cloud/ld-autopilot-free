@@ -103,7 +103,11 @@ export default async function handler(req, res) {
 
   const topic = String(req.body?.topic || "").trim().slice(0, 240);
   const format = req.body?.format === "longform" ? "longform" : "shorts";
+  const requestedStage = String(req.body?.requestedStage || "").trim().toUpperCase();
   if (!topic) return res.status(400).json({ ok:false, error:"Please provide a disaster topic first." });
+  if(requestedStage && format==="shorts" && !/^(HOOK|P(?:[1-9]|1[0-4]))$/.test(requestedStage)){
+    return res.status(400).json({ok:false,error:"requestedStage must be HOOK or P1–P14 for Shorts."});
+  }
   const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
   if (!apiKey) return res.status(500).json({ ok:false, error:"OPENAI_API_KEY is not configured on the server." });
   const apiUsageParts=[];
@@ -208,9 +212,9 @@ export default async function handler(req, res) {
   // This prevents spending generation/validator credits on a narration set that
   // the stage-scoped evidence validator would reject anyway.
   if(format==="shorts"){
-    const missingStageEvidence=Object.entries(stageEvidence)
-      .filter(([,items])=>!Array.isArray(items)||items.length===0)
-      .map(([stage])=>stage);
+    const preflightStages=requestedStage?[requestedStage]:Object.keys(stageEvidence);
+    const missingStageEvidence=preflightStages
+      .filter(stage=>!Array.isArray(stageEvidence[stage])||stageEvidence[stage].length===0);
     if(missingStageEvidence.length){
       return res.status(422).json({
         ok:false,
@@ -263,9 +267,10 @@ EVIDENCE GATE:
 - The fact pack is internal planning only. Return only the requested narration JSON, not the fact pack.
 `;
 
-  const stageNames = format === "shorts"
+  const allStageNames = format === "shorts"
     ? ["HOOK", ...Array.from({length:14},(_,i)=>"P"+(i+1))]
     : ["HOOK", ...Array.from({length:30},(_,i)=>"S"+(i+1))];
+  const stageNames = requestedStage ? [requestedStage] : allStageNames;
 
   const rawTiming=req.body?.targetStageSeconds&&typeof req.body.targetStageSeconds==="object"?req.body.targetStageSeconds:{};
   const timingTargets=Object.fromEntries(stageNames.map(stage=>{
@@ -397,7 +402,7 @@ Include every requested stage key exactly once and no markdown.`;
         text:{format:{type:"json_schema",name:"narration_set",strict:true,schema:{type:"object",properties:{stages:{type:"object",properties:Object.fromEntries(stageNames.map(n=>[n,{type:"string"}])),required:stageNames,additionalProperties:false}},required:["stages"],additionalProperties:false}}},
         input:[
           {role:"system",content:[{type:"input_text",text:system}]},
-          {role:"user",content:[{type:"input_text",text:`Topic: ${topic}\nFormat: ${format}\nRequired stages: ${stageNames.join(", ")}\nGenerate the complete narration set.\n\nRESEARCH EVIDENCE (authoritative-source gate):\n${JSON.stringify(evidenceForNarration)}\nUse this evidence as the factual boundary. If exactNumbersAllowed is false, do not state exact numerical claims from uncertain fields.`}]}
+          {role:"user",content:[{type:"input_text",text:`Topic: ${topic}\nFormat: ${format}\nRequired stages: ${stageNames.join(", ")}\n${requestedStage?"Generate ONLY the requested narration stage. It must fit this exact stage and must not summarize later panels.":"Generate the complete narration set."}\n\nRESEARCH EVIDENCE (authoritative-source gate):\n${JSON.stringify({...evidenceForNarration,stageEvidence:Object.fromEntries(stageNames.map(s=>[s,stageEvidence[s]||[]]))})}\nUse this evidence as the factual boundary. If exactNumbersAllowed is false, do not state exact numerical claims from uncertain fields.`}]}
         ],
         max_output_tokens: 8000
       })
@@ -431,7 +436,7 @@ Include every requested stage key exactly once and no markdown.`;
         text:{format:{type:"json_schema",name:"evidence_audit",strict:true,schema:{type:"object",properties:{valid:{type:"boolean"},unsupported:{type:"array",items:{type:"object",properties:{stage:{type:"string"},claim:{type:"string"},reason:{type:"string"}},required:["stage","claim","reason"],additionalProperties:false}}},required:["valid","unsupported"],additionalProperties:false}}},
         input:[
           {role:"system",content:[{type:"input_text",text:`You are a strict evidence auditor. Compare each narration stage ONLY against the supplied STAGE EVIDENCE for that exact stage. Do not use outside knowledge or borrow facts assigned to another stage. Event identity being VERIFIED does not verify other details. Split each stage into event-specific factual claims. A claim is supported only if that stage's evidence explicitly entails it; paraphrases are allowed, inference and typical disaster behavior are not. Generic connective/cinematic wording is allowed only when it adds no new factual assertion. Return JSON exactly: {"valid":true,"unsupported":[]} or {"valid":false,"unsupported":[{"stage":"HOOK","claim":"...","reason":"..."}]}.`}]},
-          {role:"user",content:[{type:"input_text",text:`STAGE EVIDENCE:\n${JSON.stringify(stageEvidence)}\n\nNARRATION:\n${JSON.stringify(stages)}`}]}
+          {role:"user",content:[{type:"input_text",text:`STAGE EVIDENCE:\n${JSON.stringify(Object.fromEntries(stageNames.map(s=>[s,stageEvidence[s]||[]])))}\n\nNARRATION:\n${JSON.stringify(stages)}`}]}
         ],
         max_output_tokens:4000
       })
@@ -564,7 +569,7 @@ Include every requested stage key exactly once and no markdown.`;
       if (typeof stages[name] !== "string" || !stages[name].trim()) return res.status(502).json({ok:false,error:`AI response is missing ${name}. Please try again.`,apiUsage:usagePayload()});
       stages[name] = polishNarrationQuality(name, sanitizeNarrationLine(name, stages[name], stageEvidence), stageEvidence);
     }
-    return res.status(200).json({ok:true,topic,format,researchStatus:research.validation.status,stages,apiUsage:usagePayload()});
+    return res.status(200).json({ok:true,topic,format,requestedStage:requestedStage||null,researchStatus:research.validation.status,stages,apiUsage:usagePayload()});
   } catch (err) {
     return res.status(500).json({ok:false,error:"AI narration error: "+String(err?.message||err),apiUsage:usagePayload()});
   }
