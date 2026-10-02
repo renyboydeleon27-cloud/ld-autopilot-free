@@ -31,7 +31,25 @@
       return {title,lead,label:i===0?'Recommended':'Alternative '+(i+1),reason:i===0?reason:i===1?'A simpler visual hook for this topic.':'A direct documentary option with the supplied event identity.',family:match?match[0]:'general'};
     }).filter((x,i,a)=>a.findIndex(y=>y.title===x.title)===i);
   }
-  const api={recommend};
+
+  function hashtags(topic,format='shorts'){
+    const event=String(topic||'').split(/\s+[—–|]\s+|\s+-\s+/)[0].replace(/\b\d{4}\b/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]/g,'').slice(0,60);
+    const family=families.find(f=>f[1].test(topic))?.[0];
+    const tags={tsunami:'Tsunami',cyclone:'Cyclone',tornado:'Tornado',earthquake:'Earthquake',dam:'DamFailure',flood:'Flood',avalanche:'Avalanche',landslide:'Landslide',volcano:'Volcano',fire:'FireHistory',insect:'LocustSwarm',epidemic:'EpidemicHistory',industrial:'IndustrialDisaster'};
+    return [...new Set([event,'LivingDisasterBook','DisasterHistory',tags[family],...(format==='shorts'?['HistoryShorts','Shorts']:['HistoryDocumentary'])].filter(Boolean))].map(t=>'#'+t).join(' ');
+  }
+  function makeDescription(topic,format='shorts'){
+    topic=String(topic||'').trim();if(!topic)return '';
+    return topic+'\n\nDiscover the story behind this disaster in this Living Disaster Book '+(format==='shorts'?'history short':'documentary')+'.\n\nWhich disaster should we cover next? Share your thoughts in the comments, and subscribe for more disaster history.\n\n'+hashtags(topic,format);
+  }
+  function descriptionFor(topic,format,meta={},fresh=false){
+    const saved=typeof meta.description==='string'?meta.description:'';
+    const legacy=/^A Living Disaster Book historical disaster (?:short|documentary) about [\s\S]+\.\n\nThank you for watching\. Like, share, and subscribe for more stories from the Living Disaster Book\.$/.test(saved.trim());
+    const managed=saved===meta.autoDescriptionText;
+    return fresh||!saved.trim()||legacy||managed?makeDescription(topic,format):saved;
+  }
+
+  const api={recommend,hashtags,makeDescription,descriptionFor};
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.LDTitleRecommendations=api;
   if(typeof document==='undefined')return;
@@ -66,13 +84,14 @@
   const field=section.querySelector('#selectedYoutubeTitle'),description=section.querySelector('#youtubeDescription'),options=section.querySelector('#titleOptions'),message=section.querySelector('#titleMessage'),details=section.querySelector('#youtubeDetails'),toggle=section.querySelector('#toggleYoutubeDetails');
   toggle.onclick=()=>{const open=details.hidden;details.hidden=!open;toggle.textContent=open?'Minimize':'Maximize';toggle.setAttribute('aria-expanded',String(open));};
   function count(){section.querySelector('#titleLength').textContent=field.value.length+'/100 characters'+(field.value.length>100?' — shorten before publishing':'');}
-  function persist(){window.ldYoutubeTitle=field.value;count();if(typeof saveCurrent==='function')saveCurrent();}
+  let preview=false;
+  function persist(){count();if(preview)return;window.ldYoutubeTitle=field.value;if(typeof saveCurrent==='function')saveCurrent();}
   function defaultDescription(topic){
     if(root.LDStoryModes?.enabled())return 'A '+root.LDStoryModes.label()+' story titled '+topic+'.\n\nCreated with NER Studio.';
-    return 'A Living Disaster Book historical disaster '+(document.getElementById('format')?.value==='longform'?'documentary':'short')+' about '+topic+'.\n\nThank you for watching. Like, share, and subscribe for more stories from the Living Disaster Book.';
+    return makeDescription(topic,document.getElementById('format')?.value||'shorts');
   }
-  function currentDescription(topic){return root.ldFinalPackageMeta?.description||defaultDescription(topic);}
   function persistDescription(){
+    if(preview)return;
     if(!root.ldFinalPackageMeta||typeof root.ldFinalPackageMeta!=='object'||Array.isArray(root.ldFinalPackageMeta))root.ldFinalPackageMeta={description:'',musicCredit:'',uploadNotes:''};
     root.ldFinalPackageMeta.description=description.value;
     const other=document.querySelector('#ldFinalPackage .final-description');if(other)other.value=description.value;
@@ -82,19 +101,28 @@
     try{await navigator.clipboard.writeText(value);message.textContent=label+' copied.';}
     catch(e){if(fallback){fallback.focus();fallback.select();}message.textContent='Copy unavailable. Select and copy the text manually.';}
   }
-  function render(){
-    const state=root.LDCore?.collectState();const topic=state?.topic||'';
+  function render(event){
+    const state=root.LDCore?.collectState();preview=event?.preview===true;
+    const topic=preview?(document.getElementById('topic')?.value||'').trim():(state?.topic||'');
     section.hidden=!topic;options.replaceChildren();if(!topic)return;
     const choices=recommend(topic);
-    field.value=typeof window.ldYoutubeTitle==='string'?window.ldYoutubeTitle:choices[0].title;
-    if(window.ldYoutubeTitle===null||window.ldYoutubeTitle===undefined){window.ldYoutubeTitle=field.value;if(typeof saveCurrent==='function')saveCurrent();field.dispatchEvent(new Event('change',{bubbles:true}));}
-    description.value=currentDescription(topic);
+    field.value=!preview&&typeof window.ldYoutubeTitle==='string'?window.ldYoutubeTitle:choices[0].title;
+    if(!preview&&(window.ldYoutubeTitle===null||window.ldYoutubeTitle===undefined)){window.ldYoutubeTitle=field.value;if(typeof saveCurrent==='function')saveCurrent();field.dispatchEvent(new Event('change',{bubbles:true}));}
+    const meta=root.ldFinalPackageMeta||{};
+    const format=document.getElementById('format')?.value||'shorts';
+    description.value=preview?defaultDescription(topic):root.LDStoryModes?.enabled()?(meta.description||defaultDescription(topic)):descriptionFor(topic,format,meta,!!event?.detail?.fresh);
+    if(!preview){
+      root.ldFinalPackageMeta=Object.assign({},meta,{description:description.value});
+      if(description.value===makeDescription(topic,format))root.ldFinalPackageMeta.autoDescriptionText=description.value;
+      const other=document.querySelector('#ldFinalPackage .final-description');if(other)other.value=description.value;
+      if(typeof saveCurrent==='function')saveCurrent();
+    }
     for(const [index,choice] of choices.entries()){
       const card=document.createElement('article');card.className='yt-option';
       const label=document.createElement('strong');label.textContent=(index+1)+'. '+choice.label;
       const title=document.createElement('p');title.textContent=choice.title;
       const actions=document.createElement('div');actions.className='yt-actions';
-      const use=document.createElement('button');use.type='button';use.className='ghost small';use.textContent='Use title';use.setAttribute('aria-label','Use title '+(index+1));use.onclick=()=>{field.value=choice.title;persist();field.dispatchEvent(new Event('change',{bubbles:true}));message.textContent='Title saved for this production.';};
+      const use=document.createElement('button');use.type='button';use.className='ghost small';use.textContent='Use title';use.setAttribute('aria-label','Use title '+(index+1));use.onclick=()=>{field.value=choice.title;persist();field.dispatchEvent(new Event('change',{bubbles:true}));message.textContent=preview?'Title selected for preview. Create production to save.':'Title saved for this production.';};
       const copyButton=document.createElement('button');copyButton.type='button';copyButton.className='yt-red';copyButton.textContent='Copy';copyButton.setAttribute('aria-label','Copy title '+(index+1));copyButton.onclick=()=>copy(choice.title,'Title '+(index+1));
       actions.append(use,copyButton);card.append(label,title,actions);options.append(card);
     }
@@ -106,6 +134,9 @@
   section.querySelector('#copyYoutubeTitle').onclick=()=>copy(field.value,'Title',field);
   section.querySelector('#copyYoutubeDescription').onclick=()=>copy(description.value,'Description',description);
   root.addEventListener('ld:production-built',render);
+  let previewTimer;
+  document.getElementById('topic')?.addEventListener('input',()=>{clearTimeout(previewTimer);previewTimer=setTimeout(()=>render({preview:true}),250);});
+  document.getElementById('format')?.addEventListener('change',()=>render({preview:true}));
   new MutationObserver(()=>{if(document.getElementById('projectTitle').textContent==='No production yet')section.hidden=true;}).observe(document.getElementById('projectTitle'),{childList:true});
   render();
 })(typeof window!=='undefined'?window:globalThis);

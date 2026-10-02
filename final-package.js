@@ -26,6 +26,7 @@ function defaultDescription(){
   const t=topic();
   if(!t)return '';
   if(window.LDStoryModes?.enabled())return 'A '+window.LDStoryModes.label()+' story titled '+t+'.\n\nCreated with NER Studio.';
+  if(window.LDTitleRecommendations?.makeDescription)return window.LDTitleRecommendations.makeDescription(t,format());
   return 'A Living Disaster Book historical disaster short about '+t+'.\n\nThank you for watching. Like, share, and subscribe for more stories from the Living Disaster Book.';
 }
 function meta(){
