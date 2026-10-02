@@ -1,6 +1,6 @@
 {
-  "version": "0.6.0",
-  "notes": "Polished Auto Cut pipeline: transitions are applied first, final timeline is calculated, then narration is generated panel-by-panel to match each stage. HOOK narration is included, subtitles use the exact same narration wording, and ENDING voice still stops at 4.5s.",
+  "version": "0.6.1",
+  "notes": "Adds Smart Continue Narration. Generate one evidence-checked narration stage at a time using the final transitioned panel duration, or build the full HOOK–P14 + ENDING narration set. Approved Smart narration is preserved by Full Auto Cut, and subtitles stay word-for-word with the final narration.",
   "files": [
     {
       "name": "index.html",
