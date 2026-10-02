@@ -503,6 +503,7 @@ function refreshEndingPhotoUi(){
 }
 function refreshAutoCutUi(){
   const script=$('autoCutScript');if(script&&document.activeElement!==script)script.value=state.autoCut?.script||'';
+  const topic=$('projectTopic');if(topic&&document.activeElement!==topic)topic.value=state.projectTopic||'';
   const missing=missingStageNames(),ready=missing.length===0;
   const btn=$('autoCutBtn'),previewBtn=$('previewAutoCutBtn');
   if(btn)btn.disabled=!ready;
@@ -512,24 +513,26 @@ function refreshAutoCutUi(){
     const captionStages=Object.keys(state.autoCut.captions||{}).length;
     setAutoCutStatus('Auto Cut ready · ENDING locked 5.0s · thumbnail hold 4.5–5.0s · narrator off last 0.5s · '+captionStages+' caption stage'+(captionStages===1?'':'s')+' · local engine FREE');
   }else{
-    setAutoCutStatus(ready?'Ready for one-tap Auto Cut.':'Missing stage'+(missing.length>1?'s':'')+': '+missing.join(', ')+'. Add '+(missing.length===1&&missing[0]==='ENDING'?'the ENDING photo':'all required stages')+' first.');
+    if(!ready)setAutoCutStatus('Missing stage'+(missing.length>1?'s':'')+': '+missing.join(', ')+'. Add '+(missing.length===1&&missing[0]==='ENDING'?'the ENDING photo':'all required stages')+' first.');
+    else if(!String(state.autoCut.script||'').trim()&&!String(state.projectTopic||'').trim())setAutoCutStatus('Ready · enter Project Topic once, then FULL AUTO CUT will generate narration + voice automatically.');
+    else setAutoCutStatus('Ready for true one-tap Auto Cut.');
   }
 }
 async function runFullAutoCut(previewAfter=false){
   const missing=missingStageNames();
   if(missing.length)return alert('Missing stage'+(missing.length>1?'s':'')+': '+missing.join(', ')+'. '+(missing.length===1&&missing[0]==='ENDING'?'Import the ENDING photo first.':'Load all required stages first.'));
-  const script=String($('autoCutScript')?$('autoCutScript').value:state.autoCut.script||'').trim();
+  let script=String($('autoCutScript')?$('autoCutScript').value:state.autoCut.script||'').trim();
+  const topic=String($('projectTopic')?.value||state.projectTopic||'').trim();
   const autoNarrator=$('autoNarrator')?$('autoNarrator').checked:true;
   const voice=String($('narratorVoice')?.value||state.autoCut.narratorVoice||'cedar');
-  if(autoNarrator&&!script)return alert('Paste the final narration first. Then one tap will generate the AI narrator and build the full Auto Cut.');
+  if(!script&&!topic)return alert('Enter the Project Topic once. FULL AUTO CUT will generate narration text and AI voice automatically.');
   const btn=$('autoCutBtn'),previewBtn=$('previewAutoCutBtn');
   if(btn)btn.disabled=true;if(previewBtn)previewBtn.disabled=true;
   state.autoCut.enabled=true;
   state.autoCut.builtAt=new Date().toISOString();
-  state.autoCut.script=script;
+  state.projectTopic=topic||state.projectTopic;
   state.autoCut.autoNarrator=autoNarrator;
   state.autoCut.narratorVoice=voice;
-  state.autoCut.captions=buildAutoCaptions(script);
   state.autoCut.plan=buildAutoCutPlan();
   $('narrationVol').value='1';
   $('musicVol').value='0.16';
@@ -538,15 +541,20 @@ async function runFullAutoCut(previewAfter=false){
   applyVolumes();
   beginApiGeneration('FULL AUTO CUT');
   try{
-    setAutoCutStatus(autoNarrator?'Step 1/2 · generating AI narrator…':'Building local Auto Cut…');
+    if(!script)script=await generateAutoNarrationScript(topic);
+    state.autoCut.script=script;
+    state.autoCut.captions=buildAutoCaptions(script);
+    if($('autoCutScript'))$('autoCutScript').value=script;
     if(autoNarrator){
+      setAutoCutStatus('Step 2/3 · generating AI narrator voice…');
       const generated=await generateAiNarrator(script,voice);
       state.autoCut.narratorSourceKey=generated.sourceKey||'';
     }
+    setAutoCutStatus('Step 3/3 · building cuts, subtitles and audio mix…');
     recordApiUsage({feature:'auto_cut_local',featureLabel:'Auto Cut Engine',model:'Local v1',free:true});
     endApiGeneration();
     saveProject();render();refreshAutoCutUi();
-    setAutoCutStatus('ONE CLICK complete · AI narrator '+(autoNarrator?'ready':'off')+' · HOOK no voice · ENDING voice stops at 4.5s · cuts + subtitles + SFX/music mix ready');
+    setAutoCutStatus('ONE CLICK complete · narration + AI voice '+(autoNarrator?'ready':'text only')+' · HOOK no voice · ENDING voice stops at 4.5s · cuts + subtitles + SFX/music mix ready');
     if(previewAfter)playAll();
   }catch(e){
     endApiGeneration();saveProject();render();refreshAutoCutUi();
@@ -1432,7 +1440,8 @@ if($('thumbnailInput'))$('thumbnailInput').addEventListener('change',()=>setThum
 $('playAllBtn').onclick=playAll;$('stopBtn').onclick=stopPlayback;
 if($('autoCutBtn'))$('autoCutBtn').onclick=()=>runFullAutoCut(false);
 if($('previewAutoCutBtn'))$('previewAutoCutBtn').onclick=()=>runFullAutoCut(true);
-if($('autoCutScript'))$('autoCutScript').addEventListener('input',()=>{state.autoCut.script=$('autoCutScript').value;saveProject();});
+if($('projectTopic'))$('projectTopic').addEventListener('input',()=>{state.projectTopic=$('projectTopic').value;saveProject();refreshAutoCutUi();});
+if($('autoCutScript'))$('autoCutScript').addEventListener('input',()=>{state.autoCut.script=$('autoCutScript').value;saveProject();refreshAutoCutUi();});
 if($('autoNarrator'))$('autoNarrator').addEventListener('change',()=>{state.autoCut.autoNarrator=$('autoNarrator').checked;syncNarratorControls();saveProject();});
 if($('narratorVoice'))$('narratorVoice').addEventListener('change',()=>{state.autoCut.narratorVoice=$('narratorVoice').value;syncNarratorControls();saveProject();});
 $('exportBtn').onclick=renderExport;
