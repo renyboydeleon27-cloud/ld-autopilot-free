@@ -204,6 +204,12 @@
 
     if(live===need){
       if(visible<need||layoutLooksBroken()){
+        // A malformed blank shell can still count as a "visible" card. Rebuild once from
+        // the complete saved state instead of accepting a half-rendered pipeline.
+        if(layoutLooksBroken()&&attempts<3&&state&&countStages(state)>=need){
+          rebuildFullPipeline(state,need);
+          return;
+        }
         normalizePipelineLayout();
         compactStageBodies();
         requestAnimationFrame(()=>{
