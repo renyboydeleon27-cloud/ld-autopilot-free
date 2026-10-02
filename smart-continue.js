@@ -43,6 +43,34 @@ function allStagesDone(){
   const cards=eligibleCards();
   return cards.length>0&&cards.every(stageDone);
 }
+function narrationHookIsSilent(){
+  const card=stages.querySelector('.stage-card[data-stage="HOOK"]');
+  if(!card)return false;
+  const corpus=[
+    card.querySelector('.flow-prompt')?.value,
+    card.querySelector('.text-video-prompt')?.value,
+    card.dataset.textVideoPrompt,
+    card.querySelector('.image-prompt')?.value,
+    card.querySelector('.scene-role')?.textContent,
+    card.dataset.videoScene
+  ].filter(Boolean).join('\n');
+  return /\bNO\s+(?:VOICE[- ]?OVER|VO|NARRATION)\b|\bSILENT\s+HOOK\b/i.test(corpus);
+}
+function finalNarrationReady(){
+  const required=[...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
+  if(!narrationHookIsSilent())required.unshift('HOOK');
+  return required.every(stage=>{
+    const card=stages.querySelector('.stage-card[data-stage="'+stage+'"]');
+    return !!String(card?.querySelector('.narration')?.value||'').trim();
+  });
+}
+function openNarrationStep(){
+  buttonLabel('🎙️ SMART NARRATION');
+  updateTargetLabel();
+  status('✅ PRODUCTION COMPLETE · Next step: build the final HOOK → P14 → ENDING narration before Final Audit.','pass');
+  const master=document.getElementById('masterNarrationCard');
+  master?.scrollIntoView({behavior:'smooth',block:'start'});
+}
 
 function showToast(message){
   if(!toast)return;
@@ -101,6 +129,7 @@ function currentCard(){
   return cards[cards.length-1]||cards[0];
 }
 function currentTargetText(){
+  if(allStagesDone()&&!finalNarrationReady())return 'CURRENT TARGET: SMART NARRATION';
   if(allStagesDone())return 'CURRENT TARGET: FINAL AUDIT';
   const card=currentCard();
   return card?'CURRENT TARGET: '+(card.dataset.stage||'CURRENT'):'CURRENT TARGET: —';
@@ -367,8 +396,13 @@ function restoreSmartSession(){
   if(cards.every(stageDone)){
     writeSmartSession({targetStage:'',pending:null});
     clearSmartState();
-    buttonLabel('🔎 FINAL AUDIT');
-    status('✅ PRODUCTION COMPLETE · All stages are Done. Next step: Final Audit.','pass');
+    if(finalNarrationReady()){
+      buttonLabel('🔎 FINAL AUDIT');
+      status('✅ PRODUCTION + FINAL NARRATION COMPLETE · Next step: Final Audit.','pass');
+    }else{
+      buttonLabel('🎙️ SMART NARRATION');
+      status('✅ PRODUCTION COMPLETE · Next step: Smart Narration, then Final Audit.','pass');
+    }
     updateTargetLabel();
     return null;
   }
@@ -1010,6 +1044,10 @@ async function prepare(card){
   return prepareImageToVideo(card);
 }
 function openFinalAudit(){
+  if(!finalNarrationReady()){
+    openNarrationStep();
+    return;
+  }
   writeSmartSession({targetStage:'',pending:null});
   clearSmartState();
   buttonLabel('🔎 FINAL AUDIT');
@@ -1047,6 +1085,12 @@ async function run(){
     }
 
     if(allStagesDone()){
+      if(!finalNarrationReady()){
+        const narrationBtn=document.getElementById('ldNarrationSmartBtn');
+        openNarrationStep();
+        if(narrationBtn&&!narrationBtn.disabled)narrationBtn.click();
+        return;
+      }
       openFinalAudit();
       return;
     }
