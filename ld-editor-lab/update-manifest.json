@@ -1,6 +1,6 @@
 {
-  "version": "0.5.4",
-  "notes": "Clarifies FULL AUTO CUT readiness: adds a dedicated Import ENDING photo button beside the ending lock and shows the exact missing stage name instead of only 15/16.",
+  "version": "0.5.5",
+  "notes": "True one-click Auto Cut: enter and save Project Topic once. If narration is blank, FULL AUTO CUT now generates fact-checked P1–P14 narration, a short ENDING line, AI narrator voice, subtitles, cuts, transitions and audio mix automatically.",
   "files": [
     {
       "name": "index.html",
