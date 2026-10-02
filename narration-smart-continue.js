@@ -132,12 +132,27 @@
     '<p id="ldNarrationSmartStatus" class="library-sub" role="status" style="margin-top:8px">Ready.</p>';
 
   const notice=document.getElementById('masterNarrationNotice');
+
+  function dedupeNarrationControls(){
+    const buttons=[...masterCard.querySelectorAll('#ldNarrationSmartBtn')];
+    if(buttons.length<=1)return;
+    // Keep the newest mounted control and remove stale cached copies.
+    buttons.slice(0,-1).forEach(oldBtn=>{
+      const block=oldBtn.closest('.field-block');
+      if(block)block.remove();
+      else oldBtn.remove();
+    });
+  }
+
   // Clean any duplicate controls left by an older cached script before mounting the new one.
   [...masterCard.querySelectorAll('#ldNarrationSmartBtn')].forEach(btn=>{
     const block=btn.closest('.field-block');
     if(block&&block!==controls)block.remove();
   });
   notice?.parentNode?.insertBefore(controls,notice.nextSibling);
+  dedupeNarrationControls();
+  [80,250,700,1500].forEach(ms=>setTimeout(dedupeNarrationControls,ms));
+  new MutationObserver(()=>dedupeNarrationControls()).observe(masterCard,{childList:true,subtree:true});
 
   const btn=document.getElementById('ldNarrationSmartBtn');
   const undo=document.getElementById('ldNarrationUndoBtn');
