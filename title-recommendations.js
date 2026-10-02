@@ -35,30 +35,76 @@
   if(typeof module==='object'&&module.exports)module.exports=api;
   root.LDTitleRecommendations=api;
   if(typeof document==='undefined')return;
-  const section=document.createElement('section'); section.className='card';section.id='titleRecommendations';
-  section.innerHTML='<h2>Recommended YouTube titles</h2><p>Based on the September 21, 2026 channel review. Suggestions are generated locally; they do not update from future syncs. Match the title to your final footage and verified facts.</p><div id="titleOptions"></div><label for="selectedYoutubeTitle">Selected title — editable</label><textarea id="selectedYoutubeTitle" rows="3" maxlength="100"></textarea><p id="titleLength" role="status"></p><button type="button" class="ghost" id="copyYoutubeTitle">Copy selected title</button><p id="titleMessage" role="status"></p>';
+
+  const section=document.createElement('section');section.className='card yt-publishing';section.id='titleRecommendations';
+  section.innerHTML='<div class="yt-head"><div><h2>Top 3 titles + YT description</h2><span class="yt-sub">Ready to edit and copy</span></div><button type="button" class="yt-red" id="toggleYoutubeDetails" aria-expanded="false" aria-controls="youtubeDetails">Maximize</button></div><div id="youtubeDetails" hidden><p class="yt-note">Topic-based suggestions. Check against your final video.</p><div id="titleOptions"></div><label for="selectedYoutubeTitle">Selected title</label><textarea id="selectedYoutubeTitle" rows="2" maxlength="100"></textarea><div class="yt-row"><span id="titleLength"></span><button type="button" class="yt-red" id="copyYoutubeTitle">Copy title</button></div><label for="youtubeDescription">YouTube description</label><textarea id="youtubeDescription" rows="4"></textarea><div class="yt-row yt-end"><button type="button" class="yt-red" id="copyYoutubeDescription">Copy description</button></div><p id="titleMessage" role="status" aria-live="polite"></p></div>';
   document.querySelector('.setup').after(section);
-  const field=section.querySelector('textarea'),options=section.querySelector('#titleOptions'),message=section.querySelector('#titleMessage');
+  const style=document.createElement('style');style.textContent=`
+    #titleRecommendations{padding:12px;margin:12px 0;min-width:0}
+    #titleRecommendations .yt-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    #titleRecommendations h2{font-size:1rem;line-height:1.3;margin:0}
+    #titleRecommendations .yt-sub,#titleRecommendations .yt-note,#titleLength{font-size:.8125rem;color:#bac5d3}
+    #titleRecommendations .yt-sub{display:block;margin-top:3px}
+    #titleRecommendations button{font-size:.875rem;min-height:40px;padding:8px 12px}
+    #titleRecommendations .yt-red{background:#b91c1c;color:#fff;border:1px solid #ef4444;border-radius:8px;flex-shrink:0;font-weight:700}
+    #titleRecommendations .yt-red:hover{background:#991b1b}
+    #titleRecommendations button:focus-visible{outline:3px solid #ffb4b4;outline-offset:2px}
+    #titleRecommendations [hidden]{display:none!important}
+    #youtubeDetails{margin-top:10px;max-height:60vh;overflow-y:auto;overscroll-behavior:contain}
+    #titleRecommendations .yt-note{margin:0 0 8px}
+    #titleRecommendations .yt-option{padding:10px 0;border-bottom:1px solid #394554}
+    #titleRecommendations .yt-option strong{font-size:.8125rem;color:#c3cddd}
+    #titleRecommendations .yt-option p{font-size:.9375rem;line-height:1.4;margin:4px 0 8px;overflow-wrap:anywhere}
+    #titleRecommendations .yt-actions,#titleRecommendations .yt-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    #titleRecommendations .yt-row{justify-content:space-between;margin:6px 0 12px}
+    #titleRecommendations .yt-end{justify-content:flex-end;margin-bottom:0}
+    #titleRecommendations label{display:block;font-size:.875rem;font-weight:700;margin-top:12px}
+    #titleRecommendations textarea{width:100%;box-sizing:border-box;min-height:64px;font-size:1rem;line-height:1.4;margin-top:5px;resize:vertical}
+    #titleMessage{font-size:.875rem;margin:8px 0 0}
+    #titleMessage:empty{display:none}
+  `;document.head.appendChild(style);
+  const field=section.querySelector('#selectedYoutubeTitle'),description=section.querySelector('#youtubeDescription'),options=section.querySelector('#titleOptions'),message=section.querySelector('#titleMessage'),details=section.querySelector('#youtubeDetails'),toggle=section.querySelector('#toggleYoutubeDetails');
+  toggle.onclick=()=>{const open=details.hidden;details.hidden=!open;toggle.textContent=open?'Minimize':'Maximize';toggle.setAttribute('aria-expanded',String(open));};
   function count(){section.querySelector('#titleLength').textContent=field.value.length+'/100 characters'+(field.value.length>100?' — shorten before publishing':'');}
   function persist(){window.ldYoutubeTitle=field.value;count();if(typeof saveCurrent==='function')saveCurrent();}
+  function defaultDescription(topic){
+    if(root.LDStoryModes?.enabled())return 'A '+root.LDStoryModes.label()+' story titled '+topic+'.\n\nCreated with NER Studio.';
+    return 'A Living Disaster Book historical disaster '+(document.getElementById('format')?.value==='longform'?'documentary':'short')+' about '+topic+'.\n\nThank you for watching. Like, share, and subscribe for more stories from the Living Disaster Book.';
+  }
+  function currentDescription(topic){return root.ldFinalPackageMeta?.description||defaultDescription(topic);}
+  function persistDescription(){
+    if(!root.ldFinalPackageMeta||typeof root.ldFinalPackageMeta!=='object'||Array.isArray(root.ldFinalPackageMeta))root.ldFinalPackageMeta={description:'',musicCredit:'',uploadNotes:''};
+    root.ldFinalPackageMeta.description=description.value;
+    const other=document.querySelector('#ldFinalPackage .final-description');if(other)other.value=description.value;
+    if(typeof saveCurrent==='function')saveCurrent();
+  }
+  async function copy(value,label,fallback){
+    try{await navigator.clipboard.writeText(value);message.textContent=label+' copied.';}
+    catch(e){if(fallback){fallback.focus();fallback.select();}message.textContent='Copy unavailable. Select and copy the text manually.';}
+  }
   function render(){
     const state=root.LDCore?.collectState();const topic=state?.topic||'';
     section.hidden=!topic;options.replaceChildren();if(!topic)return;
     const choices=recommend(topic);
     field.value=typeof window.ldYoutubeTitle==='string'?window.ldYoutubeTitle:choices[0].title;
     if(window.ldYoutubeTitle===null||window.ldYoutubeTitle===undefined){window.ldYoutubeTitle=field.value;if(typeof saveCurrent==='function')saveCurrent();field.dispatchEvent(new Event('change',{bubbles:true}));}
-    for(const choice of choices){
-      const card=document.createElement('article');card.style.cssText='padding:14px 0;border-bottom:1px solid #394554;margin-bottom:14px';
-      const label=document.createElement('strong');label.textContent=choice.label;
+    description.value=currentDescription(topic);
+    for(const [index,choice] of choices.entries()){
+      const card=document.createElement('article');card.className='yt-option';
+      const label=document.createElement('strong');label.textContent=(index+1)+'. '+choice.label;
       const title=document.createElement('p');title.textContent=choice.title;
-      const reason=document.createElement('p');reason.textContent=choice.reason;
-      const use=document.createElement('button');use.type='button';use.className='ghost small';use.textContent='Use this title';use.onclick=()=>{field.value=choice.title;persist();field.dispatchEvent(new Event('change',{bubbles:true}));message.textContent='Title saved for this production.';};
-      card.append(label,title,reason,use);options.append(card);
+      const actions=document.createElement('div');actions.className='yt-actions';
+      const use=document.createElement('button');use.type='button';use.className='ghost small';use.textContent='Use title';use.setAttribute('aria-label','Use title '+(index+1));use.onclick=()=>{field.value=choice.title;persist();field.dispatchEvent(new Event('change',{bubbles:true}));message.textContent='Title saved for this production.';};
+      const copyButton=document.createElement('button');copyButton.type='button';copyButton.className='yt-red';copyButton.textContent='Copy';copyButton.setAttribute('aria-label','Copy title '+(index+1));copyButton.onclick=()=>copy(choice.title,'Title '+(index+1));
+      actions.append(use,copyButton);card.append(label,title,actions);options.append(card);
     }
     message.textContent='';count();
   }
   field.addEventListener('input',persist);
-  section.querySelector('#copyYoutubeTitle').onclick=async()=>{try{await navigator.clipboard.writeText(field.value);message.textContent='Title copied.';}catch(e){field.focus();field.select();message.textContent='Select and copy the title manually.';}};
+  description.addEventListener('input',persistDescription);
+  document.addEventListener('input',event=>{if(event.target.matches('#ldFinalPackage .final-description'))description.value=event.target.value;});
+  section.querySelector('#copyYoutubeTitle').onclick=()=>copy(field.value,'Title',field);
+  section.querySelector('#copyYoutubeDescription').onclick=()=>copy(description.value,'Description',description);
   root.addEventListener('ld:production-built',render);
   new MutationObserver(()=>{if(document.getElementById('projectTitle').textContent==='No production yet')section.hidden=true;}).observe(document.getElementById('projectTitle'),{childList:true});
   render();
