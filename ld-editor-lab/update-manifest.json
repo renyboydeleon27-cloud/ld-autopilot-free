@@ -1,6 +1,6 @@
 {
-  "version": "0.5.6",
-  "notes": "Makes Auto Cut transitions clearly visible in both Play All preview and final render. Uses 360ms cinematic fades for setup/aftermath and fast impact dips for high-intensity panels.",
+  "version": "0.6.0",
+  "notes": "Major Auto Cut timing fix: transitions are applied before narration. Final timeline is then used to polish HOOK/P1-P14 narration, generate persistent panel-by-panel AI voice, keep narration synced to every stage, and render exact-wording subtitles. Transition trimming now shortens the final timeline before narration is generated.",
   "files": [
     {
       "name": "index.html",
