@@ -80,6 +80,26 @@
   const pipeline=document.getElementById('pipelineSection');
   pipeline?.parentNode?.insertBefore(section,pipeline);
 
+  // Global duplicate guard for cached/older narration-control scripts.
+  // Prefer the newest marked Smart Narration block; remove every stale duplicate.
+  function dedupeSmartNarrationControls(){
+    const host=document.getElementById('masterNarrationCard');
+    if(!host)return;
+    const buttons=[...host.querySelectorAll('#ldNarrationSmartBtn')];
+    if(buttons.length<=1)return;
+    const preferred=buttons.find(btn=>btn.closest('[data-ld-narration-smart-controls="1"]'))||buttons[buttons.length-1];
+    buttons.forEach(btn=>{
+      if(btn===preferred)return;
+      const block=btn.closest('.field-block');
+      if(block)block.remove();
+      else btn.remove();
+    });
+  }
+
+  const narrationDedupeObserver=new MutationObserver(()=>dedupeSmartNarrationControls());
+  narrationDedupeObserver.observe(section,{childList:true,subtree:true});
+  [0,60,180,500,1200,2500].forEach(ms=>setTimeout(dedupeSmartNarrationControls,ms));
+
   function refresh(){
     const rows=getNarration();
     const ta=document.getElementById('masterNarrationText');
