@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0d12">
   <title>LD Editor Lab</title>
-  <link rel="stylesheet" href="./styles.css?v=0.6.0">
+  <link rel="stylesheet" href="./styles.css?v=0.6.1">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.6.0</span></h1>
+        <h1>LD Editor Lab <span>v0.6.1</span></h1>
         <p class="sub">Standalone local video assembler. Imported media and project state are saved locally. Final renders save directly to your phone.</p>
       </div>
       <span class="pill safe">LOCAL · AUTO-SAVE · SELF-UPDATE</span>
@@ -76,6 +76,42 @@
         <label for="projectTopic">Project Topic <span class="muted">— enter once; saved with this project</span></label>
         <input id="projectTopic" class="topic-input" type="text" maxlength="240" placeholder="Example: Wellington Avalanche — Washington, USA — 1910">
         <span class="meta">ONE-CLICK FULL AUTO CUT now builds transitions first, then writes fact-checked HOOK + P1–P14 narration to the actual final panel durations.</span>
+      </div>
+      <div class="smart-narration-box">
+        <div class="smart-narration-head">
+          <div>
+            <strong>SMART CONTINUE — NARRATION</strong>
+            <span class="meta">Fact-checked stage narration using the final transitioned panel duration.</span>
+          </div>
+          <span class="pill safe">HOOK → P14 → ENDING</span>
+        </div>
+        <div class="smart-narration-controls">
+          <label>Current stage
+            <select id="smartNarrationStage" class="voice-select">
+              <option value="HOOK">HOOK</option>
+              <option value="P1">P1</option>
+              <option value="P2">P2</option>
+              <option value="P3">P3</option>
+              <option value="P4">P4</option>
+              <option value="P5">P5</option>
+              <option value="P6">P6</option>
+              <option value="P7">P7</option>
+              <option value="P8">P8</option>
+              <option value="P9">P9</option>
+              <option value="P10">P10</option>
+              <option value="P11">P11</option>
+              <option value="P12">P12</option>
+              <option value="P13">P13</option>
+              <option value="P14">P14</option>
+              <option value="ENDING">ENDING</option>
+            </select>
+          </label>
+          <button id="smartNarrationBtn" class="btn primary" type="button">✨ Smart Continue Narration</button>
+          <button id="buildAllNarrationBtn" class="btn ghost" type="button">Build All Narration</button>
+        </div>
+        <span id="smartNarrationMeta" class="meta">HOOK · load stage media and enter Project Topic.</span>
+        <textarea id="smartNarrationLine" class="smart-narration-line" rows="3" readonly placeholder="The exact narration for the selected stage will appear here."></textarea>
+        <span class="meta">Smart Continue generates only the selected stage, saves it into the master narration script, then advances to the next panel. Build All creates the full narration set at once. Full Auto Cut preserves approved Smart narration.</span>
       </div>
       <div class="narrator-auto-box">
         <div>
@@ -231,6 +267,6 @@
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.6.0"></script>
+  <script src="./app.js?v=0.6.1"></script>
 </body>
 </html>
