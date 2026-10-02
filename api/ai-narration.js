@@ -267,7 +267,22 @@ EVIDENCE GATE:
     ? ["HOOK", ...Array.from({length:14},(_,i)=>"P"+(i+1))]
     : ["HOOK", ...Array.from({length:30},(_,i)=>"S"+(i+1))];
 
-  const system = `You are the Living Disaster Book narration engine.\n${factPackInstruction}\n${req.body?.narrativeFormat==='causal-v1'?'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.':''}${isWellingtonAvalanche1910?'\nWELLINGTON 1910 EVENT LOCK: This is a snow-avalanche railroad disaster, not a tsunami or earthquake. Follow the supplied Wellington stageEvidence exactly. Do not introduce waves, seismic magnitude, coastal effects, or unrelated hazard mechanics.':''}
+  const rawTiming=req.body?.targetStageSeconds&&typeof req.body.targetStageSeconds==="object"?req.body.targetStageSeconds:{};
+  const timingTargets=Object.fromEntries(stageNames.map(stage=>{
+    const sec=Number(rawTiming[stage]);
+    return [stage,Number.isFinite(sec)&&sec>0?Math.max(1,Math.min(15,sec)):null];
+  }).filter(([,sec])=>sec));
+  const timingInstruction=Object.keys(timingTargets).length?
+    "\nFINAL EDIT TIMING POLISH — HIGHEST PRIORITY AFTER FACT SAFETY:\n"+
+    "- Transitions have already been applied. These are the FINAL spoken windows for each stage.\n"+
+    "- Write narration specifically for these final panel durations: "+Object.entries(timingTargets).map(([stage,sec])=>stage+"="+sec.toFixed(2)+"s (~"+Math.max(4,Math.round(sec*2.0))+"-"+Math.max(6,Math.round(sec*2.35))+" spoken words)").join(", ")+".\n"+
+    "- Aim to use roughly 85-95% of each panel spoken window so the line feels complete without spilling into the next panel.\n"+
+    "- HOOK has narration in this final edited version. Keep it concise, tense, and grounded in that HOOK stage evidence.\n"+
+    "- Do NOT shorten several panels into a single summary. Each stage must have its own complete line tied only to that stage.\n"+
+    "- You may use neutral connective wording that adds no new event-specific facts, but never pad with invented details.\n"+
+    "- The final narrator will be generated panel by panel, so every stage must stand alone and end cleanly.\n":"";
+
+  const system = `You are the Living Disaster Book narration engine.\n${factPackInstruction}\n${req.body?.narrativeFormat==='causal-v1'?'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.':''}${isWellingtonAvalanche1910?'\nWELLINGTON 1910 EVENT LOCK: This is a snow-avalanche railroad disaster, not a tsunami or earthquake. Follow the supplied Wellington stageEvidence exactly. Do not introduce waves, seismic magnitude, coastal effects, or unrelated hazard mechanics.':''}${timingInstruction}
 EVIDENCE-LOCKED NARRATION — HARD BOUNDARY:
 - VERIFIED CLAIMS is the factual allow-list for event-specific narration. Treat it as stricter than the larger raw factPack.
 - The RESEARCH EVIDENCE supplied by the user message is the ONLY factual source you may use for event-specific claims.
