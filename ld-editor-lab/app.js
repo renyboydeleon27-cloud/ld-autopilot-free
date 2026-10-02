@@ -245,8 +245,8 @@ function captionChunks(text){
 function buildAutoCaptions(script){
   const mapped=splitNarrationToStages(script),captions={};
   for(const stage of STAGES){
-    const chunks=captionChunks(mapped[stage]||'');
-    if(chunks.length)captions[stage]=chunks;
+    const exact=String(mapped[stage]||'').trim();
+    if(exact)captions[stage]=[exact];
   }
   return captions;
 }
@@ -283,17 +283,30 @@ function effectiveDuration(stage,item){
   if(stage==='ENDING'&&actual>0)return Math.min(actual,5);
   if(!state.autoCut?.enabled)return actual;
   const planned=Number(autoCutStagePlan(stage)?.duration);
-  return Number.isFinite(planned)&&planned>0?Math.min(actual||planned,planned):actual;
+  const base=Number.isFinite(planned)&&planned>0?Math.min(actual||planned,planned):actual;
+  const plan=autoCutStagePlan(stage);
+  const trim=stage!=='ENDING'&&plan?.transitionOut&&plan.transitionOut!=='none'?(state.autoCut.transitionMs||360)/1000:0;
+  return Math.max(.5,base-trim);
+}
+function narrationStageTargets(){
+  const out={};
+  for(const stage of STAGES){
+    const item=state.clips.get(stage);
+    if(!item)continue;
+    const d=effectiveDuration(stage,item);
+    out[stage]=Number(Math.max(.5,stage==='ENDING'?Math.min(4.5,d-.5):d).toFixed(2));
+  }
+  return out;
+}
+function narrationTimelineSignature(){
+  return STAGES.map(s=>s+':'+Number(narrationStageTargets()[s]||0).toFixed(2)).join('|');
 }
 function autoCaptionAt(stage,time,duration){
   if(!state.autoCut?.enabled)return'';
-  if(stage==='HOOK')return'';
   if(stage==='ENDING'&&Number(time)>=4.5)return'';
   const chunks=state.autoCut?.captions?.[stage];
   if(!Array.isArray(chunks)||!chunks.length)return'';
-  const d=Math.max(.1,Number(duration)||1);
-  const idx=Math.min(chunks.length-1,Math.floor(Math.max(0,Number(time)||0)/d*chunks.length));
-  return chunks[idx]||'';
+  return chunks[0]||'';
 }
 function narrationApiUrl(){
   const protocol=String(location.protocol||'');
@@ -303,6 +316,8 @@ function narrationApiUrl(){
 }
 function generatedStagesToScript(stages){
   const lines=[];
+  const hook=String(stages?.HOOK||'').trim();
+  if(hook)lines.push('HOOK: '+hook);
   for(let i=1;i<=14;i++){
     const key='P'+i,txt=String(stages?.[key]||'').trim();
     if(txt)lines.push(key+': '+txt);
@@ -323,7 +338,7 @@ function recordTextNarrationUsage(apiUsage){
     estimated:true
   });
 }
-async function generateAutoNarrationScript(topic){
+async function generateAutoNarrationScript(topic,targetStageSeconds={}){
   const cleanTopic=String(topic||'').trim();
   if(!cleanTopic)throw new Error('Enter the Project Topic first so Auto Cut knows which disaster to narrate.');
   setAutoCutStatus('Step 1/3 · researching and generating fact-checked narration…');
@@ -332,7 +347,7 @@ async function generateAutoNarrationScript(topic){
   try{
     response=await fetch(narrationApiUrl(),{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({topic:cleanTopic,format:'shorts',narrativeFormat:'causal-v1'}),
+      body:JSON.stringify({topic:cleanTopic,format:'shorts',narrativeFormat:'causal-v1',targetStageSeconds,includeHookNarration:true}),
       signal:controller.signal
     });
   }catch(e){
@@ -344,7 +359,7 @@ async function generateAutoNarrationScript(topic){
   const script=generatedStagesToScript(data.stages);
   if(!script.trim())throw new Error('AI narration returned no usable panel narration.');
   recordTextNarrationUsage(data.apiUsage);
-  state.projectTopic=cleanTopic;state.autoCut.script=script;
+  state.projectTopic=cleanTopic;state.autoCut.script=script;state.autoCut.scriptMode='auto';
   if($('projectTopic'))$('projectTopic').value=cleanTopic;
   if($('autoCutScript'))$('autoCutScript').value=script;
   return script;
@@ -364,7 +379,7 @@ function simpleHash(text){
 }
 function voiceNarrationText(script){
   const mapped=splitNarrationToStages(script);
-  return STAGES.filter(s=>s!=='HOOK').map(s=>String(mapped[s]||'').trim()).filter(Boolean).join('\n\n').trim();
+  return STAGES.map(s=>String(mapped[s]||'').trim()).filter(Boolean).join('\n\n').trim();
 }
 function narratorSourceKey(text,voice){return String(voice||'cedar')+':'+simpleHash(text);}
 function arrayBufferToBlob(buffer,type='audio/mpeg'){return new Blob([buffer],{type});}
@@ -1467,7 +1482,7 @@ $('playAllBtn').onclick=playAll;$('stopBtn').onclick=stopPlayback;
 if($('autoCutBtn'))$('autoCutBtn').onclick=()=>runFullAutoCut(false);
 if($('previewAutoCutBtn'))$('previewAutoCutBtn').onclick=()=>runFullAutoCut(true);
 if($('projectTopic'))$('projectTopic').addEventListener('input',()=>{state.projectTopic=$('projectTopic').value;saveProject();refreshAutoCutUi();});
-if($('autoCutScript'))$('autoCutScript').addEventListener('input',()=>{state.autoCut.script=$('autoCutScript').value;saveProject();refreshAutoCutUi();});
+if($('autoCutScript'))$('autoCutScript').addEventListener('input',()=>{state.autoCut.script=$('autoCutScript').value;state.autoCut.scriptMode='manual';saveProject();refreshAutoCutUi();});
 if($('autoNarrator'))$('autoNarrator').addEventListener('change',()=>{state.autoCut.autoNarrator=$('autoNarrator').checked;syncNarratorControls();saveProject();});
 if($('narratorVoice'))$('narratorVoice').addEventListener('change',()=>{state.autoCut.narratorVoice=$('narratorVoice').value;syncNarratorControls();saveProject();});
 $('exportBtn').onclick=renderExport;
