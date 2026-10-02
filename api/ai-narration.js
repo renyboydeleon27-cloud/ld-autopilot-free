@@ -148,7 +148,24 @@ export default async function handler(req, res) {
   const isSanriku1896=/sanriku/i.test(topic) && /\b1896\b/.test(topic);
   const isRockyMountainLocust1874=/rocky mountain locust|locust plague/i.test(topic) && /\b1874\b/.test(topic);
   const isWellingtonAvalanche1910=/wellington|stevens pass|train disaster/i.test(topic) && /\b1910\b/.test(topic) && /avalanche|wellington/i.test(topic);
-  const storyMap = isWellingtonAvalanche1910 ? {
+  const isXylazinePhiladelphia2020s=/xylazine|zombie drug|tranq/i.test(topic) && /philadelphia|pennsylvania/i.test(topic);
+  const storyMap = isXylazinePhiladelphia2020s ? {
+    HOOK:["event.location","drug.fentanylAssociation"],
+    P1:["drug.type"],
+    P2:["philadelphia.2019Share"],
+    P3:["trend.us2020to2021"],
+    P4:["trend.northeast"],
+    P5:["drug.fentanylAssociation"],
+    P6:["impact.overdose"],
+    P7:["impact.severeWounds"],
+    P8:["impact.sepsisAmputationRisk"],
+    P9:["trend.imfDeaths2019to2022"],
+    P10:["response.withdrawalStandards"],
+    P11:["response.woundCare"],
+    P12:["response.overdoseTraining"],
+    P13:["response.drugChecking"],
+    P14:["event.location","impact.severeWounds","response.woundCare"]
+  } : isWellingtonAvalanche1910 ? {
     HOOK:["event.date"],
     P1:["event.location","event.country"],
     P2:["chronology.trainsHaltedPeriod"],
