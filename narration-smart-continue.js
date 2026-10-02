@@ -202,7 +202,6 @@
       window.dispatchEvent(new CustomEvent('ld:narration-smart-complete',{
         detail:{silentHook,topic:currentTopic,stages:silentHook?15:16}
       }));
-      window.dispatchEvent(new Event('ld:production-built'));
       status(
         '✅ FINAL NARRATION READY · '+(silentHook?'HOOK kept silent · ':'HOOK narrated · ')+
         'P1–P14 aligned · ENDING CTA added. Copy Master Narration when ready.',
