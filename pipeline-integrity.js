@@ -220,7 +220,12 @@
   window.addEventListener('ld:project-opened',()=>setTimeout(check,80));
   window.addEventListener('ld:pipeline-partial',()=>setTimeout(check,30));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(check,100);});
-  window.addEventListener('ld:production-built',()=>setTimeout(check,70));
+  window.addEventListener('ld:production-built',event=>{
+    setTimeout(()=>{
+      if(event?.detail?.fresh===false)compactStageBodies();
+      check();
+    },70);
+  });
 
   window.LDPipelineIntegrity=Object.freeze({
     check,liveCount,visibleCardCount,normalizePipelineLayout,compactStageBodies,bestSavedState
