@@ -49,10 +49,10 @@ export default async function handler(req,res){
         model:MODEL,
         voice,
         input:text,
-        instructions:"Serious historical documentary narrator. Cinematic but restrained. Clear, grounded, measured pacing. Preserve the supplied words and facts. Avoid exaggerated trailer shouting.",
+        instructions:"Serious historical documentary narrator. Cinematic but restrained. Clear, grounded, measured pacing. This is one panel of a timed documentary edit: finish the supplied sentence cleanly, do not add or omit words, and avoid exaggerated trailer shouting.",
         response_format:"mp3",
         stream_format:"sse",
-        speed:1
+        speed:0.9
       })
     });
     const body=await upstream.text();
