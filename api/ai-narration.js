@@ -124,7 +124,24 @@ export default async function handler(req, res) {
 
   const isSanriku1896=/sanriku/i.test(topic) && /\b1896\b/.test(topic);
   const isRockyMountainLocust1874=/rocky mountain locust|locust plague/i.test(topic) && /\b1874\b/.test(topic);
-  const storyMap = isSanriku1896 ? {
+  const isWellingtonAvalanche1910=/wellington|stevens pass|train disaster/i.test(topic) && /\b1910\b/.test(topic) && /avalanche|wellington/i.test(topic);
+  const storyMap = isWellingtonAvalanche1910 ? {
+    HOOK:["event.date"],
+    P1:["event.location","event.country"],
+    P2:["chronology.trainsHaltedPeriod"],
+    P3:["chronology.trainTypes"],
+    P4:["hazard.repeatedAvalanches"],
+    P5:["chronology.passengersLeftForScenic"],
+    P6:["hazard.railGradeSlidePaths"],
+    P7:["hazard.denudedSlopes"],
+    P8:["hazard.weatherPatterns"],
+    P9:["impact.avalancheHit"],
+    P10:["impact.sweptIntoCanyon"],
+    P11:["impact.fatalities","impact.propertyDamage"],
+    P12:["response.rescueArrival"],
+    P13:["response.recoveryWeeks"],
+    P14:["aftermath.railroadRerouted","aftermath.tunnelBypassedSlideArea"]
+  } : isSanriku1896 ? {
     HOOK:["event.date","earthquake.shaking","event.classification"],
     P1:["event.location","event.country"],
     P2:["event.cause","earthquake.sourceRegion"],
@@ -250,7 +267,7 @@ EVIDENCE GATE:
     ? ["HOOK", ...Array.from({length:14},(_,i)=>"P"+(i+1))]
     : ["HOOK", ...Array.from({length:30},(_,i)=>"S"+(i+1))];
 
-  const system = `You are the Living Disaster Book narration engine.\n${factPackInstruction}\n${req.body?.narrativeFormat==='causal-v1'?'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.':''}
+  const system = `You are the Living Disaster Book narration engine.\n${factPackInstruction}\n${req.body?.narrativeFormat==='causal-v1'?'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.':''}${isWellingtonAvalanche1910?'\nWELLINGTON 1910 EVENT LOCK: This is a snow-avalanche railroad disaster, not a tsunami or earthquake. Follow the supplied Wellington stageEvidence exactly. Do not introduce waves, seismic magnitude, coastal effects, or unrelated hazard mechanics.':''}
 EVIDENCE-LOCKED NARRATION — HARD BOUNDARY:
 - VERIFIED CLAIMS is the factual allow-list for event-specific narration. Treat it as stricter than the larger raw factPack.
 - The RESEARCH EVIDENCE supplied by the user message is the ONLY factual source you may use for event-specific claims.
