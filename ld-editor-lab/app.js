@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='0.6.0';
+const VERSION='0.6.1';
 // Keep the v0.2 key so existing projects migrate in place after APK update.
 const STORE='ld-editor-lab-project-v0.2';
 const EXPORT_DB='ld-editor-lab-export-db-v1';
@@ -45,7 +45,8 @@ const state={
     autoNarrator:true,
     narratorVoice:'cedar',
     narratorSourceKey:'',
-    scriptMode:'auto'
+    scriptMode:'auto',
+    narrationCursor:'HOOK'
   },
   playing:false,
   playIndex:0,
@@ -205,7 +206,8 @@ function normalizeAutoCut(raw){
     autoNarrator:a.autoNarrator!==false,
     narratorVoice:String(a.narratorVoice||'cedar'),
     narratorSourceKey:String(a.narratorSourceKey||''),
-    scriptMode:a.scriptMode==='manual'?'manual':'auto'
+    scriptMode:a.scriptMode==='manual'?'manual':a.scriptMode==='smart'?'smart':'auto',
+    narrationCursor:STAGES.includes(String(a.narrationCursor||'').toUpperCase())?String(a.narrationCursor).toUpperCase():'HOOK'
   };
 }
 function splitNarrationToStages(text){
@@ -314,16 +316,37 @@ function narrationApiUrl(){
   if((protocol==='https:'||protocol==='http:')&&!/github\.io$/i.test(host))return '/api/ai-narration';
   return AI_API_ORIGIN+'/api/ai-narration';
 }
-function generatedStagesToScript(stages){
-  const lines=[];
+function endingNarrationForTopic(topic){
+  const clean=String(topic||'').trim();
+  const first=(clean.split(/[—–|]/)[0]||'').trim();
+  const year=(clean.match(/\b(?:18|19|20)\d{2}\b/)||[])[0]||'';
+  if(first){
+    const named=/^the\b/i.test(first)?first:'the '+first;
+    return 'This was '+named+(year&&!first.includes(year)?' of '+year:'')+'. Thank you for watching.';
+  }
+  return 'Thank you for watching. Subscribe for more Living Disaster stories.';
+}
+function scriptFromStageMap(mapped){
+  return STAGES.map(stage=>{
+    const txt=String(mapped?.[stage]||'').trim();
+    return txt?stage+': '+txt:'';
+  }).filter(Boolean).join('\n');
+}
+function upsertNarrationStage(script,stage,text){
+  const mapped=splitNarrationToStages(script);
+  mapped[stage]=String(text||'').trim();
+  return scriptFromStageMap(mapped);
+}
+function generatedStagesToScript(stages,topic=''){
+  const mapped={};
   const hook=String(stages?.HOOK||'').trim();
-  if(hook)lines.push('HOOK: '+hook);
+  if(hook)mapped.HOOK=hook;
   for(let i=1;i<=14;i++){
     const key='P'+i,txt=String(stages?.[key]||'').trim();
-    if(txt)lines.push(key+': '+txt);
+    if(txt)mapped[key]=txt;
   }
-  lines.push('ENDING: Thank you for watching. Subscribe for more Living Disaster stories.');
-  return lines.join('\n');
+  mapped.ENDING=endingNarrationForTopic(topic);
+  return scriptFromStageMap(mapped);
 }
 function recordTextNarrationUsage(apiUsage){
   const usage=apiUsage&&typeof apiUsage==='object'?apiUsage:{};
@@ -356,13 +379,117 @@ async function generateAutoNarrationScript(topic,targetStageSeconds={}){
   }finally{clearTimeout(timer);}
   let data=null;try{data=await response.json();}catch{}
   if(!response.ok||!data?.ok)throw new Error(data?.error||'AI narration generation failed.');
-  const script=generatedStagesToScript(data.stages);
+  const script=generatedStagesToScript(data.stages,cleanTopic);
   if(!script.trim())throw new Error('AI narration returned no usable panel narration.');
   recordTextNarrationUsage(data.apiUsage);
   state.projectTopic=cleanTopic;state.autoCut.script=script;state.autoCut.scriptMode='auto';
   if($('projectTopic'))$('projectTopic').value=cleanTopic;
   if($('autoCutScript'))$('autoCutScript').value=script;
   return script;
+}
+
+function smartNarrationStage(){
+  const select=$('smartNarrationStage');
+  const stage=String(select?.value||state.autoCut.narrationCursor||'HOOK').toUpperCase();
+  return STAGES.includes(stage)?stage:'HOOK';
+}
+function narrationStageLine(stage){
+  return String(splitNarrationToStages(state.autoCut.script||'')?.[stage]||'').trim();
+}
+function refreshSmartNarrationUi(){
+  const select=$('smartNarrationStage'),meta=$('smartNarrationMeta'),line=$('smartNarrationLine');
+  if(!select)return;
+  const stage=smartNarrationStage();
+  if(select.value!==stage)select.value=stage;
+  const item=state.clips.get(stage),targets=narrationStageTargets();
+  const seconds=Number(targets[stage])||0;
+  const existing=narrationStageLine(stage);
+  if(meta){
+    meta.textContent=stage+' · '+(item?(seconds.toFixed(2)+'s final spoken window'):'stage media not loaded')+
+      (existing?' · narration ready':' · ready to generate');
+  }
+  if(line)line.value=existing;
+  const btn=$('smartNarrationBtn');
+  if(btn)btn.disabled=!String(state.projectTopic||$('projectTopic')?.value||'').trim()||!item;
+}
+function advanceNarrationCursor(){
+  const current=smartNarrationStage(),i=STAGES.indexOf(current);
+  const next=STAGES[Math.min(STAGES.length-1,i+1)]||'ENDING';
+  state.autoCut.narrationCursor=next;
+  if($('smartNarrationStage'))$('smartNarrationStage').value=next;
+  refreshSmartNarrationUi();saveProject();
+}
+async function generateSmartNarrationStage(stage){
+  const topic=String($('projectTopic')?.value||state.projectTopic||'').trim();
+  if(!topic)throw new Error('Enter the Project Topic first.');
+  if(!state.clips.has(stage))throw new Error('Load '+stage+' media first so Smart Continue can use its final duration.');
+  state.autoCut.enabled=true;state.autoCut.transitionMs=360;state.autoCut.plan=buildAutoCutPlan();
+  const targets=narrationStageTargets(),seconds=Number(targets[stage])||0;
+  if(stage==='ENDING'){
+    const ending=endingNarrationForTopic(topic);
+    state.autoCut.script=upsertNarrationStage(state.autoCut.script,stage,ending);
+    state.autoCut.scriptMode='smart';
+    state.autoCut.captions=buildAutoCaptions(state.autoCut.script);
+    if($('autoCutScript'))$('autoCutScript').value=state.autoCut.script;
+    return {line:ending,local:true};
+  }
+  setAutoCutStatus('Smart Continue · researching '+stage+' and fitting narration to '+seconds.toFixed(2)+'s…');
+  beginApiGeneration('Smart Narration '+stage);
+  try{
+    const response=await fetch(narrationApiUrl(),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        topic,format:'shorts',narrativeFormat:'causal-v1',requestedStage:stage,
+        targetStageSeconds:{[stage]:seconds}
+      })
+    });
+    let data=null;try{data=await response.json();}catch{}
+    if(!response.ok||!data?.ok)throw new Error(data?.error||'Smart narration generation failed.');
+    const line=String(data.stages?.[stage]||'').trim();
+    if(!line)throw new Error('Smart narration returned no '+stage+' line.');
+    recordTextNarrationUsage(data.apiUsage);
+    state.autoCut.script=upsertNarrationStage(state.autoCut.script,stage,line);
+    state.autoCut.scriptMode='smart';
+    state.autoCut.captions=buildAutoCaptions(state.autoCut.script);
+    if($('autoCutScript'))$('autoCutScript').value=state.autoCut.script;
+    return {line,local:false};
+  }finally{endApiGeneration();}
+}
+async function smartContinueNarration(){
+  const stage=smartNarrationStage(),btn=$('smartNarrationBtn');
+  if(btn)btn.disabled=true;
+  try{
+    const result=await generateSmartNarrationStage(stage);
+    saveProject();refreshAutoCutUi();
+    setAutoCutStatus('Smart Continue ready · '+stage+' narration locked to final panel timing'+(result.local?' · local ENDING':' · evidence checked'));
+    advanceNarrationCursor();
+  }catch(e){
+    setAutoCutStatus('Smart Continue stopped · '+String(e?.message||e));alert(String(e?.message||e));
+  }finally{refreshSmartNarrationUi();}
+}
+async function buildAllSmartNarration(){
+  const topic=String($('projectTopic')?.value||state.projectTopic||'').trim();
+  if(!topic)return alert('Enter the Project Topic first.');
+  const missing=STAGES.filter(s=>!state.clips.has(s));
+  if(missing.length)return alert('Load all required stages first: '+missing.join(', '));
+  const btn=$('buildAllNarrationBtn');if(btn)btn.disabled=true;
+  state.autoCut.enabled=true;state.autoCut.transitionMs=360;state.autoCut.plan=buildAutoCutPlan();
+  beginApiGeneration('Build All Narration');
+  try{
+    setAutoCutStatus('Smart Narration · transitions locked · generating HOOK → P14 to final panel timings…');
+    const script=await generateAutoNarrationScript(topic,narrationStageTargets());
+    state.autoCut.script=script;state.autoCut.scriptMode='smart';
+    state.autoCut.captions=buildAutoCaptions(script);
+    state.autoCut.narrationCursor='HOOK';
+    if($('autoCutScript'))$('autoCutScript').value=script;
+    recordApiUsage({feature:'auto_cut_local',featureLabel:'Narration timeline polish',model:'Local v1',free:true});
+    saveProject();refreshAutoCutUi();refreshSmartNarrationUi();
+    setAutoCutStatus('Smart Narration complete · HOOK → P14 + ENDING · final timeline '+fmt(totalDuration())+' · exact text ready for voice/subtitles');
+  }catch(e){
+    setAutoCutStatus('Smart Narration stopped · '+String(e?.message||e));alert(String(e?.message||e));
+  }finally{
+    endApiGeneration();if(btn)btn.disabled=false;
+  }
 }
 
 function narratorApiUrl(){
@@ -702,8 +829,7 @@ async function runFullAutoCut(previewAfter=false){
   applyVolumes();
   beginApiGeneration('FULL AUTO CUT');
   try{
-    if(topic&&state.autoCut.scriptMode!=='manual')script=await generateAutoNarrationScript(topic,targetStageSeconds);
-    else if(!script)script=await generateAutoNarrationScript(topic,targetStageSeconds);
+    if(!script||state.autoCut.scriptMode==='auto')script=await generateAutoNarrationScript(topic,targetStageSeconds);
     state.autoCut.script=script;
     state.autoCut.captions=buildAutoCaptions(script);
     if($('autoCutScript'))$('autoCutScript').value=script;
@@ -1288,7 +1414,7 @@ function render(){
   $('readyStatus').textContent=dupes.size?('Review duplicate'+(dupes.size>1?'s':'')):missing===0?'Ready':loaded?'Saved · incomplete':'Waiting';
   $('exportBtn').disabled=missing!==0;
   $('playAllBtn').disabled=loaded===0;
-  renderApiTracker();refreshAutoCutUi();
+  renderApiTracker();refreshAutoCutUi();refreshSmartNarrationUi();
   if(loaded&&!preview.getAttribute('src')){
     const first=STAGES.find(s=>state.clips.has(s));showStage(first,false);
   }
@@ -1665,7 +1791,10 @@ if($('thumbnailInput'))$('thumbnailInput').addEventListener('change',()=>setThum
 $('playAllBtn').onclick=playAll;$('stopBtn').onclick=stopPlayback;
 if($('autoCutBtn'))$('autoCutBtn').onclick=()=>runFullAutoCut(false);
 if($('previewAutoCutBtn'))$('previewAutoCutBtn').onclick=()=>runFullAutoCut(true);
-if($('projectTopic'))$('projectTopic').addEventListener('input',()=>{state.projectTopic=$('projectTopic').value;saveProject();refreshAutoCutUi();});
+if($('smartNarrationBtn'))$('smartNarrationBtn').onclick=smartContinueNarration;
+if($('buildAllNarrationBtn'))$('buildAllNarrationBtn').onclick=buildAllSmartNarration;
+if($('smartNarrationStage'))$('smartNarrationStage').addEventListener('change',()=>{state.autoCut.narrationCursor=$('smartNarrationStage').value;refreshSmartNarrationUi();saveProject();});
+if($('projectTopic'))$('projectTopic').addEventListener('input',()=>{state.projectTopic=$('projectTopic').value;saveProject();refreshAutoCutUi();refreshSmartNarrationUi();});
 if($('autoCutScript'))$('autoCutScript').addEventListener('input',()=>{state.autoCut.script=$('autoCutScript').value;state.autoCut.scriptMode='manual';saveProject();refreshAutoCutUi();});
 if($('autoNarrator'))$('autoNarrator').addEventListener('change',()=>{state.autoCut.autoNarrator=$('autoNarrator').checked;syncNarratorControls();saveProject();});
 if($('narratorVoice'))$('narratorVoice').addEventListener('change',()=>{state.autoCut.narratorVoice=$('narratorVoice').value;syncNarratorControls();saveProject();});
