@@ -50,6 +50,7 @@
     return hash([topic(),format(),hookIsSilent(stageCard('HOOK'))?'silent':'vo',...parts].join('\u241e'));
   }
   function readApproval(){
+    if(window.ldNarrationApprovalState&&typeof window.ldNarrationApprovalState==='object')return window.ldNarrationApprovalState;
     try{return JSON.parse(localStorage.getItem(approvalKey())||'null');}catch{return null;}
   }
   function isApproved(){
@@ -60,15 +61,19 @@
     window.dispatchEvent(new CustomEvent('ld:narration-approval-changed',{detail:{approved:isApproved(),signature:narrationSignature()}}));
   }
   function clearApproval(){
+    window.ldNarrationApprovalState=null;
     try{localStorage.removeItem(approvalKey());}catch{}
+    try{window.LDCore?.saveCurrent?.();}catch{}
     emitApproval();
   }
   function approveNarration(){
     if(!narrationReady())return false;
-    const a={version:'1.0',topic:topic(),format:format(),signature:narrationSignature(),approvedAt:new Date().toISOString()};
-    try{localStorage.setItem(approvalKey(),JSON.stringify(a));}catch{return false;}
+    const a={version:'2.0',topic:topic(),format:format(),signature:narrationSignature(),approvedAt:new Date().toISOString()};
+    window.ldNarrationApprovalState=a;
+    try{localStorage.setItem(approvalKey(),JSON.stringify(a));}catch{}
+    try{window.LDCore?.saveCurrent?.();}catch{}
     emitApproval();
-    return true;
+    return isApproved();
   }
   function stageCard(stage){
     return stages.querySelector('.stage-card[data-stage="'+stage+'"]');
