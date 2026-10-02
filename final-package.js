@@ -217,14 +217,42 @@ function mount(){
 }
 function delayedMount(){setTimeout(()=>{mount();refresh();},120);}
 
+// Compatibility focus layer: while Smart Narration is the active Stage 0 gate,
+// keep the magnetic/current-stage viewport aligned to NARRATION instead of HOOK.
+function narrationFocusActive(){
+  const stage=document.getElementById('ldNarrationStageZero');
+  const approval=window.LDNarrationApproval;
+  if(!stage||!approval||typeof approval.isApproved!=='function')return false;
+  const productionCards=[...stages.querySelectorAll('.stage-card')].filter(c=>/^(HOOK|P(?:[1-9]|1[0-4])|ENDING|THUMBNAIL)$/.test(c.dataset.stage||''));
+  return !productionCards.some(c=>c.querySelector('.done-toggle')?.checked)&&!approval.isApproved();
+}
+function focusNarrationStage(options={}){
+  if(!narrationFocusActive())return false;
+  const stage=document.getElementById('ldNarrationStageZero');
+  if(!stage)return false;
+  window.LDSmartContinue?.updateTargetLabel?.();
+  stage.scrollIntoView({behavior:options.smooth?'smooth':'auto',block:'start'});
+  return true;
+}
+function queueNarrationFocus(delay=90,options={}){
+  setTimeout(()=>focusNarrationStage(options),delay);
+}
+
 window.LDFinalPackage=Object.freeze({buildObject,buildText,refresh,readyState,downloadTxt,downloadJson});
 
-window.addEventListener('ld:production-built',delayedMount);
+window.addEventListener('ld:production-built',()=>{delayedMount();queueNarrationFocus(260);});
 window.addEventListener('ld:production-dna-saved',()=>setTimeout(refresh,60));
 window.addEventListener('ld:approved-memory-saved',()=>setTimeout(refresh,60));
 window.addEventListener('ld:project-locks-changed',()=>setTimeout(refresh,60));
+window.addEventListener('pageshow',()=>queueNarrationFocus(260));
+window.addEventListener('focus',()=>queueNarrationFocus(140));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)queueNarrationFocus(140);});
+document.addEventListener('click',e=>{
+  if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))queueNarrationFocus(120,{smooth:true});
+});
 document.addEventListener('change',e=>{if(e.target.closest?.('#stages,#ldFinalPackage'))setTimeout(refresh,60);});
 document.addEventListener('input',e=>{if(e.target.closest?.('#stages'))setTimeout(refresh,60);});
 
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',delayedMount);else delayedMount();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{delayedMount();queueNarrationFocus(360);});
+else{delayedMount();queueNarrationFocus(220);}
 })();
