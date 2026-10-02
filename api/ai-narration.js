@@ -300,7 +300,12 @@ EVIDENCE GATE:
     "\nFINAL EDIT TIMING POLISH — HIGHEST PRIORITY AFTER FACT SAFETY:\n"+
     "- Transitions have already been applied. These are the FINAL spoken windows for each stage.\n"+
     "- Write narration specifically for these final panel durations: "+Object.entries(timingTargets).map(([stage,sec])=>stage+"="+sec.toFixed(2)+"s (~"+Math.max(4,Math.round(sec*2.0))+"-"+Math.max(6,Math.round(sec*2.35))+" spoken words)").join(", ")+".\n"+
-    "- Aim to use roughly 85-95% of each panel spoken window so the line feels complete without spilling into the next panel.\n"+
+    "- TIMING FIT V2.2: treat each supplied duration as a hard spoken-window budget, not a target to fill completely.\n"+
+    "- Aim for roughly 78-90% spoken occupancy at a natural documentary pace, leaving a short breathing margin for clean panel entry/exit and editor transitions.\n"+
+    "- Prefer a complete shorter sentence over extra clauses added only to consume time. Never add unsupported detail, repeat a fact, or slow the wording unnaturally just to fill the window.\n"+
+    "- If a verified fact needs more words than the window comfortably allows, preserve the essential fact and remove nonessential connective wording first; never move the overflow into the next panel.\n"+
+    "- Sentence complexity should scale with the window: short windows get one direct clause; longer windows may use one compact second clause only when it adds distinct stage-supported information.\n"+
+    "- Readability check: avoid tongue-twisting names, stacked numbers, or dense clauses when a simpler evidence-equivalent phrasing fits the same panel more naturally.\n"+
     "- HOOK has narration in this final edited version. Keep it concise, tense, and grounded in that HOOK stage evidence.\n"+
     "- Do NOT shorten several panels into a single summary. Each stage must have its own complete line tied only to that stage.\n"+
     "- You may use neutral connective wording that adds no new event-specific facts, but never pad with invented details.\n"+
