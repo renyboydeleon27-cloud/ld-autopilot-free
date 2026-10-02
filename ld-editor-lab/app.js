@@ -248,7 +248,7 @@ function buildAutoCaptions(script){
   const mapped=splitNarrationToStages(script),captions={};
   for(const stage of STAGES){
     const exact=String(mapped[stage]||'').trim();
-    if(exact)captions[stage]=[exact];
+    if(exact)captions[stage]=captionChunks(exact);
   }
   return captions;
 }
@@ -308,7 +308,10 @@ function autoCaptionAt(stage,time,duration){
   if(stage==='ENDING'&&Number(time)>=4.5)return'';
   const chunks=state.autoCut?.captions?.[stage];
   if(!Array.isArray(chunks)||!chunks.length)return'';
-  return chunks[0]||'';
+  const d=Math.max(.1,Number(stage==='ENDING'?Math.min(4.5,duration):duration)||1);
+  const t=Math.max(0,Math.min(d-.001,Number(time)||0));
+  const idx=Math.min(chunks.length-1,Math.floor(t/d*chunks.length));
+  return chunks[idx]||'';
 }
 function narrationApiUrl(){
   const protocol=String(location.protocol||'');
@@ -390,7 +393,9 @@ async function generateAutoNarrationScript(topic,targetStageSeconds={}){
 
 function smartNarrationStage(){
   const select=$('smartNarrationStage');
-  const stage=String(select?.value||state.autoCut.narrationCursor||'HOOK').toUpperCase();
+  const stored=String(state.autoCut.narrationCursor||'HOOK').toUpperCase();
+  const stage=STAGES.includes(stored)?stored:String(select?.value||'HOOK').toUpperCase();
+  if(select&&select.value!==stage)select.value=stage;
   return STAGES.includes(stage)?stage:'HOOK';
 }
 function narrationStageLine(stage){
