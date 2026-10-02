@@ -1127,7 +1127,13 @@ async function hydrateRestored(){
       });
     }catch{URL.revokeObjectURL(url);await clearEndingImage().catch(()=>{});}
   }
-  const aiNarrator=await getGeneratedNarrator().catch(()=>null);
+  const stageNarrators=await getGeneratedNarratorStages().catch(()=>null);
+  const restoredStageNarrators=stageNarrators?.stages?restoreNarrationStagesRecord(stageNarrators):false;
+  if(restoredStageNarrators){
+    state.autoCut.narratorSourceKey=stageNarrators.sourceKey||state.autoCut.narratorSourceKey||'';
+    $('narrationMeta').textContent='AI narrator · '+Object.keys(state.narrationStages).length+' synced stages · saved';
+  }
+  const aiNarrator=restoredStageNarrators?null:await getGeneratedNarrator().catch(()=>null);
   if(aiNarrator?.blob&&!state.narration?.native){
     if(state.narration?.objectUrl&&state.narration.url)URL.revokeObjectURL(state.narration.url);
     state.narration={
@@ -1137,7 +1143,7 @@ async function hydrateRestored(){
       sourceKey:aiNarrator.sourceKey||'',duration:Number(aiNarrator.duration)||0
     };
   }
-  setupAudioElement('narration');
+  if(!restoredStageNarrators)setupAudioElement('narration');
   setupAudioElement('music');
   const thumbStored=await getProjectThumbnail().catch(()=>null);
   if(thumbStored?.blob){
@@ -1295,14 +1301,14 @@ function setupAudioElement(key){
 }
 function setBrowserAudio(input,key){
   const file=input.files?.[0];if(!file)return;
-  if(key==='narration')clearGeneratedNarrator().catch(()=>{});
+  if(key==='narration'){clearGeneratedNarrator().catch(()=>{});clearGeneratedNarratorStages().catch(()=>{});releaseNarrationStages();}
   releaseItem(state[key]);const url=URL.createObjectURL(file);
   state[key]={name:file.name,mime:file.type,size:file.size,url,objectUrl:true,native:false};
   setupAudioElement(key);applyVolumes();saveProject();
 }
 function setNativeAudio(key,raw){
   if(!raw?.url)return;
-  if(key==='narration')clearGeneratedNarrator().catch(()=>{});
+  if(key==='narration'){clearGeneratedNarrator().catch(()=>{});clearGeneratedNarratorStages().catch(()=>{});releaseNarrationStages();}
   releaseItem(state[key]);state[key]={...raw,native:true};
   setupAudioElement(key);applyVolumes();saveProject();
 }
@@ -1631,7 +1637,7 @@ $('clearBtn').onclick=()=>{
   stopPlayback();for(const x of state.clips.values())releaseItem(x,false);
   state.clips.clear();state.narration=null;state.music=null;state.lastExport=null;state.projectTopic='';
   if(state.thumbnail?.objectUrl&&state.thumbnail.url)URL.revokeObjectURL(state.thumbnail.url);
-  state.thumbnail=null;clearProjectThumbnail().catch(()=>{});clearEndingImage().catch(()=>{});clearGeneratedNarrator().catch(()=>{});
+  state.thumbnail=null;clearProjectThumbnail().catch(()=>{});clearEndingImage().catch(()=>{});clearGeneratedNarrator().catch(()=>{});clearGeneratedNarratorStages().catch(()=>{});releaseNarrationStages();
   state.autoCut=normalizeAutoCut(null);
   if($('projectTopic'))$('projectTopic').value='';
   if($('autoCutScript'))$('autoCutScript').value='';
