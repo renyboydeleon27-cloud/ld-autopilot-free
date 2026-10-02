@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0d12">
   <title>LD Editor Lab</title>
-  <link rel="stylesheet" href="./styles.css?v=0.5.2">
+  <link rel="stylesheet" href="./styles.css?v=0.5.3">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.5.2</span></h1>
+        <h1>LD Editor Lab <span>v0.5.3</span></h1>
         <p class="sub">Standalone local video assembler. Imported media and project state are saved locally. Final renders save directly to your phone.</p>
       </div>
       <span class="pill safe">LOCAL · AUTO-SAVE · SELF-UPDATE</span>
@@ -55,9 +55,9 @@
         </div>
         <span class="pill safe">LOCAL ENGINE V1 · FREE</span>
       </div>
-      <p class="muted">One tap builds stage timing, automatic cuts, cinematic transition timing, subtitle timing, original-clip SFX mix, background-music ducking and export-ready audio balance. AI narrator and custom AI music/SFX plug into this same pipeline next.</p>
+      <p class="muted">One tap now generates the AI narrator voice, builds subtitle timing, automatic cuts, cinematic transition timing, original-clip SFX mix, background-music ducking and export-ready audio balance.</p>
       <div class="auto-cut-flags">
-        <span class="mini-flag">✓ Auto cuts</span><span class="mini-flag">✓ Transitions</span><span class="mini-flag">✓ Subtitle timing</span><span class="mini-flag">✓ SFX mix</span><span class="mini-flag">✓ Music ducking</span><span class="mini-flag">✓ ENDING 5.0s</span><span class="mini-flag">✓ Thumbnail final 0.5s</span>
+        <span class="mini-flag">✓ AI narrator</span><span class="mini-flag">✓ Auto cuts</span><span class="mini-flag">✓ Transitions</span><span class="mini-flag">✓ Subtitle timing</span><span class="mini-flag">✓ SFX mix</span><span class="mini-flag">✓ Music ducking</span><span class="mini-flag">✓ ENDING 5.0s</span><span class="mini-flag">✓ Thumbnail final 0.5s</span>
       </div>
       <div class="ending-lock-box">
         <strong>ENDING FORMAT LOCK</strong>
@@ -68,11 +68,25 @@
           <span id="thumbnailMeta" class="meta">No thumbnail loaded</span>
         </div>
       </div>
-      <label class="script-label" for="autoCutScript">Narration / subtitle script <span class="muted">(optional in v1; AI narrator will fill this automatically later)</span></label>
-      <textarea id="autoCutScript" class="script-box" rows="5" placeholder="Paste final narration here, or use stage labels like HOOK: ... P1: ... P2: ..."></textarea>
+      <div class="narrator-auto-box">
+        <div>
+          <label class="check narrator-toggle"><input id="autoNarrator" type="checkbox" checked> Auto-generate AI narrator with FULL AUTO CUT</label>
+          <span id="narratorAiStatus" class="meta narrator-ai-status paid">ON · narrator will generate with FULL AUTO CUT</span>
+        </div>
+        <label class="voice-select-label">Narrator voice
+          <select id="narratorVoice" class="voice-select">
+            <option value="cedar" selected>Cedar · documentary</option>
+            <option value="onyx">Onyx · deep</option>
+            <option value="marin">Marin · natural</option>
+            <option value="coral">Coral · clear</option>
+          </select>
+        </label>
+      </div>
+      <label class="script-label" for="autoCutScript">Final narration / subtitle script <span class="muted">— AI voice is generated automatically; HOOK is excluded</span></label>
+      <textarea id="autoCutScript" class="script-box" rows="5" placeholder="Paste final narration here. Stage labels like P1: ... P2: ... ENDING: ... are supported."></textarea>
       <div class="export-actions">
-        <button id="autoCutBtn" class="btn primary" type="button" disabled>⚡ Build FULL AUTO CUT</button>
-        <button id="previewAutoCutBtn" class="btn ghost" type="button" disabled>▶ Build & Preview</button>
+        <button id="autoCutBtn" class="btn primary" type="button" disabled>⚡ FULL AUTO CUT + AI NARRATOR</button>
+        <button id="previewAutoCutBtn" class="btn ghost" type="button" disabled>▶ One-Click Build & Preview</button>
       </div>
       <p id="autoCutStatus" class="status">Load HOOK, P1–P14 and ENDING first.</p>
     </section>
@@ -200,13 +214,13 @@
     <section class="card future">
       <p class="eyebrow">LATER UPGRADES</p>
       <h2>Not enabled yet</h2>
-      <p>AI narrator voice generation · speech-aligned word timing · custom AI music/SFX connector · MP4 encoder. Auto Cut, caption timing, transitions and audio mixing are now enabled locally.</p>
+      <p>Speech-aligned word timing · custom AI music/SFX connector · MP4 encoder. AI narrator voice, Auto Cut, caption timing, transitions and audio mixing are now enabled.</p>
     </section>
   </main>
 
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.5.2"></script>
+  <script src="./app.js?v=0.5.3"></script>
 </body>
 </html>

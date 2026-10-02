@@ -1,6 +1,6 @@
 {
-  "version": "0.5.2",
-  "notes": "ENDING now opens the photo gallery and uses a persistent 5-second image card. Final thumbnail remains only at 4.5–5.0 seconds with narration off. Also fixes stale app.js/styles.css cache versions.",
+  "version": "0.5.3",
+  "notes": "Adds one-click OpenAI AI narrator inside FULL AUTO CUT. Narration begins after the HOOK, is saved persistently, reuses identical generations without new cost, and reports narrator usage/cost to the API Credit Tracker.",
   "files": [
     {
       "name": "index.html",

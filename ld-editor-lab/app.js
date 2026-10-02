@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='0.5.2';
+const VERSION='0.5.3';
 // Keep the v0.2 key so existing projects migrate in place after APK update.
 const STORE='ld-editor-lab-project-v0.2';
 const EXPORT_DB='ld-editor-lab-export-db-v1';
@@ -9,6 +9,8 @@ const EXPORT_STORE='exports';
 const EXPORT_KEY='last-render';
 const THUMB_KEY='project-thumbnail';
 const ENDING_IMAGE_KEY='ending-image';
+const AI_NARRATOR_KEY='generated-ai-narrator';
+const AI_API_ORIGIN='https://ld-autopilot-free.vercel.app';
 const STAGES=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
 const TARGET={HOOK:10,ENDING:5};
 for(let i=1;i<=14;i++)TARGET['P'+i]=10;
@@ -36,7 +38,10 @@ const state={
     script:'',
     captions:{},
     plan:{},
-    transitionMs:160
+    transitionMs:160,
+    autoNarrator:true,
+    narratorVoice:'cedar',
+    narratorSourceKey:''
   },
   playing:false,
   playIndex:0,
@@ -192,7 +197,10 @@ function normalizeAutoCut(raw){
     script:String(a.script||''),
     captions:a.captions&&typeof a.captions==='object'?a.captions:{},
     plan:a.plan&&typeof a.plan==='object'?a.plan:{},
-    transitionMs:Number.isFinite(Number(a.transitionMs))?Math.max(80,Math.min(400,Number(a.transitionMs))):160
+    transitionMs:Number.isFinite(Number(a.transitionMs))?Math.max(80,Math.min(400,Number(a.transitionMs))):160,
+    autoNarrator:a.autoNarrator!==false,
+    narratorVoice:String(a.narratorVoice||'cedar'),
+    narratorSourceKey:String(a.narratorSourceKey||'')
   };
 }
 function splitNarrationToStages(text){
@@ -274,6 +282,7 @@ function effectiveDuration(stage,item){
 }
 function autoCaptionAt(stage,time,duration){
   if(!state.autoCut?.enabled)return'';
+  if(stage==='HOOK')return'';
   if(stage==='ENDING'&&Number(time)>=4.5)return'';
   const chunks=state.autoCut?.captions?.[stage];
   if(!Array.isArray(chunks)||!chunks.length)return'';
@@ -281,6 +290,148 @@ function autoCaptionAt(stage,time,duration){
   const idx=Math.min(chunks.length-1,Math.floor(Math.max(0,Number(time)||0)/d*chunks.length));
   return chunks[idx]||'';
 }
+function narratorApiUrl(){
+  const protocol=String(location.protocol||'');
+  const host=String(location.hostname||'');
+  if((protocol==='https:'||protocol==='http:')&&!/github\.io$/i.test(host))return '/api/ai-voice';
+  return AI_API_ORIGIN+'/api/ai-voice';
+}
+function simpleHash(text){
+  let h=2166136261;
+  const s=String(text||'');
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}
+  return (h>>>0).toString(16);
+}
+function voiceNarrationText(script){
+  const mapped=splitNarrationToStages(script);
+  return STAGES.filter(s=>s!=='HOOK').map(s=>String(mapped[s]||'').trim()).filter(Boolean).join('\n\n').trim();
+}
+function narratorSourceKey(text,voice){return String(voice||'cedar')+':'+simpleHash(text);}
+function arrayBufferToBlob(buffer,type='audio/mpeg'){return new Blob([buffer],{type});}
+async function putGeneratedNarrator(blob,meta={}){
+  const db=await openExportDb();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readwrite');
+      tx.objectStore(EXPORT_STORE).put({
+        blob,name:meta.name||'LD-AI-Narrator.mp3',mime:meta.mime||blob.type||'audio/mpeg',
+        size:Number(blob.size)||0,model:meta.model||'gpt-4o-mini-tts',voice:meta.voice||'cedar',
+        sourceKey:meta.sourceKey||'',duration:Number(meta.duration)||0,savedAt:new Date().toISOString()
+      },AI_NARRATOR_KEY);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Could not save AI narrator.'));
+      tx.onabort=()=>reject(tx.error||new Error('AI narrator save was aborted.'));
+    });
+  }finally{db.close();}
+}
+async function getGeneratedNarrator(){
+  const db=await openExportDb();
+  try{
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readonly');
+      const req=tx.objectStore(EXPORT_STORE).get(AI_NARRATOR_KEY);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>reject(req.error||new Error('Could not restore AI narrator.'));
+    });
+  }finally{db.close();}
+}
+async function clearGeneratedNarrator(){
+  if(!('indexedDB' in window))return;
+  const db=await openExportDb();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(EXPORT_STORE,'readwrite');
+      tx.objectStore(EXPORT_STORE).delete(AI_NARRATOR_KEY);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Could not clear AI narrator.'));
+    });
+  }finally{db.close();}
+}
+function probeAudioDuration(url){
+  return new Promise((resolve,reject)=>{
+    const a=document.createElement('audio');a.preload='metadata';
+    a.onloadedmetadata=()=>resolve(Number(a.duration)||0);
+    a.onerror=()=>reject(new Error('Generated narrator audio could not be read.'));
+    a.src=url;
+  });
+}
+function setNarratorAiStatus(message,kind=''){
+  const el=$('narratorAiStatus');if(!el)return;
+  el.textContent=message;el.className='meta narrator-ai-status '+kind;
+}
+function syncNarratorControls(){
+  const toggle=$('autoNarrator'),voice=$('narratorVoice');
+  if(toggle)toggle.checked=state.autoCut.autoNarrator!==false;
+  if(voice)voice.value=state.autoCut.narratorVoice||'cedar';
+  if(state.narration?.generated)setNarratorAiStatus('AI narrator ready · '+(state.narration.voice||'cedar')+' · '+fmt(state.narration.duration||0),'ready');
+  else if(toggle?.checked)setNarratorAiStatus('ON · narrator will generate with FULL AUTO CUT','paid');
+  else setNarratorAiStatus('OFF · imported narrator only','');
+}
+async function generateAiNarrator(script,voice){
+  const speech=voiceNarrationText(script);
+  if(!speech)throw new Error('Paste the final narration script first. HOOK is automatically excluded from voice-over.');
+  if(speech.length>3900)throw new Error('Narration is too long for one-click voice. Keep the spoken script under about 3,900 characters.');
+  const sourceKey=narratorSourceKey(speech,voice);
+  if(state.narration?.generated&&state.narration.sourceKey===sourceKey&&state.narration.url){
+    setNarratorAiStatus('Reusing saved AI narrator · no new API charge','ready');
+    return {reused:true,costUsd:0,sourceKey};
+  }
+  const saved=await getGeneratedNarrator().catch(()=>null);
+  if(saved?.blob&&saved.sourceKey===sourceKey){
+    releaseItem(state.narration,false);
+    const url=URL.createObjectURL(saved.blob);
+    state.narration={
+      name:saved.name||'LD-AI-Narrator.mp3',mime:saved.mime||'audio/mpeg',size:Number(saved.size||saved.blob.size)||0,
+      url,objectUrl:true,browserStored:true,generated:true,model:saved.model||'gpt-4o-mini-tts',
+      voice:saved.voice||voice,sourceKey,duration:Number(saved.duration)||0
+    };
+    setupAudioElement('narration');applyVolumes();
+    setNarratorAiStatus('Reusing saved AI narrator · no new API charge','ready');
+    return {reused:true,costUsd:0,sourceKey};
+  }
+  setNarratorAiStatus('Generating cinematic AI narrator…','busy');
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),180000);
+  let response;
+  try{
+    response=await fetch(narratorApiUrl(),{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text:speech,voice}),
+      signal:controller.signal
+    });
+  }catch(e){
+    if(e?.name==='AbortError')throw new Error('AI narrator timed out. Please try again.');
+    throw new Error('Could not reach AI narrator service: '+String(e?.message||e));
+  }finally{clearTimeout(timer);}
+  if(!response.ok){
+    let msg='AI narrator generation failed.';
+    try{const data=await response.json();if(data?.error)msg=data.error;}catch{}
+    throw new Error(msg);
+  }
+  const blob=arrayBufferToBlob(await response.arrayBuffer(),response.headers.get('Content-Type')||'audio/mpeg');
+  if(!blob.size)throw new Error('AI narrator returned an empty audio file.');
+  releaseItem(state.narration);
+  const url=URL.createObjectURL(blob),duration=await probeAudioDuration(url);
+  const model=response.headers.get('X-LD-Model')||'gpt-4o-mini-tts';
+  const inputTokens=Number(response.headers.get('X-LD-Input-Tokens'))||0;
+  const outputTokens=Number(response.headers.get('X-LD-Output-Tokens'))||0;
+  const totalTokens=Number(response.headers.get('X-LD-Total-Tokens'))||(inputTokens+outputTokens);
+  const hasUsage=inputTokens>0||outputTokens>0;
+  const calculatedCost=hasUsage?((inputTokens*0.60+outputTokens*12)/1000000):(duration/60*0.015);
+  state.narration={
+    name:'LD-AI-Narrator-'+voice+'.mp3',mime:blob.type||'audio/mpeg',size:blob.size,url,objectUrl:true,
+    browserStored:true,generated:true,model,voice,sourceKey,duration
+  };
+  await putGeneratedNarrator(blob,state.narration);
+  setupAudioElement('narration');applyVolumes();saveProject();
+  recordApiUsage({
+    feature:'narrator_voice',featureLabel:'Narrator voice',model,
+    inputTokens,outputTokens,totalTokens,costUsd:calculatedCost,estimated:!hasUsage
+  });
+  setNarratorAiStatus('AI narrator ready · '+voice+' · '+fmt(duration)+' · '+money(calculatedCost)+(hasUsage?'':' EST.'),'ready');
+  return {reused:false,costUsd:calculatedCost,sourceKey};
+}
+
 function setAutoCutStatus(message){const el=$('autoCutStatus');if(el)el.textContent=message;}
 function refreshAutoCutUi(){
   const script=$('autoCutScript');if(script&&document.activeElement!==script)script.value=state.autoCut?.script||'';
@@ -288,6 +439,7 @@ function refreshAutoCutUi(){
   const btn=$('autoCutBtn'),previewBtn=$('previewAutoCutBtn');
   if(btn)btn.disabled=!ready;
   if(previewBtn)previewBtn.disabled=!ready;
+  syncNarratorControls();
   if(state.autoCut?.enabled){
     const captionStages=Object.keys(state.autoCut.captions||{}).length;
     setAutoCutStatus('Auto Cut ready · ENDING locked 5.0s · thumbnail hold 4.5–5.0s · narrator off last 0.5s · '+captionStages+' caption stage'+(captionStages===1?'':'s')+' · local engine FREE');
@@ -295,13 +447,20 @@ function refreshAutoCutUi(){
     setAutoCutStatus(ready?'Ready for one-tap Auto Cut.':'Load HOOK, P1–P14 and ENDING first.');
   }
 }
-function runFullAutoCut(previewAfter=false){
+async function runFullAutoCut(previewAfter=false){
   if(STAGES.some(s=>!state.clips.has(s)))return alert('Load HOOK, P1–P14 and ENDING first.');
-  const script=$('autoCutScript')?$('autoCutScript').value:state.autoCut.script;
+  const script=String($('autoCutScript')?$('autoCutScript').value:state.autoCut.script||'').trim();
+  const autoNarrator=$('autoNarrator')?$('autoNarrator').checked:true;
+  const voice=String($('narratorVoice')?.value||state.autoCut.narratorVoice||'cedar');
+  if(autoNarrator&&!script)return alert('Paste the final narration first. Then one tap will generate the AI narrator and build the full Auto Cut.');
+  const btn=$('autoCutBtn'),previewBtn=$('previewAutoCutBtn');
+  if(btn)btn.disabled=true;if(previewBtn)previewBtn.disabled=true;
   state.autoCut.enabled=true;
   state.autoCut.builtAt=new Date().toISOString();
-  state.autoCut.script=String(script||'');
-  state.autoCut.captions=buildAutoCaptions(state.autoCut.script);
+  state.autoCut.script=script;
+  state.autoCut.autoNarrator=autoNarrator;
+  state.autoCut.narratorVoice=voice;
+  state.autoCut.captions=buildAutoCaptions(script);
   state.autoCut.plan=buildAutoCutPlan();
   $('narrationVol').value='1';
   $('musicVol').value='0.16';
@@ -309,11 +468,25 @@ function runFullAutoCut(previewAfter=false){
   $('autoDuck').checked=true;
   applyVolumes();
   beginApiGeneration('FULL AUTO CUT');
-  recordApiUsage({feature:'auto_cut_local',featureLabel:'Auto Cut Engine',model:'Local v1',free:true});
-  endApiGeneration();
-  saveProject();render();refreshAutoCutUi();
-  setAutoCutStatus('Auto Cut built · ENDING 5.0s · thumbnail last 0.5s · no narration last 0.5s · cuts + subtitles + SFX/music mix · FREE local pass');
-  if(previewAfter)playAll();
+  try{
+    setAutoCutStatus(autoNarrator?'Step 1/2 · generating AI narrator…':'Building local Auto Cut…');
+    if(autoNarrator){
+      const generated=await generateAiNarrator(script,voice);
+      state.autoCut.narratorSourceKey=generated.sourceKey||'';
+    }
+    recordApiUsage({feature:'auto_cut_local',featureLabel:'Auto Cut Engine',model:'Local v1',free:true});
+    endApiGeneration();
+    saveProject();render();refreshAutoCutUi();
+    setAutoCutStatus('ONE CLICK complete · AI narrator '+(autoNarrator?'ready':'off')+' · HOOK no voice · ENDING voice stops at 4.5s · cuts + subtitles + SFX/music mix ready');
+    if(previewAfter)playAll();
+  }catch(e){
+    endApiGeneration();saveProject();render();refreshAutoCutUi();
+    setAutoCutStatus('Auto Cut stopped · '+String(e?.message||e));
+    alert(String(e?.message||e));
+  }finally{
+    if(btn)btn.disabled=STAGES.some(s=>!state.clips.has(s));
+    if(previewBtn)previewBtn.disabled=STAGES.some(s=>!state.clips.has(s));
+  }
 }
 function drawAutoTransition(ctx,stage,time,duration){
   if(!state.autoCut?.enabled)return;
@@ -695,6 +868,16 @@ async function hydrateRestored(){
       });
     }catch{URL.revokeObjectURL(url);await clearEndingImage().catch(()=>{});}
   }
+  const aiNarrator=await getGeneratedNarrator().catch(()=>null);
+  if(aiNarrator?.blob&&!state.narration?.native){
+    if(state.narration?.objectUrl&&state.narration.url)URL.revokeObjectURL(state.narration.url);
+    state.narration={
+      name:aiNarrator.name||'LD-AI-Narrator.mp3',mime:aiNarrator.mime||aiNarrator.blob.type||'audio/mpeg',
+      size:Number(aiNarrator.size||aiNarrator.blob.size)||0,url:URL.createObjectURL(aiNarrator.blob),objectUrl:true,
+      browserStored:true,generated:true,model:aiNarrator.model||'gpt-4o-mini-tts',voice:aiNarrator.voice||'cedar',
+      sourceKey:aiNarrator.sourceKey||'',duration:Number(aiNarrator.duration)||0
+    };
+  }
   setupAudioElement('narration');
   setupAudioElement('music');
   const thumbStored=await getProjectThumbnail().catch(()=>null);
@@ -846,19 +1029,21 @@ function setupAudioElement(key){
   audio.src=item.url;
   audio.onloadedmetadata=()=>{
     item.duration=audio.duration;
-    $(metaId).textContent=(item.name||key)+' · '+fmt(audio.duration)+(item.native?' · saved':' · session only');
-    if(item.native)saveProject();
+    $(metaId).textContent=(item.name||key)+' · '+fmt(audio.duration)+(item.generated?' · AI generated · saved':item.native?' · saved':' · session only');
+    if(item.native||item.generated)saveProject();
   };
   audio.onerror=()=>{$(metaId).textContent='Saved file unavailable · re-import';};
 }
 function setBrowserAudio(input,key){
   const file=input.files?.[0];if(!file)return;
+  if(key==='narration')clearGeneratedNarrator().catch(()=>{});
   releaseItem(state[key]);const url=URL.createObjectURL(file);
   state[key]={name:file.name,mime:file.type,size:file.size,url,objectUrl:true,native:false};
   setupAudioElement(key);applyVolumes();saveProject();
 }
 function setNativeAudio(key,raw){
   if(!raw?.url)return;
+  if(key==='narration')clearGeneratedNarrator().catch(()=>{});
   releaseItem(state[key]);state[key]={...raw,native:true};
   setupAudioElement(key);applyVolumes();saveProject();
 }
@@ -909,6 +1094,8 @@ function startImageStagePreview(stage,item){
 function showStage(stage,autoplay){
   const item=state.clips.get(stage);if(!item)return;
   state.playIndex=STAGES.indexOf(stage);$('previewStage').textContent=stage;placeholder.style.display='none';
+  if(stage==='HOOK'&&state.narration){narrationAudio.pause();try{narrationAudio.currentTime=0;}catch{}}
+  if(stage==='P1'&&autoplay&&state.narration&&narrationAudio.paused)narrationAudio.play().catch(()=>{});
   preview.removeAttribute('data-advancing');
   const pi=$('previewImage');
   if(isImageItem(item)){
@@ -927,7 +1114,7 @@ function loadedSequence(){return STAGES.filter(s=>state.clips.has(s));}
 async function playAll(){
   const seq=loadedSequence();if(!seq.length)return;
   stopPlayback();state.playing=true;state.playIndex=STAGES.indexOf(seq[0]);
-  if(state.narration){narrationAudio.currentTime=0;narrationAudio.play().catch(()=>{});}
+  if(state.narration){narrationAudio.pause();narrationAudio.currentTime=0;}
   if(state.music){musicAudio.currentTime=0;musicAudio.play().catch(()=>{});}
   applyVolumes();showStage(seq[0],true);
 }
@@ -1065,12 +1252,13 @@ async function renderExport(){
   };
 
   try{
-    await ac.resume();rec.start(1000);draw();narrEl?.play().catch(()=>{});musicEl?.play().catch(()=>{});
+    await ac.resume();rec.start(1000);draw();if(narrEl){narrEl.pause();narrEl.currentTime=0;}musicEl?.play().catch(()=>{});
     const total=totalDuration();let elapsedBase=0;
     for(const stage of STAGES){
       if(state.exportAbort)break;
       const item=state.clips.get(stage),stageDuration=effectiveDuration(stage,item);
       currentRenderStage=stage;currentRenderDuration=stageDuration;
+      if(stage==='P1'&&narrEl&&narrEl.paused)narrEl.play().catch(()=>{});
       const plan=autoCutStagePlan(stage);
       if(state.autoCut?.enabled&&plan){
         clipGain.gain.setValueAtTime(Math.min(1.5,vols.clip*(Number(plan.clipFactor)||1)),ac.currentTime);
@@ -1172,6 +1360,8 @@ $('playAllBtn').onclick=playAll;$('stopBtn').onclick=stopPlayback;
 if($('autoCutBtn'))$('autoCutBtn').onclick=()=>runFullAutoCut(false);
 if($('previewAutoCutBtn'))$('previewAutoCutBtn').onclick=()=>runFullAutoCut(true);
 if($('autoCutScript'))$('autoCutScript').addEventListener('input',()=>{state.autoCut.script=$('autoCutScript').value;saveProject();});
+if($('autoNarrator'))$('autoNarrator').addEventListener('change',()=>{state.autoCut.autoNarrator=$('autoNarrator').checked;syncNarratorControls();saveProject();});
+if($('narratorVoice'))$('narratorVoice').addEventListener('change',()=>{state.autoCut.narratorVoice=$('narratorVoice').value;syncNarratorControls();saveProject();});
 $('exportBtn').onclick=renderExport;
 $('cancelExportBtn').onclick=()=>{state.exportAbort=true;$('cancelExportBtn').disabled=true;};
 $('clearBtn').onclick=()=>{
@@ -1179,7 +1369,7 @@ $('clearBtn').onclick=()=>{
   stopPlayback();for(const x of state.clips.values())releaseItem(x,false);
   state.clips.clear();state.narration=null;state.music=null;state.lastExport=null;
   if(state.thumbnail?.objectUrl&&state.thumbnail.url)URL.revokeObjectURL(state.thumbnail.url);
-  state.thumbnail=null;clearProjectThumbnail().catch(()=>{});clearEndingImage().catch(()=>{});
+  state.thumbnail=null;clearProjectThumbnail().catch(()=>{});clearEndingImage().catch(()=>{});clearGeneratedNarrator().catch(()=>{});
   state.autoCut=normalizeAutoCut(null);
   if($('autoCutScript'))$('autoCutScript').value='';
   state.apiTracker.projectCostUsd=0;
