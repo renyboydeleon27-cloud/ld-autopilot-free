@@ -25,6 +25,51 @@
     const active=localStorage.getItem('ld-autopilot-free-active-project')||'';
     return BACKUP_PREFIX+(active||[topic(),format()].join('|'));
   }
+  const APPROVAL_PREFIX='ner-studio-narration-approval-v1:';
+  function approvalKey(){
+    const active=localStorage.getItem('ld-autopilot-free-active-project')||'';
+    return APPROVAL_PREFIX+(active||[topic(),format()].join('|'));
+  }
+  function hash(value){
+    const s=String(value||'');
+    let h=2166136261;
+    for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}
+    return (h>>>0).toString(36);
+  }
+  function narrationReady(){
+    const hook=stageCard('HOOK');
+    const required=[...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
+    if(!hookIsSilent(hook))required.unshift('HOOK');
+    return required.every(stage=>!!value(stageCard(stage),'.narration'));
+  }
+  function narrationSignature(){
+    const parts=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'].map(stage=>{
+      const card=stageCard(stage);
+      return stage+'\u241f'+value(card,'.narration');
+    });
+    return hash([topic(),format(),hookIsSilent(stageCard('HOOK'))?'silent':'vo',...parts].join('\u241e'));
+  }
+  function readApproval(){
+    try{return JSON.parse(localStorage.getItem(approvalKey())||'null');}catch{return null;}
+  }
+  function isApproved(){
+    const a=readApproval();
+    return !!a&&a.topic===topic()&&a.format===format()&&a.signature===narrationSignature()&&narrationReady();
+  }
+  function emitApproval(){
+    window.dispatchEvent(new CustomEvent('ld:narration-approval-changed',{detail:{approved:isApproved(),signature:narrationSignature()}}));
+  }
+  function clearApproval(){
+    try{localStorage.removeItem(approvalKey());}catch{}
+    emitApproval();
+  }
+  function approveNarration(){
+    if(!narrationReady())return false;
+    const a={version:'1.0',topic:topic(),format:format(),signature:narrationSignature(),approvedAt:new Date().toISOString()};
+    try{localStorage.setItem(approvalKey(),JSON.stringify(a));}catch{return false;}
+    emitApproval();
+    return true;
+  }
   function stageCard(stage){
     return stages.querySelector('.stage-card[data-stage="'+stage+'"]');
   }
@@ -157,8 +202,49 @@
   const btn=document.getElementById('ldNarrationSmartBtn');
   const undo=document.getElementById('ldNarrationUndoBtn');
 
+  function refreshApprovalUi(){
+    if(!btn)return;
+    if(isApproved()){
+      btn.dataset.mode='rebuild';
+      btn.textContent='🎙️ REBUILD NARRATION';
+      status('✅ SMART NARRATION APPROVED · Final Audit is now unlocked.','pass');
+      return;
+    }
+    if(narrationReady()&&btn.dataset.generated==='1'){
+      btn.dataset.mode='approve';
+      btn.textContent='✅ APPROVE SMART NARRATION';
+      return;
+    }
+    btn.dataset.mode='generate';
+    btn.textContent='🎙️ SMART CONTINUE NARRATION';
+  }
+
+  window.LDNarrationApproval={
+    isApproved,
+    approve:approveNarration,
+    clear:clearApproval,
+    signature:narrationSignature,
+    ready:narrationReady
+  };
+  refreshApprovalUi();
+
   btn?.addEventListener('click',async()=>{
     if(btn.disabled)return;
+
+    if(btn.dataset.mode==='approve'){
+      if(!approveNarration()){
+        status('Smart Narration cannot be approved yet because a required narration segment is missing.','error');
+        return;
+      }
+      btn.dataset.generated='0';
+      refreshApprovalUi();
+      return;
+    }
+
+    // Rebuilding narration invalidates the previous approval until the new version is reviewed.
+    clearApproval();
+    btn.dataset.generated='0';
+
     const currentTopic=topic();
     if(!currentTopic){
       status('Add the disaster topic first.','error');
@@ -225,20 +311,22 @@
       if(ending)setNarration(ending,ENDING_CTA);
 
       undo?.classList.remove('hidden');
+      btn.dataset.generated='1';
       window.dispatchEvent(new CustomEvent('ld:narration-smart-complete',{
         detail:{silentHook,topic:currentTopic,stages:silentHook?15:16}
       }));
       status(
-        '✅ FINAL NARRATION READY · '+(silentHook?'HOOK kept silent · ':'HOOK narrated · ')+
-        'P1–P14 aligned · ENDING CTA added. Copy Master Narration when ready.',
+        '✅ FINAL NARRATION READY FOR REVIEW · '+(silentHook?'HOOK kept silent · ':'HOOK narrated · ')+
+        'P1–P14 aligned · ENDING CTA added. Review it, then press APPROVE SMART NARRATION to unlock Final Audit.',
         'pass'
       );
+      refreshApprovalUi();
     }catch(error){
       restoreBackup();
       status('Narration polish stopped safely: '+String(error?.message||error)+' Previous narration was restored.','error');
     }finally{
       btn.disabled=false;
-      btn.textContent='🎙️ SMART CONTINUE NARRATION';
+      refreshApprovalUi();
     }
   });
 
@@ -247,7 +335,26 @@
       status('No narration backup is available for this project.','error');
       return;
     }
+    clearApproval();
+    btn.dataset.generated='0';
     undo.classList.add('hidden');
-    status('Previous narration restored.','pass');
+    status('Previous narration restored. Smart Narration approval was cleared.','pass');
+    refreshApprovalUi();
   });
+
+  // Any manual narration edit after approval requires a fresh narration approval.
+  document.addEventListener('input',event=>{
+    if(!event.target.closest?.('#stages .narration'))return;
+    if(isApproved())return;
+    const previous=readApproval();
+    if(previous){
+      try{localStorage.removeItem(approvalKey());}catch{}
+      emitApproval();
+      btn.dataset.generated='1';
+      refreshApprovalUi();
+      status('Narration changed after approval. Review the change and approve Smart Narration again.','working');
+    }
+  });
+
+  emitApproval();
 })();
