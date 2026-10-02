@@ -21,6 +21,60 @@
   function liveCount(){
     return document.querySelectorAll('#stages .stage-card').length;
   }
+  function visibleCardCount(){
+    return [...document.querySelectorAll('#stages .stage-card')].filter(card=>{
+      const css=getComputedStyle(card);
+      return !card.hidden&&!card.classList.contains('hidden')&&css.display!=='none'&&css.visibility!=='hidden';
+    }).length;
+  }
+  function normalizePipelineLayout(){
+    const root=document.getElementById('stages');
+    if(!root)return 0;
+    root.hidden=false;
+    root.classList.remove('hidden');
+    root.style.removeProperty('display');
+    root.style.removeProperty('height');
+    root.style.removeProperty('min-height');
+    const cards=[...root.querySelectorAll('.stage-card')];
+    cards.forEach(card=>{
+      // Stage cards themselves must always remain in the document flow.
+      // Only .stage-body is allowed to collapse.
+      card.hidden=false;
+      card.classList.remove('hidden');
+      card.style.removeProperty('display');
+      card.style.removeProperty('visibility');
+      card.style.removeProperty('height');
+      card.style.removeProperty('min-height');
+      card.style.removeProperty('max-height');
+      card.style.removeProperty('overflow');
+
+      const body=card.querySelector('.stage-body');
+      if(body){
+        body.style.removeProperty('display');
+        body.style.removeProperty('visibility');
+        body.style.removeProperty('height');
+        body.style.removeProperty('min-height');
+        body.style.removeProperty('max-height');
+        body.style.removeProperty('overflow');
+      }
+
+      // Full prompts default to collapsed on mobile and must never reserve viewport-height space.
+      card.querySelectorAll('.text-prompt-details').forEach(details=>{
+        details.open=false;
+        details.style.removeProperty('height');
+        details.style.removeProperty('min-height');
+        details.style.removeProperty('max-height');
+        const summary=details.querySelector('summary');
+        if(summary)summary.textContent='View Full Prompt';
+      });
+      card.querySelectorAll('.text-video-prompt').forEach(field=>{
+        field.style.removeProperty('height');
+        field.style.removeProperty('min-height');
+        field.style.removeProperty('max-height');
+      });
+    });
+    return cards.length;
+  }
   function sameIdentity(a,b){
     return !!a&&!!b&&String(a.topic||'').trim()===String(b.topic||'').trim()&&
       String(a.format||'shorts')===String(b.format||'shorts')&&
@@ -41,11 +95,7 @@
     return candidates[0]||core||null;
   }
   function collapseFullPrompts(){
-    document.querySelectorAll('.text-prompt-details').forEach(details=>{
-      details.open=false;
-      const summary=details.querySelector('summary');
-      if(summary)summary.textContent='View Full Prompt';
-    });
+    normalizePipelineLayout();
   }
   function notify(message){
     const toast=document.getElementById('toast');
@@ -56,13 +106,26 @@
     notify.t=setTimeout(()=>toast.classList.remove('show'),2600);
   }
   function check(){
-    collapseFullPrompts();
+    normalizePipelineLayout();
     if(recovering)return;
     const saved=bestSavedState();
     const need=expected(saved);
     if(!need)return;
     const live=liveCount();
-    if(live===need)return;
+    const visible=visibleCardCount();
+
+    // If all cards exist but some were accidentally hidden or stretched by stale mobile UI state,
+    // normalizePipelineLayout() fixes the layout without rebuilding or touching prompt data.
+    if(live===need&&visibleCardCount()===need){
+      return;
+    }
+    if(live===need&&visible<need){
+      normalizePipelineLayout();
+      if(visibleCardCount()===need){
+        notify('✅ Production layout restored · '+need+'/'+need+' stages visible');
+        return;
+      }
+    }
     if(live>need)return;
     if(attempts>=2){
       notify('Pipeline display is incomplete. Reload NER Studio once; saved project data is protected.');
@@ -98,5 +161,5 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(check,140);});
   window.addEventListener('ld:production-built',()=>setTimeout(()=>{collapseFullPrompts();},40));
 
-  window.LDPipelineIntegrity=Object.freeze({check,liveCount,bestSavedState});
+  window.LDPipelineIntegrity=Object.freeze({check,liveCount,visibleCardCount,normalizePipelineLayout,bestSavedState});
 })();
