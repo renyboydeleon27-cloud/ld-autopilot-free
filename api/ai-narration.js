@@ -364,6 +364,15 @@ STAGE ROLE LOCK — SHORTS P1-P14 — EVENT-ADAPTIVE V2:
 - AFTERMATH MOMENTUM: after peak impact, keep the story moving through distinct verified consequences, rescue, survival, recovery, or legacy instead of repeatedly describing destruction.
 - P14 is the historical payoff: use a verified consequence, significance, change, or legacy when available. Do not merely repeat the event identity, casualty count, or earlier damage unless the exact stage evidence leaves no stronger supported close.
 - Final continuity audit: compare every adjacent pair. If two lines could be summarized by the same factual sentence or feel interchangeable, rewrite the later one using its own stage evidence.
+- FULL-STORY FINAL POLISH V2.3: after drafting all requested stages, silently read the complete narration once from the first spoken stage through P14 as one documentary story before returning JSON.
+- STORY ARC AUDIT: confirm the full sequence has clear forward movement from setup/build-up through trigger/impact and then distinct aftermath/response/recovery/payoff where supported. Do not manufacture a missing phase merely to complete the arc.
+- TRANSITION AUDIT: inspect every adjacent pair for abrupt topic resets, encyclopedia-style restarts, duplicated setup, or weak handoffs. Rewrite only with facts already assigned to the affected stage.
+- ESCALATION AUDIT: reserve the strongest active language for the verified trigger/peak-impact area. Earlier setup must not sound more catastrophic than the supported impact, and later recovery must not falsely re-escalate the event.
+- RHYTHM AUDIT: vary sentence openings and sentence shape naturally across the full story while preserving evidence. Avoid a mechanical sequence of repeated "The...", "As...", "When...", or place-name openings.
+- AFTERMATH AUDIT: after peak impact, each line must add a distinct supported consequence, rescue, survival/relief, recovery, or legacy beat rather than repeatedly describing destruction.
+- ENDING PAYOFF AUDIT: P14 should feel like a factual historical close using its own verified evidence. Do not turn it into a CTA; the separate ENDING_CTA remains outside P1-P14.
+- MINIMAL-REWRITE RULE: if a line already passes evidence, panel match, continuity, timing, and rhythm checks, keep it. Polish only lines that materially improve the complete story.
+- FINAL SAFETY PASS: story polish may improve ordering, wording, handoff, and rhythm, but must never introduce a fact absent from that stage's evidence, borrow a neighbor fact, or weaken any explicit uncertainty/safety restriction.
 - If a stage has sparse evidence, prefer one short, strong, natural sentence. Never borrow a fact from another stage to make the line fuller.
 
 FINAL VIDEO-FLOW NARRATION QUALITY LOCK — LIVING DISASTER BOOK:
