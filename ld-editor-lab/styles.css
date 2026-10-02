@@ -58,3 +58,11 @@ button,input{font:inherit}.app{width:min(1120px,100%);margin:auto;padding:18px 1
 .preview-caption{z-index:4}.thumbnail-overlay{z-index:3}
 
 .preview-caption{max-height:34%;overflow:hidden;white-space:normal}
+
+.smart-narration-box{background:#0b0f16;border:1px solid rgba(61,220,151,.38);border-radius:14px;padding:13px;margin:13px 0;display:grid;gap:10px}
+.smart-narration-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.smart-narration-head>div{display:grid;gap:4px}.smart-narration-head strong{font-size:12px;letter-spacing:.08em;color:var(--good)}
+.smart-narration-controls{display:grid;grid-template-columns:minmax(120px,180px) auto auto;gap:10px;align-items:end}
+.smart-narration-controls label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:800}
+.smart-narration-line{width:100%;resize:vertical;min-height:78px;background:#101620;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px;line-height:1.4}
+@media(max-width:760px){.smart-narration-controls{grid-template-columns:1fr}.smart-narration-controls .btn{width:100%}}
