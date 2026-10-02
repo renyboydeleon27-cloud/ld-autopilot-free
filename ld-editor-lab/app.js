@@ -341,7 +341,7 @@ function recordTextNarrationUsage(apiUsage){
 async function generateAutoNarrationScript(topic,targetStageSeconds={}){
   const cleanTopic=String(topic||'').trim();
   if(!cleanTopic)throw new Error('Enter the Project Topic first so Auto Cut knows which disaster to narrate.');
-  setAutoCutStatus('Step 1/3 · researching and generating fact-checked narration…');
+  setAutoCutStatus('Step 2/4 · polishing narration to the FINAL transitioned timeline…');
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),240000);
   let response;
   try{
@@ -692,7 +692,9 @@ async function runFullAutoCut(previewAfter=false){
   state.projectTopic=topic||state.projectTopic;
   state.autoCut.autoNarrator=autoNarrator;
   state.autoCut.narratorVoice=voice;
+  setAutoCutStatus('Step 1/4 · applying transitions and calculating FINAL timeline…');
   state.autoCut.plan=buildAutoCutPlan();
+  const targetStageSeconds=narrationStageTargets();
   $('narrationVol').value='1';
   $('musicVol').value='0.16';
   $('clipVol').value='0.42';
@@ -700,20 +702,21 @@ async function runFullAutoCut(previewAfter=false){
   applyVolumes();
   beginApiGeneration('FULL AUTO CUT');
   try{
-    if(!script)script=await generateAutoNarrationScript(topic);
+    if(topic&&state.autoCut.scriptMode!=='manual')script=await generateAutoNarrationScript(topic,targetStageSeconds);
+    else if(!script)script=await generateAutoNarrationScript(topic,targetStageSeconds);
     state.autoCut.script=script;
     state.autoCut.captions=buildAutoCaptions(script);
     if($('autoCutScript'))$('autoCutScript').value=script;
     if(autoNarrator){
-      setAutoCutStatus('Step 2/3 · generating AI narrator voice…');
-      const generated=await generateAiNarrator(script,voice);
+      setAutoCutStatus('Step 3/4 · generating panel-by-panel AI narrator…');
+      const generated=await generateAiNarratorStages(script,voice);
       state.autoCut.narratorSourceKey=generated.sourceKey||'';
     }
-    setAutoCutStatus('Step 3/3 · building cuts, subtitles and audio mix…');
+    setAutoCutStatus('Step 4/4 · locking exact subtitles and final audio mix…');
     recordApiUsage({feature:'auto_cut_local',featureLabel:'Auto Cut Engine',model:'Local v1',free:true});
     endApiGeneration();
     saveProject();render();refreshAutoCutUi();
-    setAutoCutStatus('ONE CLICK complete · narration + AI voice '+(autoNarrator?'ready':'text only')+' · visible cinematic transitions · HOOK no voice · ENDING voice stops at 4.5s · subtitles + SFX/music mix ready');
+    setAutoCutStatus('POLISHED complete · transitions first · final timeline '+fmt(totalDuration())+' · panel-synced narration '+(autoNarrator?'ready':'text only')+' · HOOK narrated · exact-wording subtitles · ENDING voice stops at 4.5s');
     if(previewAfter)playAll();
   }catch(e){
     endApiGeneration();saveProject();render();refreshAutoCutUi();
@@ -1356,11 +1359,22 @@ function startImageStagePreview(stage,item){
   };
   state.imagePreviewRaf=requestAnimationFrame(tick);
 }
+function playStageNarrator(stage,autoplay){
+  if(!hasStageNarration())return false;
+  const seg=state.narrationStages[stage];
+  narrationAudio.pause();
+  if(!seg?.url){narrationAudio.removeAttribute('src');return true;}
+  if(narrationAudio.src!==seg.url)narrationAudio.src=seg.url;
+  try{narrationAudio.currentTime=0;}catch{}
+  narrationAudio.playbackRate=stageNarratorRate(stage,seg);
+  narrationAudio.volume=Math.min(1,Number($('narrationVol').value)||1);
+  if(autoplay)narrationAudio.play().catch(()=>{});
+  return true;
+}
 function showStage(stage,autoplay){
   const item=state.clips.get(stage);if(!item)return;
   state.playIndex=STAGES.indexOf(stage);$('previewStage').textContent=stage;placeholder.style.display='none';
-  if(stage==='HOOK'&&state.narration){narrationAudio.pause();try{narrationAudio.currentTime=0;}catch{}}
-  if(stage==='P1'&&autoplay&&state.narration&&narrationAudio.paused)narrationAudio.play().catch(()=>{});
+  playStageNarrator(stage,autoplay);
   preview.removeAttribute('data-advancing');
   const pi=$('previewImage');
   if(isImageItem(item)){
@@ -1379,7 +1393,8 @@ function loadedSequence(){return STAGES.filter(s=>state.clips.has(s));}
 async function playAll(){
   const seq=loadedSequence();if(!seq.length)return;
   stopPlayback();state.playing=true;state.playIndex=STAGES.indexOf(seq[0]);
-  if(state.narration){narrationAudio.pause();narrationAudio.currentTime=0;}
+  narrationAudio.pause();
+  if(!hasStageNarration()&&state.narration?.url){narrationAudio.src=state.narration.url;try{narrationAudio.currentTime=0;}catch{};narrationAudio.playbackRate=1;narrationAudio.play().catch(()=>{});}
   if(state.music){musicAudio.currentTime=0;musicAudio.play().catch(()=>{});}
   applyVolumes();showStage(seq[0],true);
 }
