@@ -211,69 +211,9 @@ function place(root){
   document.querySelector('main')?.appendChild(root);
 }
 function mount(){
-  // LD publishing uses the compact titles/description section; keep saved metadata and export API.
-  if(!window.LDStoryModes?.enabled()){
-    document.getElementById('ldFinalPackage')?.remove();
-    return;
-  }
-  let root=document.getElementById('ldFinalPackage');
-  if(!root){
-    root=document.createElement('section');
-    root.id='ldFinalPackage';
-    root.className='card';
-  }
-  place(root);
-  const m=meta();
-  root.innerHTML=`
-    <div class="final-package-head">
-      <div>
-        <span class="audit-label">ONE-CLICK FINAL PACKAGE</span>
-        <strong>Archive-ready production export</strong>
-      </div>
-      <strong class="final-package-badge">Checking…</strong>
-    </div>
-    <p class="final-package-help">Available after Final Production Check passes and Finished Production DNA is saved. Includes final title, description, music credit, prompts, narration, locks, audit summary, DNA summary and API usage.</p>
-    <label>Description<textarea class="final-description" rows="4" placeholder="YouTube description"></textarea></label>
-    <label>Music credit<textarea class="final-music" rows="2" placeholder="Example: Music: War — Astronic (from Audiio)"></textarea></label>
-    <label>Upload notes<textarea class="final-notes" rows="3" placeholder="Optional upload notes, hashtags, scheduling notes, etc."></textarea></label>
-    <div class="final-package-actions">
-      <button type="button" class="primary final-package-action final-copy">📋 Copy Final Package</button>
-      <button type="button" class="ghost final-package-action final-txt">⬇ Download TXT</button>
-      <button type="button" class="ghost final-package-action final-json">⬇ Download JSON</button>
-    </div>
-    <p class="final-package-status"></p>
-  `;
-  root.querySelector('.final-description').value=m.description||defaultDescription();
-  root.querySelector('.final-music').value=m.musicCredit||'';
-  root.querySelector('.final-notes').value=m.uploadNotes||'';
-  root.querySelectorAll('textarea').forEach(x=>x.addEventListener('input',()=>{saveMeta();}));
-  root.querySelector('.final-copy').addEventListener('click',copyAll);
-  root.querySelector('.final-txt').addEventListener('click',downloadTxt);
-  root.querySelector('.final-json').addEventListener('click',downloadJson);
-  refresh();
-
-  if(!document.getElementById('ldFinalPackageStyles')){
-    const style=document.createElement('style');
-    style.id='ldFinalPackageStyles';
-    style.textContent=`
-      #ldFinalPackage{padding:14px;margin:14px 0;border:1px solid #476582}
-      .final-package-head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
-      .final-package-head strong{display:block}
-      .final-package-badge{font-size:12px}
-      .final-package-badge[data-state="pass"]{color:#65c28d}
-      .final-package-badge[data-state="warn"]{color:#f0b35f}
-      .final-package-help{font-size:12px;opacity:.8}
-      #ldFinalPackage label{display:block;margin:10px 0;font-size:12px;font-weight:700}
-      #ldFinalPackage textarea{display:block;width:100%;box-sizing:border-box;margin-top:5px}
-      .final-package-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-      .final-package-actions button{flex:1;min-width:150px}
-      .final-package-action:disabled{opacity:.45;cursor:not-allowed}
-      .final-package-status{font-size:12px;margin:10px 0 0}
-      .final-package-status[data-state="pass"]{color:#65c28d}
-      .final-package-status[data-state="warn"]{color:#f0b35f}
-    `;
-    document.head.appendChild(style);
-  }
+  // Final Package UI retired: titles and YouTube description are handled by the compact publishing section.
+  // Keep export helpers/API for compatibility, but never render the duplicate card.
+  document.getElementById('ldFinalPackage')?.remove();
 }
 function delayedMount(){setTimeout(()=>{mount();refresh();},120);}
 
