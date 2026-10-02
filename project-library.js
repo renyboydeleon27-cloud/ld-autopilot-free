@@ -184,7 +184,6 @@
     if(window.LDCore?.loadProductionState){
       window.LDCore.loadProductionState(deepClone(p.state));
       render();
-      window.dispatchEvent(new CustomEvent('ld:project-opened',{detail:{id,topic:p.state?.topic||p.name||''}}));
       setTimeout(()=>{switchingProject=false;render();},0);
     }else{
       switchingProject=false;
@@ -235,8 +234,6 @@
     localStorage.setItem(NEW_PROJECT_KEY,'1');
     setActive('');
     localStorage.removeItem(CORE_KEY);
-    window.ldNarrationApprovalState=null;
-    window.ldFinalAuditState=null;
 
     const topic=document.getElementById('topic');
     const format=document.getElementById('format');
@@ -276,8 +273,6 @@
     localStorage.removeItem(NEW_PROJECT_KEY);
     setActive('');
     localStorage.removeItem(CORE_KEY);
-    window.ldNarrationApprovalState=null;
-    window.ldFinalAuditState=null;
     return true;
   }
 
