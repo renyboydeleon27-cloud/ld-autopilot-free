@@ -44,12 +44,15 @@ function customPrompt(idea){
  var locked=window.LDVideoModes?.withLock?window.LDVideoModes.withLock(base):base;
  return window.LDProductionDNA?.polishHookPrompt?window.LDProductionDNA.polishHookPrompt(locked):locked;
 }
+var customRenderPending=false;
 function mountCustom(root){
  var wrap=document.createElement('div');wrap.className='hook-custom';
  var label=document.createElement('label');label.textContent='Describe your hook';
  var input=document.createElement('textarea');input.className='hook-custom-idea';input.rows=5;input.placeholder='Example: An adult combs their hair in front of a mirror. One quake jolt cracks the glass; the camera moves through the crack to the street impact.';
- input.value=localStorage.getItem(customKey())||'';
- input.addEventListener('input',function(){localStorage.setItem(customKey(),input.value);});
+ var draftKey=customKey();input.dataset.draftKey=draftKey;
+ input.value=localStorage.getItem(draftKey)||'';
+ input.addEventListener('input',function(){localStorage.setItem(draftKey,input.value);});
+ input.addEventListener('blur',function(){if(customRenderPending){customRenderPending=false;schedule();}});
  label.appendChild(input);wrap.appendChild(label);
  var button=document.createElement('button');button.type='button';button.className='ghost';button.textContent='Use my hook idea · build prompt';
  button.addEventListener('click',function(){
@@ -101,6 +104,13 @@ function addStyles(){
   document.head.appendChild(s);
 }
 function render(){
+  // Replacing the focused textarea closes the Android keyboard and loses selection.
+  // Defer background refreshes until editing ends; context changes still render normally.
+  var editing=document.activeElement;
+  if(editing&&editing.matches('.hook-custom-idea')&&editing.dataset.draftKey===customKey()){
+    customRenderPending=true;return;
+  }
+  customRenderPending=false;
   if(window.LDStoryModes?.enabled()){document.getElementById('hookChoiceSystem')?.remove();return;}
   addStyles();var old=document.getElementById('locustLaundryHook');if(old)old.remove();
   var h=card();if(!h){var x=document.getElementById('hookChoiceSystem');if(x)x.remove();return;}
