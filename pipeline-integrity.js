@@ -3,6 +3,18 @@
    It never rewrites existing saved stage fields; missing stage shells are recreated
    by LDCore.loadProductionState using the best saved copy of the same project. */
 (()=>{'use strict';
+  const rescueStyle=document.createElement('style');
+  rescueStyle.id='ldPipelineLayoutRescue';
+  rescueStyle.textContent=`
+    #pipelineSection{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;contain:none!important}
+    #stages.stage-grid{display:flex!important;flex-direction:column!important;gap:10px!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;contain:none!important}
+    #stages>.stage-card{display:block!important;position:relative!important;visibility:visible!important;opacity:1!important;transform:none!important;float:none!important;inset:auto!important;width:auto!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important}
+    #stages>.stage-card>.stage-top{display:flex!important;position:relative!important;visibility:visible!important;opacity:1!important;transform:none!important;height:auto!important;min-height:0!important;max-height:none!important}
+    #stages>.stage-card>.stage-body:not(.hidden){display:block!important;position:relative!important;visibility:visible!important;opacity:1!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
+    #stages>.stage-card>.stage-body.hidden{display:none!important}
+    #stages>.stage-card .text-prompt-details:not([open]) .text-video-prompt{display:none!important}
+  `;
+  document.head.appendChild(rescueStyle);
   const CORE_KEY='ld-autopilot-free-v1';
   const LIB_KEY='ld-autopilot-free-project-library-v1';
   const ACTIVE_KEY='ld-autopilot-free-active-project';
@@ -29,7 +41,10 @@
   function visibleCardCount(){
     return liveCards().filter(card=>{
       const css=getComputedStyle(card);
-      return !card.hidden&&!card.classList.contains('hidden')&&css.display!=='none'&&css.visibility!=='hidden';
+      const r=card.getBoundingClientRect();
+      const head=card.querySelector('.stage-top')?.getBoundingClientRect();
+      return !card.hidden&&!card.classList.contains('hidden')&&css.display!=='none'&&css.visibility!=='hidden'&&
+        Number(css.opacity||1)>0&&r.width>20&&r.height>20&&(!head||head.height>12);
     }).length;
   }
   function normalizePipelineLayout(){
@@ -37,15 +52,23 @@
     if(!root)return 0;
     root.hidden=false;
     root.classList.remove('hidden');
-    for(const p of ['display','visibility','height','min-height','max-height','overflow']){
+    for(const p of ['display','visibility','height','min-height','max-height','overflow','position','transform','opacity','contain']){
       root.style.removeProperty(p);
     }
     const cards=liveCards();
     cards.forEach(card=>{
       card.hidden=false;
       card.classList.remove('hidden');
-      for(const p of ['display','visibility','height','min-height','max-height','overflow','position','top','bottom']){
+      for(const p of ['display','visibility','height','min-height','max-height','overflow','position','top','bottom','left','right','transform','opacity','float']){
         card.style.removeProperty(p);
+      }
+      const top=card.querySelector('.stage-top');
+      if(top){
+        top.hidden=false;
+        top.classList.remove('hidden');
+        for(const p of ['display','visibility','height','min-height','max-height','position','top','bottom','left','right','transform','opacity']){
+          top.style.removeProperty(p);
+        }
       }
       const body=card.querySelector('.stage-body');
       if(body){
@@ -121,11 +144,14 @@
   function layoutLooksBroken(){
     const cards=liveCards();
     if(cards.length<2)return cards.length===1;
+    const root=document.getElementById('stages')?.getBoundingClientRect();
     const first=cards[0].getBoundingClientRect();
     const second=cards[1].getBoundingClientRect();
     const hugeFirst=first.height>Math.max(620,(window.innerHeight||800)*0.7);
     const abnormalGap=second.top-first.bottom>120;
-    return hugeFirst||abnormalGap;
+    const detached=!!root&&(first.top-root.top>100);
+    const zeroish=first.height<20||second.height<20||first.width<20||second.width<20;
+    return hugeFirst||abnormalGap||detached||zeroish;
   }
   function rebuildFullPipeline(state,need){
     if(recovering||!window.LDCore?.loadProductionState||!state)return false;
@@ -189,8 +215,8 @@
     }
   }
 
-  window.addEventListener('load',()=>setTimeout(check,350));
-  window.addEventListener('pageshow',()=>setTimeout(check,120));
+  window.addEventListener('load',()=>{[80,220,500,1100,2200].forEach(ms=>setTimeout(check,ms));});
+  window.addEventListener('pageshow',()=>{[60,180,450,900].forEach(ms=>setTimeout(check,ms));});
   window.addEventListener('ld:project-opened',()=>setTimeout(check,80));
   window.addEventListener('ld:pipeline-partial',()=>setTimeout(check,30));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(check,100);});
