@@ -256,7 +256,22 @@
       return;
     }
 
-    // Rebuilding narration invalidates the previous approval until the new version is reviewed.
+    // APPROVAL PROTECTION V2.4:
+    // An approved narration is immutable until the user explicitly confirms a rebuild.
+    // This prevents an accidental Smart Continue click from clearing a reviewed script.
+    if(btn.dataset.mode==='rebuild'&&isApproved()){
+      const confirmed=window.confirm(
+        'This narration is APPROVED and protected. Rebuild it with Smart Narration? The current approved narration will be backed up first and approval will be cleared only after you confirm.'
+      );
+      if(!confirmed){
+        status('✅ APPROVED NARRATION KEPT · No changes were made.','pass');
+        refreshApprovalUi();
+        return;
+      }
+    }
+
+    // Save the currently reviewed script before any approved rebuild, then invalidate approval.
+    if(isApproved())saveBackup();
     clearApproval();
     btn.dataset.generated='0';
 
