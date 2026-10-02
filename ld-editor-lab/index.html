@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0d12">
   <title>LD Editor Lab</title>
-  <link rel="stylesheet" href="./styles.css?v=0.5.4">
+  <link rel="stylesheet" href="./styles.css?v=0.5.5">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.5.4</span></h1>
+        <h1>LD Editor Lab <span>v0.5.5</span></h1>
         <p class="sub">Standalone local video assembler. Imported media and project state are saved locally. Final renders save directly to your phone.</p>
       </div>
       <span class="pill safe">LOCAL · AUTO-SAVE · SELF-UPDATE</span>
@@ -72,6 +72,11 @@
           <span id="thumbnailMeta" class="meta">No thumbnail loaded</span>
         </div>
       </div>
+      <div class="project-topic-box">
+        <label for="projectTopic">Project Topic <span class="muted">— enter once; saved with this project</span></label>
+        <input id="projectTopic" class="topic-input" type="text" maxlength="240" placeholder="Example: Wellington Avalanche — Washington, USA — 1910">
+        <span class="meta">If narration is blank, ONE-CLICK FULL AUTO CUT will research this topic and generate fact-checked P1–P14 narration automatically.</span>
+      </div>
       <div class="narrator-auto-box">
         <div>
           <label class="check narrator-toggle"><input id="autoNarrator" type="checkbox" checked> Auto-generate AI narrator with FULL AUTO CUT</label>
@@ -86,10 +91,10 @@
           </select>
         </label>
       </div>
-      <label class="script-label" for="autoCutScript">Final narration / subtitle script <span class="muted">— AI voice is generated automatically; HOOK is excluded</span></label>
-      <textarea id="autoCutScript" class="script-box" rows="5" placeholder="Paste final narration here. Stage labels like P1: ... P2: ... ENDING: ... are supported."></textarea>
+      <label class="script-label" for="autoCutScript">Final narration / subtitle script <span class="muted">— optional; leave blank for automatic narration generation</span></label>
+      <textarea id="autoCutScript" class="script-box" rows="5" placeholder="Optional. Leave blank and ONE-CLICK FULL AUTO CUT will generate P1–P14 + ENDING narration from Project Topic."></textarea>
       <div class="export-actions">
-        <button id="autoCutBtn" class="btn primary" type="button" disabled>⚡ FULL AUTO CUT + AI NARRATOR</button>
+        <button id="autoCutBtn" class="btn primary" type="button" disabled>⚡ ONE-CLICK FULL AUTO CUT</button>
         <button id="previewAutoCutBtn" class="btn ghost" type="button" disabled>▶ One-Click Build & Preview</button>
       </div>
       <p id="autoCutStatus" class="status">Checking required stages…</p>
@@ -225,6 +230,6 @@
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.5.4"></script>
+  <script src="./app.js?v=0.5.5"></script>
 </body>
 </html>
