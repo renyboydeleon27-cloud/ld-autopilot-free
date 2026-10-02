@@ -69,6 +69,50 @@
   // state and compiled narration without duplicating the engine.
   section.hidden=true;
 
+  // Smart Narration is visually part of the production sequence, but it stays
+  // outside app.js's normal .stage-card persistence contract because normal
+  // stages require image/flow fields. Its Done state is tied directly to the
+  // Smart Narration approval signature instead.
+  function syncNarrationStageZero(){
+    const stage=document.getElementById('ldNarrationStageZero');
+    if(!stage)return;
+
+    // Prevent the generic stage collector from treating NARRATION like a visual stage.
+    stage.classList.remove('stage-card');
+    stage.classList.add('card','narration-stage-zero-card');
+    stage.dataset.stage='NARRATION';
+
+    const header=stage.firstElementChild;
+    if(!header)return;
+
+    let right=document.getElementById('ldNarrationStageRight');
+    if(!right){
+      const badge=document.getElementById('ldNarrationStageBadge');
+      right=document.createElement('div');
+      right.id='ldNarrationStageRight';
+      right.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:8px;white-space:nowrap';
+      if(badge){
+        badge.parentNode?.insertBefore(right,badge);
+        right.appendChild(badge);
+      }else{
+        header.appendChild(right);
+      }
+      const label=document.createElement('label');
+      label.className='check';
+      label.innerHTML='<input id="ldNarrationDoneToggle" type="checkbox"/> Done';
+      right.appendChild(label);
+    }
+
+    const toggle=document.getElementById('ldNarrationDoneToggle');
+    const approved=!!window.LDNarrationApproval?.isApproved?.();
+    if(toggle){
+      toggle.checked=approved;
+      toggle.disabled=!approved;
+      toggle.title=approved?'Smart Narration approved':'Approve Smart Narration first';
+    }
+    stage.dataset.done=approved?'1':'0';
+  }
+
   function refresh(){
     const rows=getNarration();
     const ta=document.getElementById('masterNarrationText');
@@ -86,6 +130,7 @@
     const notice=document.getElementById('masterNarrationNotice');
     if(notice)notice.textContent=(affected.length?'Production instructions excluded from export: '+affected.join(', ')+'. Original fields unchanged. ':'')+(missing.length?'INCOMPLETE NARRATION — missing or prompt-only fields: '+missing.join(', ')+'. Restore spoken narration before voice generation.':'');
     if(count)count.textContent=`${rows.length} segment${rows.length===1?'':'s'}`;
+    syncNarrationStageZero();
   }
 
   document.getElementById('copyMasterNarrationBtn')?.addEventListener('click',()=>copy(compiled(false)));
@@ -94,10 +139,13 @@
   document.getElementById('selectMasterNarrationBtn')?.addEventListener('click',()=>selectText(compiled(false)));
   document.getElementById('masterNarrationText')?.addEventListener('blur',refresh);
   window.addEventListener('ld:production-built',refresh);
+  window.addEventListener('ld:narration-approval-changed',()=>setTimeout(syncNarrationStageZero,0));
+  window.addEventListener('ld:narration-smart-complete',()=>setTimeout(syncNarrationStageZero,0));
 
   document.addEventListener('input',e=>{if(e.target.closest('.narration'))refresh();});
   document.addEventListener('click',e=>{if(e.target.closest('#buildBtn,#generateAllBtn,.generate-template-btn'))[80,220,500].forEach(ms=>setTimeout(refresh,ms));},true);
-  new MutationObserver(()=>setTimeout(refresh,80)).observe(stages,{childList:true,subtree:true});
-  window.addEventListener('load',()=>setTimeout(refresh,500));
+  new MutationObserver(()=>{setTimeout(refresh,80);setTimeout(syncNarrationStageZero,0);}).observe(stages,{childList:true,subtree:true});
+  window.addEventListener('load',()=>{setTimeout(refresh,500);setTimeout(syncNarrationStageZero,520);});
   setTimeout(refresh,250);
+  setTimeout(syncNarrationStageZero,320);
 })();
