@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='0.5.4';
+const VERSION='0.5.5';
 // Keep the v0.2 key so existing projects migrate in place after APK update.
 const STORE='ld-editor-lab-project-v0.2';
 const EXPORT_DB='ld-editor-lab-export-db-v1';
@@ -32,6 +32,7 @@ const state={
   activeGenerationId:'',
   activeGenerationLabel:'',
   activeGenerationCostUsd:0,
+  projectTopic:'',
   autoCut:{
     enabled:false,
     builtAt:'',
@@ -785,6 +786,7 @@ function projectPayload(){
   }
   return {
     version:VERSION,clips,
+    projectTopic:state.projectTopic||'',
     narration:serialItem(state.narration),
     music:serialItem(state.music),
     thumbnail:state.thumbnail?{name:state.thumbnail.name||'thumbnail',mime:state.thumbnail.mime||'image/jpeg',size:Number(state.thumbnail.size)||0,browserStored:true}:null,
@@ -826,6 +828,8 @@ function restoreProject(){
   if(data.narration?.native&&data.narration.url)state.narration=data.narration;
   if(data.music?.native&&data.music.url)state.music=data.music;
   if(data.lastExport&&(data.lastExport.uri||data.lastExport.browserStored))state.lastExport=data.lastExport;
+  state.projectTopic=String(data.projectTopic||'');
+  if($('projectTopic'))$('projectTopic').value=state.projectTopic;
   state.apiTracker=normalizeApiTracker(data.apiTracker);
   state.autoCut=normalizeAutoCut(data.autoCut);
   if($('autoCutScript'))$('autoCutScript').value=state.autoCut.script||'';
@@ -1381,10 +1385,11 @@ $('cancelExportBtn').onclick=()=>{state.exportAbort=true;$('cancelExportBtn').di
 $('clearBtn').onclick=()=>{
   if(!confirm('Clear all clips, narrator and music saved in LD Editor Lab?'))return;
   stopPlayback();for(const x of state.clips.values())releaseItem(x,false);
-  state.clips.clear();state.narration=null;state.music=null;state.lastExport=null;
+  state.clips.clear();state.narration=null;state.music=null;state.lastExport=null;state.projectTopic='';
   if(state.thumbnail?.objectUrl&&state.thumbnail.url)URL.revokeObjectURL(state.thumbnail.url);
   state.thumbnail=null;clearProjectThumbnail().catch(()=>{});clearEndingImage().catch(()=>{});clearGeneratedNarrator().catch(()=>{});
   state.autoCut=normalizeAutoCut(null);
+  if($('projectTopic'))$('projectTopic').value='';
   if($('autoCutScript'))$('autoCutScript').value='';
   state.apiTracker.projectCostUsd=0;
   state.apiTracker.lastGenerationCostUsd=0;
