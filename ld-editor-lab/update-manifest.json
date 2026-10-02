@@ -1,6 +1,6 @@
 {
   "version": "0.6.0",
-  "notes": "Major Auto Cut timing fix: transitions are applied before narration. Final timeline is then used to polish HOOK/P1-P14 narration, generate persistent panel-by-panel AI voice, keep narration synced to every stage, and render exact-wording subtitles. Transition trimming now shortens the final timeline before narration is generated.",
+  "notes": "Polished Auto Cut pipeline: transitions are applied first, final timeline is calculated, then narration is generated panel-by-panel to match each stage. HOOK narration is included, subtitles use the exact same narration wording, and ENDING voice still stops at 4.5s.",
   "files": [
     {
       "name": "index.html",
