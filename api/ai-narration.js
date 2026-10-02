@@ -346,6 +346,12 @@ STAGE ROLE LOCK — SHORTS P1-P14 — EVENT-ADAPTIVE V2:
 - The role sequence is descriptive, not a license to invent facts. Skip or combine unsupported roles rather than manufacturing details.
 - Every panel owns ONE primary narrative job. Adjacent panels must advance time, cause/effect, location, human consequence, response, or historical meaning.
 - Use the previous and next requested stage as continuity context. A line should naturally hand the story forward without previewing facts assigned to the next stage.
+- NEIGHBOR AWARENESS V2.1: before drafting each requested stage, silently inspect the immediately previous and next requested stage evidence plus their APPROVED PRODUCTION STAGE CONTEXT. Use neighbors only to understand continuity, contrast, and handoff; they are NEVER factual sources for the current stage.
+- CURRENT-PANEL PRIORITY: the current stage's own STAGE EVIDENCE and APPROVED PRODUCTION STAGE CONTEXT always win. Narrate the action, place, consequence, or story beat visible/assigned NOW; do not describe a neighbor merely because it is more dramatic.
+- NO EARLY REVEAL: do not state the next panel's primary fact, impact, casualty, rescue, or historical payoff before its assigned stage.
+- NO BACKWARD ECHO: do not restate the previous panel's primary fact unless a few neutral connective words are needed for grammar; the new sentence must immediately advance to the current panel's distinct evidence.
+- VISUAL HANDOFF: when production context establishes a supported visual transition between adjacent panels, phrase the current line so it enters from the previous beat and exits cleanly toward the next without inventing motion, timing, reactions, or causality.
+- NEIGHBOR CONFLICT RULE: if a neighbor's production context conflicts with the current stage evidence, ignore the conflicting neighbor detail and stay inside the current stage evidence boundary.
 - HARD NO-REUSE RULE: assign each important fact or idea to one stage. Once used as a stage's main point, do not restate or paraphrase it as the main point of an adjacent stage.
 - REPETITION KILLER: adjacent lines should not begin with the same subject pattern or rely on the same main verb when a natural alternative is possible without changing factual meaning.
 - CAUSE/EFFECT BRIDGE: when two adjacent stage-evidence sets explicitly support a causal sequence, connect them naturally. Never infer a causal link that the evidence does not establish.
