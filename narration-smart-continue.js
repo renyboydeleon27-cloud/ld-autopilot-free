@@ -210,6 +210,33 @@
     if(block&&block!==controls)block.remove();
   });
   notice?.parentNode?.insertBefore(controls,notice.nextSibling);
+
+  // UNIFIED PIPELINE UI V1:
+  // Present Smart Narration as Stage 0 directly before HOOK while preserving
+  // the existing narration engine, approval state, backup and controls.
+  function mountNarrationStageZero(){
+    const firstStage=stages.querySelector('.stage-card');
+    if(!firstStage)return;
+    let stage=document.getElementById('ldNarrationStageZero');
+    if(!stage){
+      stage=document.createElement('section');
+      stage.id='ldNarrationStageZero';
+      stage.className='stage-card';
+      stage.dataset.stage='NARRATION';
+      stage.style.marginBottom='14px';
+      stage.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">'+
+          '<div><span class="stage-name">NARRATION</span><h3 class="stage-title" style="margin:8px 0 4px">Smart Narration</h3>'+
+          '<p class="scene-role" style="margin:0">Stage 0 · Build, review and approve the complete voice-over before HOOK production.</p></div>'+
+          '<span id="ldNarrationStageBadge" style="white-space:nowrap;font-weight:800">NOT APPROVED</span>'+
+        '</div>'+
+        '<div id="ldNarrationStageBody" style="margin-top:12px"></div>';
+      stages.insertBefore(stage,firstStage);
+    }
+    const body=stage.querySelector('#ldNarrationStageBody');
+    if(body&&controls.parentNode!==body)body.appendChild(controls);
+  }
+  mountNarrationStageZero();
   dedupeNarrationControls();
   [80,250,700,1500].forEach(ms=>setTimeout(dedupeNarrationControls,ms));
   new MutationObserver(()=>dedupeNarrationControls()).observe(masterCard,{childList:true,subtree:true});
@@ -219,7 +246,18 @@
 
   function refreshApprovalUi(){
     if(!btn)return;
-    if(isApproved()){
+    const stageZero=document.getElementById('ldNarrationStageZero');
+    const badge=document.getElementById('ldNarrationStageBadge');
+    const approvedNow=isApproved();
+    if(stageZero){
+      stageZero.style.borderColor=approvedNow?'#2fa84f':'';
+      stageZero.dataset.approved=approvedNow?'1':'0';
+    }
+    if(badge){
+      badge.textContent=approvedNow?'✓ APPROVED':'NOT APPROVED';
+      badge.style.color=approvedNow?'#7ee787':'';
+    }
+    if(approvedNow){
       btn.dataset.mode='rebuild';
       btn.textContent='🎙️ REBUILD NARRATION';
       status('✅ SMART NARRATION APPROVED · Final Audit is now unlocked.','pass');
