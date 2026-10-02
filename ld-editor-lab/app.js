@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='0.5.3';
+const VERSION='0.5.4';
 // Keep the v0.2 key so existing projects migrate in place after APK update.
 const STORE='ld-editor-lab-project-v0.2';
 const EXPORT_DB='ld-editor-lab-export-db-v1';
@@ -433,22 +433,35 @@ async function generateAiNarrator(script,voice){
 }
 
 function setAutoCutStatus(message){const el=$('autoCutStatus');if(el)el.textContent=message;}
+function missingStageNames(){return STAGES.filter(s=>!state.clips.has(s));}
+function refreshEndingPhotoUi(){
+  const el=$('endingPhotoMeta');if(!el)return;
+  const item=state.clips.get('ENDING');
+  if(item&&isImageItem(item)){
+    el.textContent='✓ '+(item.name||'ENDING photo')+' · 5.0s ready';
+    el.classList.add('ready');
+  }else{
+    el.textContent='Missing ENDING photo · required before FULL AUTO CUT';
+    el.classList.remove('ready');
+  }
+}
 function refreshAutoCutUi(){
   const script=$('autoCutScript');if(script&&document.activeElement!==script)script.value=state.autoCut?.script||'';
-  const ready=STAGES.every(s=>state.clips.has(s));
+  const missing=missingStageNames(),ready=missing.length===0;
   const btn=$('autoCutBtn'),previewBtn=$('previewAutoCutBtn');
   if(btn)btn.disabled=!ready;
   if(previewBtn)previewBtn.disabled=!ready;
-  syncNarratorControls();
+  syncNarratorControls();refreshEndingPhotoUi();
   if(state.autoCut?.enabled){
     const captionStages=Object.keys(state.autoCut.captions||{}).length;
     setAutoCutStatus('Auto Cut ready · ENDING locked 5.0s · thumbnail hold 4.5–5.0s · narrator off last 0.5s · '+captionStages+' caption stage'+(captionStages===1?'':'s')+' · local engine FREE');
   }else{
-    setAutoCutStatus(ready?'Ready for one-tap Auto Cut.':'Load HOOK, P1–P14 and ENDING first.');
+    setAutoCutStatus(ready?'Ready for one-tap Auto Cut.':'Missing stage'+(missing.length>1?'s':'')+': '+missing.join(', ')+'. Add '+(missing.length===1&&missing[0]==='ENDING'?'the ENDING photo':'all required stages')+' first.');
   }
 }
 async function runFullAutoCut(previewAfter=false){
-  if(STAGES.some(s=>!state.clips.has(s)))return alert('Load HOOK, P1–P14 and ENDING first.');
+  const missing=missingStageNames();
+  if(missing.length)return alert('Missing stage'+(missing.length>1?'s':'')+': '+missing.join(', ')+'. '+(missing.length===1&&missing[0]==='ENDING'?'Import the ENDING photo first.':'Load all required stages first.'));
   const script=String($('autoCutScript')?$('autoCutScript').value:state.autoCut.script||'').trim();
   const autoNarrator=$('autoNarrator')?$('autoNarrator').checked:true;
   const voice=String($('narratorVoice')?.value||state.autoCut.narratorVoice||'cedar');
@@ -1353,6 +1366,7 @@ $('clipInput').addEventListener('change',e=>addBrowserFiles(e.target.files));
 if($('endingImageInput'))$('endingImageInput').addEventListener('change',()=>addSpecificBrowser('ENDING',$('endingImageInput').files?.[0]));
 $('narrationInput').addEventListener('change',()=>setBrowserAudio($('narrationInput'),'narration'));
 $('musicInput').addEventListener('change',()=>setBrowserAudio($('musicInput'),'music'));
+if($('endingPhotoPickerBtn'))$('endingPhotoPickerBtn').onclick=()=>openPicker('stage:ENDING',false);
 if($('thumbnailPickerBtn'))$('thumbnailPickerBtn').onclick=()=>$('thumbnailInput')?.click();
 if($('thumbnailInput'))$('thumbnailInput').addEventListener('change',()=>setThumbnailFile($('thumbnailInput').files?.[0]));
 ['narrationVol','musicVol','clipVol','autoDuck'].forEach(id=>$(id).addEventListener('input',()=>{applyVolumes();saveProject();}));

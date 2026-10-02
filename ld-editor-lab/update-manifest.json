@@ -1,6 +1,6 @@
 {
-  "version": "0.5.3",
-  "notes": "Adds one-click OpenAI AI narrator inside FULL AUTO CUT. Narration begins after the HOOK, is saved persistently, reuses identical generations without new cost, and reports narrator usage/cost to the API Credit Tracker.",
+  "version": "0.5.4",
+  "notes": "Clarifies FULL AUTO CUT readiness: adds a dedicated Import ENDING photo button beside the ending lock and shows the exact missing stage name instead of only 15/16.",
   "files": [
     {
       "name": "index.html",

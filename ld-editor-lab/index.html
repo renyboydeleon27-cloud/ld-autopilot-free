@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b0d12">
   <title>LD Editor Lab</title>
-  <link rel="stylesheet" href="./styles.css?v=0.5.3">
+  <link rel="stylesheet" href="./styles.css?v=0.5.4">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
         <p class="eyebrow">LIVING DISASTER BOOK · EXPERIMENTAL</p>
-        <h1>LD Editor Lab <span>v0.5.3</span></h1>
+        <h1>LD Editor Lab <span>v0.5.4</span></h1>
         <p class="sub">Standalone local video assembler. Imported media and project state are saved locally. Final renders save directly to your phone.</p>
       </div>
       <span class="pill safe">LOCAL · AUTO-SAVE · SELF-UPDATE</span>
@@ -62,6 +62,10 @@
       <div class="ending-lock-box">
         <strong>ENDING FORMAT LOCK</strong>
         <span>ENDING photo holds 0.0–5.0s · narration allowed only 0.0–4.5s · thumbnail replaces it at 4.5–5.0s · no narration in final 0.5s</span>
+        <div class="ending-import-row">
+          <button id="endingPhotoPickerBtn" class="btn primary" type="button">Import ENDING photo</button>
+          <span id="endingPhotoMeta" class="meta ending-photo-meta">Missing ENDING photo · required before FULL AUTO CUT</span>
+        </div>
         <div class="thumbnail-row">
           <button id="thumbnailPickerBtn" class="btn ghost" type="button">Import final thumbnail</button>
           <input id="thumbnailInput" type="file" accept="image/*" hidden>
@@ -88,7 +92,7 @@
         <button id="autoCutBtn" class="btn primary" type="button" disabled>⚡ FULL AUTO CUT + AI NARRATOR</button>
         <button id="previewAutoCutBtn" class="btn ghost" type="button" disabled>▶ One-Click Build & Preview</button>
       </div>
-      <p id="autoCutStatus" class="status">Load HOOK, P1–P14 and ENDING first.</p>
+      <p id="autoCutStatus" class="status">Checking required stages…</p>
     </section>
 
     <section class="stats">
@@ -221,6 +225,6 @@
   <audio id="narrationAudio" preload="metadata"></audio>
   <audio id="musicAudio" preload="metadata" loop></audio>
   <canvas id="renderCanvas" width="720" height="1280" hidden></canvas>
-  <script src="./app.js?v=0.5.3"></script>
+  <script src="./app.js?v=0.5.4"></script>
 </body>
 </html>
