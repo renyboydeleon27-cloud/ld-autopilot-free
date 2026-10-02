@@ -49,13 +49,23 @@
     });
     return hash([topic(),format(),hookIsSilent(stageCard('HOOK'))?'silent':'vo',...parts].join('\u241e'));
   }
+  function approvalMatches(a){
+    return !!a&&a.topic===topic()&&a.format===format()&&a.signature===narrationSignature()&&narrationReady();
+  }
   function readApproval(){
-    if(window.ldNarrationApprovalState&&typeof window.ldNarrationApprovalState==='object')return window.ldNarrationApprovalState;
-    try{return JSON.parse(localStorage.getItem(approvalKey())||'null');}catch{return null;}
+    const projectState=window.ldNarrationApprovalState;
+    if(approvalMatches(projectState))return projectState;
+    try{
+      const localState=JSON.parse(localStorage.getItem(approvalKey())||'null');
+      if(approvalMatches(localState)){
+        window.ldNarrationApprovalState=localState;
+        return localState;
+      }
+      return projectState||localState;
+    }catch{return projectState||null;}
   }
   function isApproved(){
-    const a=readApproval();
-    return !!a&&a.topic===topic()&&a.format===format()&&a.signature===narrationSignature()&&narrationReady();
+    return approvalMatches(readApproval());
   }
   function emitApproval(){
     window.dispatchEvent(new CustomEvent('ld:narration-approval-changed',{detail:{approved:isApproved(),signature:narrationSignature()}}));
