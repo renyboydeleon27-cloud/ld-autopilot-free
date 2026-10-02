@@ -4,6 +4,11 @@
    verified narration API using the exact current visual/story context. ENDING
    uses the locked Living Disaster Book CTA. */
 (()=>{'use strict';
+  // Idempotent install: NER Studio/PWA refreshes must never create duplicate narration controls.
+  document.querySelectorAll('[data-ld-narration-smart-controls="1"]').forEach((el,i)=>{if(i>0)el.remove();});
+  if(window.__LD_NARRATION_SMART_CONTINUE_INSTALLED__)return;
+  window.__LD_NARRATION_SMART_CONTINUE_INSTALLED__=true;
+
   const stages=document.getElementById('stages');
   const masterCard=document.getElementById('masterNarrationCard');
   if(!stages||!masterCard)return;
@@ -117,6 +122,7 @@
 
   const controls=document.createElement('div');
   controls.className='field-block';
+  controls.dataset.ldNarrationSmartControls='1';
   controls.style.marginTop='12px';
   controls.innerHTML=
     '<div class="field-head"><label>Final narration Smart Continue</label></div>'+
@@ -126,6 +132,11 @@
     '<p id="ldNarrationSmartStatus" class="library-sub" role="status" style="margin-top:8px">Ready.</p>';
 
   const notice=document.getElementById('masterNarrationNotice');
+  // Clean any duplicate controls left by an older cached script before mounting the new one.
+  [...masterCard.querySelectorAll('#ldNarrationSmartBtn')].forEach(btn=>{
+    const block=btn.closest('.field-block');
+    if(block&&block!==controls)block.remove();
+  });
   notice?.parentNode?.insertBefore(controls,notice.nextSibling);
 
   const btn=document.getElementById('ldNarrationSmartBtn');
