@@ -70,10 +70,14 @@
   function emitApproval(){
     window.dispatchEvent(new CustomEvent('ld:narration-approval-changed',{detail:{approved:isApproved(),signature:narrationSignature()}}));
   }
+  function persistApprovalNow(){
+    try{window.LDCore?.saveCurrent?.();}catch{}
+    try{window.LDProjectLibrary?.flushCurrent?.();}catch{}
+  }
   function clearApproval(){
     window.ldNarrationApprovalState=null;
     try{localStorage.removeItem(approvalKey());}catch{}
-    try{window.LDCore?.saveCurrent?.();}catch{}
+    persistApprovalNow();
     emitApproval();
   }
   function approveNarration(){
@@ -81,7 +85,7 @@
     const a={version:'2.0',topic:topic(),format:format(),signature:narrationSignature(),approvedAt:new Date().toISOString()};
     window.ldNarrationApprovalState=a;
     try{localStorage.setItem(approvalKey(),JSON.stringify(a));}catch{}
-    try{window.LDCore?.saveCurrent?.();}catch{}
+    persistApprovalNow();
     emitApproval();
     return isApproved();
   }
@@ -241,7 +245,20 @@
     signature:narrationSignature,
     ready:narrationReady
   };
+
+  function restoreApprovalUi(){
+    refreshApprovalUi();
+    emitApproval();
+  }
+
   refreshApprovalUi();
+  window.addEventListener('ld:production-built',()=>setTimeout(restoreApprovalUi,40));
+  window.addEventListener('ld:project-opened',()=>setTimeout(restoreApprovalUi,40));
+  window.addEventListener('pageshow',()=>setTimeout(restoreApprovalUi,80));
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)setTimeout(restoreApprovalUi,80);
+  });
+  window.addEventListener('load',()=>setTimeout(restoreApprovalUi,300));
 
   btn?.addEventListener('click',async()=>{
     if(btn.disabled)return;
