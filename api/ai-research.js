@@ -165,6 +165,50 @@ const CURATED_EVENT_EVIDENCE = [
     ]
   },
   {
+    id:"xylazine-philadelphia-2020s-pdph",
+    matches:({topic})=>/xylazine|zombie drug|tranq/i.test(topic) && /philadelphia|pennsylvania/i.test(topic),
+    source:{
+      id:"pdph-xylazine-emerging-threat-2023",
+      authority:"Philadelphia Department of Public Health",
+      name:"Health Department statement on xylazine in fentanyl as an emerging threat",
+      url:"https://www.phila.gov/2023-04-13-health-department-statement-regarding-office-of-national-drug-control-policy-ondcp-announcement-declaring-xylazine-in-fentanyl-an-emerging-threat/",
+      supports:["Philadelphia identity","xylazine definition","fentanyl association","overdose harms","severe wounds","local public-health response"],
+      confidence:"authoritative"
+    },
+    claims:[
+      {field:"event.year",value:2020,claim:"The selected production covers the xylazine crisis as it intensified during the 2020s."},
+      {field:"event.location",value:"Philadelphia, Pennsylvania",claim:"Philadelphia has been particularly hard hit by xylazine in the illicit drug supply."},
+      {field:"event.country",value:"United States",claim:"Philadelphia is in the United States."},
+      {field:"drug.type",value:"non-opioid veterinary tranquilizer",claim:"Xylazine is a non-opioid tranquilizer approved for veterinary use, not human use."},
+      {field:"drug.fentanylAssociation",value:true,claim:"Philadelphia public-health officials describe xylazine as associated with fentanyl in the illicit drug supply."},
+      {field:"impact.overdose",value:true,claim:"Philadelphia officials report that xylazine has contributed to overdose harms."},
+      {field:"impact.severeWounds",value:true,claim:"Xylazine exposure is associated with severe wounds that can become medically serious."},
+      {field:"impact.sepsisAmputationRisk",value:true,claim:"Philadelphia officials warn that severe xylazine-associated wounds can lead to sepsis and amputation."},
+      {field:"response.withdrawalStandards",value:true,claim:"Philadelphia worked with local health systems on practice-based standards for managing xylazine withdrawal."},
+      {field:"response.woundCare",value:true,claim:"Philadelphia public-health partners developed wound-care support and best practices for xylazine-associated wounds."},
+      {field:"response.overdoseTraining",value:true,claim:"Philadelphia updated overdose-response training to incorporate xylazine-related risks."},
+      {field:"response.drugChecking",value:true,claim:"Philadelphia continued surveillance drug checking and planned distribution of xylazine test strips."}
+    ]
+  },
+  {
+    id:"xylazine-philadelphia-2020s-cdc",
+    matches:({topic})=>/xylazine|zombie drug|tranq/i.test(topic) && /philadelphia|pennsylvania/i.test(topic),
+    source:{
+      id:"cdc-xylazine-overdose-prevention",
+      authority:"U.S. Centers for Disease Control and Prevention",
+      name:"Xylazine — Overdose Prevention",
+      url:"https://www.cdc.gov/overdose-prevention/about/what-you-should-know-about-xylazine.html",
+      supports:["national trend","Philadelphia overdose data","fentanyl co-involvement","overdose risk"],
+      confidence:"authoritative"
+    },
+    claims:[
+      {field:"trend.us2020to2021",value:"increased in every U.S. region",claim:"CDC reports that xylazine presence in laboratory-tested drugs increased in every U.S. region from 2020 to 2021."},
+      {field:"philadelphia.2019Share",value:"31%",claim:"CDC reports xylazine was found in 31% of Philadelphia overdose deaths involving heroin and/or fentanyl in 2019."},
+      {field:"trend.imfDeaths2019to2022",value:"3% to 11%",claim:"Across reporting jurisdictions, the monthly percentage of illegally made fentanyl-involved deaths with xylazine detected increased from 3% in January 2019 to 11% in June 2022."},
+      {field:"trend.northeast",value:"higher detection",claim:"CDC reported higher xylazine detection in illegally made fentanyl-involved deaths in the Northeastern United States during January 2021 through June 2022."}
+    ]
+  },
+  {
     id:"wellington-avalanche-1910-loc",
     matches:({topic,year})=>year===1910 && /wellington|stevens pass|train disaster/i.test(topic) && /avalanche|wellington/i.test(topic),
     source:{
