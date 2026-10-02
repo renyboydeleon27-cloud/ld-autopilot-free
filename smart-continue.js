@@ -1051,6 +1051,35 @@ async function run(){
       return;
     }
 
+    // UNIFIED SMART CONTINUE V1:
+    // Narration is the first production gate. A new production must have its
+    // complete Smart Narration reviewed and approved before HOOK -> P14 begins.
+    // Existing/legacy productions that already have completed stages are not
+    // forced backward into this gate.
+    const productionCards=[...stages.querySelectorAll('.stage-card')];
+    const hasCompletedStage=productionCards.some(stageDone);
+    const narrationApproval=window.LDNarrationApproval;
+    if(!hasCompletedStage&&narrationApproval&&typeof narrationApproval.isApproved==='function'&&!narrationApproval.isApproved()){
+      const narrationBtn=document.getElementById('ldNarrationSmartBtn');
+      const narrationCard=document.getElementById('masterNarrationCard');
+      narrationCard?.scrollIntoView({behavior:'smooth',block:'start'});
+      if(narrationBtn&&!narrationBtn.disabled){
+        const mode=narrationBtn.dataset.mode||'generate';
+        if(mode==='approve'){
+          buttonLabel('🎙️ APPROVE NARRATION FIRST');
+          status('SMART CONTINUE · Smart Narration is ready for review. Approve it before HOOK production begins.','working');
+        }else{
+          buttonLabel('🎙️ BUILDING SMART NARRATION…');
+          status('SMART CONTINUE · Starting with Smart Narration before HOOK → P14 production…','working');
+          narrationBtn.click();
+        }
+      }else{
+        buttonLabel('🎙️ SMART NARRATION FIRST');
+        status('SMART CONTINUE · Smart Narration must be reviewed and approved before HOOK production begins.','working');
+      }
+      return;
+    }
+
     let card=currentCard();
     if(!card)throw new Error('No production stage is available.');
     writeSmartSession({targetStage:card.dataset.stage||'',pending:readSmartSession()?.pending||null});
