@@ -208,10 +208,28 @@ const CURATED_EVENT_EVIDENCE = [
       {field:"hazard.denudedSlopes",value:"forest fires had denuded slopes above the railroad",claim:"An official report after the 1909–1910 winter noted that recent forest fires had denuded slopes above the railroad and created avalanche paths."},
       {field:"hazard.weatherPatterns",value:"weather patterns led to severe avalanche conditions",claim:"A second official report described weather patterns that led to severe avalanche conditions during the 1909–1910 winter."},
       {field:"impact.sweptIntoCanyon",value:"trains swept to bottom of canyon",claim:"The avalanche swept the snowbound trains into the bottom of a canyon."},
-      {field:"impact.fatalities",value:"more than 100 fatalities",claim:"The U.S. Forest Service handbook reports that the Wellington avalanche caused more than 100 fatalities."},
-      {field:"impact.propertyDamage",value:"about one million dollars",claim:"The U.S. Forest Service handbook reports about one million dollars in property damage from the Wellington disaster."},
+      {field:"impact.propertyDamage",value:"about one million dollars",claim:"The Wellington disaster caused about one million dollars in property damage."},
       {field:"aftermath.railroadRerouted",value:"railroad rerouted through a tunnel",claim:"After the disaster, the railroad was rerouted through a tunnel under the pass."},
       {field:"aftermath.tunnelBypassedSlideArea",value:true,claim:"A tunnel was built to bypass the Wellington slide area."}
+    ]
+  },
+  {
+    id:"wellington-avalanche-1910-nps",
+    matches:({topic,year})=>year===1910 && /wellington|stevens pass|train disaster/i.test(topic) && /avalanche|wellington/i.test(topic),
+    source:{
+      id:"nps-beneath-the-avalanche",
+      authority:"U.S. National Park Service",
+      name:"Beneath the Avalanche — Wellington history program",
+      url:"https://www.nps.gov/resources/event.htm?eventID=31E83DF3-1DD8-B71B-0BD7916F0B065A13",
+      supports:["1910 Wellington identity","Great Northern Railway setting","heavy snow","fatality count","historical significance"],
+      confidence:"authoritative"
+    },
+    claims:[
+      {field:"event.year",value:1910,claim:"The Wellington avalanche disaster occurred in 1910."},
+      {field:"event.location",value:"Wellington near Stevens Pass, Washington",claim:"The disaster site was at Wellington near Stevens Pass, Washington."},
+      {field:"hazard.heavySnow",value:"heavy snow",claim:"Heavy snow enveloped the Great Northern Railway depot at Wellington before the disaster."},
+      {field:"impact.fatalities",value:96,claim:"Ninety-six people lost their lives in the Wellington avalanche."},
+      {field:"significance.usAvalancheHistory",value:"worst avalanche in U.S. history",claim:"The National Park Service describes Wellington as the worst avalanche in United States history."}
     ]
   }
 ];
