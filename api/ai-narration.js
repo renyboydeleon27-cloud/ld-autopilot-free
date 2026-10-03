@@ -469,6 +469,11 @@ FINAL VIDEO-FLOW NARRATION QUALITY LOCK — LIVING DISASTER BOOK:
 - If verified evidence is sparse, use a shorter strong sentence rather than padding with generic disaster language.
 - P14 must close with a verified historical consequence, identity, change, or legacy when evidence supports one; never default to a generic preparedness slogan.
 - Repetition audit: adjacent panels must differ in subject, verb, information, and dramatic purpose.
+- STORY SELECTION LOCK: prefer direct event developments, physical consequences, human impact, rescue/evacuation/displacement, and immediate aftermath over source/archive metadata or retrospective institutional material.
+- Do not spend multiple panels on the event's ranking, archive inclusion, commemorations, later studies, legal-document archives, monitoring programmes, or generic hazard-management significance. Use at most one such legacy beat, preferably P14, and only when supported and no stronger event-specific consequence is available.
+- GLOBAL DUPLICATION LOCK: before returning JSON, compare ALL requested lines, not only adjacent panels. Date/location/event identity should normally appear once; a casualty/ranking/legacy idea should normally appear once. If two lines communicate substantially the same fact, keep the stronger placement and rewrite the other from its own stage evidence.
+- LATE-STORY LOCK: P10-P13 should stay close to people and direct consequences whenever evidence permits: survivors, evacuation, rescue, displacement, recovery, continuing hazard, health/environmental effects, or concrete damage. Do not drift into encyclopedia-summary mode merely because retrospective sources are available.
+- SOURCE-INVISIBILITY LOCK: authoritative organizations, archives, atlases, records, reviews, studies, and planning documents validate facts backstage; they are not themselves the story unless their role is historically essential to the event.
 - Read every line aloud mentally before returning it. It must sound natural, cinematic, and solid at normal documentary pace.
 
 DOCUMENTARY NARRATION POLISH LOCK:
