@@ -104,7 +104,7 @@ export function validateResearch(data,topic){
     claims.push({field,value,claim:value,sourceUrl:x.sourceUrl,sourceId:'web-'+x.authority,authority:x.authority,support:x.support});
     stageMap[stage]=[field];
   });
-  const storyQualityWarnings={needsReallocation:false,globalPoolSize:pool.length,selectedStoryFacts:selected.length,allocatorVersion:'V4.1-semantic-planner'};
+  const storyQualityWarnings={needsReallocation:false,globalPoolSize:pool.length,selectedStoryFacts:Object.values(planned).filter(Boolean).length,allocatorVersion:'V4.1-semantic-planner'};
   const sources=[...new Set(claims.map(c=>c.sourceUrl))].map(url=>({id:'web-'+authority(url),authority:authority(url),name:authority(url),url}));
   return {verifiedClaims:claims,stageMap,sources,storyQualityWarnings,validation:{status:'PARTIAL',confidence:'medium',reason:'Event identity cross-checked against retrieved authorities; stage claims remain subject to narration validation.',checks:pack.identitySources.map(url=>({field:'Event identity',match:true,url}))},narrationGate:{allowed:true,exactNumbersAllowed:false,status:'PARTIAL'},factPack:{identity:[{year:pack.year,location:pack.location}],uncertainty:['Automatically researched claims require the narration evidence audit. Omit disputed numbers.']}};
 }
