@@ -398,7 +398,14 @@
       const raw=await response.text();
       let data;
       try{data=JSON.parse(raw);}
-      catch{throw new Error('Narration service returned an invalid response.');}
+      catch{
+        const looksLikeHtml=/^\s*<!doctype html|^\s*<html|<body[\s>]/i.test(raw);
+        const preview=String(raw||'').replace(/\s+/g,' ').trim().slice(0,180);
+        throw new Error(
+          'Narration endpoint returned '+(looksLikeHtml?'an HTML/app page':'a non-JSON response')+
+          ' (HTTP '+response.status+'). '+(preview?'Preview: '+preview:'No response body.')
+        );
+      }
       recordUsage(data.apiUsage);
       if(!response.ok||!data.ok)throw new Error(data.error||('Narration HTTP '+response.status));
 
