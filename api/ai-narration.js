@@ -138,8 +138,12 @@ export default async function handler(req, res) {
   try { research = await buildResearch(topic); }
   catch (e) { return res.status(502).json({ok:false,error:"Research verification failed: "+String(e?.message||e)}); }
 
-  if(req.body?.preflightOnly!==true && (!curatedNarration(topic)||!research?.narrationGate?.allowed)){
-    research=await expandResearch(topic,research,{apiKey,onUsage:usage=>apiUsageParts.push(usage)});
+  // COST GUARD V3: reuse an already-valid research pack. Expansion is only
+  // allowed when the base/curated pack cannot pass the narration gate.
+  // This avoids paying for a second web-research pass merely because an event
+  // is not in the curated-topic list.
+  if(req.body?.preflightOnly!==true && !research?.narrationGate?.allowed){
+    research=await expandResearch(topic,research,{apiKey,onUsage:usage=>apiUsageParts.push(usage),maxAttempts:2});
   }
 
   if (!research?.narrationGate?.allowed) {
