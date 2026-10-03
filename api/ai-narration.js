@@ -284,12 +284,34 @@ export default async function handler(req, res) {
     const preflightStages=(requestedStage?[requestedStage]:Object.keys(stageEvidence)).filter(stage=>!skipStages.has(stage));
     const missingStageEvidence=preflightStages
       .filter(stage=>!Array.isArray(stageEvidence[stage])||stageEvidence[stage].length===0);
-    if(missingStageEvidence.length){
+
+    // Narrative Evidence Sufficiency Gate V1:
+    // identity-only evidence can frame a story, but must never be used as filler
+    // to occupy later impact/aftermath panels simply to satisfy P1-P14.
+    const identityOnlyStages=preflightStages.filter(stage=>{
+      const items=Array.isArray(stageEvidence[stage])?stageEvidence[stage]:[];
+      return items.length>0 && items.every(item=>reusableIdentityFields.has(item.field));
+    });
+    const identityFramingAllowance=new Set(["HOOK","P1","P2"]);
+    const fillerIdentityStages=identityOnlyStages.filter(stage=>!identityFramingAllowance.has(stage));
+    const meaningfulStages=preflightStages.filter(stage=>{
+      const items=Array.isArray(stageEvidence[stage])?stageEvidence[stage]:[];
+      return items.some(item=>!reusableIdentityFields.has(item.field));
+    });
+    const narrativeEvidenceInsufficient=fillerIdentityStages.length>0;
+
+    if(missingStageEvidence.length || narrativeEvidenceInsufficient){
       return res.status(422).json({
         ok:false,
-        error:"Narration preflight blocked before AI generation: some stages have no verified stage-specific evidence.",
+        error:narrativeEvidenceInsufficient
+          ?"Narration preflight blocked before AI generation: verified research is not narratively sufficient for all requested stages. Identity facts such as date, year, country, or location cannot be used as filler for later panels."
+          :"Narration preflight blocked before AI generation: some stages have no verified stage-specific evidence.",
         missingStageEvidence,
+        fillerIdentityStages,
+        meaningfulStageCount:meaningfulStages.length,
+        requestedStageCount:preflightStages.length,
         repeatedSubstantiveEvidence,
+        needsResearchExpansion:narrativeEvidenceInsufficient,
         creditSafe:true,
         researchStatus:research.validation.status
       });
