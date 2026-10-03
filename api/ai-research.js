@@ -356,7 +356,7 @@ async function fetchUsgsCandidate(topic, year) {
   url.searchParams.set("minmagnitude","5");
   url.searchParams.set("orderby","magnitude");
   url.searchParams.set("limit","100");
-  const r = await fetch(url);
+  const r = await fetch(url,{signal:AbortSignal.timeout(12000)});
   if (!r.ok) return {status:"error", reason:`USGS HTTP ${r.status}`};
   const data = await r.json();
   const words = topicSearchText(topic).toLowerCase().split(" ").filter(w=>w.length>2);
@@ -398,7 +398,7 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
   url.searchParams.set("outFields", "*");
   url.searchParams.set("returnGeometry", "true");
   url.searchParams.set("f", "json");
-  const r = await fetch(url);
+  const r = await fetch(url,{signal:AbortSignal.timeout(12000)});
   if (!r.ok) return {status:"error", reason:`NOAA/NCEI HTTP ${r.status}`};
   let data = await r.json();
   if (data?.error) {
@@ -408,7 +408,7 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
     fallback.searchParams.set("returnGeometry","true");
     fallback.searchParams.set("f","json");
     fallback.searchParams.set("resultRecordCount","2000");
-    const fr=await fetch(fallback);
+    const fr=await fetch(fallback,{signal:AbortSignal.timeout(12000)});
     if (!fr.ok) return {status:"error",reason:`NOAA/NCEI fallback HTTP ${fr.status}`};
     data=await fr.json();
     if (data?.error) return {status:"error",reason:data.error.message || "NOAA/NCEI query error"};
@@ -433,7 +433,7 @@ async function fetchNoaaTsunamiCandidate(topic, year) {
     const score = direct + regional;
     return {feature,score};
   }).sort((a,b)=>b.score-a.score);
-  const best = scored[0];
+  let best = scored[0];
   if (!best || best.score === 0) {
     // Historical NOAA records do not always repeat the modern event name in
     // searchable text. If the requested year has exactly one tsunami source
@@ -523,12 +523,20 @@ function crossValidate(noaa, usgs) {
   return {status:"CONFLICT",confidence:"low",checks,reason:"NOAA/NCEI and USGS candidates do not agree strongly enough to lock the event identity."};
 }
 
-function classifyTopic(topic) {
+export function classifyTopic(topic) {
   const t = topic.toLowerCase();
   if (t.includes("tsunami")) return "tsunami";
   if (t.includes("earthquake") || t.includes("quake")) return "earthquake";
   if (t.includes("locust") || t.includes("insect") || t.includes("grasshopper")) return "insect";
   if (t.includes("avalanche") || t.includes("snowslide") || t.includes("snow slide")) return "avalanche";
+  if (/volcan|eruption|tambora|krakatoa|vesuvius/.test(t)) return "volcano";
+  if (/cyclone|hurricane|typhoon/.test(t)) return "cyclone";
+  if (/tornado/.test(t)) return "tornado";
+  if (/flood|dam failure|dam collapse/.test(t)) return "flood";
+  if (/landslide|mudslide|lahar/.test(t)) return "landslide";
+  if (/wildfire|forest fire|fire/.test(t)) return "fire";
+  if (/drought|famine/.test(t)) return "drought";
+  if (/epidemic|pandemic|plague|virus/.test(t)) return "epidemic";
   return "general";
 }
 
@@ -686,3 +694,4 @@ export default async function handler(req, res) {
   try { return res.status(200).json(await buildResearch(topic)); }
   catch (e) { return res.status(500).json({ok:false,error:"Research error: "+String(e?.message||e)}); }
 }
+

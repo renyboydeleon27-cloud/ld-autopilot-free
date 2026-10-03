@@ -1,4 +1,5 @@
 import { buildResearch } from "./ai-research.js";
+import { expandResearch, curatedNarration } from "./narration-research.js";
 import { usageFromResponse, mergeApiUsage } from "./api-usage.js";
 
 function naturalCaseValue(value) {
@@ -137,11 +138,15 @@ export default async function handler(req, res) {
   try { research = await buildResearch(topic); }
   catch (e) { return res.status(502).json({ok:false,error:"Research verification failed: "+String(e?.message||e)}); }
 
+  if(req.body?.preflightOnly!==true && (!curatedNarration(topic)||!research?.narrationGate?.allowed)){
+    research=await expandResearch(topic,research,{apiKey,onUsage:usage=>apiUsageParts.push(usage)});
+  }
+
   if (!research?.narrationGate?.allowed) {
     return res.status(422).json({
       ok:false,
       error:`Narration blocked by research gate: ${research?.validation?.status || "NEEDS_REVIEW"}. ${research?.validation?.reason || "Evidence is not strong enough yet."}`,
-      research
+      research, apiUsage:usagePayload()
     });
   }
 
@@ -150,7 +155,7 @@ export default async function handler(req, res) {
   const isWellingtonAvalanche1910=/wellington|stevens pass|train disaster/i.test(topic) && /\b1910\b/.test(topic) && /avalanche|wellington/i.test(topic);
   const isXylazinePhiladelphia2020s=/xylazine|zombie drug|tranq/i.test(topic) && /philadelphia|pennsylvania/i.test(topic);
   const isMessina1908=/messina|reggio calabria/i.test(topic) && /\b1908\b/.test(topic) && /tsunami/i.test(topic);
-  const storyMap = isMessina1908 ? {
+  const storyMap = research.stageMap || (isMessina1908 ? {
     HOOK:["tsunami.initialMovement"],
     P1:["event.location","event.country"],
     P2:["event.date","earthquake.magnitude"],
@@ -246,7 +251,7 @@ export default async function handler(req, res) {
     P12:["impact.deaths","impact.injuries"],
     P13:["impact.housesDestroyed","impact.housesDamaged"],
     P14:["event.date","event.location","impact.maximumWaterHeightM","impact.deaths"]
-  };
+  });
   const claimsByField = Object.fromEntries((research.verifiedClaims||[]).map(x=>[x.field,x]));
   const stageEvidence = Object.fromEntries(Object.entries(storyMap).map(([stage,fields])=>[
     stage, fields.map(field=>claimsByField[field]).filter(Boolean)
@@ -312,7 +317,8 @@ export default async function handler(req, res) {
         requestedStageCount:preflightStages.length,
         repeatedSubstantiveEvidence,
         needsResearchExpansion:narrativeEvidenceInsufficient,
-        creditSafe:true,
+        creditSafe:apiUsageParts.length===0,
+        apiUsage:usagePayload(),
         researchStatus:research.validation.status
       });
     }
@@ -705,3 +711,4 @@ Include every requested stage key exactly once and no markdown.`;
     return res.status(500).json({ok:false,error:"AI narration error: "+String(err?.message||err),apiUsage:usagePayload()});
   }
 }
+

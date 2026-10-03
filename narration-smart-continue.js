@@ -380,7 +380,7 @@
     saveBackup();
     btn.disabled=true;
     btn.textContent='🎙️ BUILDING FINAL NARRATION…';
-    status('Research-checking facts and matching every line to the current HOOK → P14 production flow…','working');
+    status('Checking event sources → expanding research if needed → writing and auditing narration. Please keep this project open…','working');
 
     try{
       const response=await fetch('/api/ai-narration',{
