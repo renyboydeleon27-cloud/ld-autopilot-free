@@ -87,16 +87,24 @@ export function validateResearch(data,topic){
   const secondaryStages=required.filter(stage=>{
     const fields=stageMap[stage]||[];
     const items=fields.map(field=>claims.find(x=>x.field===field)).filter(Boolean);
-    return items.length>0 && items.every(item=>secondaryLegacyRe.test(narrativeText(item)));
+    return items.length>0 && items.every(item=>secondaryLegacyRe.test(narrativeText(item)) && !directConsequenceRe.test(narrativeText(item)));
   });
-  const misplacedSecondary=secondaryStages.filter(stage=>stage!=='P14');
-  if(missing.length||lateSecondary.length>=2||repeatedLegacy.length>=2||secondaryStages.length>1||misplacedSecondary.length>0)throw new Error(
-    'Sources do not yet support a strong, distinct disaster story for all stages. '+
-    'Research must replace repetitive or misplaced legacy/metadata beats with direct event developments or human consequences; only one legacy/significance beat is allowed and it belongs at P14. '+
-    'Evidence diagnostics: '+JSON.stringify({missing,lateSecondary,secondaryStages,misplacedSecondary,repeatedLegacy,claims:pack.claims?.length||0,retrievedSources:sourceUrls.size,rejected})
+
+  // V3.1 SMART REALLOCATION — story-quality problems are not identity failures.
+  // Keep verified claims and let the narration layer prefer/reallocate direct
+  // event evidence instead of spending another web-search attempt.
+  const storyQualityWarnings={
+    lateSecondary,
+    secondaryStages,
+    repeatedLegacy,
+    needsReallocation:lateSecondary.length>=2||secondaryStages.length>1||repeatedLegacy.length>=2
+  };
+  if(missing.length)throw new Error(
+    'Sources do not yet support distinct evidence for '+missing.join(', ')+
+    '. Evidence diagnostics: '+JSON.stringify({missing,claims:pack.claims?.length||0,retrievedSources:sourceUrls.size,rejected})
   );
   const sources=[...new Set(claims.map(c=>c.sourceUrl))].map(url=>({id:'web-'+authority(url),authority:authority(url),name:authority(url),url}));
-  return {verifiedClaims:claims,stageMap,sources,validation:{status:'PARTIAL',confidence:'medium',reason:'Event identity cross-checked against retrieved authorities; stage claims remain subject to narration validation.',checks:pack.identitySources.map(url=>({field:'Event identity',match:true,url}))},narrationGate:{allowed:true,exactNumbersAllowed:false,status:'PARTIAL'},factPack:{identity:[{year:pack.year,location:pack.location}],uncertainty:['Automatically researched claims require the narration evidence audit. Omit disputed numbers.']}};
+  return {verifiedClaims:claims,stageMap,sources,storyQualityWarnings,validation:{status:'PARTIAL',confidence:'medium',reason:'Event identity cross-checked against retrieved authorities; stage claims remain subject to narration validation.',checks:pack.identitySources.map(url=>({field:'Event identity',match:true,url}))},narrationGate:{allowed:true,exactNumbersAllowed:false,status:'PARTIAL'},factPack:{identity:[{year:pack.year,location:pack.location}],uncertainty:['Automatically researched claims require the narration evidence audit. Omit disputed numbers.']}};
 }
 export async function expandResearch(topic,research,{apiKey,fetchImpl=fetch,onUsage=()=>{},maxAttempts=2}={}){
   if(research.validation?.status==='CONFLICT')return research;
