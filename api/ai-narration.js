@@ -279,6 +279,7 @@ export default async function handler(req, res) {
 
   const evidenceForNarration = {
     validation: research.validation,
+    storyQualityWarnings: research.storyQualityWarnings || null,
     exactNumbersAllowed: research.narrationGate.exactNumbersAllowed,
     verifiedClaims: research.verifiedClaims || [],
     factPack: research.factPack,
@@ -478,6 +479,8 @@ FINAL VIDEO-FLOW NARRATION QUALITY LOCK — LIVING DISASTER BOOK:
 - GLOBAL DUPLICATION LOCK: before returning JSON, compare ALL requested lines, not only adjacent panels. Date/location/event identity should normally appear once; a casualty/ranking/legacy idea should normally appear once. If two lines communicate substantially the same fact, keep the stronger placement and rewrite the other from its own stage evidence.
 - LATE-STORY LOCK: P10-P13 should stay close to people and direct consequences whenever evidence permits: survivors, evacuation, rescue, displacement, recovery, continuing hazard, health/environmental effects, or concrete damage. Do not drift into encyclopedia-summary mode merely because retrospective sources are available.
 - SOURCE-INVISIBILITY LOCK: authoritative organizations, archives, atlases, records, reviews, studies, and planning documents validate facts backstage; they are not themselves the story unless their role is historically essential to the event.
+- V3.1 REALLOCATION LOCK: if STORY QUALITY WARNINGS identify secondary/legacy-heavy stages, do not repeat their metadata framing. Translate only the direct event fact contained in that stage evidence when one exists. If the stage evidence contains only secondary metadata, keep it extremely brief rather than expanding it into archive/source discussion.
+- HARD LEGACY OUTPUT QUOTA: across HOOK through P14, no more than ONE spoken line may primarily discuss ranking, archives, atlases, databases, documentary review, record-keeping, later studies, or comparative historical status. Prefer that single line at P14.
 - Read every line aloud mentally before returning it. It must sound natural, cinematic, and solid at normal documentary pace.
 
 DOCUMENTARY NARRATION POLISH LOCK:
