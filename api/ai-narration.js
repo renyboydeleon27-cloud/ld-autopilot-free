@@ -280,7 +280,7 @@ export default async function handler(req, res) {
   // FREE PREFLIGHT — stop before any OpenAI call if a Shorts stage has no evidence.
   // This prevents spending generation/validator credits on a narration set that
   // the stage-scoped evidence validator would reject anyway.
-  if(format==="shorts"){
+  if(String(format||"").trim().toLowerCase().includes("short")){
     const preflightStages=(requestedStage?[requestedStage]:Object.keys(stageEvidence)).filter(stage=>!skipStages.has(stage));
     const missingStageEvidence=preflightStages
       .filter(stage=>!Array.isArray(stageEvidence[stage])||stageEvidence[stage].length===0);
