@@ -93,7 +93,14 @@ const CURATED_EVENT_EVIDENCE = [
       {field:"tsunami.waveSequence",value:"at least three large waves",claim:"The sea withdrawal was followed by coastal flooding from at least three large waves."},
       {field:"tsunami.runupOver10m",value:true,claim:"Post-event surveys estimated tsunami flooding and run-up heights above 10 metres in some places."},
       {field:"impact.tsunamiDamage",value:"severe",claim:"The tsunami caused severe coastal damage and many casualties."},
-      {field:"impact.destroyedAreaKm2",value:6000,claim:"The earthquake study describes about 6,000 square kilometres as the destroyed area."}
+      {field:"impact.destroyedAreaKm2",value:6000,claim:"The earthquake study describes about 6,000 square kilometres as the destroyed area."},
+      {field:"tsunami.withdrawalDistanceM",value:200,claim:"INGV reports that in some places the initial sea withdrawal reached about 200 metres and lasted a few minutes."},
+      {field:"tsunami.sicilyMaxRunupM",value:11.9,claim:"INGV reports a maximum tsunami run-up of 11.90 metres at Sant'Alessio on the east coast of Sicily."},
+      {field:"tsunami.effectsNorthernSicily",value:"Termini Imerese",claim:"INGV reports tsunami effects along the northern coast of Sicily as far as Termini Imerese."},
+      {field:"tsunami.maltaReached",value:true,claim:"INGV's Italian Tsunami Effects Database reports that the 1908 tsunami reached Malta, about 250 kilometres away."},
+      {field:"tsunami.maltaSeaLevelRiseM",value:1,claim:"INGV's Italian Tsunami Effects Database reports a sea-level rise of more than one metre in Malta, with slight damage."},
+      {field:"tsunami.civitavecchiaRecorded",value:true,claim:"INGV's Italian Tsunami Effects Database reports that the tsunami was recorded at the Civitavecchia tide gauge about 450 kilometres away."},
+      {field:"tsunami.observationPoints",value:115,claim:"INGV's Italian Tsunami Effects Database describes the 1908 Messina tsunami as Italy's most documented event, with 115 observation points along Italian coasts."}
     ]
   },
 
