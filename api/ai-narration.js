@@ -571,36 +571,13 @@ Include every requested stage key exactly once and no markdown.`;
       try{recheck=JSON.parse(recheckRaw.replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim());}
       catch{return res.status(502).json({ok:false,error:"Narration repair validator returned an unexpected format.",apiUsage:usagePayload()});}
       if(recheck?.valid!==true||(Array.isArray(recheck?.unsupported)&&recheck.unsupported.length)){
-        const remainingUnsupported=Array.isArray(recheck?.unsupported)?recheck.unsupported:[];
-        const remainingStages=[...new Set(remainingUnsupported.map(x=>x.stage).filter(s=>repairStages.includes(s)))];
-
-        // CREDIT-SAFE DETERMINISTIC FALLBACK:
-        // A second AI rewrite can repeat the same unsupported inference and costs another call.
-        // Instead, rebuild only the still-rejected stages directly from their verified claim text.
-        // This intentionally favors a shorter factual line over repeated paid retries.
-        for(const stage of remainingStages){
-          const items=Array.isArray(stageEvidence?.[stage])?stageEvidence[stage]:[];
-          const claimTexts=items.map(item=>{
-            const candidates=[item?.claim,item?.text,item?.value,item?.statement,item?.description];
-            return candidates.find(v=>typeof v==="string"&&v.trim())?.trim()||"";
-          }).filter(Boolean);
-          if(claimTexts.length){
-            const unique=[...new Set(claimTexts)];
-            stages[stage]=unique.slice(0,2).join(" ").replace(/\s+/g," ").trim();
-          }
-        }
-
-        const unresolved=remainingStages.filter(stage=>typeof stages[stage]!=="string"||!stages[stage].trim());
-        if(unresolved.length){
-          return res.status(422).json({
-            ok:false,
-            error:"Narration repair needs review: verified evidence could not produce a safe fallback for some stages.",
-            unsupportedClaims:remainingUnsupported,
-            unresolvedStages:unresolved,
-            researchStatus:research.validation.status,
-            apiUsage:usagePayload()
-          });
-        }
+        return res.status(422).json({
+          ok:false,
+          error:"Narration auto-repair was still not fully supported by evidence.",
+          unsupportedClaims:Array.isArray(recheck?.unsupported)?recheck.unsupported:[],
+          researchStatus:research.validation.status,
+          apiUsage:usagePayload()
+        });
       }
     }
 
