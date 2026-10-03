@@ -149,7 +149,7 @@ export default async function handler(req, res) {
   const isRockyMountainLocust1874=/rocky mountain locust|locust plague/i.test(topic) && /\b1874\b/.test(topic);
   const isWellingtonAvalanche1910=/wellington|stevens pass|train disaster/i.test(topic) && /\b1910\b/.test(topic) && /avalanche|wellington/i.test(topic);
   const isXylazinePhiladelphia2020s=/xylazine|zombie drug|tranq/i.test(topic) && /philadelphia|pennsylvania/i.test(topic);
-  const storyMap = isMessina1908 ? {
+  const isMessina1908=/messina|reggio calabria/i.test(topic) && /\\b1908\\b/.test(topic) && /tsunami/i.test(topic);\n  const storyMap = isMessina1908 ? {
     HOOK:["event.date","tsunami.waveSequence"],
     P1:["event.location","event.country"],
     P2:["earthquake.magnitude","event.date"],
