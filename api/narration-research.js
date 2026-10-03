@@ -43,8 +43,48 @@ export function validateResearch(data,topic){
     (stageMap[c.stage]||=[]).push(field);
   }
   const required=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1))];
+
+  // EVIDENCE ALLOCATOR V2 — reject a technically complete pack when later
+  // stages are only repeating rankings, archives, studies or generic legacy.
+  // This runs before narration generation so weak evidence triggers another
+  // research attempt instead of forcing the writer to turn metadata into story.
+  const narrativeText=c=>String(c?.claim||'').toLowerCase();
+  const secondaryLegacyRe=/\b(archive|atlas|database|inventory|compilation|compiled|planning document|development planning|benchmark|reference case|historical record|world record|global record|deadliest|ranking|ranked|later stud|research program|monitoring program|institutional|commemoration|documentary heritage)\b/i;
+  const directConsequenceRe=/\b(kill|death|died|injur|destroy|damage|collapse|evacuat|rescue|relief|aid|displac|homeless|surviv|hospital|health|contamin|burn|flood|inundat|wave|ash|fire|landslide|avalanche|tornado|wind|eruption|explosion|radiation|recovery|rebuild)\b/i;
+  const lateStages=['P10','P11','P12','P13','P14'];
+  const lateSecondary=lateStages.filter(stage=>{
+    const fields=stageMap[stage]||[];
+    const items=fields.map(field=>claims.find(x=>x.field===field)).filter(Boolean);
+    return items.length>0 && items.every(item=>secondaryLegacyRe.test(narrativeText(item)) && !directConsequenceRe.test(narrativeText(item)));
+  });
+  const normalizedIdea=text=>String(text||'').toLowerCase()
+    .replace(/\b(1989|19\d{2}|20\d{2})\b/g,' ')
+    .replace(/\b(records?|accounts?|sources?|international|global|historical|regional|national|authoritative|later|long[- ]term)\b/g,' ')
+    .replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  const legacyIdeas=[];
+  for(const stage of required){
+    for(const field of stageMap[stage]||[]){
+      const item=claims.find(x=>x.field===field); if(!item) continue;
+      if(secondaryLegacyRe.test(narrativeText(item))) legacyIdeas.push({stage,idea:normalizedIdea(item.claim)});
+    }
+  }
+  const legacyTokens=s=>new Set(s.split(' ').filter(x=>x.length>4));
+  const similar=(a,b)=>{
+    const A=legacyTokens(a),B=legacyTokens(b); if(!A.size||!B.size)return false;
+    let overlap=0; for(const x of A)if(B.has(x))overlap++;
+    return overlap/Math.min(A.size,B.size)>=0.6;
+  };
+  const repeatedLegacy=[];
+  for(let i=0;i<legacyIdeas.length;i++)for(let j=i+1;j<legacyIdeas.length;j++){
+    if(similar(legacyIdeas[i].idea,legacyIdeas[j].idea)) repeatedLegacy.push([legacyIdeas[i].stage,legacyIdeas[j].stage]);
+  }
+
   const missing=required.filter(s=>!stageMap[s]?.length);
-  if(missing.length)throw new Error('Sources do not yet support distinct evidence for '+missing.join(', ')+'. Evidence diagnostics: '+JSON.stringify({claims:pack.claims?.length||0,retrievedSources:sourceUrls.size,rejected}));
+  if(missing.length||lateSecondary.length>=2||repeatedLegacy.length>=2)throw new Error(
+    'Sources do not yet support a strong, distinct disaster story for all stages. '+
+    'Research must replace repetitive legacy/metadata beats with direct event developments or human consequences. '+
+    'Evidence diagnostics: '+JSON.stringify({missing,lateSecondary,repeatedLegacy,claims:pack.claims?.length||0,retrievedSources:sourceUrls.size,rejected})
+  );
   const sources=[...new Set(claims.map(c=>c.sourceUrl))].map(url=>({id:'web-'+authority(url),authority:authority(url),name:authority(url),url}));
   return {verifiedClaims:claims,stageMap,sources,validation:{status:'PARTIAL',confidence:'medium',reason:'Event identity cross-checked against retrieved authorities; stage claims remain subject to narration validation.',checks:pack.identitySources.map(url=>({field:'Event identity',match:true,url}))},narrationGate:{allowed:true,exactNumbersAllowed:false,status:'PARTIAL'},factPack:{identity:[{year:pack.year,location:pack.location}],uncertainty:['Automatically researched claims require the narration evidence audit. Omit disputed numbers.']}};
 }
