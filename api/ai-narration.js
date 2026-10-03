@@ -149,7 +149,23 @@ export default async function handler(req, res) {
   const isRockyMountainLocust1874=/rocky mountain locust|locust plague/i.test(topic) && /\b1874\b/.test(topic);
   const isWellingtonAvalanche1910=/wellington|stevens pass|train disaster/i.test(topic) && /\b1910\b/.test(topic) && /avalanche|wellington/i.test(topic);
   const isXylazinePhiladelphia2020s=/xylazine|zombie drug|tranq/i.test(topic) && /philadelphia|pennsylvania/i.test(topic);
-  const storyMap = isXylazinePhiladelphia2020s ? {
+  const storyMap = isMessina1908 ? {
+    HOOK:["event.date","tsunami.waveSequence"],
+    P1:["event.location","event.country"],
+    P2:["earthquake.magnitude","event.date"],
+    P3:["impact.destroyedAreaKm2"],
+    P4:["tsunami.initialMovement"],
+    P5:["tsunami.waveSequence"],
+    P6:["tsunami.runupOver10m"],
+    P7:["impact.coasts"],
+    P8:["impact.tsunamiDamage"],
+    P9:["impact.waveHeightOver13m"],
+    P10:["impact.coasts","impact.tsunamiDamage"],
+    P11:["tsunami.waveSequence","tsunami.runupOver10m"],
+    P12:["impact.combinedFatalitiesApprox"],
+    P13:["impact.tsunamiDamage","impact.coasts"],
+    P14:["event.date","event.location","impact.combinedFatalitiesApprox"]
+  } : isXylazinePhiladelphia2020s ? {
     HOOK:["event.location","drug.fentanylAssociation"],
     P1:["drug.type"],
     P2:["philadelphia.2019Share"],
