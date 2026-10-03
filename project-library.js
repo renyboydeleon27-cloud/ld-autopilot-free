@@ -3,6 +3,7 @@
   const LIB_KEY='ld-autopilot-free-project-library-v1';
   const ACTIVE_KEY='ld-autopilot-free-active-project';
   const NEW_PROJECT_KEY='ld-autopilot-free-new-project-pending';
+  const DELETED_KEY='ld-autopilot-free-deleted-projects-v1';
   const listEl=document.getElementById('projectList');
   const countEl=document.getElementById('libraryCount');
   const newBtn=document.getElementById('newProjectBtn');
@@ -41,6 +42,7 @@
   }
   function writeLibrary(lib){
     const compact=compactLibrary(lib);
+    compact.projects=compact.projects.filter(p=>!isDeleted(p.id));
     try{localStorage.setItem(LIB_KEY,JSON.stringify(compact));}
     catch(error){
       window.LDCore?.compactStorage?.();
@@ -48,6 +50,9 @@
     }
   }
   function activeId(){return localStorage.getItem(ACTIVE_KEY)||'';}
+  function deletedIds(){try{return new Set(JSON.parse(localStorage.getItem(DELETED_KEY)||'[]'));}catch{return new Set();}}
+  function markDeleted(id){const ids=deletedIds();ids.add(id);localStorage.setItem(DELETED_KEY,JSON.stringify([...ids].slice(-200)));}
+  function isDeleted(id){return !!id&&deletedIds().has(id);}
   function setActive(id){if(id)localStorage.setItem(ACTIVE_KEY,id);else localStorage.removeItem(ACTIVE_KEY);}
   function uid(){return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;}
   function readCore(){
@@ -117,6 +122,7 @@
     if(switchingProject)return;
     const state=readCore();if(!validState(state)||(state.category||'disaster')!=='disaster')return;
     const lib=readLibrary();let id=forceNew?'':activeId();
+    if(isDeleted(id)){setActive('');id='';}
     let p=id?lib.projects.find(x=>x.id===id):null;
 
     // Never overwrite one saved project with another topic's live pipeline.
@@ -140,7 +146,7 @@
   }
   function migrateLegacy(){
     const core=readCore();const lib=readLibrary();
-    if(!lib.projects.length&&validState(core)){
+    if(!lib.projects.length&&validState(core)&&!isDeleted(activeId())){
       const id=uid();lib.projects.push({id,name:core.topic,state:core,createdAt:core.updatedAt||new Date().toISOString(),updatedAt:core.updatedAt||new Date().toISOString()});writeLibrary(lib);setActive(id);
     }else if(lib.projects.length&&!activeId()){
       const match=validState(core)?lib.projects.find(p=>p.state?.topic===core.topic&&p.state?.format===core.format&&(p.state?.narrativeFormat||'original')===(core.narrativeFormat||'original')):null;
@@ -220,10 +226,21 @@
     render();
   }
   function deleteProject(id){
+    clearTimeout(timer);
     const lib=readLibrary();const p=lib.projects.find(x=>x.id===id);if(!p)return;
-    if(!confirm(`Delete “${displayName(p)}” from this device?`))return;
+    if(!confirm(`Delete “${displayName(p)}” from this device? This permanently removes this production and its saved project data.`))return;
+    const wasActive=activeId()===id;
+    // Tombstone first: delayed save/pagehide handlers must never resurrect this id.
+    markDeleted(id);
     lib.projects=lib.projects.filter(x=>x.id!==id);writeLibrary(lib);
-    if(activeId()===id){setActive('');localStorage.removeItem(CORE_KEY);location.reload();return;}
+    if(wasActive){
+      switchingProject=true;
+      setActive('');
+      localStorage.removeItem(CORE_KEY);
+      localStorage.setItem(NEW_PROJECT_KEY,'1');
+      location.reload();
+      return;
+    }
     render();
   }
   function startNew(){
