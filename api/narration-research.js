@@ -51,28 +51,60 @@ export function validateResearch(data,topic){
   };
   const tokens=s=>new Set(String(s).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(x=>x.length>4));
   const similar=(a,b)=>{const A=tokens(a),B=tokens(b);if(!A.size||!B.size)return false;let n=0;for(const x of A)if(B.has(x))n++;return n/Math.min(A.size,B.size)>=0.65;};
-  const ranked=[...pool].sort((a,b)=>score(b)-score(a)||a.index-b.index);
-  const chosen=[];
-  for(const item of ranked){if(chosen.some(x=>similar(x.claim,item.claim)))continue;chosen.push(item);}
-  const identity=pool.filter(x=>x.kind==='identity');
-  const direct=chosen.filter(x=>!legacyRe.test(x.claim));
-  const legacy=chosen.filter(x=>legacyRe.test(x.claim));
+  // V4.1 SEMANTIC STORY PLANNER — facts earn a narrative role before a slot.
+  // Metadata never consumes a standalone panel; date/place are merged into P1.
+  const text=x=>String(x?.claim||'').toLowerCase();
+  const aftermathRe=/\b(rescue|relief|aid|army|convoy|shelter|evacuat|displac|homeless|surviv|missing|aftermath|recovery|rebuild|hospital|disease|starvation)\b/i;
+  const humanRe=/\b(kill|death|died|fatal|injur|wound|casualt|homeless|displac|surviv|missing)\b/i;
+  const destructionRe=/\b(destroy|damage|level|flatten|collapse|devastat|track|path|width|village|town|structure|building|house|home)\b/i;
+  const mechanismRe=/\b(fujita|\bf[0-5](?:\.[0-9])?\b|wind speed|km\/h|mph|intensity|formed|formation|storm|funnel|tornado|trigger|cause|landfall|ruptur|eruption|explosion|landslide|avalanche|wave)\b/i;
+  const dateOnlyRe=/^(?:on\s+)?\d{1,2}\s+[a-z]+\s+(?:19|20)\d{2}[\s.,]*$/i;
+  const identityOnly=x=>x.kind==='identity'||dateOnlyRe.test(String(x.claim).trim());
+  const bucket={
+    identity:pool.filter(identityOnly),
+    mechanism:pool.filter(x=>!identityOnly(x)&&mechanismRe.test(text(x))&&!legacyRe.test(text(x))),
+    destruction:pool.filter(x=>destructionRe.test(text(x))&&!legacyRe.test(text(x))),
+    human:pool.filter(x=>humanRe.test(text(x))&&!legacyRe.test(text(x))),
+    aftermath:pool.filter(x=>aftermathRe.test(text(x))&&!legacyRe.test(text(x))),
+    legacy:pool.filter(x=>legacyRe.test(text(x)))
+  };
+  const uniquePick=(arr,used,predicate=()=>true)=>{
+    const candidates=[...arr].filter(x=>!used.has(x)&&predicate(x)).sort((a,b)=>score(b)-score(a)||a.index-b.index);
+    for(const x of candidates){if([...used].some(y=>similar(y.claim,x.claim)))continue;used.add(x);return x;} return null;
+  };
+  const used=new Set(),planned={};
+  // HOOK: strongest concrete catastrophe/human consequence, never archive metadata.
+  planned.HOOK=uniquePick([...bucket.destruction,...bucket.human],used,x=>!legacyRe.test(text(x)))||uniquePick(pool,used,x=>!legacyRe.test(text(x)));
+  // P1: merge date/location identity into one slot later; choose best identity anchor.
+  planned.P1=uniquePick(bucket.identity,used)||uniquePick(pool,used,x=>identityOnly(x));
+  // P2-P4: mechanism / onset / intensity.
+  for(const s of ['P2','P3','P4']) planned[s]=uniquePick(bucket.mechanism,used)||uniquePick(pool,used,x=>!legacyRe.test(text(x)));
+  // P5-P8: physical escalation and destruction.
+  for(const s of ['P5','P6','P7','P8']) planned[s]=uniquePick(bucket.destruction,used)||uniquePick(pool,used,x=>!legacyRe.test(text(x)));
+  // P9-P11: direct human consequences.
+  for(const s of ['P9','P10','P11']) planned[s]=uniquePick(bucket.human,used)||uniquePick(bucket.aftermath,used)||uniquePick(pool,used,x=>!legacyRe.test(text(x)));
+  // P12-P13: immediate response / survival / aftermath.
+  for(const s of ['P12','P13']) planned[s]=uniquePick(bucket.aftermath,used)||uniquePick(pool,used,x=>!legacyRe.test(text(x)));
+  // P14: at most one historical significance/legacy fact.
+  planned.P14=uniquePick(bucket.legacy,used)||uniquePick(pool,used,x=>!legacyRe.test(text(x)));
   const slots=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1))];
-  const selected=[];
-  const hook=direct.find(x=>impactRe.test(x.claim))||direct[0]||identity[0];
-  if(hook)selected.push(hook);
-  for(const x of identity)if(selected.length<3&&!selected.includes(x)&&!selected.some(y=>similar(y.claim,x.claim)))selected.push(x);
-  for(const x of direct)if(selected.length<14&&!selected.includes(x)&&!selected.some(y=>similar(y.claim,x.claim)))selected.push(x);
-  if(selected.length<15&&legacy.length)selected.push(legacy[0]);
-  for(const x of chosen)if(selected.length<15&&!selected.includes(x))selected.push(x);
-  if(selected.length<15)throw new Error('Verified global evidence pool has only '+selected.length+' distinct usable story facts; need 15 for HOOK + P1-P14. Evidence diagnostics: '+JSON.stringify({pool:pool.length,rejected}));
+  // Fill any semantic gap only with a still-distinct direct fact; legacy is P14-only.
+  for(const s of slots)if(!planned[s])planned[s]=uniquePick(pool,used,x=>s==='P14'||!legacyRe.test(text(x)));
+  if(slots.some(s=>!planned[s]))throw new Error('Verified global evidence pool cannot fill the semantic story plan without duplicate/legacy filler. Evidence diagnostics: '+JSON.stringify({pool:pool.length,buckets:Object.fromEntries(Object.entries(bucket).map(([k,v])=>[k,v.length]))}));
   const claims=[],stageMap={};
-  slots.forEach((stage,i)=>{
-    const x=selected[i];const field='research.'+stage+'.'+x.index;
-    claims.push({field,value:x.claim,claim:x.claim,sourceUrl:x.sourceUrl,sourceId:'web-'+x.authority,authority:x.authority,support:x.support});
+  slots.forEach((stage)=>{
+    const x=planned[stage];const field='research.'+stage+'.'+x.index;
+    let value=x.claim;
+    if(stage==='P1'){
+      const date=String(topic).match(/\b(1\d{3}|20\d{2})\b/)?.[1]||String(pack.year);
+      const loc=String(pack.location||'').trim();
+      // Never allow a bare date/location panel.
+      if(dateOnlyRe.test(value)||value.split(/\s+/).length<6)value=`${date}: the disaster was centered in ${loc}.`;
+    }
+    claims.push({field,value,claim:value,sourceUrl:x.sourceUrl,sourceId:'web-'+x.authority,authority:x.authority,support:x.support});
     stageMap[stage]=[field];
   });
-  const storyQualityWarnings={needsReallocation:false,globalPoolSize:pool.length,selectedStoryFacts:selected.length,allocatorVersion:'V4-global-pool'};
+  const storyQualityWarnings={needsReallocation:false,globalPoolSize:pool.length,selectedStoryFacts:selected.length,allocatorVersion:'V4.1-semantic-planner'};
   const sources=[...new Set(claims.map(c=>c.sourceUrl))].map(url=>({id:'web-'+authority(url),authority:authority(url),name:authority(url),url}));
   return {verifiedClaims:claims,stageMap,sources,storyQualityWarnings,validation:{status:'PARTIAL',confidence:'medium',reason:'Event identity cross-checked against retrieved authorities; stage claims remain subject to narration validation.',checks:pack.identitySources.map(url=>({field:'Event identity',match:true,url}))},narrationGate:{allowed:true,exactNumbersAllowed:false,status:'PARTIAL'},factPack:{identity:[{year:pack.year,location:pack.location}],uncertainty:['Automatically researched claims require the narration evidence audit. Omit disputed numbers.']}};
 }
