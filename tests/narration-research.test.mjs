@@ -71,3 +71,8 @@ test('no additional research on healthy pool; conflict and network errors do not
  const req=[];const r=await expandResearch('Healthy Tornado — Example — 1989',base,stub([fixture()],req));assert(r.narrationGate.allowed);assert.equal(req.length,1);
  let calls=0;const opts={apiKey:'test',fetchImpl:async()=>{calls++;throw new Error('network down')}};const conflict={validation:{status:'CONFLICT'},narrationGate:{allowed:false}};assert.equal(await expandResearch('Conflict 1989',conflict,opts),conflict);assert.equal(calls,0);const fail=await expandResearch('Offline 1989',base,opts);assert.equal(fail.narrationGate.allowed,false);assert.equal(calls,1);
 });
+test('incomplete identity uses targeted confirmation while retaining verified facts',async()=>{
+ const initial=fixture();const p=JSON.parse(initial.output_text);p.identitySources=[urls[0],'https://wmo.int/not-retrieved'];initial.output_text=JSON.stringify(p);
+ const partial=readEvidencePool(initial,topic);assert.equal(assessEvidencePool(partial).missing.identity_sources,1);assert.equal(partial.pool.length,15);
+ const requests=[];const r=await expandResearch('Identity repair Tornado — Example — 1989',base,stub([initial,fixture([])],requests));assert(r.narrationGate.allowed);assert.equal(requests.length,2);assert.deepEqual(JSON.parse(requests[1].input).missingCategories,['identity_sources']);assert.equal(r.evidencePoolQuality.counts.identityAuthorities,2);
+});

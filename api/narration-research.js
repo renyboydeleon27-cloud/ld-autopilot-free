@@ -63,8 +63,9 @@ export function readEvidencePool(data,topic,previous=null){
   let pack;try{pack=JSON.parse(outputText(data).trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,''));}catch{throw new Error('Source research returned an unreadable evidence pool.');}
   const year=Number(String(topic).match(/\b(1\d{3}|20\d{2})\b/)?.[1]);
   if(pack.eventMatch!==true||!year||Number(pack.year)!==year||!String(pack.location||'').trim())throw new Error('Event name, location and year need a more precise match.');
-  if(!Array.isArray(pack.identitySources)||pack.identitySources.length<2||pack.identitySources.some(u=>!sourceUrls.has(canonical(u))))throw new Error('Two retrieved authoritative sources are required for event identity.');
-  if(new Set(pack.identitySources.map(authority)).size<2)throw new Error('Event identity needs two independent authorities.');
+  // Incomplete identity evidence is a targeted source deficit, never permission
+  // to narrate. Keep only exact retrieved URLs; fabricated URLs earn no credit.
+  const identitySources=[...new Set([...(previous?.identitySources||[]),...(Array.isArray(pack.identitySources)?pack.identitySources:[])].map(canonical).filter(u=>u&&trusted(u)&&sourceUrls.has(u)))];
   const pool=[...(previous?.pool||[])],rejected={...(previous?.rejected||{})};
   const reject=reason=>{rejected[reason]=(rejected[reason]||0)+1;};
   for(const item of pack.claims||[]){
@@ -80,13 +81,15 @@ export function readEvidencePool(data,topic,previous=null){
     if(pool.some(x=>key(x.factKey)===key(item.factKey)||key(x.claim)===key(item.claim)||similar(x.claim,item.claim))){reject('duplicate');continue;}
     pool.push({evidenceType:type,phase,factKey:item.factKey,claim:item.claim.trim(),support:item.support.trim(),sourceUrl:canonical(item.sourceUrl),authority:authority(item.sourceUrl),index:pool.length});
   }
-  return {topic,year,location:previous?.location||pack.location,identitySources:previous?.identitySources||pack.identitySources.map(canonical),retrievedSources:[...sourceUrls],pool,rejected};
+  return {topic,year,location:previous?.location||pack.location,identitySources,retrievedSources:[...sourceUrls],pool,rejected};
 }
 export function assessEvidencePool(evidence){
   const pool=evidence.pool||[],counts=Object.fromEntries(TYPES.filter(x=>x!=='source_metadata').map(t=>[t,pool.filter(x=>x.evidenceType===t).length]));
   // Extra date/place claims cannot inflate the 14 usable direct-story facts.
   counts.directTotal=pool.filter(x=>!['event_identity','legacy'].includes(x.evidenceType)).length+Math.min(1,counts.event_identity);
+  counts.identityAuthorities=new Set((evidence.identitySources||[]).map(authority)).size;
   const missing=Object.fromEntries(Object.entries(POOL_QUOTAS).map(([k,min])=>[k,Math.max(0,min-(counts[k]||0))]).filter(([,n])=>n));
+  if(counts.identityAuthorities<2)missing.identity_sources=2-counts.identityAuthorities;
   if(counts.directTotal<15&&!counts.legacy)missing.closingFact=1;
   return {version:EVIDENCE_VERSION,passed:Object.keys(missing).length===0,quotas:POOL_QUOTAS,counts,missing,rejected:evidence.rejected||{}};
 }
@@ -127,10 +130,12 @@ const BASE_INSTRUCTIONS=`Research the EXACT named historical disaster, location 
 export function researchRequest(topic,evidence=null){
   if(!evidence)return {instructions:BASE_INSTRUCTIONS+' Build the initial pool with 18-22 distinct direct-event facts if documented. Required minimums: one event identity, three physical impact, three human impact, three aftermath/response, and fourteen distinct direct facts in total. Include documented onset/trigger facts for chronological context. No story slots or narration yet.',input:{topic,mode:'initial_pool',quotas:POOL_QUOTAS}};
   const quality=assessEvidencePool(evidence);
+  const identityMissing=!!quality.missing.identity_sources;
   const missingCategories=Object.keys(quality.missing).filter(k=>TYPES.includes(k));
+  if(identityMissing)missingCategories.unshift('identity_sources');
   if(quality.missing.directTotal)for(const t of ['precursor_onset','physical_impact','human_impact','aftermath_response'])if(!missingCategories.includes(t))missingCategories.push(t);
   if(quality.missing.closingFact&&!quality.missing.directTotal)missingCategories.push('legacy');
-  return {instructions:BASE_INSTRUCTIONS+' TARGETED EXPANSION ONLY: event identity is already verified. Keep the same year, location and identitySources. Search only missingCategories and the listed shortfalls. Return ONLY newly found facts that address those shortfalls, not the existing pool. Do not restart a full event review, re-collect identity, or rephrase accepted facts. Existing retrieved URLs are valid citations, but each new claim still needs direct source support. If the missing facts cannot be verified, return claims:[] while retaining the confirmed identity.',input:{topic,mode:'targeted_expansion',year:evidence.year,location:evidence.location,identitySources:evidence.identitySources,missingCategories,shortfalls:quality.missing,acceptedFacts:evidence.pool.map(x=>({factKey:x.factKey,evidenceType:x.evidenceType,claim:x.claim})),retrievedSources:evidence.retrievedSources}};
+  return {instructions:BASE_INSTRUCTIONS+(identityMissing?' TARGETED IDENTITY VERIFICATION: confirm the exact event with the missing independent authoritative source(s). Supplied identity is a candidate, not yet verified. Return retrieved identitySources for the SAME event, location and year. Preserve the accepted direct facts; do not narrate or switch events.':' TARGETED EXPANSION ONLY: event identity is already verified. Keep the same year, location and identitySources.')+' Search only missingCategories and the listed shortfalls. Return ONLY newly found facts that address those shortfalls, not the existing pool. Do not restart a full event review or rephrase accepted facts. Re-check identity only when identity_sources is listed as missing. Existing retrieved URLs are valid citations, but each new claim still needs direct source support. If the missing facts cannot be verified, return claims:[] while retaining the confirmed identity.',input:{topic,mode:'targeted_expansion',year:evidence.year,location:evidence.location,identitySources:evidence.identitySources,missingCategories,shortfalls:quality.missing,acceptedFacts:evidence.pool.map(x=>({factKey:x.factKey,evidenceType:x.evidenceType,claim:x.claim})),retrievedSources:evidence.retrievedSources}};
 }
 export async function expandResearch(topic,research,{apiKey,fetchImpl=fetch,onUsage=()=>{},maxAttempts=2}={}){
   if(research.validation?.status==='CONFLICT')return research;
