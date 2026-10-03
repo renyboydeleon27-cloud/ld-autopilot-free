@@ -659,6 +659,44 @@ Include every requested stage key exactly once and no markdown.`;
       }
     }
 
+    // V3.2 FINAL STORY AUDIT — cheap local whole-script inspection.
+    // No web research and no extra model call: detect metadata-heavy or globally
+    // repetitive output after factual validation, then rewrite only flagged
+    // stages from their own verified evidence using deterministic phrasing.
+    const legacySpeechRe=/\b(authoritative|meteorological authorities|records? (?:list|show|record|use)|archives?|atlases?|databases?|compilations?|expert review|archival|professional literature|historical inventories|benchmark|world[- ]weather extremes|deadliest .*record|highest .*mortality)\b/i;
+    const normStory=s=>String(s||"").toLowerCase().replace(/\b(19\d{2}|20\d{2})\b/g," ").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+    const storyTokens=s=>new Set(normStory(s).split(" ").filter(x=>x.length>5));
+    const storySimilar=(a,b)=>{
+      const A=storyTokens(a),B=storyTokens(b); if(A.size<3||B.size<3)return false;
+      let n=0; for(const x of A)if(B.has(x))n++;
+      return n/Math.min(A.size,B.size)>=0.65;
+    };
+    const flagged=new Set();
+    const ordered=stageNames.filter(s=>typeof stages[s]==="string");
+    const legacySpoken=ordered.filter(s=>legacySpeechRe.test(stages[s]));
+    if(legacySpoken.length>1){
+      const keep=legacySpoken.includes("P14")?"P14":legacySpoken[legacySpoken.length-1];
+      for(const s of legacySpoken)if(s!==keep)flagged.add(s);
+    }
+    for(let i=0;i<ordered.length;i++)for(let j=i+1;j<ordered.length;j++){
+      if(storySimilar(stages[ordered[i]],stages[ordered[j]]))flagged.add(ordered[j]);
+    }
+    const directFromEvidence=(stage)=>{
+      const items=stageEvidence?.[stage]||[];
+      if(!items.length)return "";
+      const raw=String(items[0]?.claim??items[0]?.value??"").trim();
+      if(!raw)return "";
+      return raw
+        .replace(/^(authoritative|official|historical|international|meteorological)\s+(records?|accounts?|sources?|compilations?)\s+(?:show|list|record|report|note|describe|cite)\s+(?:that\s+)?/i,"")
+        .replace(/^(records?|accounts?|sources?|compilations?)\s+(?:show|list|record|report|note|describe|cite)\s+(?:that\s+)?/i,"")
+        .replace(/^according to [^,]+,\s*/i,"")
+        .replace(/^./,m=>m.toUpperCase());
+    };
+    for(const stage of flagged){
+      const replacement=directFromEvidence(stage);
+      if(replacement)stages[stage]=replacement;
+    }
+
     // PROGRAMMATIC EVIDENCE GUARD — reject high-risk event claims unless the
     // retrieved fact pack explicitly contains evidence for that claim class.
     const fp = research.factPack || {};
