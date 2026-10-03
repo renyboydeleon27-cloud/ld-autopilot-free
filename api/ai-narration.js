@@ -151,9 +151,9 @@ export default async function handler(req, res) {
   const isXylazinePhiladelphia2020s=/xylazine|zombie drug|tranq/i.test(topic) && /philadelphia|pennsylvania/i.test(topic);
   const isMessina1908=/messina|reggio calabria/i.test(topic) && /\b1908\b/.test(topic) && /tsunami/i.test(topic);
   const storyMap = isMessina1908 ? {
-    HOOK:["event.date","tsunami.waveSequence"],
+    HOOK:["tsunami.waveSequence"],
     P1:["event.location","event.country"],
-    P2:["earthquake.magnitude","event.date"],
+    P2:["event.date","earthquake.magnitude"],
     P3:["impact.destroyedAreaKm2"],
     P4:["tsunami.initialMovement"],
     P5:["tsunami.waveSequence"],
@@ -161,11 +161,11 @@ export default async function handler(req, res) {
     P7:["impact.coasts"],
     P8:["impact.tsunamiDamage"],
     P9:["impact.waveHeightOver13m"],
-    P10:["impact.coasts","impact.tsunamiDamage"],
-    P11:["tsunami.waveSequence","tsunami.runupOver10m"],
+    P10:["event.location"],
+    P11:["event.country"],
     P12:["impact.combinedFatalitiesApprox"],
-    P13:["impact.tsunamiDamage","impact.coasts"],
-    P14:["event.date","event.location","impact.combinedFatalitiesApprox"]
+    P13:["event.year"],
+    P14:["event.date"]
   } : isXylazinePhiladelphia2020s ? {
     HOOK:["event.location","drug.fentanylAssociation"],
     P1:["drug.type"],
@@ -252,6 +252,22 @@ export default async function handler(req, res) {
     stage, fields.map(field=>claimsByField[field]).filter(Boolean)
   ]));
 
+  // Evidence allocator guard: detect structural reuse before spending AI credits.
+  // Reuse is allowed for basic identity fields, but substantive disaster facts
+  // should have one primary owner stage unless an event-specific map explicitly
+  // supplies a distinct claim.
+  const reusableIdentityFields=new Set(["event.year","event.date","event.location","event.country"]);
+  const substantiveOwners={};
+  for(const [stage,fields] of Object.entries(storyMap)){
+    for(const field of fields){
+      if(reusableIdentityFields.has(field) || !claimsByField[field]) continue;
+      (substantiveOwners[field] ||= []).push(stage);
+    }
+  }
+  const repeatedSubstantiveEvidence=Object.fromEntries(
+    Object.entries(substantiveOwners).filter(([,stages])=>stages.length>1)
+  );
+
   const evidenceForNarration = {
     validation: research.validation,
     exactNumbersAllowed: research.narrationGate.exactNumbersAllowed,
@@ -273,6 +289,7 @@ export default async function handler(req, res) {
         ok:false,
         error:"Narration preflight blocked before AI generation: some stages have no verified stage-specific evidence.",
         missingStageEvidence,
+        repeatedSubstantiveEvidence,
         creditSafe:true,
         researchStatus:research.validation.status
       });
