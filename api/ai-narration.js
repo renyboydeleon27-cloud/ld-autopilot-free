@@ -469,7 +469,18 @@ Include every requested stage key exactly once and no markdown.`;
         max_output_tokens: 8000
       })
     });
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+    try { data = responseText ? JSON.parse(responseText) : {}; }
+    catch {
+      return res.status(502).json({
+        ok:false,
+        error:"OpenAI narration service returned a non-JSON response. Please retry.",
+        upstreamStatus:response.status,
+        outputPreview:responseText.slice(0,300),
+        apiUsage:usagePayload()
+      });
+    }
     apiUsageParts.push(usageFromResponse(data,"gpt-5-mini"));
     if (!response.ok) return res.status(response.status).json({ok:false,error:data?.error?.message || "OpenAI request failed.",apiUsage:usagePayload()});
     const raw = data.output_text || (data.output || []).flatMap(x=>x.content||[]).map(x=>x.text||"").join("").trim();
