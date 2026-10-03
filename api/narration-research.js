@@ -80,10 +80,20 @@ export function validateResearch(data,topic){
   }
 
   const missing=required.filter(s=>!stageMap[s]?.length);
-  if(missing.length||lateSecondary.length>=2||repeatedLegacy.length>=2)throw new Error(
+
+  // V3 HARD STORY QUOTA — across the complete HOOK + P1-P14 evidence pack,
+  // allow at most ONE stage whose primary purpose is archive/ranking/atlas/
+  // benchmark/legacy metadata. Prefer that single payoff at P14.
+  const secondaryStages=required.filter(stage=>{
+    const fields=stageMap[stage]||[];
+    const items=fields.map(field=>claims.find(x=>x.field===field)).filter(Boolean);
+    return items.length>0 && items.every(item=>secondaryLegacyRe.test(narrativeText(item)));
+  });
+  const misplacedSecondary=secondaryStages.filter(stage=>stage!=='P14');
+  if(missing.length||lateSecondary.length>=2||repeatedLegacy.length>=2||secondaryStages.length>1||misplacedSecondary.length>0)throw new Error(
     'Sources do not yet support a strong, distinct disaster story for all stages. '+
-    'Research must replace repetitive legacy/metadata beats with direct event developments or human consequences. '+
-    'Evidence diagnostics: '+JSON.stringify({missing,lateSecondary,repeatedLegacy,claims:pack.claims?.length||0,retrievedSources:sourceUrls.size,rejected})
+    'Research must replace repetitive or misplaced legacy/metadata beats with direct event developments or human consequences; only one legacy/significance beat is allowed and it belongs at P14. '+
+    'Evidence diagnostics: '+JSON.stringify({missing,lateSecondary,secondaryStages,misplacedSecondary,repeatedLegacy,claims:pack.claims?.length||0,retrievedSources:sourceUrls.size,rejected})
   );
   const sources=[...new Set(claims.map(c=>c.sourceUrl))].map(url=>({id:'web-'+authority(url),authority:authority(url),name:authority(url),url}));
   return {verifiedClaims:claims,stageMap,sources,validation:{status:'PARTIAL',confidence:'medium',reason:'Event identity cross-checked against retrieved authorities; stage claims remain subject to narration validation.',checks:pack.identitySources.map(url=>({field:'Event identity',match:true,url}))},narrationGate:{allowed:true,exactNumbersAllowed:false,status:'PARTIAL'},factPack:{identity:[{year:pack.year,location:pack.location}],uncertainty:['Automatically researched claims require the narration evidence audit. Omit disputed numbers.']}};
