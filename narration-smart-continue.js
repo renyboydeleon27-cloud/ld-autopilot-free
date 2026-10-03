@@ -188,6 +188,7 @@
     '<div class="field-head"><label>Final narration Smart Continue</label></div>'+
     '<p class="library-sub">Builds the final voice-over from the exact CURRENT HOOK and P1–P14 production flow. An explicit NO-VO HOOK stays silent. ENDING uses the locked channel CTA.</p>'+
     '<button id="ldNarrationSmartBtn" class="primary" type="button" style="width:100%;margin-top:8px">🎙️ SMART CONTINUE NARRATION</button>'+
+    '<button id="ldNarrationCopyFullBtn" class="ghost small" type="button" style="width:100%;margin-top:8px">📋 COPY FULL NARRATION</button>'+
     '<button id="ldNarrationUndoBtn" class="ghost small hidden" type="button" style="margin-top:8px">Undo narration polish</button>'+
     '<p id="ldNarrationSmartStatus" class="library-sub" role="status" style="margin-top:8px">Ready.</p>';
 
@@ -242,7 +243,45 @@
   new MutationObserver(()=>dedupeNarrationControls()).observe(masterCard,{childList:true,subtree:true});
 
   const btn=document.getElementById('ldNarrationSmartBtn');
+  const copyFull=document.getElementById('ldNarrationCopyFullBtn');
   const undo=document.getElementById('ldNarrationUndoBtn');
+
+  function fullNarrationText(){
+    const ordered=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
+    return ordered.map(stage=>{
+      if(stage==='HOOK'&&hookIsSilent(stageCard('HOOK')))return '';
+      return value(stageCard(stage),'.narration');
+    }).filter(Boolean).join('\n\n').trim();
+  }
+
+  copyFull?.addEventListener('click',async()=>{
+    const text=fullNarrationText();
+    if(!text){
+      status('No narration is available to copy yet.','error');
+      return;
+    }
+    try{
+      await navigator.clipboard.writeText(text);
+      const previous=copyFull.textContent;
+      copyFull.textContent='✅ FULL NARRATION COPIED';
+      status('Full narration copied as clean text — ready to paste into your voice lab.','pass');
+      setTimeout(()=>{copyFull.textContent=previous;},1800);
+    }catch{
+      const area=document.createElement('textarea');
+      area.value=text;
+      area.style.position='fixed';
+      area.style.opacity='0';
+      document.body.appendChild(area);
+      area.select();
+      const ok=document.execCommand('copy');
+      area.remove();
+      if(ok){
+        status('Full narration copied as clean text — ready to paste into your voice lab.','pass');
+      }else{
+        status('Copy failed. Please try again.','error');
+      }
+    }
+  });
 
   function refreshApprovalUi(){
     if(!btn)return;
