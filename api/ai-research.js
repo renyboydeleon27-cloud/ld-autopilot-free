@@ -56,6 +56,48 @@ const SOURCE_REGISTRY = {
 
 const CURATED_EVENT_EVIDENCE = [
   {
+    id:"messina-1908-civil-protection",
+    matches:({topic,year,hazardType})=>hazardType==="tsunami" && year===1908 && /messina|reggio calabria/i.test(topic),
+    source:{
+      id:"italy-civil-protection-messina-1908",
+      authority:"Italian Civil Protection Department",
+      name:"Tsunami risk emergencies — 1908 Messina event",
+      url:"https://emergenze.protezionecivile.gov.it/en/tsunami/",
+      supports:["event identity","date","location","earthquake magnitude","coastal impact","wave height","fatalities"],
+      confidence:"authoritative"
+    },
+    claims:[
+      {field:"event.year",value:1908,claim:"The Messina Strait earthquake and tsunami occurred in 1908."},
+      {field:"event.date",value:"1908-12-28",claim:"The Messina Strait earthquake and tsunami occurred on 28 December 1908."},
+      {field:"event.location",value:"Strait of Messina",claim:"The disaster struck the Strait of Messina area in southern Italy."},
+      {field:"event.country",value:"Italy",claim:"The 1908 Messina disaster occurred in Italy."},
+      {field:"earthquake.magnitude",value:7.1,claim:"The Italian Civil Protection Department describes the 1908 Messina Strait earthquake as magnitude 7.1."},
+      {field:"impact.coasts",value:"eastern Sicily and Calabria",claim:"The tsunami devastated coastal areas of eastern Sicily and Calabria."},
+      {field:"impact.waveHeightOver13m",value:true,claim:"The Italian Civil Protection Department reports tsunami waves over 13 metres high."},
+      {field:"impact.combinedFatalitiesApprox",value:80000,claim:"The Italian Civil Protection Department reports about 80,000 victims from the earthquake and tsunami combined."}
+    ]
+  },
+  {
+    id:"messina-1908-peer-reviewed-tsunami",
+    matches:({topic,year,hazardType})=>hazardType==="tsunami" && year===1908 && /messina|reggio calabria/i.test(topic),
+    source:{
+      id:"messina-tsunami-simulation-1999",
+      authority:"Peer-reviewed",
+      name:"Finite-element simulations of the 28 December 1908 Messina Straits tsunami",
+      url:"https://doi.org/10.1016/S1464-1895(99)00010-1",
+      supports:["earthquake impact","tsunami sequence","sea withdrawal","multiple waves","run-up","coastal flooding"],
+      confidence:"peer-reviewed"
+    },
+    claims:[
+      {field:"tsunami.initialMovement",value:"sea withdrawal",claim:"Historical observations indicate the first sea movement was a withdrawal lasting a few minutes."},
+      {field:"tsunami.waveSequence",value:"at least three large waves",claim:"The sea withdrawal was followed by coastal flooding from at least three large waves."},
+      {field:"tsunami.runupOver10m",value:true,claim:"Post-event surveys estimated tsunami flooding and run-up heights above 10 metres in some places."},
+      {field:"impact.tsunamiDamage",value:"severe",claim:"The tsunami caused severe coastal damage and many casualties."},
+      {field:"impact.destroyedAreaKm2",value:6000,claim:"The earthquake study describes about 6,000 square kilometres as the destroyed area."}
+    ]
+  },
+
+  {
     id:"sanriku-1896-satake-2017",
     matches:({topic,year,hazardType})=>hazardType==="tsunami" && year===1896 && /sanriku/i.test(topic),
     source:{
