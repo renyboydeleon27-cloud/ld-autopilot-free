@@ -32,7 +32,8 @@
    if(parts[k].length>1800)throw Error(k+' is too long for a Shorts panel.');
    result[k]=parts[k].trim();
   }
-  if(parts.ENDING&&parts.ENDING!==ENDING)throw Error('ENDING must use the locked channel CTA. Omit ENDING to add it automatically.');
+  // Normalize pasted ending wording to the channel CTA; never block a complete script.
+  // This also keeps production notes such as NO NARRATION out of the spoken text.
   result.ENDING=ENDING;
   return result;
  }

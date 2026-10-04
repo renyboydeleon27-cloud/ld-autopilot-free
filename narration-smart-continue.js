@@ -278,7 +278,7 @@
 
   const importBox=document.createElement('details');
   const importTitle=document.createElement('summary');importTitle.textContent='PASTE FULL NARRATION · No AI credits';
-  const importHelp=document.createElement('p');importHelp.textContent='Paste labeled HOOK, P1: through P14:, and ENDING sections, then press OK to distribute and approve. HOOK narration is required, even when the Flow prompt says NO VO. Omit ENDING to add the locked channel CTA automatically. Your previous narration is backed up.';
+  const importHelp=document.createElement('p');importHelp.textContent='Paste labeled HOOK, P1: through P14:, and ENDING sections, then press OK to distribute and approve. HOOK narration is required, even when the Flow prompt says NO VO. ENDING always uses the standard channel CTA automatically. Your previous narration is backed up.';
   const importInput=document.createElement('textarea');importInput.rows=10;importInput.style.width='100%';importInput.placeholder='HOOK: ...\nP1: ...\nP2: ...\n...\nP14: ...';importInput.setAttribute('aria-label','Paste full narration');
   const approveImport=document.createElement('button');approveImport.type='button';approveImport.className='primary';approveImport.textContent='OK';
   const importMessage=document.createElement('p');importMessage.setAttribute('role','status');
@@ -299,7 +299,7 @@
       btn.dataset.generated='1';
       if(!approveNarration())throw Error('Import could not be approved.');
       undo?.classList.remove('hidden');refreshApprovalUi();
-      importMessage.textContent='Done — narration distributed to HOOK, P1–P14 and ENDING, and approved. '+(silentHook?'HOOK kept silent. ':'')+'No AI call was made.';
+      importMessage.textContent='Done — narration distributed to HOOK, P1–P14 and ENDING, and approved. '+(silentHook?'HOOK kept silent. ':'')+'Standard channel ending applied. No AI call was made.';
       window.dispatchEvent(new CustomEvent('ld:narration-smart-complete',{detail:{topic:topic(),source:'manual-import',silentHook}}));
     }catch(e){
       if(changed){restoreBackup();clearApproval();refreshApprovalUi();}

@@ -11,7 +11,7 @@ test('rejects missing, duplicate and unsupported panels before import',()=>{
 test('enforces hook and ending locks',()=>{
  assert.throws(()=>api.parse('HOOK: Spoken.\n'+script,{silentHook:true}));
  assert.throws(()=>api.parse(script));
- assert.throws(()=>api.parse(script+'\nENDING: Different CTA.',{silentHook:true}));
+ assert.equal(api.parse(script+'\nENDING: Different CTA.',{silentHook:true}).ENDING,api.ENDING);
  assert.equal(api.parse('HOOK: [SILENT]\n'+script,{silentHook:true}).HOOK,'');
 });
 test('supports fenced multiline text without rewriting content',()=>{
@@ -33,4 +33,18 @@ test('one OK distributes every panel, approves and uses no API',()=>{
 });
 test('invalid paste makes no changes and cannot approve',()=>{
  const h=harness();h.ui.importInput.value='P1: Incomplete.';h.ui.approveImport.click();assert.deepEqual(h.values,{});assert.equal(h.approved(),false);assert.equal(h.backups(),0);assert.match(h.ui.importMessage.textContent,/Missing narration/);
+});
+
+test('one OK accepts alternate ending wording and strips ending production notes',()=>{
+ for(const ending of ['Thank you for watching. Like, share and subscribe.', '[NO NARRATION]', '', api.ENDING]){
+  const h=harness();h.ui.importInput.value=script+'\nENDING: '+ending;
+  h.ui.approveImport.click();
+  assert.equal(h.approved(),true);assert.equal(h.values.ENDING,api.ENDING);
+  assert.equal(h.values.P14,'Sentence 14.');assert.match(h.ui.importMessage.textContent,/Standard channel ending applied/);
+ }
+});
+test('alternate ending does not bypass missing panel validation',()=>{
+ const h=harness();h.ui.importInput.value=script.replace('P8: Sentence 8.','')+'\nENDING: Thanks.';
+ h.ui.approveImport.click();assert.equal(h.approved(),false);assert.equal(h.backups(),0);
+ assert.deepEqual(h.values,{});assert.match(h.ui.importMessage.textContent,/Missing narration: P8/);
 });
