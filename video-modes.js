@@ -1048,12 +1048,44 @@ function sanFranciscoP11AnimePrompt(card){
  result=window.LDStoryFormat?.decorate(result,'P11',format())||result;
  return window.LDProductionDNA?.polishPrompt?window.LDProductionDNA.polishPrompt(card,result):result;
 }
+// Approved visual reference: 1000270314.mp4. Scene approval does not auto-approve a new render.
+function approvedXylazineP2(card){
+ return card.dataset.stage==='P2' && /xylazine/i.test(current()) && /Philadelphia/i.test(current()) && /\b2020\b/.test(current()) && style()==='anime' && colorMode()==='bw' && /veterinary/i.test(card.querySelector('.narration')?.value||'');
+}
+function xylazineP2Prompt(card){
+ var scene='Illustrative veterinary examination room in Philadelphia, 2020. An intact examination table in the foreground and a closed glass-front medicine cabinet behind it, containing a fixed arrangement of sealed containers. No people or animals. No readable labels or brands. Camera movement is the only dominant action.';
+ card.dataset.videoScene=scene;
+ var sceneField=card.querySelector('.video-scene');if(sceneField)sceneField.value=scene;
+ return 'VIDEO PROMPT — EXACTLY 10 SECONDS\n'+current()+' · P2\n\n'+absoluteStyleLock()+'\n\n'
+ +'APPROVED XYLAZINE P2 — VETERINARY CONTEXT: Scene based on the user-approved 1000270314.mp4 visual trial. Review each new render before marking Done.\n'
+ +'TEXT-TO-VIDEO. '+(format()==='shorts'?'Portrait 9:16.':'Landscape 16:9.')+' Exactly 10 seconds. One continuous shot. No reference image required. Serious hand-drawn 2D anime with detailed linework and restrained shading. Strict true black-and-white grayscale.\n\n'
+ +'ENVIRONMENT BIBLE — SHARED PHYSICAL WORLD: Philadelphia, Pennsylvania, USA, 2020. Modest veterinary examination room, intact furniture and sealed containers. This is illustrative context, not a reconstruction of a named clinic, investigation or drug-diversion incident.\n\n'
+ +'PANEL SCENE:\n'+scene+'\n\n'
+ +'NARRATIVE CONTEXT — not spoken, not on screen:\n'+card.querySelector('.narration').value.trim()+'\n\n'
+ +'FACTUAL BOUNDARY: The containers are contextual props; their contents cannot be identified visually. Narration added during editing explains veterinary use and the illicit drug supply. Do not imply this room supplied street drugs. No transaction, drug mixing, testing, sample collection or human administration.\n\n'
+ +'TIMING:\n0.0–0.5s: Table edge and cabinet are visible immediately. Begin a gentle lateral camera move.\n0.5–7.0s: Continue the same move with readable parallax between the examination table and closed cabinet. All objects remain stationary.\n7.0–10.0s: Ease to a stop on a balanced composition. No new action or transition.\n\n'
+ +'MASTER CINEMATIC CONSISTENCY LOCK — HIGH PRIORITY:\n'
+ +'MICRO-TRANSITION + MORPH CONTROL: Continuous camera motion only; no cuts, viewpoint jumps or object transformation.\n'
+ +'SUBJECT + OBJECT PERSISTENCE LOCK: Preserve every container, shelf, handle and table edge. Fixed counts, proportions and geometry throughout.\n'
+ +'CHARACTER DIVERSITY + ANTI-CLONE LOCK: No people or animals are present; do not introduce any.\n'
+ +'WEATHER + ATMOSPHERE CONTINUITY LOCK: Stable restrained indoor lighting. No invented weather, dust, smoke or dramatic lighting changes.\n'
+ +'DEBRIS + DAMAGE PHYSICS LOCK: All furniture remains intact. No structural damage, moving debris, collapse or disaster forces.\n'
+ +'CINEMATIC CAMERA DIRECTOR: One slow lateral move, stable horizon and coherent perspective. Foreground table and background cabinet provide depth.\n'
+ +'PROFESSIONAL CINEMATIC AUDIO MIX: Quiet indoor room tone only. No voices, dialogue, music or dramatic effects.\n\n'
+ +'EPISODE CANON — CONTINUITY ENGINE: This is a distinct illustrative sublocation. Inherit only the selected episode style, city and year. Do not claim a specific P1 room, character or structural damage. No prior-panel action is reconstructed.\n\n'
+ +'CAMERA: Start close to the table edge with the cabinet already visible. Slow continuous lateral tracking; no zoom pumping or orbit.\n'
+ +'PHYSICS AND TIME: Camera parallax only. Objects do not move, change shape or multiply. No clinical procedure occurs.\n'
+ +'AUDIO: Quiet room tone. NO VOICE-OVER, dialogue or music. Final narration is added separately.\n'
+ +'NEGATIVE: No live action, photorealism, 3D CGI, color, sepia, tint, text, captions, logos, watermark, people, animals, needles entering skin, drug preparation, illicit packets, forensic handling, gore, floating containers, hidden cuts or structural destruction.\n'
+ +'STATUS: APPROVED SCENE REFERENCE — test the generated clip before marking this production panel Done.';
+}
 function build(card){
  if(window.LDStoryModes?.enabled())return window.LDStoryModes.video(card,current(),format(),style(),colorMode());
  var scene=cleanSceneText(stripSceneModePrefix(sceneFrom(card)));
  if(!scene)throw Error('Add the panel scene description first.');
  if(!ready())throw Error('Set the shared year and location before creating Text-to-Video prompts.');
  var stage=card.dataset.stage;
+ if(approvedXylazineP2(card))return xylazineP2Prompt(card);
  if(stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw')return window.LDStoryFormat?.decorate(sanFranciscoP11AnimePrompt(card),stage,format())||sanFranciscoP11AnimePrompt(card);
  var special=choiceSpecial(card,eventPanel(stage));
  if(special&&special.scene)scene=special.scene;
@@ -1123,7 +1155,7 @@ function rebuildTextPrompt(card){
  syncGlobalControl();
  return text;
 }
-function valid(card){if(window.LDStoryModes?.enabled())return completeTextPrompt(state(card).text)&&state(card).text.includes('CHARACTER + WORLD BIBLE:')&&normalizedSignature(state(card).signature)===signature(card);var approvedDone=!!card.querySelector('.done-toggle')?.checked&&card.dataset.approvalRevoked!=='1';if(approvedDone&&state(card).mode==='text'&&completeTextPrompt(state(card).text))return true;if(!card.querySelector('.done-toggle')?.checked&&isWellingtonMasterStage(card.dataset.stage)&&!state(card).text.includes('WELLINGTON CHAPTER MASTER DNA — APPROVED P4 INHERITANCE:'))return false;if(!card.querySelector('.done-toggle')?.checked&&isWellingtonMasterStage(card.dataset.stage)&&!state(card).text.includes('ABSOLUTE AUDIO LOCK — WELLINGTON P4–P14 — HIGHEST PRIORITY:'))return false;if(!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('ENVIRONMENT BIBLE — SHARED PHYSICAL WORLD:'))return false;if(!card.querySelector('.done-toggle')?.checked&&window.LDContinuityEngine&&!state(card).text.includes('EPISODE CANON — CONTINUITY ENGINE:'))return false;if(card.dataset.stage==='P14'&&sanFrancisco1906P14('P14')&&!state(card).text.includes('P14 APPROVED SINGLE-MAP CONTINUITY LOCK:'))return false;if(card.dataset.stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P13 SINGLE-ACTION ANTI-MORPH LOCK:'))return false;if(card.dataset.stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function valid(card){if(window.LDStoryModes?.enabled())return completeTextPrompt(state(card).text)&&state(card).text.includes('CHARACTER + WORLD BIBLE:')&&normalizedSignature(state(card).signature)===signature(card);var approvedDone=!!card.querySelector('.done-toggle')?.checked&&card.dataset.approvalRevoked!=='1';if(approvedDone&&state(card).mode==='text'&&completeTextPrompt(state(card).text))return true;if(approvedXylazineP2(card)&&!state(card).text.includes('APPROVED XYLAZINE P2 — VETERINARY CONTEXT:'))return false;if(!card.querySelector('.done-toggle')?.checked&&isWellingtonMasterStage(card.dataset.stage)&&!state(card).text.includes('WELLINGTON CHAPTER MASTER DNA — APPROVED P4 INHERITANCE:'))return false;if(!card.querySelector('.done-toggle')?.checked&&isWellingtonMasterStage(card.dataset.stage)&&!state(card).text.includes('ABSOLUTE AUDIO LOCK — WELLINGTON P4–P14 — HIGHEST PRIORITY:'))return false;if(!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('ENVIRONMENT BIBLE — SHARED PHYSICAL WORLD:'))return false;if(!card.querySelector('.done-toggle')?.checked&&window.LDContinuityEngine&&!state(card).text.includes('EPISODE CANON — CONTINUITY ENGINE:'))return false;if(card.dataset.stage==='P14'&&sanFrancisco1906P14('P14')&&!state(card).text.includes('P14 APPROVED SINGLE-MAP CONTINUITY LOCK:'))return false;if(card.dataset.stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P13 SINGLE-ACTION ANTI-MORPH LOCK:'))return false;if(card.dataset.stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
 function legacyCompletionReady(card){
  if(!supports(card)||state(card).mode!=='text')return false;
  if(!card.querySelector('.narration')?.value.trim())return false;
