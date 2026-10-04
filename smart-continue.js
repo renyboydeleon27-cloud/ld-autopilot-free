@@ -1188,6 +1188,20 @@ document.addEventListener('click',e=>{
   run();
 });
 
+function revalidateStaleLocalReview(){
+  const el=document.getElementById('ldSmartContinueStatus');
+  const sticky=document.getElementById('ldSmartStickyStatus');
+  const msg=String(el?.textContent||sticky?.textContent||'');
+  if(!/Local prompt check — no audit credits used:/i.test(msg))return;
+  const card=currentCard();
+  if(!card)return;
+  const payload=panelPayload(card);
+  const issues=window.LDPublicHealthPolicy?.issues(payload.topic,payload.currentPrompt)||[];
+  if(issues.length)return;
+  buttonLabel('🚀 SMART CONTINUE');
+  status('✅ '+(card.dataset.stage||'CURRENT')+' local checks now pass · no audit credits used. Ready for one controlled Smart Continue audit.','pass');
+}
+
 function mountAdvanced(){
   let details=document.getElementById('ldAdvancedTools');
   if(!details){
@@ -1223,6 +1237,10 @@ function mount(){
   }
 
   mountAdvanced();
+  // Saved error text can outlive a local-policy update. Revalidate it locally
+  // after all scripts restore the project; never spend an API call here.
+  setTimeout(revalidateStaleLocalReview,350);
+  setTimeout(revalidateStaleLocalReview,1200);
 
   stages.addEventListener('input',e=>{
     const card=e.target.closest?.('.stage-card');
@@ -1356,5 +1374,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.50.1',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.50.2',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
