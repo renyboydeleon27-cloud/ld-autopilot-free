@@ -1,7 +1,7 @@
 /* Shared local policy. No network calls. */
 (function(root){
  'use strict';
- const version='1.0.0';
+ const version='1.0.1';
  function matches(topic){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic||'');}
  function beat(text){
   const s=String(text||'');
