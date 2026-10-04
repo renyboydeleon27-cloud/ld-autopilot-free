@@ -1,6 +1,6 @@
 /* LD AUTO v3.49.30 — topic-aware Smart Random scene matching for public-health crises. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.49.30-topic-aware-scenes-v1';
+const T2V_POLICY_VERSION='3.50.0-public-health-policy-v1';
 const SMART_SCENE_PREFIX='SMART RANDOM CHOICE — ';
 const KEEP_SCENE_PREFIX='KEEP CURRENT SCENE — ';
 function supports(card){if(window.ldStoryEpisode)return /^P[1-9]\d*$/.test(card.dataset.stage);return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
@@ -132,6 +132,7 @@ function lock(){
  if(window.LDStoryModes?.enabled())return window.LDStoryModes.identity();
  var c=continuity();
  var location=cleanLocation(c.location)||'UNCONFIRMED — specify the chapter location';
+ if(publicHealthTopic())return 'CHAPTER CONTINUITY LOCK:\nEvent: '+current()+'. Year: '+c.year+'. Location: '+location+'.\n'+absoluteStyleLock()+'\nENVIRONMENT BIBLE — SHARED PHYSICAL WORLD: Match the selected city, year and visual style. Use restrained plausible local architecture and objects. Illustrative settings are not reconstructions of named facilities. No invented weather, disaster damage, medical procedures or readable records.\nEND CHAPTER CONTINUITY LOCK.';
  return 'CHAPTER CONTINUITY LOCK:\nEvent: '+current()+'.\nEvent year: '+(c.year||'UNCONFIRMED')+'.\nMain location: '+location+'.\n'+effectiveVisualDna()+'\n'+effectiveEnvironmentBible()+'\nThe auto visual DNA controls the shared chapter rendering language and is generated from Visual Style + Color Treatment + event year + main location. Clothing, architecture, crops, terrain, transport, utilities, tools and technology must match this event and location. Use the same chapter visual world from HOOK through P14, with distinct sublocations and camera views. P1 returns to normal life before the event; later panels follow their own historical time and narrative beat. Recovery or wider-impact panels may change date or location only when explicitly established by that panel. Never carry peak destruction into a pre-disaster scene. Keep recurring adult appearance and wardrobe consistent when adults are present. No invented historical facts.'+(textOnlyAccuracyLock()?'\n'+textOnlyAccuracyLock():'')+'\nEND CHAPTER CONTINUITY LOCK.';
 }
 function stripLock(s){return String(s||'').replace(/\s*CHAPTER CONTINUITY LOCK:[\s\S]*?END CHAPTER CONTINUITY LOCK\./g,'').trim();}
@@ -197,6 +198,7 @@ function childHookException(prompt){
  ].join('\\n');
 }
 function continuityEngineBlock(card){
+ if(publicHealthTopic()&&window.LDPublicHealthPolicy)return window.LDPublicHealthPolicy.rules.canon;
  return window.LDContinuityEngine?.promptBlock?.(card)||'';
 }
 function withLock(prompt){
@@ -236,7 +238,7 @@ const PUBLIC_HEALTH_SCENE_BANK={
 };
 function publicHealthTopic(){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(current());}
 function publicHealthScenes(card){
- var n=stageNumber(card.dataset.stage),rows=PUBLIC_HEALTH_SCENE_BANK[n]||[];
+ var n=window.LDPublicHealthPolicy?.beat(card.querySelector('.narration')?.value)||stageNumber(card.dataset.stage),rows=PUBLIC_HEALTH_SCENE_BANK[n]||[];
  return rows.map(function(row,i){return {place:row[0],kind:'public-health',index:1000+n*10+i,tag:row[1]};});
 }
 const SCENE_BANK_LATE=[
@@ -319,7 +321,7 @@ function selectedScene(card,index){
  var item=availableScenes(card).find(function(row){return row.index===index;});
  if(!item)return '';
  var n=stageNumber(card.dataset.stage),beat=String(card.querySelector('.narration')?.value||'').trim();
- var phase=publicHealthTopic()?(n<=2?'the evidence-supported public-health context':n<=5?'the documented emergence and spread of the crisis':n<=8?'the documented medical and human consequences':n<=11?'the documented scale, treatment and care response':n<=13?'the documented overdose-response, surveillance and prevention work':'the continuing evidence-supported public-health response'):(n<=2?'intact ordinary life before the disaster':n<=6?'the current panel’s established disaster stage':n<=8?'wider damage or a documented secondary hazard':n===9?'the immediate aftermath':n===10?'rescue or emergency response supported by the narration':n===11?'relief, displacement or short-term human needs':n===12?'wider documented consequences':n===13?'gradual cleanup or recovery':'the event’s reflective closing beat');
+ var phase=publicHealthTopic()?(n<=2?'the evidence-supported public-health context':n<=5?'the current approved narration’s public-health context':n<=8?'the documented medical and human consequences':n<=11?'the documented scale, treatment and care response':n<=13?'the documented overdose-response, surveillance and prevention work':'the continuing evidence-supported public-health response'):(n<=2?'intact ordinary life before the disaster':n<=6?'the current panel’s established disaster stage':n<=8?'wider damage or a documented secondary hazard':n===9?'the immediate aftermath':n===10?'rescue or emergency response supported by the narration':n===11?'relief, displacement or short-term human needs':n===12?'wider documented consequences':n===13?'gradual cleanup or recovery':'the event’s reflective closing beat');
  return 'PRIMARY LOCATION: '+item.place+', in '+cleanLocation(continuity().location)+', '+continuity().year+'. Depict '+phase+' with one readable action immediately. '+(beat?'PANEL NARRATIVE CONTEXT (never spoken): '+beat+' ':'')+'Use historically appropriate occupants, clothing, construction and objects for this exact place. Preserve the event progression and previously established conditions. For a public-health crisis, do not invent earthquake, storm, fire, collapse, disaster debris, historical-period styling, or unrelated catastrophe imagery. Do not invent unverified weather, dust, wind, transport or damage. One coherent camera move; distinct angle and cast from the previous panel. No speech, music, embedded text or modern objects.';
 }
 function sceneChoiceIndex(card){
@@ -750,6 +752,7 @@ function progression(stage,special){
  return window.LDDisasterProgression?.stage?.(current(),stage)||null;
 }
 function progressionLock(stage,special){
+ if(publicHealthTopic()&&window.LDPublicHealthPolicy)return window.LDPublicHealthPolicy.rules.progression;
  var p=progression(stage,special);
  if(!p)return special
    ? 'EVENT-SPECIFIC PROGRESSION OVERRIDE: This panel uses a dedicated event-specific scene and timing lock. The generic disaster-family stage is intentionally superseded.'
@@ -781,6 +784,7 @@ function previousApprovedContinuity(stage){
  return head.slice(0,space>220?space:620).trim()+'…';
 }
 function intensityDirector(stage){
+ if(publicHealthTopic()&&window.LDPublicHealthPolicy)return window.LDPublicHealthPolicy.rules.intensity;
  if(isSanFrancisco1906P2(stage))return 'INTENSITY: normal life only. Fault stress is invisible and explained by narration; show no warning sign, concern, shaking, ominous change, fire, damage or buildup before P3.';
  var n=stageNumber(stage),fam=familyKey();
  if(n===1)return 'INTENSITY: restrained normal-world tension. The scene must feel alive and cinematic, but do not foreshadow with impossible destruction.';
@@ -795,6 +799,7 @@ function intensityDirector(stage){
  return 'INTENSITY: reflective cinematic closure. End with visual weight, historical memory and a composed final image; do not introduce a new disaster beat.';
 }
 function cameraDirector(stage,scientific){
+ if(publicHealthTopic()&&window.LDPublicHealthPolicy)return window.LDPublicHealthPolicy.rules.camera;
  if(stage==='P14'&&sanFrancisco1906P14(stage))return 'CINEMATIC CAMERA DIRECTOR: nearly fixed medium-wide three-quarter view of all three adults and entire existing flat map; at most a minimal continuous push. No cuts, pan, jump, wipe, background reveal or viewpoint reset.';
  if(stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current()))return 'CINEMATIC CAMERA DIRECTOR: hold one stable fixed 2D anime composition on the worker, the fully assembled cart and the single brick. No pan, orbit, crane, viewpoint reset, transition or new characters.';
  if(isSanFrancisco1906P2(stage))return 'CINEMATIC CAMERA DIRECTOR: one smooth lateral surface-level move through an intact 1906 San Francisco street, visually distinct from P1. Reveal ordinary life and period setting only. Do not expose warning signs, a fault, hidden mechanisms, shaking or environmental changes.';
@@ -819,6 +824,7 @@ function cameraDirector(stage,scientific){
  return (map[n]||map[6])+' Maintain one lens family and coherent perspective for the whole 10 seconds. No zoom pumping, fisheye, random orbit, camera teleportation, viewpoint reset, wall pass-through or unmotivated shake.';
 }
 function weatherContinuityLock(stage){
+ if(publicHealthTopic()&&window.LDPublicHealthPolicy)return window.LDPublicHealthPolicy.rules.weather;
  if(stage==='P2'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current()))return 'WEATHER + ATMOSPHERE CONTINUITY LOCK: Keep the same visible light, weather and ground condition as P1 when established. If P1 does not establish a detail, leave it unspecified; do not invent wind, rain or an ominous atmospheric change. The 1906 street is intact and quiet before perceptible shaking in P3.';
  if(window.LDWellingtonAvalanche1910?.matches?.(current())&&stage==='P4')return 'WEATHER + ATMOSPHERE CONTINUITY LOCK — WELLINGTON P4: P4 is a deliberate location transition from the prior interior/human scene to the outdoor upper mountain release zone. Do NOT inherit indoor objects, people, room lighting, structural damage, or interior atmosphere from P3. Use restrained winter mountain visibility and lighting consistent with the established chapter world; do not invent a dramatic storm change unless separately established.';
  var prev=previousApprovedContinuity(stage);
@@ -826,6 +832,7 @@ function weatherContinuityLock(stage){
  return 'WEATHER + ATMOSPHERE CONTINUITY LOCK:\nWeather is story continuity, not decoration. Preserve only weather and atmosphere details visibly established by the preceding approved panel; if cloud direction, wind, light direction, visibility, precipitation, ground wetness or dust are not established, leave them unspecified and do not invent them. Any established change must evolve progressively on-screen, never reset abruptly. Storm buildup must darken / thicken / intensify progressively; aftermath may ease only when the story position supports it. Keep foreground, midground and background readable; add atmospheric layers only when visibly established or caused within this panel.'+bridge;
 }
 function transitionMorphLock(stage){
+ if(publicHealthTopic()&&window.LDPublicHealthPolicy)return window.LDPublicHealthPolicy.rules.motion;
  if(stage==='P14'&&sanFrancisco1906P14(stage))return 'MICRO-TRANSITION + MORPH CONTROL: one flat open map with stable four corners, markings and folds remains visible from the first through final frame. Exactly three people stay present. One short finger trace has continuous hand contact; no map redraw, unrolling, cut, new person or scenery change.';
  if(stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current()))return 'MICRO-TRANSITION + MORPH CONTROL: keep the P13 worker, one brick and fully assembled cart persistent. Show hand contact before the brick lifts, continuous lift, single release, then stillness. No morphing, pop-in, cut, new person, extra tool, sudden cart or wheel formation.';
  return 'MICRO-TRANSITION + MORPH CONTROL:\nAll state changes need visible physical intermediates. Wind builds before objects accelerate. People brace, turn, stumble or react before changing position. Structures flex / strain / detach before failure. Debris begins moving before reaching speed. Damage never reverses. No morph dissolve, hidden cut, snap transformation, pop-in, pop-out, teleportation, duplicate person, replacement face, changing clothing, changing body proportions, geometry melt, respawn, spontaneous repair or unexplained object multiplication. Large objects keep identity, scale and orientation until a visible force changes them.';
@@ -837,6 +844,7 @@ function subjectObjectLock(stage){
  return 'SUBJECT + OBJECT PERSISTENCE LOCK:\nWithin this shot, each adult keeps the same face, age, hair, clothing, body proportions and accessories from first frame to last. Buildings, windows, roofs, poles, trees, fences, vehicles and large debris preserve geometry and identity unless visibly altered by a physical event. Across panels, reuse a recurring adult only when continuity context establishes that it is the same person; otherwise do not invent false character continuity.';
 }
 function audioDirector(stage){
+ if(publicHealthTopic()&&window.LDPublicHealthPolicy)return window.LDPublicHealthPolicy.rules.audio;
  var wellingtonAudio=window.LDWellingtonAvalanche1910?.audioLock?.(current(),stage)||'';
  if(wellingtonAudio)return 'PROFESSIONAL CINEMATIC AUDIO MIX:\n'+wellingtonAudio;
  if(eventPanel(stage)?.audio)return 'PROFESSIONAL CINEMATIC AUDIO MIX: Follow the event-specific AUDIO section exactly. Use only the listed sounds when their cause is visible. Do not add generic hazard ambience, wind, rumble, voices, music or extra impacts. Keep natural timing and dynamic range for those permitted sounds.';
@@ -846,9 +854,11 @@ function audioDirector(stage){
  return 'PROFESSIONAL CINEMATIC AUDIO MIX:\nAudio phase: '+phase+'. Use natural, scene-specific sound only unless music or dialogue is explicitly requested. Hierarchy: primary environmental hazard/ambience first, secondary environment second, occasional physically motivated impacts third, subtle human movement/reaction last. No repetitive identical impact loop, constant metallic clanging, random cinematic boom, camera whoosh, high-pitched continuous screech, artificial bass hit, unsupported explosion, or modern siren/alarm. Keep dynamic range: quieter tension → rising pressure → peak → natural decay when appropriate. Every major audible event must have a visible cause and occur in sync with the image.';
 }
 function debrisPhysicsLock(){
+ if(publicHealthTopic()&&window.LDPublicHealthPolicy)return window.LDPublicHealthPolicy.rules.damage;
  return 'DEBRIS + DAMAGE PHYSICS LOCK:\nDebris obeys mass, gravity, wind direction and momentum. Light debris may rise higher; shingles and small boards may travel farther; heavy timber, furniture and structural fragments stay lower and move with believable inertia. No hovering heavy objects, reverse-direction debris without cause, giant foreground debris that blocks the main hazard, or sudden scale changes. Damage accumulates irreversibly: broken remains broken; detached remains detached; collapsed elements do not rebuild.';
 }
 function stageCastProfile(stage){
+ if(publicHealthTopic()&&window.LDPublicHealthPolicy)return window.LDPublicHealthPolicy.rules.cast;
  if(isSanFrancisco1906P2(stage))return 'ordinary pre-disaster adults with neutral expressions, unaware of the coming earthquake';
  var n=stageNumber(stage);
  if(n===1)return 'normal life / pre-disaster adults';
@@ -1143,6 +1153,8 @@ function rebuildTextPrompt(card){
  }
  pinScene(card);
  var text=build(card);
+ const policyIssues=window.LDPublicHealthPolicy?.issues(current(),text)||[];
+ if(policyIssues.length)throw Error('Local prompt check: '+policyIssues.join(' '));
  if(!promptStyleCompatible(text))throw Error('Visual-style lock mismatch. Rebuild the panel prompt before approval.');
  if(!qualityPromptCompatible(text))throw Error('Cinematic consistency lock is incomplete. Rebuild the panel prompt before approval.');
  if(!antiClonePromptCompatible(text))throw Error('Character diversity / anti-clone lock is incomplete. Rebuild the panel prompt before approval.');

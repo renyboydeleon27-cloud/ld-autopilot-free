@@ -500,11 +500,12 @@ function panelPayload(card){
   const sceneField=card.querySelector('.video-scene');
   const promptField=card.querySelector('.text-video-prompt');
   const stage=card.dataset.stage||'';
-  const eventSpecificOverride=!!window.LDVideoModes?.eventPanel?.(stage);
+  const publicHealth=!!window.LDPublicHealthPolicy?.matches(topic());
+  const eventSpecificOverride=publicHealth||!!window.LDVideoModes?.eventPanel?.(stage);
   const progression=eventSpecificOverride?null:window.LDDisasterProgression?.stage?.(topic(),stage);
   return {
     narrativeFormat:window.ldNarrativeFormat||'original',
-    previousScene:String(card.previousElementSibling?.dataset.videoScene||card.previousElementSibling?.querySelector('.narration')?.value||'').slice(0,3500),
+    previousScene:publicHealth?'':String(card.previousElementSibling?.dataset.videoScene||card.previousElementSibling?.querySelector('.narration')?.value||'').slice(0,3500),
     topic:topic(),
     stage,
     format:format(),
@@ -512,7 +513,7 @@ function panelPayload(card){
     colorMode:colorMode(),
     year:String(continuity.year||'').trim(),
     location:String(continuity.location||'').trim(),
-    sharedDetails:String(continuity.details||'').trim(),
+    sharedDetails:publicHealth?window.LDPublicHealthPolicy.rules.progression:String(continuity.details||'').trim(),
     narration:String(card.querySelector('.narration')?.value||'').trim(),
     currentScene:String(sceneField?.value||card.dataset.videoScene||'').trim(),
     currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim(),
@@ -814,6 +815,8 @@ async function ensureNarration(card){
   return true;
 }
 async function audit(payload){
+  const localIssues=window.LDPublicHealthPolicy?.issues(payload.topic,payload.currentPrompt)||[];
+  if(localIssues.length)throw new Error('Local prompt check — no audit credits used: '+localIssues.join(' '));
   const key=auditCacheKey(payload);
   const cached=auditPassCache.get(key);
   if(cached)return {...cached,cached:true};
