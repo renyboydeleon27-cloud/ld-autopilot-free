@@ -1188,6 +1188,9 @@ document.addEventListener('click',e=>{
   run();
 });
 
+function scheduleLocalReviewRevalidation(){
+  [0,250,800,1600].forEach(ms=>setTimeout(revalidateStaleLocalReview,ms));
+}
 function revalidateStaleLocalReview(){
   const el=document.getElementById('ldSmartContinueStatus');
   const sticky=document.getElementById('ldSmartStickyStatus');
@@ -1218,7 +1221,13 @@ function mountAdvanced(){
 }
 
 function mount(){
-  if(document.getElementById('ldSmartContinuePanel'))return;
+  if(document.getElementById('ldSmartContinuePanel')){
+    mountAdvanced();
+    scheduleLocalReviewRevalidation();
+    updateTargetLabel();
+    refreshApiCostCounter();
+    return;
+  }
   const panel=document.createElement('section');
   panel.id='ldSmartContinuePanel';
   panel.className='card ld-smart-continue';
@@ -1239,8 +1248,7 @@ function mount(){
   mountAdvanced();
   // Saved error text can outlive a local-policy update. Revalidate it locally
   // after all scripts restore the project; never spend an API call here.
-  setTimeout(revalidateStaleLocalReview,350);
-  setTimeout(revalidateStaleLocalReview,1200);
+  scheduleLocalReviewRevalidation();
 
   stages.addEventListener('input',e=>{
     const card=e.target.closest?.('.stage-card');
@@ -1331,6 +1339,7 @@ window.addEventListener('ld:production-built',()=>{
     restoreSmartSession();
     scheduleTargetUpdate();
     refreshApiCostCounter();
+    scheduleLocalReviewRevalidation();
   },180);
 });
 
@@ -1344,9 +1353,10 @@ document.addEventListener('visibilitychange',()=>{
   }
   if(Date.now()-lastHiddenAt>=300)restoreCurrentPanelViewport({delay:120});
 });
-window.addEventListener('pageshow',()=>restoreCurrentPanelViewport({delay:180}));
+window.addEventListener('pageshow',()=>{restoreCurrentPanelViewport({delay:180});scheduleLocalReviewRevalidation();});
 window.addEventListener('focus',()=>{
   if(lastHiddenAt&&Date.now()-lastHiddenAt>=300)restoreCurrentPanelViewport({delay:100});
+  scheduleLocalReviewRevalidation();
 });
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
@@ -1374,5 +1384,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.50.2',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.50.3',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
