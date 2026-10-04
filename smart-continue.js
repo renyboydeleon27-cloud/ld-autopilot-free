@@ -1015,6 +1015,13 @@ async function prepareTextToVideo(card){
   if(window.LDVideoModes?.antiClonePromptCompatible&&!window.LDVideoModes.antiClonePromptCompatible(exactPrompt)){
     throw new Error('Character diversity / anti-clone lock is incomplete after final rebuild. SMART CONTINUE will not approve this panel.');
   }
+  // Guard the last handoff: the exact bytes copied to Flow must still be the
+  // same prompt whose final payload passed audit. Do not spend another call;
+  // fail locally if a decorator or saved-state sync changed it after audit.
+  const copyPayload=panelPayload(card);
+  if(auditCacheKey(copyPayload)!==auditCacheKey(finalPayload)||String(copyPayload.currentPrompt||'')!==String(exactPrompt||'')){
+    throw new Error('Exact-prompt verification failed locally: the prompt changed after final audit. No additional audit credits were used.');
+  }
   const copied=await copyText(exactPrompt);
   markSmartReady(card);
   buttonLabel(approveLabel(card));
@@ -1349,5 +1356,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.49.13',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.50.1',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
