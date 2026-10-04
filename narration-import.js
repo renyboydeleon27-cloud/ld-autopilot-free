@@ -1,7 +1,7 @@
 /* Local-only narration parsing. No network or AI calls. */
 (function(root){
  'use strict';
- const ENDING='Please like share subscribe for more living disaster story';
+ const ENDING='Please like, share, and subscribe for more Living Disaster stories.';
  function parse(text,{silentHook=false}={}){
   const source=String(text||'').trim().replace(/^```[^\n]*\n/,'').replace(/\n```$/,'');
   if(source.length>30000)throw Error('Narration is too long. Paste only the labeled script.');

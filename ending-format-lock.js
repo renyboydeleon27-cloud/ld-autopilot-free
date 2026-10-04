@@ -53,7 +53,7 @@ HISTORICAL / TRUTH LOCK: architecture, clothing, boats, vehicles, utilities, too
     el.dispatchEvent(new Event('change',{bubbles:true}));
   }
 
-  const ENDING_NARRATION='Please like share subscribe for more living disaster story';
+  const ENDING_NARRATION='Please like, share, and subscribe for more Living Disaster stories.';
   function lockNarration(){
     if(window.LDStoryModes?.enabled())return;
     const field=stages.querySelector('.stage-card[data-stage="ENDING"] .narration');

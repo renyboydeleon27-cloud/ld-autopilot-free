@@ -25,7 +25,7 @@
   function compiled(withLabels=false){
     const rows=getNarration();
     const body=rows.map(x=>withLabels?`${x.stage}\n${x.narration}`:x.narration).join('\n\n');
-    const outro="Please like share subscribe for more living disaster story";
+    const outro="Please like, share, and subscribe for more Living Disaster stories.";
     return body ? body+'\n\n'+(withLabels?'OUTRO\n':'')+outro : '';
   }
 

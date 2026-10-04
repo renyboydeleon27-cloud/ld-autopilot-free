@@ -13,7 +13,7 @@
   const masterCard=document.getElementById('masterNarrationCard');
   if(!stages||!masterCard)return;
 
-  const ENDING_CTA='Please like share subscribe for more living disaster story';
+  const ENDING_CTA='Please like, share, and subscribe for more Living Disaster stories.';
   const BACKUP_PREFIX='ner-studio-narration-backup-v1:';
 
   function topic(){
