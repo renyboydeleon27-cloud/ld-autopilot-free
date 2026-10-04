@@ -24,14 +24,13 @@ function harness(){
  let title='Test event',approved=false,backups=0;const values={};const events={};
  const element=()=>({style:{},setAttribute(){},append(){},addEventListener(k,fn){this[k]=fn;}});
  const c={document:{createElement:element},controls:{insertBefore(){}},window:{LDNarrationImport:api,addEventListener(k,f){events[k]=f;},dispatchEvent(){}},btn:{disabled:false,dataset:{}},topic:()=>title,format:()=> 'shorts',projectKey:()=>title,hookIsSilent:()=>true,stageCard:s=>({stage:s,querySelector:()=>({})}),narrationSignature:()=>JSON.stringify(values),saveBackup:()=>{backups++;},clearApproval:()=>{approved=false;},setNarration:(card,text)=>{values[card.stage]=text;},approveNarration:()=>{approved=true;return true;},restoreBackup(){},undo:{classList:{remove(){}}},refreshApprovalUi(){},CustomEvent:function(){},fetch(){throw Error('Import must not call API');}};
- vm.createContext(c);vm.runInContext(code+';globalThis.ui={importInput,previewBtn,approveImport,importMessage};',c);
+ vm.createContext(c);vm.runInContext(code+';globalThis.ui={importInput,approveImport,importMessage};',c);
  return {ui:c.ui,values,changeTopic:()=>{title='Other';},approved:()=>approved,backups:()=>backups};
 }
-test('preview does not mutate; explicit approve maps panels and uses no API',()=>{
- const h=harness();h.ui.importInput.value=script;h.ui.previewBtn.click();assert.deepEqual(h.values,{});assert.equal(h.approved(),false);
- h.ui.approveImport.click();assert.equal(h.values.P1,'Sentence 1.');assert.equal(h.values.HOOK,'');assert.equal(h.approved(),true);assert.equal(h.backups(),1);
+test('one OK distributes every panel, approves and uses no API',()=>{
+ const h=harness();h.ui.importInput.value=script;assert.deepEqual(h.values,{});
+ h.ui.approveImport.click();assert.equal(h.values.P1,'Sentence 1.');assert.equal(h.values.P14,'Sentence 14.');assert.equal(h.values.HOOK,'');assert.equal(h.values.ENDING,api.ENDING);assert.equal(h.approved(),true);assert.equal(h.backups(),1);
 });
-test('changed project or edited draft invalidates approval',()=>{
- const h=harness();h.ui.importInput.value=script;h.ui.previewBtn.click();h.changeTopic();h.ui.approveImport.click();assert.deepEqual(h.values,{});assert.equal(h.approved(),false);
- h.ui.previewBtn.click();h.ui.importInput.input();h.ui.approveImport.click();assert.deepEqual(h.values,{});
+test('invalid paste makes no changes and cannot approve',()=>{
+ const h=harness();h.ui.importInput.value='P1: Incomplete.';h.ui.approveImport.click();assert.deepEqual(h.values,{});assert.equal(h.approved(),false);assert.equal(h.backups(),0);assert.match(h.ui.importMessage.textContent,/Missing narration/);
 });

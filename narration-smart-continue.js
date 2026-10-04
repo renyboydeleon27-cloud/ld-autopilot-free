@@ -285,45 +285,33 @@
 
   const importBox=document.createElement('details');
   const importTitle=document.createElement('summary');importTitle.textContent='PASTE FULL NARRATION · No AI credits';
-  const importHelp=document.createElement('p');importHelp.textContent='Paste labeled P1: through P14: sections. Include HOOK: only if narrated; a silent HOOK stays empty. The locked ending CTA is added automatically. Preview, then approve to continue to visuals.';
+  const importHelp=document.createElement('p');importHelp.textContent='Paste labeled HOOK, P1: through P14:, and ENDING sections, then press OK to distribute and approve. A silent HOOK stays empty. Omit ENDING to add the locked channel CTA automatically. Your previous narration is backed up.';
   const importInput=document.createElement('textarea');importInput.rows=10;importInput.style.width='100%';importInput.placeholder='P1: ...\nP2: ...\n...\nP14: ...';importInput.setAttribute('aria-label','Paste full narration');
-  const previewBtn=document.createElement('button');previewBtn.type='button';previewBtn.className='ghost small';previewBtn.textContent='PREVIEW PANELS';
-  const importPreview=document.createElement('textarea');importPreview.readOnly=true;importPreview.rows=12;importPreview.style.width='100%';importPreview.hidden=true;importPreview.setAttribute('aria-label','Narration panel preview');
-  const approveImport=document.createElement('button');approveImport.type='button';approveImport.className='primary';approveImport.textContent='IMPORT & APPROVE NARRATION';approveImport.disabled=true;
+  const approveImport=document.createElement('button');approveImport.type='button';approveImport.className='primary';approveImport.textContent='OK';
   const importMessage=document.createElement('p');importMessage.setAttribute('role','status');
-  importBox.append(importTitle,importHelp,importInput,previewBtn,importPreview,approveImport,importMessage);controls.insertBefore(importBox,controls.firstChild);
-  let pendingImport=null;
-  const importContext=()=>JSON.stringify([projectKey(),topic(),format(),hookIsSilent(stageCard('HOOK')),narrationSignature()]);
-  function invalidateImport(){pendingImport=null;approveImport.disabled=true;importPreview.hidden=true;importMessage.textContent='';}
-  importInput.addEventListener('input',invalidateImport);
-  window.addEventListener('ld:production-built',()=>{invalidateImport();importInput.value='';});
-  previewBtn.addEventListener('click',()=>{
-    invalidateImport();
+  importBox.append(importTitle,importHelp,importInput,approveImport,importMessage);controls.insertBefore(importBox,controls.firstChild);
+  window.addEventListener('ld:production-built',()=>{importInput.value='';importMessage.textContent='';});
+  approveImport.addEventListener('click',()=>{
+    let changed=false;
     try{
       if(btn.disabled)throw Error('Wait for the current narration run to finish.');
       if(format()!=='shorts')throw Error('Narration import currently supports Shorts P1–P14.');
       if(!topic())throw Error('Create a production with a topic first.');
       if(!window.LDNarrationImport)throw Error('Reload the app to load narration import.');
-      const parsed=window.LDNarrationImport.parse(importInput.value,{silentHook:hookIsSilent(stageCard('HOOK'))});
+      const silentHook=hookIsSilent(stageCard('HOOK'));
+      const parsed=window.LDNarrationImport.parse(importInput.value,{silentHook});
       for(const stage of Object.keys(parsed))if(!stageCard(stage)?.querySelector('.narration'))throw Error('Missing production panel: '+stage);
-      pendingImport={parsed,context:importContext()};
-      importPreview.value=Object.entries(parsed).map(([stage,line])=>stage+': '+(line||'[SILENT]')).join('\n\n');
-      importPreview.hidden=false;approveImport.disabled=false;
-      importMessage.textContent='Review the mapped panels. Approval replaces current narration and saves an undo backup. This checks structure, not historical accuracy or spoken timing.';
-    }catch(e){importMessage.textContent=e.message;}
-  });
-  approveImport.addEventListener('click',()=>{
-    if(!pendingImport||btn.disabled)return;
-    if(pendingImport.context!==importContext()){invalidateImport();importMessage.textContent='The project changed. Preview the script again.';return;}
-    const parsed=pendingImport.parsed;
-    saveBackup();clearApproval();
-    for(const [stage,line] of Object.entries(parsed))setNarration(stageCard(stage),line);
-    btn.dataset.generated='1';
-    if(!approveNarration()){restoreBackup();importMessage.textContent='Import could not be approved. Previous narration restored.';return;}
-    undo?.classList.remove('hidden');
-    invalidateImport();refreshApprovalUi();
-    importMessage.textContent='Imported and approved. Smart Continue can now proceed to visuals. No AI call was made.';
-    window.dispatchEvent(new CustomEvent('ld:narration-smart-complete',{detail:{topic:topic(),source:'manual-import',silentHook:hookIsSilent(stageCard('HOOK'))}}));
+      saveBackup();changed=true;clearApproval();
+      for(const [stage,line] of Object.entries(parsed))setNarration(stageCard(stage),line);
+      btn.dataset.generated='1';
+      if(!approveNarration())throw Error('Import could not be approved.');
+      undo?.classList.remove('hidden');refreshApprovalUi();
+      importMessage.textContent='Done — narration distributed to HOOK, P1–P14 and ENDING, and approved. '+(silentHook?'HOOK kept silent. ':'')+'No AI call was made.';
+      window.dispatchEvent(new CustomEvent('ld:narration-smart-complete',{detail:{topic:topic(),source:'manual-import',silentHook}}));
+    }catch(e){
+      if(changed){restoreBackup();clearApproval();refreshApprovalUi();}
+      importMessage.textContent=e.message+(changed?' Previous narration restored.':'');
+    }
   });
 
   function fullNarrationText(){
