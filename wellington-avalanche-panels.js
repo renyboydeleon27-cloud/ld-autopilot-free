@@ -50,7 +50,7 @@ const FINAL_NARRATION=Object.freeze({
   P12:'Inside shelter, survivors received warmth, rest, and simple care while the recovery effort continued outside.',
   P13:'For days, crews dug through snow and debris, recovering victims and clearing the devastated railway area.',
   P14:'Ninety-six people died, making Wellington the deadliest avalanche disaster in U.S. history. Great Northern later expanded snow-shed protection.',
-  ENDING:'Thank you for watching. Like, share, and subscribe.'
+  ENDING:'Please like share subscribe for more living disaster story'
 });
 
 function narration(topic,stage){
