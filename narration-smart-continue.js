@@ -1,6 +1,6 @@
 /* NER Studio — Smart Continue Narration v1.0.0
    Builds a final stage-aligned voice-over from the CURRENT approved production.
-   HOOK respects explicit NO VO / silent-hook locks. P1–P14 are rebuilt from the
+   HOOK always receives final narration; Flow NO VO controls clip audio only. P1–P14 are rebuilt from the
    verified narration API using the exact current visual/story context. ENDING
    uses the locked Living Disaster Book CTA. */
 (()=>{'use strict';
@@ -91,17 +91,10 @@
   function value(card,selector){
     return String(card?.querySelector(selector)?.value||'').trim();
   }
-  function hookIsSilent(card){
-    if(!card)return false;
-    const corpus=[
-      value(card,'.flow-prompt'),
-      value(card,'.text-video-prompt'),
-      card.dataset.textVideoPrompt||'',
-      value(card,'.image-prompt'),
-      card.querySelector('.scene-role')?.textContent||'',
-      card.dataset.videoScene||''
-    ].join('\n');
-    return /\bNO\s+(?:VOICE[- ]?OVER|VO|NARRATION)\b|\bSILENT\s+HOOK\b/i.test(corpus);
+  function hookIsSilent(){
+    // Flow's NO VO / silent animation directions control generated clip audio.
+    // Final edited episodes always include a separately recorded HOOK narration.
+    return false;
   }
   function detectSeconds(card){
     const corpus=[
@@ -186,7 +179,7 @@
   controls.style.marginTop='12px';
   controls.innerHTML=
     '<div class="field-head"><label>Final narration Smart Continue</label></div>'+
-    '<p class="library-sub">Builds the final voice-over from the exact CURRENT HOOK and P1–P14 production flow. An explicit NO-VO HOOK stays silent. ENDING uses the locked channel CTA.</p>'+
+    '<p class="library-sub">Builds the final voice-over from the exact CURRENT HOOK and P1–P14 production flow. HOOK narration is added in the final edit; Flow NO VO applies only to generated clip audio. ENDING uses the locked channel CTA.</p>'+
     '<button id="ldNarrationSmartBtn" class="primary" type="button" style="width:100%;margin-top:8px">🎙️ SMART CONTINUE NARRATION</button>'+
     '<button id="ldNarrationCopyFullBtn" class="ghost small" type="button" style="width:100%;margin-top:8px">📋 COPY FULL NARRATION</button>'+
     '<button id="ldNarrationUndoBtn" class="ghost small hidden" type="button" style="margin-top:8px">Undo narration polish</button>'+
@@ -285,8 +278,8 @@
 
   const importBox=document.createElement('details');
   const importTitle=document.createElement('summary');importTitle.textContent='PASTE FULL NARRATION · No AI credits';
-  const importHelp=document.createElement('p');importHelp.textContent='Paste labeled HOOK, P1: through P14:, and ENDING sections, then press OK to distribute and approve. A silent HOOK stays empty. Omit ENDING to add the locked channel CTA automatically. Your previous narration is backed up.';
-  const importInput=document.createElement('textarea');importInput.rows=10;importInput.style.width='100%';importInput.placeholder='P1: ...\nP2: ...\n...\nP14: ...';importInput.setAttribute('aria-label','Paste full narration');
+  const importHelp=document.createElement('p');importHelp.textContent='Paste labeled HOOK, P1: through P14:, and ENDING sections, then press OK to distribute and approve. HOOK narration is required, even when the Flow prompt says NO VO. Omit ENDING to add the locked channel CTA automatically. Your previous narration is backed up.';
+  const importInput=document.createElement('textarea');importInput.rows=10;importInput.style.width='100%';importInput.placeholder='HOOK: ...\nP1: ...\nP2: ...\n...\nP14: ...';importInput.setAttribute('aria-label','Paste full narration');
   const approveImport=document.createElement('button');approveImport.type='button';approveImport.className='primary';approveImport.textContent='OK';
   const importMessage=document.createElement('p');importMessage.setAttribute('role','status');
   importBox.append(importTitle,importHelp,importInput,approveImport,importMessage);controls.insertBefore(importBox,controls.firstChild);
