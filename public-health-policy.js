@@ -1,7 +1,7 @@
 /* Shared local policy. No network calls. */
 (function(root){
  'use strict';
- const version='1.0.1';
+ const version='1.0.2';
  function matches(topic){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic||'');}
  function beat(text){
   const s=String(text||'');
@@ -33,7 +33,7 @@
   for(const [re,message] of [
    [/rising environmental pressure|quieter tension\s*→\s*rising pressure|powerful hazard sound/i,'Generic hazard audio conflicts with public-health context.'],
    [/PEAK PRIMARY IMPACT|P1 returns to normal life before the event|pre-impact \/ intact baseline/i,'Generic disaster timeline remains in this public-health prompt.'],
-   [/prior panel P\d+ used.*structural damage/i,'Unverified prior-panel structural damage remains.'],
+   [/prior panel P\d+ used\s+(?![^.\n]*(?:\bno\b|\bwithout\b|\bavoid\b|\bnever\b)[^.\n]*structural damage)[^.\n]*structural damage/i,'Unverified prior-panel structural damage remains.'],
    [/Wind builds before objects accelerate|shingles and small boards may travel farther/i,'Natural-disaster motion rules remain in the public-health prompt.']
   ])if(re.test(prompt||''))errors.push(message);
   return errors;
