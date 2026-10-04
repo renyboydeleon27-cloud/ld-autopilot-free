@@ -832,6 +832,19 @@ async function audit(payload){
   if(d.result==='PASS')auditPassCache.set(key,d);
   return d;
 }
+function removeMotionPositionContradictions(scene){
+  let text=String(scene||'').trim();
+  if(!text)return text;
+  const hasMovement=/\b(approach(?:es|ed|ing)?|enter(?:s|ed|ing)?|walk(?:s|ed|ing)?|move(?:s|d|ing)?|reach(?:es|ed|ing)?|open(?:s|ed|ing)?|hold(?:s|ing)? the door|step(?:s|ped|ping)?|cross(?:es|ed|ing)?|turn(?:s|ed|ing)?)\b/i.test(text);
+  if(!hasMovement)return text;
+  text=text
+    .replace(/\b(?:both|all|the)\s+adults?\s+(?:must\s+)?retain\s+(?:their\s+)?positions?\s+throughout\.?/gi,'')
+    .replace(/\b(?:both|all|the)\s+(?:people|characters|subjects)\s+(?:must\s+)?retain\s+(?:their\s+)?positions?\s+throughout\.?/gi,'')
+    .replace(/\b(?:keep|remain|stay)\s+(?:in\s+)?(?:the\s+)?same\s+positions?\s+throughout\.?/gi,'')
+    .replace(/\s{2,}/g,' ').trim();
+  const lock=' Preserve character identity, clothing, anatomy, scale, and spatial continuity throughout. Allow natural position changes only when required by the specified action. No teleportation, duplication, morphing, or identity changes.';
+  return (text+lock).trim();
+}
 async function fixPanel(card,payload){
   startPhase('FIXING',payload.stage);
   const r=await fetchWithTimeout('/api/ai-panel-fix',{
@@ -846,9 +859,10 @@ async function fixPanel(card,payload){
   if(!r.ok||!d.ok)throw new Error(d.error||('Panel Fix HTTP '+r.status));
   const field=card.querySelector('.video-scene');
   if(!field)throw new Error('Text-to-Video panel scene is unavailable.');
+  const cleanedScene=removeMotionPositionContradictions(d.scene);
   const safeScene=window.LDVideoModes?.sanitizeSceneForStyle
-    ? window.LDVideoModes.sanitizeSceneForStyle(d.scene)
-    : String(d.scene||'').trim();
+    ? window.LDVideoModes.sanitizeSceneForStyle(cleanedScene)
+    : String(cleanedScene||'').trim();
   if(!safeScene)throw new Error('AI panel fix returned an empty scene after visual-style safety cleanup.');
   field.value=safeScene;
   field.dispatchEvent(new Event('input',{bubbles:true}));
