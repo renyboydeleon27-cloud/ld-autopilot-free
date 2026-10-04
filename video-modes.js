@@ -1021,6 +1021,7 @@ function sceneVarietyIssue(card){
 }
 function adjacentSceneLock(stage){
  var n=stageNumber(stage);if(n<2)return '';
+ if(publicHealthTopic())return 'PANEL SCENE IDENTITY LOCK: Use the approved narration as the source of truth. Give this panel a distinct readable setup when appropriate. Preserve chapter year, location and visual style, but do not inherit prior-panel damage, diagnoses, outcomes, identities or disaster actions.';
  if(window.LDWellingtonAvalanche1910?.matches?.(current())&&stage==='P4'){
    return 'PANEL SCENE IDENTITY LOCK — WELLINGTON P4 HARD TRANSITION: P4 intentionally leaves the prior human/interior scene and moves to the outdoor upper mountain release zone. DO NOT carry forward any P3 kitchen, room, building interior, furniture, window, stove, lamp, adult, face, clothing, structural-damage layout or indoor object. Preserve only chapter-level year, region, strict black-and-white 2D anime rendering and any genuinely established outdoor environmental canon. P4 begins as a clean mountain-slope scene with ZERO PEOPLE.';
  }
