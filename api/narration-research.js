@@ -4,7 +4,7 @@ import { usageFromResponse } from './api-usage.js';
 // for evidence. Never accept a model-invented URL as a retrieved source.
 export const SOURCE_DOMAINS = ['usgs.gov','noaa.gov','si.edu','nasa.gov','nps.gov','loc.gov','usda.gov','weather.gov','metoffice.gov.uk','bom.gov.au','jma.go.jp','pagasa.dost.gov.ph','phivolcs.dost.gov.ph','bnpb.go.id','esdm.go.id','bmkg.go.id','wmo.int','who.int','cdc.gov','fao.org','undrr.org','reliefweb.int','ifrc.org','worldbank.org','unesco.org','ingv.it','protezionecivile.gov.it','nhc.noaa.gov','gov.uk','ga.gov.au','gsi.go.jp','bgs.ac.uk'];
 
-export const EVIDENCE_VERSION='V4.3-targeted-evidence-expansion';
+export const EVIDENCE_VERSION='V4.4-evidence-diagnostics';
 export const POOL_QUOTAS=Object.freeze({event_identity:1,physical_impact:3,human_impact:3,aftermath_response:3,directTotal:14});
 const TYPES=['event_identity','precursor_onset','physical_impact','human_impact','aftermath_response','legacy','source_metadata'];
 const PHASES=['identity','precursor','onset','impact','human_impact','response','recovery','legacy','metadata'];
@@ -23,8 +23,9 @@ function canonical(url){try{const u=new URL(url);u.hash='';for(const key of [...
 function authority(url){const h=new URL(url).hostname;return SOURCE_DOMAINS.find(d=>h===d||h.endsWith('.'+d))||h;}
 function outputText(data){return data.output_text||(data.output||[]).filter(x=>x.type==='message').flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text).join('\n');}
 const physicalRe=/\b(?:destroy\w*|damag\w*|collaps\w*|flatten\w*|devastat\w*|inundat\w*|flood\w*|burn\w*|bur(?:y|ied)\w*|swept|wash\w* away|tore|torn|uproot\w*|debris|ashfall|pyroclastic|lava|surge\w*|wave\w*|landslide\w*|avalanche\w*|contaminat\w*|crop\w* fail\w*|outage\w*|erosion|erod\w*)\b/i;
-const humanRe=/\b(?:kill\w*|death\w*|died|fatal\w*|injur\w*|wound\w*|casualt\w*|homeless\w*|displac\w*|surviv\w*|missing|starv\w*|disease\w*|illness\w*|shelterless|without shelter|sleep\w* (?:outdoors|in the open)|slept (?:outdoors|in the open))\b/i;
+const humanRe=/\b(?:kill\w*|death\w*|died|fatal\w*|injur\w*|wound\w*|casualt\w*|homeless\w*|displac\w*|surviv\w*|missing|starv\w*|disease\w*|illness\w*|shelterless|without (?:shelter|homes?|housing)|lost their homes?|sleep\w* (?:outdoors|in the open)|slept (?:outdoors|in the open))\b/i;
 const responseRe=/\b(?:rescu\w*|relief|aid|suppl\w*|convoy\w*|shelter\w*|evacuat\w*|hospital\w*|treat\w*|recover\w*|rebuild\w*|rebuilt|clear\w*|distribut\w*|deliver\w*|deploy\w*|assist\w*|donat\w*|restor\w*|repair\w*|food|water|medicine|camp\w*)\b/i;
+const reliefActionRe=/\b(?:brought|provided|sent|carried|gave)\b.{0,80}\b(?:tents?|blankets?|bedding|rations?|medical equipment)\b/i;
 const onsetRe=/\b(?:began|start\w*|form\w*|trigger\w*|caus\w*|landfall|ruptur\w*|erupt\w*|explod\w*|explosion\w*|struck|hit|funnel\w*|wind\w*|rain\w*|storm\w*|tremor\w*|unrest|precursor\w*|fault\w*|pressure|drought|spread\w*)\b/i;
 // These describe the record/source process, not what happened to people or places.
 // Matching is on the claim, never the URL/support attribution; a NOAA-sourced
@@ -41,7 +42,7 @@ export function classifyEvidence(item){
   if(!TYPES.includes(type))return 'unclassified';
   if(type==='physical_impact')return physicalRe.test(t)?type:'unclassified';
   if(type==='human_impact')return humanRe.test(t)?type:'unclassified';
-  if(type==='aftermath_response')return responseRe.test(t)?type:'unclassified';
+  if(type==='aftermath_response')return (responseRe.test(t)||reliefActionRe.test(t))?type:'unclassified';
   if(type==='precursor_onset')return onsetRe.test(t)?type:'unclassified';
   if(type==='event_identity'&&(physicalRe.test(t)||humanRe.test(t)))return 'unclassified';
   return type;
@@ -67,21 +68,34 @@ export function readEvidencePool(data,topic,previous=null){
   // to narrate. Keep only exact retrieved URLs; fabricated URLs earn no credit.
   const identitySources=[...new Set([...(previous?.identitySources||[]),...(Array.isArray(pack.identitySources)?pack.identitySources:[])].map(canonical).filter(u=>u&&trusted(u)&&sourceUrls.has(u)))];
   const pool=[...(previous?.pool||[])],rejected={...(previous?.rejected||{})};
-  const reject=reason=>{rejected[reason]=(rejected[reason]||0)+1;};
+  const rejectedFacts=[...(previous?.rejectedFacts||[])];
+  const reject=(reason,item)=>{
+    rejected[reason]=(rejected[reason]||0)+1;
+    rejectedFacts.push({reason,claim:String(item.claim||'').slice(0,1000),factKey:String(item.factKey||'').slice(0,160),evidenceType:String(item.evidenceType||'').slice(0,80),sourceUrl:canonical(item.sourceUrl)});
+    if(rejectedFacts.length>80)rejectedFacts.shift();
+  };
   for(const item of pack.claims||[]){
-    if(!sourceUrls.has(canonical(item.sourceUrl))){reject('source');continue;}
-    if(!String(item.claim||'').trim()||!String(item.support||'').trim()||!key(item.factKey)){reject('content');continue;}
-    if(item.disputed!==false){reject('disputed');continue;}
+    if(!sourceUrls.has(canonical(item.sourceUrl))){reject('source',item);continue;}
+    if(!String(item.claim||'').trim()||!String(item.support||'').trim()||!key(item.factKey)){reject('content',item);continue;}
+    if(item.disputed!==false){reject('disputed',item);continue;}
     const type=classifyEvidence(item);
-    if(type==='source_metadata'||type==='unclassified'){reject(type);continue;}
+    if(type==='source_metadata'||type==='unclassified'){reject(type,item);continue;}
     // A detected ranking remains legacy regardless of an incorrect model label.
     const phase=type==='legacy'?'legacy':item.phase;
-    if(type==='event_identity'&&(!String(item.claim).includes(String(year))||String(item.claim).trim().split(/\s+/).length<6)){reject('identity_fragment');continue;}
-    if(!validPhase(type,phase)){reject('phase');continue;}
-    if(pool.some(x=>key(x.factKey)===key(item.factKey)||key(x.claim)===key(item.claim)||similar(x.claim,item.claim))){reject('duplicate');continue;}
+    if(type==='event_identity'&&(!String(item.claim).includes(String(year))||String(item.claim).trim().split(/\s+/).length<6)){reject('identity_fragment',item);continue;}
+    if(!validPhase(type,phase)){reject('phase',item);continue;}
+    if(pool.some(x=>key(x.factKey)===key(item.factKey)||key(x.claim)===key(item.claim)||similar(x.claim,item.claim))){reject('duplicate',item);continue;}
     pool.push({evidenceType:type,phase,factKey:item.factKey,claim:item.claim.trim(),support:item.support.trim(),sourceUrl:canonical(item.sourceUrl),authority:authority(item.sourceUrl),index:pool.length});
   }
-  return {topic,year,location:previous?.location||pack.location,identitySources,retrievedSources:[...sourceUrls],pool,rejected};
+  return {topic,year,location:previous?.location||pack.location,identitySources,retrievedSources:[...sourceUrls],pool,rejected,rejectedFacts};
+}
+export function researchReport(evidence,progress){
+  return {version:EVIDENCE_VERSION,createdAt:new Date().toISOString(),topic:evidence?.topic||'',
+    quality:evidence?assessEvidencePool(evidence):null,progress,
+    sources:(evidence?.retrievedSources||[]).slice(0,100),
+    acceptedFacts:(evidence?.pool||[]).slice(0,80).map(x=>({claim:x.claim.slice(0,1000),evidenceType:x.evidenceType,phase:x.phase,factKey:x.factKey,sourceUrl:x.sourceUrl,support:x.support.slice(0,500)})),
+    rejectedFacts:evidence?.rejectedFacts||[],
+    note:'Accepted means passed the evidence filter, not independently verified. Rejected samples are limited to the latest 80; counts cover the full pool. This report cannot approve narration.'};
 }
 export function assessEvidencePool(evidence){
   const pool=evidence.pool||[],counts=Object.fromEntries(TYPES.filter(x=>x!=='source_metadata').map(t=>[t,pool.filter(x=>x.evidenceType===t).length]));
@@ -150,7 +164,7 @@ export function researchRequest(topic,evidence=null){
 export async function expandResearch(topic,research,{apiKey,fetchImpl=fetch,onUsage=()=>{},maxAttempts=3}={}){
   if(research.validation?.status==='CONFLICT')return research;
   const cacheKey=EVIDENCE_VERSION+':'+topic.trim().toLowerCase(),cached=cache.get(cacheKey),hit=cached?.expires>Date.now()?cached:null;
-  if(hit?.pack)return {...research,...structuredClone(hit.pack),researchExpansion:'cached',researchAttempts:0};
+  if(hit?.pack)return {...research,...structuredClone(hit.pack),researchExpansion:'cached',researchAttempts:0,researchReport:researchReport(hit.evidence,{stopReason:'cached',rounds:[]})};
   if(!apiKey)return {...research,researchExpansion:'unavailable'};
   let evidence=hit?.evidence?structuredClone(hit.evidence):null,lastError=null,calls=0,stopReason='attempt-limit';
   const rounds=[];
@@ -181,9 +195,9 @@ export async function expandResearch(topic,research,{apiKey,fetchImpl=fetch,onUs
         continue;
       }
       const pack=planEvidencePool(evidence);saveCache(cacheKey,{evidence:structuredClone(evidence),pack:structuredClone(pack)});
-      return {...research,...pack,researchExpansion:targeted?'completed-after-targeted-expansion':'completed',researchAttempts:calls,researchProgress:{stopReason:'complete',rounds}};
+      return {...research,...pack,researchExpansion:targeted?'completed-after-targeted-expansion':'completed',researchAttempts:calls,researchProgress:{stopReason:'complete',rounds},researchReport:researchReport(evidence,{stopReason:'complete',rounds})};
     }catch(error){lastError=error;stopReason='error';break;}
   }
   const quality=evidence?assessEvidencePool(evidence):null;
-  return {...research,narrationGate:{allowed:false,exactNumbersAllowed:false,status:'NEEDS_REVIEW'},validation:{status:'NEEDS_REVIEW',confidence:'none',reason:String(lastError?.message||lastError||'Direct-event evidence is insufficient.')},evidencePoolQuality:quality,researchExpansion:'needs-review',researchAttempts:calls,researchProgress:{stopReason,rounds}};
+  return {...research,narrationGate:{allowed:false,exactNumbersAllowed:false,status:'NEEDS_REVIEW'},validation:{status:'NEEDS_REVIEW',confidence:'none',reason:String(lastError?.message||lastError||'Direct-event evidence is insufficient.')},evidencePoolQuality:quality,researchExpansion:'needs-review',researchAttempts:calls,researchProgress:{stopReason,rounds},researchReport:researchReport(evidence,{stopReason,rounds})};
 }

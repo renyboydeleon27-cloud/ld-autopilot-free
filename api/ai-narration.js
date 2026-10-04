@@ -758,7 +758,7 @@ Include every requested stage key exactly once and no markdown.`;
       if (typeof stages[name] !== "string" || !stages[name].trim()) return res.status(502).json({ok:false,error:`AI response is missing ${name}. Please try again.`,apiUsage:usagePayload()});
       stages[name] = polishNarrationQuality(name, sanitizeNarrationLine(name, stages[name], stageEvidence), stageEvidence);
     }
-    return res.status(200).json({ok:true,topic,format,requestedStage:requestedStage||null,researchStatus:research.validation.status,evidencePoolQuality:research.evidencePoolQuality||null,storyPlan:research.storyPlan||null,stages,apiUsage:usagePayload()});
+    return res.status(200).json({ok:true,topic,format,requestedStage:requestedStage||null,researchStatus:research.validation.status,evidencePoolQuality:research.evidencePoolQuality||null,storyPlan:research.storyPlan||null,researchReport:research.researchReport||null,stages,apiUsage:usagePayload()});
   } catch (err) {
     return res.status(500).json({ok:false,error:"AI narration error: "+String(err?.message||err),apiUsage:usagePayload()});
   }

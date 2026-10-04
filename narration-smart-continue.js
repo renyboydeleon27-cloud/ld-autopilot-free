@@ -246,6 +246,43 @@
   const copyFull=document.getElementById('ldNarrationCopyFullBtn');
   const undo=document.getElementById('ldNarrationUndoBtn');
 
+  // Reports are diagnostic only: never read them as trusted research input.
+  const reportDetails=document.createElement('details');
+  const reportTitle=document.createElement('summary');
+  reportTitle.textContent='Research report';
+  const reportText=document.createElement('textarea');
+  reportText.readOnly=true;reportText.rows=12;reportText.style.width='100%';
+  reportText.setAttribute('aria-label','Research report');
+  const reportCopy=document.createElement('button');
+  reportCopy.type='button';reportCopy.className='ghost small';reportCopy.textContent='COPY RESEARCH REPORT';
+  reportDetails.append(reportTitle,reportText,reportCopy);controls.appendChild(reportDetails);
+  const reportKey=()=> 'ner-research-report-v1:'+JSON.stringify([localStorage.getItem('ld-autopilot-free-active-project')||'',topic(),format()]);
+  let reportMemory={key:'',text:''};
+  function refreshReport(){
+    const key=reportKey();let text='';
+    try{text=localStorage.getItem(key)||'';}catch{}
+    if(reportMemory.key===key)text=reportMemory.text;
+    reportText.value=text;reportDetails.hidden=!text;
+  }
+  function saveReport(report,key){
+    if(!report)return;
+    const text=JSON.stringify(report,null,2);
+    reportMemory={key,text};
+    try{localStorage.setItem(key,text);}catch{
+      reportMemory.text=text+'\nReport could not be saved on this device. Copy it before closing.';
+    }
+    refreshReport();
+  }
+  reportCopy.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(reportText.value);reportCopy.textContent='REPORT COPIED';}
+    catch{reportText.focus();reportText.select();reportCopy.textContent='Select and copy the report above';}
+    setTimeout(()=>{reportCopy.textContent='COPY RESEARCH REPORT';},2000);
+  });
+  window.addEventListener('ld:production-built',refreshReport);
+  document.getElementById('topic')?.addEventListener('change',refreshReport);
+  document.getElementById('format')?.addEventListener('change',refreshReport);
+  refreshReport();
+
   function fullNarrationText(){
     const ordered=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
     return ordered.map(stage=>{
@@ -353,6 +390,7 @@
     btn.dataset.generated='0';
 
     const currentTopic=topic();
+    const currentReportKey=reportKey();
     if(!currentTopic){
       status('Add the disaster topic first.','error');
       return;
@@ -407,6 +445,7 @@
         );
       }
       recordUsage(data.apiUsage);
+      saveReport(data.researchReport||data.research?.researchReport,currentReportKey);
       if(!response.ok||!data.ok)throw new Error(data.error||('Narration HTTP '+response.status));
 
       if(silentHook)setNarration(hook,'');

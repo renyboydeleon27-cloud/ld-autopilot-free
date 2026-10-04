@@ -118,3 +118,38 @@ test('research time budget prevents starting another request after the deadline'
   assert.equal(requests.length,1);assert.equal(r.narrationGate.allowed,false);assert.equal(r.researchProgress.stopReason,'time-limit');
  }finally{Date.now=realNow;}
 });
+test('natural displacement and relief wording passes classification but keeps source and dispute checks',()=>{
+ const variants=[fact('The tornado left families without homes.','human_impact','human_impact','lost_homes'),fact('The army brought tents and blankets to the affected town.','aftermath_response','response','tents_brought')];
+ for(const f of variants)assert.equal(classifyEvidence(f),f.evidenceType);
+ assert.equal(readEvidencePool(fixture(variants),topic).pool.length,2);
+ assert.equal(readEvidencePool(fixture(variants.map(x=>({...x,disputed:true}))),topic).pool.length,0);
+ assert.equal(readEvidencePool(fixture(variants.map(x=>({...x,sourceUrl:'https://www.noaa.gov/not-retrieved'}))),topic).pool.length,0);
+ assert.equal(classifyEvidence(fact('The archive contains reports of tents and blankets brought to town.','aftermath_response','response','metadata')),'source_metadata');
+ assert.equal(classifyEvidence(fact('The town manufactured tents and blankets.','aftermath_response','response','unrelated')),'unclassified');
+});
+test('failed research report includes accepted facts, rejected samples, sources and stop reason',async()=>{
+ const bad=fact('The NOAA archive contains a historical evaluation.','physical_impact','impact','metadata');
+ const r=await expandResearch('Diagnostic Tornado — Example — 1989',base,stub([fixture([...facts.slice(0,4),bad]),fixture([])],[]));
+ assert.equal(r.narrationGate.allowed,false);
+ assert.equal(r.researchReport.acceptedFacts.length,4);
+ assert.equal(r.researchReport.rejectedFacts[0].reason,'source_metadata');
+ assert.equal(r.researchReport.rejectedFacts[0].claim,bad.claim);
+ assert.deepEqual(r.researchReport.sources,urls);
+ assert.equal(r.researchReport.progress.stopReason,'no-progress');
+ assert.equal(r.researchReport.quality.passed,false);
+ assert(!JSON.stringify(r.researchReport).includes('Bearer'));
+});
+test('rejected report samples are bounded while aggregate counts remain accurate',()=>{
+ const bad=Array.from({length:100},(_,i)=>fact('An archive contains a report '+i,'physical_impact','impact','bad_'+i));
+ const p=readEvidencePool(fixture(bad),topic);
+ assert.equal(p.rejected.source_metadata,100);assert.equal(p.rejectedFacts.length,80);
+ assert.equal(p.rejectedFacts[0].factKey,'bad_20');
+ const next=readEvidencePool(fixture([bad[0]]),topic,p);
+ assert.equal(next.rejected.source_metadata,101);assert.equal(next.rejectedFacts.length,80);
+});
+test('successful and cached research both expose reports without new paid calls',async()=>{
+ const requests=[],opts=stub([fixture()],requests),t='Healthy diagnostic Tornado — Example — 1989';
+ const r=await expandResearch(t,base,opts);assert.equal(r.researchReport.progress.stopReason,'complete');
+ const cached=await expandResearch(t,base,opts);assert.equal(cached.researchReport.progress.stopReason,'cached');
+ assert.equal(cached.researchReport.acceptedFacts.length,15);assert.equal(requests.length,1);
+});
