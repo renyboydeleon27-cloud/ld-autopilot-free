@@ -1,6 +1,6 @@
-/* LD AUTO v3.49.15 — stale Approved Memory guard + Wellington P12 handoff cleanup. */
+/* LD AUTO v3.49.30 — topic-aware Smart Random scene matching for public-health crises. */
 (function(){'use strict';
-const T2V_POLICY_VERSION='3.49.15-stale-memory-guard-v1';
+const T2V_POLICY_VERSION='3.49.30-topic-aware-scenes-v1';
 const SMART_SCENE_PREFIX='SMART RANDOM CHOICE — ';
 const KEEP_SCENE_PREFIX='KEEP CURRENT SCENE — ';
 function supports(card){if(window.ldStoryEpisode)return /^P[1-9]\d*$/.test(card.dataset.stage);return /^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage);}
@@ -218,6 +218,27 @@ const SCENE_BANK_50=[
  ['at a carriage stop','exterior'],['beside a street market','exterior'],['on an open work yard','exterior'],['at a farmyard if relevant locally','exterior'],['along an appropriate local footpath','exterior'],
  ['at a neighborhood intersection','exterior'],['at an open plaza if present locally','exterior'],['beside a period transport stop','exterior'],['along a residential lane','exterior'],['outside a station entrance if present locally','exterior']
 ];
+const PUBLIC_HEALTH_SCENE_BANK={
+  1:[['on a Philadelphia neighborhood sidewalk with restrained public-health context','community'],['outside a Philadelphia community health clinic','medical'],['at a Philadelphia harm-reduction outreach area','outreach']],
+  2:[['inside a veterinary clinical setting showing xylazine as a veterinary sedative without depicting human administration','veterinary'],['inside a clinical supply room with veterinary-use context and no readable labels','veterinary'],['inside a public-health education room using neutral medical context','medical']],
+  3:[['at a Philadelphia harm-reduction outreach table during drug-supply education','outreach'],['inside a Philadelphia public-health drug-checking workspace','surveillance'],['at a community outreach area where workers discuss contaminated street-drug risk','outreach']],
+  4:[['inside a Philadelphia public-health surveillance office with staff reviewing non-readable trend charts','surveillance'],['inside an overdose-response coordination room','surveillance'],['at a community health outreach hub during an expanding overdose response','outreach']],
+  5:[['at a Philadelphia harm-reduction outreach area focused on fentanyl and xylazine exposure risk','outreach'],['inside a drug-checking workspace handling anonymous samples with protective procedure','surveillance'],['outside a community health van serving people at overdose risk','outreach']],
+  6:[['inside an emergency treatment area responding to a suspected opioid overdose','medical'],['beside an overdose-response team providing emergency aid in a Philadelphia public space','medical'],['inside a community overdose-response training room demonstrating naloxone response','medical']],
+  7:[['inside a wound-care clinic treating a patient with non-graphic xylazine-associated injuries','wound'],['at a mobile wound-care outreach station in Philadelphia','wound'],['inside a community health clinic during non-graphic wound assessment','wound']],
+  8:[['inside a hospital treatment room managing serious non-graphic wound complications','wound'],['inside a clinical wound-care room with staff preparing infection treatment','wound'],['at a medical consultation area discussing escalation of wound care','medical']],
+  9:[['inside a Philadelphia public-health operations room reviewing overdose mortality trends','surveillance'],['at a community outreach hub facing sustained overdose burden','outreach'],['inside an overdose surveillance workspace with non-readable data displays','surveillance']],
+  10:[['inside a hospital or clinic treatment area supporting withdrawal and emergency care','medical'],['inside an emergency department care area during overdose response','medical'],['at a community medical outreach station coordinating treatment referrals','medical']],
+  11:[['inside a wound-care clinic providing ongoing non-graphic treatment','wound'],['at a mobile wound-care outreach station serving the community','wound'],['inside a harm-reduction clinic during wound-care support','wound']],
+  12:[['at an overdose-response training session demonstrating naloxone use on a training mannequin','training'],['at a harm-reduction outreach station distributing overdose-response supplies','outreach'],['inside a community health room during overdose-response education','training']],
+  13:[['inside a public-health drug-checking workspace performing surveillance on anonymous samples','surveillance'],['at a harm-reduction outreach table explaining drug-checking options','outreach'],['inside a Philadelphia prevention program workspace coordinating surveillance and outreach','surveillance']],
+  14:[['at a Philadelphia community health outreach hub continuing harm-reduction work','legacy'],['outside a community clinic as outreach work continues','legacy'],['inside a public-health coordination room focused on continuing response','legacy']]
+};
+function publicHealthTopic(){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(current());}
+function publicHealthScenes(card){
+ var n=stageNumber(card.dataset.stage),rows=PUBLIC_HEALTH_SCENE_BANK[n]||[];
+ return rows.map(function(row,i){return {place:row[0],kind:'public-health',index:1000+n*10+i,tag:row[1]};});
+}
 const SCENE_BANK_LATE=[
  {stage:10,place:'at a damaged residential street where adults search for survivors',tag:'rescue'},
  {stage:10,place:'outside a damaged home during a careful search',tag:'rescue'},
@@ -257,6 +278,7 @@ function lateSceneFits(item,card){
 function sceneBankHash(value){var h=2166136261;for(var i=0;i<value.length;i++)h=Math.imul(h^value.charCodeAt(i),16777619);return h>>>0;}
 function availableScenes(card){
  var n=stageNumber(card.dataset.stage),fam=familyKey();
+ if(publicHealthTopic())return publicHealthScenes(card);
  if(n>=10){return SCENE_BANK_LATE.map(function(row,i){return {place:row.place,kind:'late',index:SCENE_BANK_50.length+i,stage:row.stage,tag:row.tag};}).filter(function(row){return row.stage===n&&lateSceneFits(row,card);});}
  return SCENE_BANK_50.map(function(row,index){return {place:row[0],kind:row[1],index:index};}).filter(function(row){
   if(row.kind==='vehicle'&&(!/^19\d\d$|^20\d\d$/.test(String(continuity().year||''))||n>=6))return false;
@@ -297,8 +319,8 @@ function selectedScene(card,index){
  var item=availableScenes(card).find(function(row){return row.index===index;});
  if(!item)return '';
  var n=stageNumber(card.dataset.stage),beat=String(card.querySelector('.narration')?.value||'').trim();
- var phase=n<=2?'intact ordinary life before the disaster':n<=6?'the current panel’s established disaster stage':n<=8?'wider damage or a documented secondary hazard':n===9?'the immediate aftermath':n===10?'rescue or emergency response supported by the narration':n===11?'relief, displacement or short-term human needs':n===12?'wider documented consequences':n===13?'gradual cleanup or recovery':'the event’s reflective closing beat';
- return 'PRIMARY LOCATION: '+item.place+', in '+cleanLocation(continuity().location)+', '+continuity().year+'. Depict '+phase+' with one readable action immediately. '+(beat?'PANEL NARRATIVE CONTEXT (never spoken): '+beat+' ':'')+'Use historically appropriate occupants, clothing, construction and objects for this exact place. Preserve the earthquake/disaster progression and previously established conditions. Do not invent unverified weather, dust, wind, transport or damage. One coherent camera move; distinct angle and cast from the previous panel. No speech, music, embedded text or modern objects.';
+ var phase=publicHealthTopic()?(n<=2?'the evidence-supported public-health context':n<=5?'the documented emergence and spread of the crisis':n<=8?'the documented medical and human consequences':n<=11?'the documented scale, treatment and care response':n<=13?'the documented overdose-response, surveillance and prevention work':'the continuing evidence-supported public-health response'):(n<=2?'intact ordinary life before the disaster':n<=6?'the current panel’s established disaster stage':n<=8?'wider damage or a documented secondary hazard':n===9?'the immediate aftermath':n===10?'rescue or emergency response supported by the narration':n===11?'relief, displacement or short-term human needs':n===12?'wider documented consequences':n===13?'gradual cleanup or recovery':'the event’s reflective closing beat');
+ return 'PRIMARY LOCATION: '+item.place+', in '+cleanLocation(continuity().location)+', '+continuity().year+'. Depict '+phase+' with one readable action immediately. '+(beat?'PANEL NARRATIVE CONTEXT (never spoken): '+beat+' ':'')+'Use historically appropriate occupants, clothing, construction and objects for this exact place. Preserve the event progression and previously established conditions. For a public-health crisis, do not invent earthquake, storm, fire, collapse, disaster debris, historical-period styling, or unrelated catastrophe imagery. Do not invent unverified weather, dust, wind, transport or damage. One coherent camera move; distinct angle and cast from the previous panel. No speech, music, embedded text or modern objects.';
 }
 function sceneChoiceIndex(card){
  var saved=String(card.dataset.sceneChoice||'');
@@ -314,7 +336,7 @@ function sceneChoiceIndex(card){
 function sceneChoiceAllowed(card){
  if(window.LDStoryModes?.enabled())return false;
  var special=eventPanel(card.dataset.stage);
- return !card.querySelector('.done-toggle')?.checked&&(!special||(!special.approved&&!special.lockedScene))&&card.dataset.stage!=='P2';
+ return !card.querySelector('.done-toggle')?.checked&&(!special||(!special.approved&&!special.lockedScene))&&(publicHealthTopic()||card.dataset.stage!=='P2');
 }
 function choiceSpecial(card,special){
  if(!special)return special;
