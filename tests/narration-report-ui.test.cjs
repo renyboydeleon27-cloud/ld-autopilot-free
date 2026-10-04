@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const fs=require('node:fs');
 const source=fs.readFileSync('narration-smart-continue.js','utf8');
-const reportCode=source.slice(source.indexOf('  // Reports are diagnostic only:'),source.indexOf('  function fullNarrationText(){'));
+const reportCode=source.slice(source.indexOf('  // Reports are diagnostic only:'),source.indexOf('  const importBox='));
 function mount(storage,selection){
  const element=()=>({style:{},setAttribute(){},append(){},addEventListener(){}});
  const context={document:{createElement:element,getElementById:()=>element()},controls:{appendChild(){}},window:{addEventListener(){}},localStorage:storage,topic:()=>selection.topic,format:()=> 'shorts'};
