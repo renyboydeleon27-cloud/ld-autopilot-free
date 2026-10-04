@@ -83,11 +83,12 @@ function refreshCard(card){
    card.classList.add('complete');
    card.classList.remove('ready');
  }else if(ready){
-   status.textContent='Ready to mark done';
+   const smartPending=window.LDVideoModes?.supports(card)&&card.dataset.videoMode==='text'&&card.dataset.smartReady!=='1';
+   status.textContent=smartPending?'Prompt complete · Smart Continue review required':'Ready for Flow review · not yet approved';
    card.classList.add('ready');
    card.classList.remove('complete');
  }else{
-   status.textContent='Needs required fields · tap Done to validate';
+   status.textContent='Needs required fields';
    card.classList.remove('ready','complete');
  }
  renderApprovalStamp(card);
