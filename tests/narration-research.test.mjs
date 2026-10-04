@@ -76,3 +76,45 @@ test('incomplete identity uses targeted confirmation while retaining verified fa
  const partial=readEvidencePool(initial,topic);assert.equal(assessEvidencePool(partial).missing.identity_sources,1);assert.equal(partial.pool.length,15);
  const requests=[];const r=await expandResearch('Identity repair Tornado — Example — 1989',base,stub([initial,fixture([])],requests));assert(r.narrationGate.allowed);assert.equal(requests.length,2);assert.deepEqual(JSON.parse(requests[1].input).missingCategories,['identity_sources']);assert.equal(r.evidencePoolQuality.counts.identityAuthorities,2);
 });
+test('progressive expansion fills remaining deficits across two targeted passes',async()=>{
+ const requests=[],usage=[];
+ const initial=facts.filter(x=>x.evidenceType!=='aftermath_response');
+ const response=facts.filter(x=>x.evidenceType==='aftermath_response');
+ const r=await expandResearch('Progressive Tornado — Example — 1989',base,stub([fixture(initial),fixture(response.slice(0,1)),fixture(response.slice(1))],requests,usage));
+ assert(r.narrationGate.allowed);assert.equal(requests.length,3);assert.equal(usage.length,3);
+ const last=JSON.parse(requests[2].input);
+ assert.equal(last.mode,'targeted_expansion');assert.equal(last.shortfalls.aftermath_response,2);
+ assert(last.acceptedFacts.some(x=>x.factKey==='army_supplies'));
+ assert(last.searchObjectives.some(x=>x.category==='aftermath_response'&&/rescue/.test(x.objective)));
+ assert.equal(r.researchProgress.stopReason,'complete');assert.equal(r.researchProgress.rounds.length,3);
+});
+test('irrelevant new facts and duplicates cannot earn another paid search',async()=>{
+ const requests=[];
+ const extras=[fact('Flooding damaged the grain depot.','physical_impact','impact','depot'),fact('Landslides buried the rail line.','physical_impact','impact','rail'),fact('Fires burned market stalls.','physical_impact','impact','market')];
+ const initial=facts.filter(x=>x.evidenceType!=='aftermath_response').concat(extras);
+ const irrelevant=fact('Debris destroyed the school roof.','physical_impact','impact','school');
+ const r=await expandResearch('No useful progress Tornado — Example — 1989',base,stub([fixture(initial),fixture([...initial,irrelevant])],requests));
+ assert.equal(requests.length,2);assert.equal(r.narrationGate.allowed,false);assert.equal(r.researchProgress.stopReason,'no-progress');
+ assert.equal(r.evidencePoolQuality.missing.aftermath_response,3);
+});
+test('bounded attempts stop safely and cached pool resumes with only missing facts',async()=>{
+ const t='Bounded Tornado — Example — 1989',requests=[];
+ const initial=facts.filter(x=>x.evidenceType!=='aftermath_response');
+ const response=facts.filter(x=>x.evidenceType==='aftermath_response');
+ const r=await expandResearch(t,base,{...stub([fixture(initial),fixture(response.slice(0,1)),fixture(response.slice(1,2))],requests),maxAttempts:99});
+ assert.equal(requests.length,3);assert.equal(r.narrationGate.allowed,false);assert.equal(r.stageMap,undefined);
+ assert.equal(r.researchProgress.stopReason,'attempt-limit');
+ const resumed=[];const done=await expandResearch(t,base,stub([fixture(response.slice(2))],resumed));
+ assert(done.narrationGate.allowed);assert.equal(resumed.length,1);
+ assert.equal(JSON.parse(resumed[0].input).mode,'targeted_expansion');
+ assert.equal(JSON.parse(resumed[0].input).shortfalls.aftermath_response,1);
+});
+test('research time budget prevents starting another request after the deadline',async()=>{
+ const realNow=Date.now;let now=realNow();Date.now=()=>now;
+ try{
+  const requests=[];const opts=stub([fixture(facts.filter(x=>x.evidenceType!=='aftermath_response'))],requests);
+  const originalFetch=opts.fetchImpl;opts.fetchImpl=async(...args)=>{const result=await originalFetch(...args);now+=150001;return result;};
+  const r=await expandResearch('Deadline Tornado — Example — 1989',base,opts);
+  assert.equal(requests.length,1);assert.equal(r.narrationGate.allowed,false);assert.equal(r.researchProgress.stopReason,'time-limit');
+ }finally{Date.now=realNow;}
+});

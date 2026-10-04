@@ -143,7 +143,7 @@ export default async function handler(req, res) {
   // This avoids paying for a second web-research pass merely because an event
   // is not in the curated-topic list.
   if(req.body?.preflightOnly!==true && !research?.narrationGate?.allowed){
-    research=await expandResearch(topic,research,{apiKey,onUsage:usage=>apiUsageParts.push(usage),maxAttempts:2});
+    research=await expandResearch(topic,research,{apiKey,onUsage:usage=>apiUsageParts.push(usage),maxAttempts:3});
   }
 
   if (!research?.narrationGate?.allowed) {
