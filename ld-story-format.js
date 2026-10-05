@@ -22,9 +22,11 @@ const beats=[
 function guidance(stage,format='shorts'){
  if(!enabled()||['HOOK','ENDING','THUMBNAIL'].includes(stage))return '';
  const n=Number(stage.slice(1));
- const beat=format==='shorts'?beats[n-1]:'Advance the assigned longform scene role with one new evidence-supported action or consequence; avoid repeating adjacent scenes.';
+ const publicHealth=window.LDPublicHealthPolicy?.matches?.(document.getElementById('topic')?.value||'')===true;
+ const publicHealthBeat='Advance the approved narration with one distinct, evidence-supported public-health context or consequence. Do not impose a natural-disaster danger, impact, damage, aftermath, relief, or recovery stage.';
+ const beat=publicHealth?publicHealthBeat:(format==='shorts'?beats[n-1]:'Advance the assigned longform scene role with one new evidence-supported action or consequence; avoid repeating adjacent scenes.');
  if(!beat)return '';
- return 'NEW LD FORMAT — TRIAL V1: '+beat+' CAUSAL FLOW: Make the connection to the preceding beat understandable without inventing a cause. Every panel adds a new development, consequence, or meaningful piece of context. Vary framing to serve the action. Build intensity across the assigned timeline; calm stays calm, peak impact is not repeated in every panel. Event-specific facts and approved stage chronology override this editorial guidance. Preserve duration, visual/color locks, one-shot rules, and selected hook. Narration explains supported causes and stakes in natural language; no generic repeated filler. END NEW LD FORMAT.';
+ return 'NEW LD FORMAT — TRIAL V1: '+beat+' CAUSAL FLOW: Make the connection to the preceding beat understandable without inventing a cause. Every panel adds a new development, consequence, or meaningful piece of context. Vary framing to serve the action. '+(publicHealth?'Public-health intensity follows the approved narration; do not manufacture disaster escalation.':'Build intensity across the assigned timeline; calm stays calm, peak impact is not repeated in every panel.')+' Event-specific facts and approved stage chronology override this editorial guidance. Preserve duration, visual/color locks, one-shot rules, and selected hook. Narration explains supported causes and stakes in natural language; no generic repeated filler. END NEW LD FORMAT.';
 }
 function decorate(text,stage,format){const g=guidance(stage,format);return g?text+'\n\n'+g:text;}
 function reset(){window.ldNarrativeFormat='original';window.ldApprovedMemory=null;const el=document.getElementById('narrativeFormat');if(el){el.value='original';el.disabled=false;}document.getElementById('ldFlowReview')?.remove();}
