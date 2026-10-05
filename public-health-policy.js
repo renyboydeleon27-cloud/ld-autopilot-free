@@ -1,7 +1,7 @@
 /* Shared local policy. No network calls. */
 (function(root){
  'use strict';
- const version='1.2.1';
+ const version='1.3.0';
  function matches(topic){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic||'');}
  function beat(text){
   const s=String(text||'');
@@ -21,7 +21,7 @@
  camera:'CINEMATIC CAMERA DIRECTOR: One restrained human-height lateral move or gentle push serving the selected scene. Stable horizon and coherent perspective; no hazard reveal or forced urgency.',
  audio:'PROFESSIONAL CINEMATIC AUDIO MIX: Quiet scene-specific ambience only. Audible movements must have visible causes. Stable sound level; no dramatic buildup, impact sounds, sirens, alarms, voice-over, dialogue or music.',
  weather:'WEATHER + ATMOSPHERE CONTINUITY LOCK: Preserve established local light and atmosphere only. No weather escalation, smoke or dust added for drama.',
- motion:'MICRO-TRANSITION + MORPH CONTROL: One simple visible action with continuous movement and physical contact. The action must create an unmistakable visible state change: by the middle frame, a foreground subject or handled object must occupy a clearly different position or configuration than at the start; by the final frame, that action must reach a visibly different completed state. Camera motion, blinking, breathing, tiny hand movement, paper handling, or a held pose alone do NOT count as progression. Preserve identities and geometry. No teleportation, duplication or sudden object changes. Identity continuity does not freeze a moving person in position.',
+ motion:'MICRO-TRANSITION + MORPH CONTROL: Use ONE primary purposeful micro-action that creates one clear completed state change. Keep the main adult anchored in place unless the approved narration truly requires relocation. Prefer a short hand/object transfer within reach over walking, crossing the room, turning away and returning, or multiple sequential body actions. Meaningful document/folder handling counts when the object visibly moves from one stable location to another; tiny paper fidgeting does not. One subtle secondary reaction is allowed, but never a second major action just to create motion. The primary action may finish naturally before the final seconds; after completion, allow only calm residual movement such as breathing, gaze or a small hand settle. Identity and geometry stability outrank amount of motion. No teleportation, duplication, morphing or sudden object changes.',
  damage:'DEBRIS + DAMAGE PHYSICS LOCK: Keep structures intact unless the current approved scene explicitly establishes otherwise. Ordinary objects obey gravity and contact. No generic disaster debris or destruction sequence.',
  cast:'adults appropriate to the current narration and illustrative setting, without invented diagnoses or exaggerated behavior',
  progression:'PUBLIC-HEALTH STORY RULE: The current approved narration determines the beat. Do not impose a natural-disaster timeline. Illustrative context is not evidence of a specific historical incident, investigation, treatment encounter or chemical identification.',
@@ -30,10 +30,10 @@
  function motionProgressionIssue(prompt){
   const p=String(prompt||'');
   const timed=(p.match(/\b(?:0(?:\.0)?|2(?:\.0)?|7(?:\.0)?)[–-](?:2(?:\.0)?|7(?:\.0)?|10(?:\.0)?)\s*(?:s|seconds?)\b/gi)||[]).length;
-  const actions=(p.match(/\b(?:reach|reaches|reaching|move|moves|moving|walk|walks|walking|turn|turns|turning|check|checks|checking|place|places|placing|apply|applies|applying|wrap|wraps|wrapping|hand|hands|handing|slide|slides|sliding|open|opens|opening|lift|lifts|lifting|withdraw|withdraws|withdrawing|step|steps|stepping|gesture|gestures|gesturing|assist|assists|assisting|respond|responds|responding|exchange|exchanges|exchanging|prepare|prepares|preparing|finish|finishes|finishing)\b/gi)||[]).length;
+  const actions=(p.match(/\b(?:reach|reaches|reaching|move|moves|moving|turn|turns|turning|check|checks|checking|place|places|placing|hand|hands|handing|slide|slides|sliding|open|opens|opening|lift|lifts|lifting|withdraw|withdraws|withdrawing|gesture|gestures|gesturing|exchange|exchanges|exchanging|finish|finishes|finishing|release|releases|releasing|settle|settles|settling)\b/gi)||[]).length;
   const progression=/\b(?:then|next|after|by the end|finally|finishes?|completes?|responds? by|follow(?:s|ed|ing)? with)\b/i.test(p);
   const stateChange=/\b(?:clearly different position|different position|changes? position|moves? from .* to|transfers? .* from .* to|places? .* (?:onto|into|beside|on)|stands? up|sits? down|steps? (?:aside|forward|back)|crosses? .*|opens? .* (?:fully|wide)|closes? .*|lifts? .* (?:off|from)|sets? .* down|hands? .* to|passes? .* to|reaches? .* then|completed state|visibly different|foreground subject .* different|object .* different)\b/i.test(p);
-  return (timed>=3&&actions>=2&&progression&&stateChange)?'':'Visible state change is too weak: require a foreground subject or handled object to occupy a clearly different position/configuration at the middle and a visibly completed different state by the final frame. Camera motion, blinking, breathing, tiny hand/paper movement, or a held pose alone do not count.';
+  const excessiveBodyTravel=/\b(?:walks?|walking|crosses?|crossing|steps?)\b[\s\S]{0,220}\b(?:walks? back|walking back|returns? to|crosses? back|turns? back)\b/i.test(p);\n  if(excessiveBodyTravel)return 'Unnecessary back-and-forth body travel increases morph risk. Keep the main adult anchored and use one nearby purposeful hand/object action unless narration requires relocation.';\n  return (timed>=3&&actions>=1&&progression&&stateChange)?'':'Visible state change is too weak: use one purposeful nearby action that ends in a clearly different completed object/hand state. Meaningful folder or object transfer counts; camera motion, breathing, tiny fidgeting, or a held pose alone do not.';
  }
  function issues(topic,prompt){
   if(!matches(topic))return [];
