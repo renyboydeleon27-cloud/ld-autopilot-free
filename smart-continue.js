@@ -958,6 +958,17 @@ async function prepareTextToVideo(card){
   const builtSceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
   if(builtSceneIssue)throw new Error(builtSceneIssue);
   let payload=panelPayload(card);
+  let localIssues=window.LDPublicHealthPolicy?.issues(payload.topic,payload.currentPrompt)||[];
+  if(localIssues.length){
+    status('SMART CONTINUE · Local motion check found a weak scene. Rebuilding it before paid audit… '+localIssues.join(' · '),'working');
+    await fixPanel(card,payload);
+    assertStageOwnsSmartRun(card);
+    const rebuilt=window.LDVideoModes?.prompt?.(card);
+    if(!rebuilt)throw new Error('The prompt could not be rebuilt after the local motion fix.');
+    payload=panelPayload(card);
+    localIssues=window.LDPublicHealthPolicy?.issues(payload.topic,payload.currentPrompt)||[];
+    if(localIssues.length)throw new Error('Local prompt check — no audit credits used: '+localIssues.join(' '));
+  }
   status('SMART CONTINUE · AI is auditing '+payload.stage+'…','working');
   let result=await audit(payload);
   assertStageOwnsSmartRun(card);
@@ -1384,5 +1395,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.50.3',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.50.4',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
