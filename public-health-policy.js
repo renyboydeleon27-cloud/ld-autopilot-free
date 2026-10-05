@@ -1,7 +1,7 @@
 /* Shared local policy. No network calls. */
 (function(root){
  'use strict';
- const version='1.3.3';
+ const version='1.3.4';
  function matches(topic){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic||'');}
  function beat(text){
   const s=String(text||'');
@@ -23,8 +23,8 @@
   weather:'WEATHER + ATMOSPHERE CONTINUITY LOCK: Preserve established local light and atmosphere only. No weather escalation, smoke or dust added for drama.',
   motion:'MICRO-TRANSITION + MORPH CONTROL: Use EXACTLY ONE primary purposeful micro-action that creates one clear completed state change. Keep the main adult anchored in place unless the approved narration truly requires relocation. Prefer one purposeful nearby hand/object action within reach, such as moving one stable folder, bundle, tray item or other simple object from one stable location to another. Meaningful document/folder handling counts when the same object visibly moves from one stable location to another; tiny paper fidgeting does not. Supporting or background adults may only show subtle gaze, breathing or posture settling; they must NOT touch, turn, adjust, carry, open, close or otherwise manipulate a second object such as a monitor, paper stack, tray, folder, door or tool. Never add a second purposeful task merely to create motion. The primary action may finish naturally before the final seconds; after completion, allow only calm residual movement such as breathing, gaze or a small hand settle. Identity stability outranks amount of motion. Preserve identity, anatomy, clothing, object count and geometry. No teleportation, duplication, morphing, object respawn or sudden object changes.',
   damage:'DEBRIS + DAMAGE PHYSICS LOCK: Keep structures intact unless the current approved scene explicitly establishes otherwise. Ordinary objects obey gravity and contact. No generic disaster debris or destruction sequence.',
-  cast:'adults appropriate to the current narration and illustrative setting, without invented diagnoses or exaggerated behavior',
-  progression:'PUBLIC-HEALTH STORY RULE: The current approved narration determines the beat. Do not impose a natural-disaster timeline. Illustrative context is not evidence of a specific historical incident, investigation, treatment encounter or chemical identification. GENERAL-GUIDANCE LOCK: a narration instruction such as give naloxone or call emergency services is public guidance, not proof of a specific documented treatment encounter. Unless the narration explicitly identifies a specific documented administration event, visualize preparedness or readiness only—such as moving one naloxone device from an already-open kit to a nearby tray—without showing injection, nasal administration, dosing, route of administration, recovery, or treatment outcome. CONTINUING-CARE LOCK: when narration generally says people need wound care, access to treatment, or ongoing support, that is not proof of a specific examination or procedure. Visualize access to care/support without patient contact: use a calm clinic or support setting and one closed unmarked resource folder or similarly neutral support object moved from one stable surface to a nearby tray. Keep the visitor fully clothed with hands and forearms still. Do not expose a wound, roll or raise a sleeve for assessment, examine or touch the patient, or show bandage, gauze, dressing, wound treatment, medication, injection, dosing, procedure, recovery, or treatment outcome unless the narration explicitly documents that specific event.',
+  cast:'adults appropriate to the current narration and illustrative setting, without invented diagnoses or exaggerated behavior. For event years 2000 or later, year-appropriate means contemporary to that locked year: modern everyday/work/clinic clothing and hairstyles are expected, while antique, Victorian, Edwardian, early-1900s, retro nurse-dress, long-apron, bonnet, vintage-uniform or historical-classroom styling is forbidden unless the narration explicitly documents such a reenactment.',
+  progression:'PUBLIC-HEALTH STORY RULE: The current approved narration determines the beat. Do not impose a natural-disaster timeline. Illustrative context is not evidence of a specific historical incident, investigation, treatment encounter or chemical identification. GENERAL-GUIDANCE LOCK: a narration instruction such as give naloxone or call emergency services is public guidance, not proof of a specific documented treatment encounter. Unless the narration explicitly identifies a specific documented administration event, visualize preparedness or readiness only—such as moving one naloxone device from an already-open kit to a nearby tray—without showing injection, nasal administration, dosing, route of administration, recovery, or treatment outcome. CONTINUING-CARE LOCK: when narration generally says people need wound care, access to treatment, or ongoing support, that is not proof of a specific examination or procedure. Visualize access to care/support without patient contact: use a calm clinic or support setting and one closed unmarked resource folder or similarly neutral support object moved from one stable surface to a nearby tray. Keep the visitor fully clothed with hands and forearms still. Do not expose a wound, roll or raise a sleeve for assessment, examine or touch the patient, or show bandage, gauze, dressing, wound treatment, medication, injection, dosing, procedure, recovery, or treatment outcome unless the narration explicitly documents that specific event. MODERN-EVENT ERA OVERRIDE — HIGHEST PRIORITY FOR 2000+ EVENTS: “historical anime” describes only the serious hand-drawn documentary/graphic-novel rendering style; it does NOT mean antique, Victorian, Edwardian, early-1900s, wartime, retro, vintage or pre-digital wardrobe, interiors, furniture, hairstyles, props or technology. For any locked event year from 2000 onward, every visible person, room and object must read as contemporary to that exact year and location. Use year-appropriate modern casual/work/clinic clothing, contemporary furniture and fixtures, and ordinary technology that existed in the locked year. Any generic phrase such as “historically appropriate wardrobe” means year-appropriate contemporary clothing for the locked year. Any generic “no modern objects outside the era” wording means no objects newer than the locked year; it does NOT ban ordinary technology contemporary to that year. No vintage nurse dress, long apron, bonnet, antique clinic uniform, historical classroom styling or old-period interior unless the narration explicitly requires it.',
   canon:'EPISODE CANON — CONTINUITY ENGINE: Preserve project location, year and selected visual style. Different illustrative settings may use different adults. Do not invent prior-panel damage, clinical outcomes, identities or action. Reuse specific continuity only when explicitly supplied and relevant.'
  };
  function secondaryObjectActionIssue(prompt){
@@ -41,6 +41,20 @@
   const p=String(prompt||'');
   const m=p.match(/PANEL SCENE:\s*([\s\S]*?)(?:\n\s*PANEL SCENE IDENTITY LOCK:|\n\s*NARRATIVE CONTEXT|\n\s*TIMING:)/i);
   return m?m[1]:'';
+ }
+ function modernEventEraIssue(prompt){
+  const p=String(prompt||'');
+  const years=(p.match(/\b20\d{2}\b/g)||[]).map(Number);
+  const year=years.find(function(y){return y>=2000;});
+  if(!year)return '';
+  if(!/MODERN-EVENT ERA OVERRIDE/i.test(p))return 'Modern public-health event needs the MODERN-EVENT ERA OVERRIDE. For a '+year+' scene, historical anime is only the drawing style; people, clothing, furnishings and technology must read as contemporary to '+year+', not antique or early-1900s.';
+  const scene=panelScene(p);
+  if(!scene)return '';
+  const ambiguousWardrobe=/\b(?:period-appropriate|historically appropriate)\b[^.\n]{0,100}\b(?:clothing|wardrobe|attire|uniform|dress)\b/i.test(scene);
+  if(ambiguousWardrobe)return 'Modern-era wardrobe wording is still ambiguous. In the PANEL SCENE, replace period/historically-appropriate clothing language with explicit contemporary '+year+' clothing and hairstyles. Historical anime is the art style only; no vintage nurse dress, long apron, bonnet, antique clinic uniform or early-1900s styling.';
+  const oldEraPositive=/\b(?:Victorian|Edwardian|early[- ]1900s|vintage nurse|long apron|bonnet|antique clinic|historical classroom|retro uniform)\b/i.test(scene)&&!/\b(?:no|not|without|forbid|avoid)\b[^.\n]{0,45}\b(?:Victorian|Edwardian|early[- ]1900s|vintage nurse|long apron|bonnet|antique clinic|historical classroom|retro uniform)\b/i.test(scene);
+  if(oldEraPositive)return 'PANEL SCENE contains old-period styling for a '+year+' event. Use contemporary '+year+' wardrobe, clinic/support furnishings, hairstyles and technology only.';
+  return '';
  }
  function generalGuidanceTreatmentIssue(prompt){
   const p=String(prompt||'');
@@ -84,6 +98,8 @@
    [/PEAK PRIMARY IMPACT|P1 returns to normal life before the event|pre-impact \/ intact baseline/i,'Generic disaster timeline remains in this public-health prompt.'],
    [/Wind builds before objects accelerate|shingles and small boards may travel farther/i,'Natural-disaster motion rules remain in this public-health prompt.']
   ])if(re.test(prompt||''))errors.push(message);
+  const eraIssue=modernEventEraIssue(prompt);
+  if(eraIssue)errors.push(eraIssue);
   const treatmentIssue=generalGuidanceTreatmentIssue(prompt);
   if(treatmentIssue)errors.push(treatmentIssue);
   const careIssue=generalContinuingCareProcedureIssue(prompt);
