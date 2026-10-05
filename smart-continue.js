@@ -368,8 +368,17 @@ function clearCardSmartReady(card){
   if(session?.pending?.stage===stage)writeSmartSession({pending:null});
   window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage,ready:false,signature:''}}));
 }
+function currentPublicHealthReadyCompatible(card){
+  if(!card||window.LDPublicHealthPolicy?.matches?.(topic())!==true)return true;
+  const currentPolicyVersion=String(window.LDPublicHealthPolicy?.version||'');
+  const savedPolicyVersion=String(card.dataset.publicHealthPolicyVersion||'');
+  const prompt=String(card.querySelector('.text-video-prompt')?.value||card.dataset.textVideoPrompt||'');
+  const oldMotionDNA=/one unmistakable foreground action|Continue and visibly complete the physical action through most of this beat|paper handling, or a held pose alone do NOT count/i;
+  return !!currentPolicyVersion&&savedPolicyVersion===currentPolicyVersion&&!oldMotionDNA.test(prompt);
+}
 function smartReadyStillCurrent(card){
-  return card?.dataset?.smartReady==='1'
+  return currentPublicHealthReadyCompatible(card)
+    && card?.dataset?.smartReady==='1'
     && !!card.dataset.smartReadySignature
     && card.dataset.smartReadySignature===readinessSignature(card);
 }
@@ -395,7 +404,7 @@ function restoreSmartSession(){
   const pending=session?.pending;
   if(pending?.stage){
     const card=cards.find(x=>x.dataset.stage===pending.stage);
-    if(card&&!stageDone(card)&&pending.signature&&pending.signature===readinessSignature(card)){
+    if(card&&!stageDone(card)&&currentPublicHealthReadyCompatible(card)&&pending.signature&&pending.signature===readinessSignature(card)){
       card.dataset.smartReady='1';
       card.dataset.smartReadySignature=pending.signature;
       target=card;
@@ -408,7 +417,7 @@ function restoreSmartSession(){
     writeSmartSession({pending:null});
   }
 
-  const persistedReady=cards.find(card=>!stageDone(card)&&card.dataset.smartReady==='1'&&card.dataset.smartReadySignature&&card.dataset.smartReadySignature===readinessSignature(card));
+  const persistedReady=cards.find(card=>!stageDone(card)&&currentPublicHealthReadyCompatible(card)&&card.dataset.smartReady==='1'&&card.dataset.smartReadySignature&&card.dataset.smartReadySignature===readinessSignature(card));
   if(persistedReady){
     target=persistedReady;
     const signature=persistedReady.dataset.smartReadySignature;
@@ -1418,5 +1427,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.50.8',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.50.9',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
