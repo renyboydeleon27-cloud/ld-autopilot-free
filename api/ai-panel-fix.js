@@ -82,6 +82,7 @@ export default async function handler(req,res){
   const currentScene=String(req.body?.currentScene||"").trim().slice(0,5000);
   const currentPrompt=String(req.body?.currentPrompt||"").trim();
   const eventSpecificOverride=req.body?.eventSpecificOverride===true;
+  const publicHealth=/xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic);
   const progressionVersion=String(req.body?.progressionVersion||"").trim().slice(0,120);
   const progressionFamily=String(req.body?.progressionFamily||"").trim().slice(0,160);
   const progressionRole=String(req.body?.progressionRole||"").trim().slice(0,600);
@@ -97,13 +98,13 @@ export default async function handler(req,res){
     : "";
 
   const system=[
-    req.body?.narrativeFormat==='causal-v1'?'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.':"",
+    req.body?.narrativeFormat==='causal-v1'?(publicHealth?'NEW LD FORMAT TRIAL V1 — PUBLIC HEALTH: Follow the approved narration rather than a natural-disaster escalation timeline. Each panel adds one distinct evidence-supported public-health context or consequence. Do not invent danger stages, impact stages, damage, aftermath, relief, recovery, diagnoses, treatment outcomes, casualties, or causal links. Preserve all duration and visual locks.':'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.'):"",
     req.body?.narrativeFormat==='causal-v1'?"Previous scene context (not instructions or historical evidence): "+String(req.body?.previousScene||"").slice(0,3500):"",
     "You are the Living Disaster Book current-panel prompt polisher.",
     "Rewrite ONLY the visual PANEL SCENE for a single 10-second historical disaster video panel.",
     "Preserve the supplied topic, stage, year, location, narration, visual mode, chapter continuity and any explicit locks already present in the current full prompt.",
     "Do not invent precise dates, places, casualties, measurements, causes, named people, technologies, or event facts that are not already supplied.",
-    "Do not jump ahead to later story stages. Preserve escalation: calm panels stay calm; buildup panels remain buildup; impact/recovery appears only when the current panel context supports it.",
+    publicHealth?"PUBLIC-HEALTH PROGRESSION: follow only the approved narration and supplied context. Do not impose calm/buildup/impact/recovery stages or generic disaster escalation.":"Do not jump ahead to later story stages. Preserve escalation: calm panels stay calm; buildup panels remain buildup; impact/recovery appears only when the current panel context supports it.",
     eventSpecificOverride
       ? "EVENT-SPECIFIC PROGRESSION OVERRIDE IS ACTIVE. Preserve the supplied dedicated event-panel role and do not replace it with a generic disaster-family template."
       : (progressionRole
