@@ -959,8 +959,17 @@ async function prepareTextToVideo(card){
   const prompt=window.LDVideoModes?.prompt?.(card);
   if(!prompt)throw new Error('Text-to-Video prompt could not be built.');
   const publicHealth=window.LDPublicHealthPolicy?.matches?.(topic())===true;
-  if(publicHealth&&(/Only the selected disaster mechanism belongs here|Advance to the next documented stage of danger|Build intensity across the assigned timeline/i.test(prompt))){
-    throw new Error('Stale public-health prompt detected after rebuild. Refresh NER Studio before any audit or Flow generation.');
+  const stalePublicHealth=/Only the selected disaster mechanism belongs here|Advance to the next documented stage of danger|Build intensity across the assigned timeline/i;
+  if(publicHealth&&stalePublicHealth.test(prompt)){
+    // Saved panels can carry a pre-update scene/prompt. Repair that scene once,
+    // then rebuild with the current public-health prompt engine before any audit.
+    status('SMART CONTINUE · Updating the saved public-health scene to the current prompt engine…','working');
+    let stalePayload=panelPayload(card);
+    await fixPanel(card,stalePayload);
+    assertStageOwnsSmartRun(card);
+    const migrated=window.LDVideoModes?.prompt?.(card);
+    if(!migrated)throw new Error('The public-health prompt could not be rebuilt after scene migration.');
+    if(stalePublicHealth.test(migrated))throw new Error('Stale public-health prompt remains after automatic scene migration. No audit or Flow credits were used.');
   }
 
   const builtSceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
@@ -1403,5 +1412,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.50.5',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.50.6',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
