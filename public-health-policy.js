@@ -1,7 +1,7 @@
 /* Shared local policy. No network calls. */
 (function(root){
  'use strict';
- const version='1.3.4';
+ const version='1.3.5';
  function matches(topic){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic||'');}
  function beat(text){
   const s=String(text||'');
@@ -9,6 +9,10 @@
   if(/thousand.*train|training|received training/i.test(s))return 12;
   if(/distributed|distribution/i.test(s)&&/naloxone/i.test(s))return 12;
   if(/naloxone|rescuers|emergency services/i.test(s))return 10;
+  // Continuing-care narration must route to neutral support/outreach scenes BEFORE
+  // the generic wound keyword can route it into wound-treatment scene choices.
+  if(/only the beginning|access to treatment|support(?:\s+that)?\s+continues|support[^\n.]{0,80}\bafterward\b|ongoing support|continued support/i.test(s))return 14;
+  if(/wound\s+care/i.test(s)&&/treatment|support/i.test(s))return 14;
   if(/wound|infected|skin/i.test(s))return 7;
   if(/deaths|died|quarter|mortality/i.test(s))return 9;
   if(/slow.*heart|blood pressure|breathing|unresponsive|unconscious/i.test(s))return 6;
@@ -72,7 +76,7 @@
   if(!guidance)return '';
   const scene=panelScene(p);
   if(!scene)return '';
-  const procedureCue=/\b(?:sleeve\s+(?:rolled|raised)|rolled\s+(?:up\s+)?sleeve|raised\s+sleeve|exposed\s+wound|visible\s+wound|wound\s+(?:assessment|examination|exam)|non-graphic\s+wound\s+assessment|examines?\s+(?:the\s+)?(?:patient|wound|forearm|arm)|treats?\s+(?:the\s+)?wound|bandages?\s+(?:the\s+)?(?:wound|arm|forearm)|wraps?\s+(?:the\s+)?(?:arm|forearm|wound)|appl(?:y|ies|ying)\s+(?:a\s+)?(?:bandage|gauze|dressing)|places?\s+(?:a\s+)?(?:bandage|gauze|dressing)\s+(?:on|onto|over)|clinician[^.]{0,100}\b(?:touches?|examines?|treats?|bandages?|wraps?)\s+(?:the\s+)?patient)\b/i;
+  const procedureCue=/\b(?:wound-care clinic treating a patient|wound-care clinic providing ongoing[^.\n]{0,50}treatment|community health clinic during non-graphic wound assessment|sleeve\s+(?:rolled|raised)|rolled\s+(?:up\s+)?sleeve|raised\s+sleeve|exposed\s+wound|visible\s+wound|wound\s+(?:assessment|examination|exam)|non-graphic\s+wound\s+assessment|examines?\s+(?:the\s+)?(?:patient|wound|forearm|arm)|treats?\s+(?:the\s+)?wound|bandages?\s+(?:the\s+)?(?:wound|arm|forearm)|wraps?\s+(?:the\s+)?(?:arm|forearm|wound)|appl(?:y|ies|ying)\s+(?:a\s+)?(?:bandage|gauze|dressing)|places?\s+(?:a\s+)?(?:bandage|gauze|dressing)\s+(?:on|onto|over)|clinician[^.]{0,100}\b(?:touches?|examines?|treats?|bandages?|wraps?)\s+(?:the\s+)?patient)\b/i;
   if(procedureCue.test(scene))return 'General continuing-care narration was staged too literally as a wound examination or treatment procedure. Keep the clinic visitor fully clothed with both hands/forearms still and no exposed wound or rolled sleeve. The clinician must not touch the visitor. Use exactly one neutral support action instead, preferably moving one closed unmarked resource folder from a stable counter to a nearby tray, then settle. No bandage, gauze, dressing, wound assessment, medication, injection, procedure, recovery, or treatment outcome.';
   return '';
  }
@@ -98,14 +102,10 @@
    [/PEAK PRIMARY IMPACT|P1 returns to normal life before the event|pre-impact \/ intact baseline/i,'Generic disaster timeline remains in this public-health prompt.'],
    [/Wind builds before objects accelerate|shingles and small boards may travel farther/i,'Natural-disaster motion rules remain in this public-health prompt.']
   ])if(re.test(prompt||''))errors.push(message);
-  const eraIssue=modernEventEraIssue(prompt);
-  if(eraIssue)errors.push(eraIssue);
-  const treatmentIssue=generalGuidanceTreatmentIssue(prompt);
-  if(treatmentIssue)errors.push(treatmentIssue);
-  const careIssue=generalContinuingCareProcedureIssue(prompt);
-  if(careIssue)errors.push(careIssue);
-  const motionIssue=motionProgressionIssue(prompt);
-  if(motionIssue)errors.push(motionIssue);
+  const eraIssue=modernEventEraIssue(prompt); if(eraIssue)errors.push(eraIssue);
+  const treatmentIssue=generalGuidanceTreatmentIssue(prompt); if(treatmentIssue)errors.push(treatmentIssue);
+  const careIssue=generalContinuingCareProcedureIssue(prompt); if(careIssue)errors.push(careIssue);
+  const motionIssue=motionProgressionIssue(prompt); if(motionIssue)errors.push(motionIssue);
   return errors;
  }
  const api={version,matches,beat,rules,issues};
