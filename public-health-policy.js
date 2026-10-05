@@ -1,7 +1,7 @@
 /* Shared local policy. No network calls. */
 (function(root){
  'use strict';
- const version='1.0.3';
+ const version='1.1.0';
  function matches(topic){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic||'');}
  function beat(text){
   const s=String(text||'');
@@ -27,6 +27,13 @@
  progression:'PUBLIC-HEALTH STORY RULE: The current approved narration determines the beat. Do not impose a natural-disaster timeline. Illustrative context is not evidence of a specific historical incident, investigation, treatment encounter or chemical identification.',
  canon:'EPISODE CANON — CONTINUITY ENGINE: Preserve project location, year and selected visual style. Different illustrative settings may use different adults. Do not invent prior-panel damage, clinical outcomes, identities or action. Reuse specific continuity only when explicitly supplied and relevant.'
  };
+ function motionProgressionIssue(prompt){
+  const p=String(prompt||'');
+  const timed=(p.match(/\b(?:0(?:\.0)?|2(?:\.0)?|7(?:\.0)?)[–-](?:2(?:\.0)?|7(?:\.0)?|10(?:\.0)?)\s*(?:s|seconds?)\b/gi)||[]).length;
+  const actions=(p.match(/\b(?:reach|reaches|reaching|move|moves|moving|walk|walks|walking|turn|turns|turning|check|checks|checking|place|places|placing|apply|applies|applying|wrap|wraps|wrapping|hand|hands|handing|slide|slides|sliding|open|opens|opening|lift|lifts|lifting|withdraw|withdraws|withdrawing|step|steps|stepping|gesture|gestures|gesturing|assist|assists|assisting|respond|responds|responding|exchange|exchanges|exchanging|prepare|prepares|preparing|finish|finishes|finishing)\b/gi)||[]).length;
+  const progression=/\b(?:then|next|after|by the end|finally|finishes?|completes?|responds? by|follow(?:s|ed|ing)? with)\b/i.test(p);
+  return (timed>=3&&actions>=2&&progression)?'':'Motion progression is too weak: require a visible action that materially develops across 0–2s, 2–7s, and 7–10s instead of a mostly static pose.';
+ }
  function issues(topic,prompt){
   if(!matches(topic))return [];
   const errors=[];
@@ -35,6 +42,8 @@
    [/PEAK PRIMARY IMPACT|P1 returns to normal life before the event|pre-impact \/ intact baseline/i,'Generic disaster timeline remains in this public-health prompt.'],
    [/Wind builds before objects accelerate|shingles and small boards may travel farther/i,'Natural-disaster motion rules remain in the public-health prompt.']
   ])if(re.test(prompt||''))errors.push(message);
+  const motionIssue=motionProgressionIssue(prompt);
+  if(motionIssue)errors.push(motionIssue);
   return errors;
  }
  const api={version,matches,beat,rules,issues};
