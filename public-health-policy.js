@@ -1,7 +1,7 @@
 /* Shared local policy. No network calls. */
 (function(root){
  'use strict';
- const version='1.3.2';
+ const version='1.3.3';
  function matches(topic){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic||'');}
  function beat(text){
   const s=String(text||'');
@@ -24,7 +24,7 @@
   motion:'MICRO-TRANSITION + MORPH CONTROL: Use EXACTLY ONE primary purposeful micro-action that creates one clear completed state change. Keep the main adult anchored in place unless the approved narration truly requires relocation. Prefer one purposeful nearby hand/object action within reach, such as moving one stable folder, bundle, tray item or other simple object from one stable location to another. Meaningful document/folder handling counts when the same object visibly moves from one stable location to another; tiny paper fidgeting does not. Supporting or background adults may only show subtle gaze, breathing or posture settling; they must NOT touch, turn, adjust, carry, open, close or otherwise manipulate a second object such as a monitor, paper stack, tray, folder, door or tool. Never add a second purposeful task merely to create motion. The primary action may finish naturally before the final seconds; after completion, allow only calm residual movement such as breathing, gaze or a small hand settle. Identity stability outranks amount of motion. Preserve identity, anatomy, clothing, object count and geometry. No teleportation, duplication, morphing, object respawn or sudden object changes.',
   damage:'DEBRIS + DAMAGE PHYSICS LOCK: Keep structures intact unless the current approved scene explicitly establishes otherwise. Ordinary objects obey gravity and contact. No generic disaster debris or destruction sequence.',
   cast:'adults appropriate to the current narration and illustrative setting, without invented diagnoses or exaggerated behavior',
-  progression:'PUBLIC-HEALTH STORY RULE: The current approved narration determines the beat. Do not impose a natural-disaster timeline. Illustrative context is not evidence of a specific historical incident, investigation, treatment encounter or chemical identification. GENERAL-GUIDANCE LOCK: a narration instruction such as give naloxone or call emergency services is public guidance, not proof of a specific documented treatment encounter. Unless the narration explicitly identifies a specific documented administration event, visualize preparedness or readiness only—such as moving one naloxone device from an already-open kit to a nearby tray—without showing injection, nasal administration, dosing, route of administration, recovery, or treatment outcome.',
+  progression:'PUBLIC-HEALTH STORY RULE: The current approved narration determines the beat. Do not impose a natural-disaster timeline. Illustrative context is not evidence of a specific historical incident, investigation, treatment encounter or chemical identification. GENERAL-GUIDANCE LOCK: a narration instruction such as give naloxone or call emergency services is public guidance, not proof of a specific documented treatment encounter. Unless the narration explicitly identifies a specific documented administration event, visualize preparedness or readiness only—such as moving one naloxone device from an already-open kit to a nearby tray—without showing injection, nasal administration, dosing, route of administration, recovery, or treatment outcome. CONTINUING-CARE LOCK: when narration generally says people need wound care, access to treatment, or ongoing support, that is not proof of a specific examination or procedure. Visualize access to care/support without patient contact: use a calm clinic or support setting and one closed unmarked resource folder or similarly neutral support object moved from one stable surface to a nearby tray. Keep the visitor fully clothed with hands and forearms still. Do not expose a wound, roll or raise a sleeve for assessment, examine or touch the patient, or show bandage, gauze, dressing, wound treatment, medication, injection, dosing, procedure, recovery, or treatment outcome unless the narration explicitly documents that specific event.',
   canon:'EPISODE CANON — CONTINUITY ENGINE: Preserve project location, year and selected visual style. Different illustrative settings may use different adults. Do not invent prior-panel damage, clinical outcomes, identities or action. Reuse specific continuity only when explicitly supplied and relevant.'
  };
  function secondaryObjectActionIssue(prompt){
@@ -52,6 +52,16 @@
   if(actualAdministration.test(scene))return 'General naloxone guidance was staged as a specific administration encounter. Show preparedness only: one naloxone device may move from an already-open kit to a nearby tray, then settle. Do not show injection, nasal administration, dosing, route, recovery, or treatment outcome unless the narration explicitly identifies a specific documented administration event.';
   return '';
  }
+ function generalContinuingCareProcedureIssue(prompt){
+  const p=String(prompt||'');
+  const guidance=/\bwound care\b|\baccess to treatment\b|\bsupport(?:\s+that)?\s+continues\b|\bsupport[^\n.]{0,80}\bafterward\b|\bongoing support\b|\bcontinued support\b/i.test(p);
+  if(!guidance)return '';
+  const scene=panelScene(p);
+  if(!scene)return '';
+  const procedureCue=/\b(?:sleeve\s+(?:rolled|raised)|rolled\s+(?:up\s+)?sleeve|raised\s+sleeve|exposed\s+wound|visible\s+wound|wound\s+(?:assessment|examination|exam)|non-graphic\s+wound\s+assessment|examines?\s+(?:the\s+)?(?:patient|wound|forearm|arm)|treats?\s+(?:the\s+)?wound|bandages?\s+(?:the\s+)?(?:wound|arm|forearm)|wraps?\s+(?:the\s+)?(?:arm|forearm|wound)|appl(?:y|ies|ying)\s+(?:a\s+)?(?:bandage|gauze|dressing)|places?\s+(?:a\s+)?(?:bandage|gauze|dressing)\s+(?:on|onto|over)|clinician[^.]{0,100}\b(?:touches?|examines?|treats?|bandages?|wraps?)\s+(?:the\s+)?patient)\b/i;
+  if(procedureCue.test(scene))return 'General continuing-care narration was staged too literally as a wound examination or treatment procedure. Keep the clinic visitor fully clothed with both hands/forearms still and no exposed wound or rolled sleeve. The clinician must not touch the visitor. Use exactly one neutral support action instead, preferably moving one closed unmarked resource folder from a stable counter to a nearby tray, then settle. No bandage, gauze, dressing, wound assessment, medication, injection, procedure, recovery, or treatment outcome.';
+  return '';
+ }
  function motionProgressionIssue(prompt){
   const p=String(prompt||'');
   const legacyMotion=/one unmistakable foreground action|Continue and visibly complete the physical action through most of this beat|paper handling, or a held pose alone do NOT count|Do not hold a static pose for the full final three seconds/i;
@@ -72,10 +82,12 @@
   for(const [re,message] of [
    [/rising environmental pressure|quieter tension\s*→\s*rising pressure|powerful hazard sound/i,'Generic hazard audio conflicts with public-health context.'],
    [/PEAK PRIMARY IMPACT|P1 returns to normal life before the event|pre-impact \/ intact baseline/i,'Generic disaster timeline remains in this public-health prompt.'],
-   [/Wind builds before objects accelerate|shingles and small boards may travel farther/i,'Natural-disaster motion rules remain in the public-health prompt.']
+   [/Wind builds before objects accelerate|shingles and small boards may travel farther/i,'Natural-disaster motion rules remain in this public-health prompt.']
   ])if(re.test(prompt||''))errors.push(message);
   const treatmentIssue=generalGuidanceTreatmentIssue(prompt);
   if(treatmentIssue)errors.push(treatmentIssue);
+  const careIssue=generalContinuingCareProcedureIssue(prompt);
+  if(careIssue)errors.push(careIssue);
   const motionIssue=motionProgressionIssue(prompt);
   if(motionIssue)errors.push(motionIssue);
   return errors;
