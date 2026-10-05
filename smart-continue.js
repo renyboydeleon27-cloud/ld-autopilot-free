@@ -952,8 +952,16 @@ async function prepareTextToVideo(card){
   }
 
   status('SMART CONTINUE · Building the current Text-to-Video prompt…','working');
+  // Always invalidate saved readiness before rebuilding. Prompt-engine/cache updates
+  // must never inherit an older READY signature.
+  clearCardSmartReady(card);
+  auditPassCache.clear();
   const prompt=window.LDVideoModes?.prompt?.(card);
   if(!prompt)throw new Error('Text-to-Video prompt could not be built.');
+  const publicHealth=window.LDPublicHealthPolicy?.matches?.(topic())===true;
+  if(publicHealth&&(/Only the selected disaster mechanism belongs here|Advance to the next documented stage of danger|Build intensity across the assigned timeline/i.test(prompt))){
+    throw new Error('Stale public-health prompt detected after rebuild. Refresh NER Studio before any audit or Flow generation.');
+  }
 
   const builtSceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
   if(builtSceneIssue)throw new Error(builtSceneIssue);
@@ -1395,5 +1403,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.50.4',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.50.5',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
