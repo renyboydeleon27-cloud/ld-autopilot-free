@@ -969,13 +969,13 @@ async function prepareTextToVideo(card){
   const needsPolicyMigration=publicHealth&&currentPolicyVersion&&(savedPolicyVersion!==currentPolicyVersion||stalePublicHealth.test(prompt)||oldMotionDNA.test(prompt));
   if(needsPolicyMigration){
     status('SMART CONTINUE · Migrating '+(card.dataset.stage||'panel')+' to Public Health Policy v'+currentPolicyVersion+' before audit…','working');
-    card.dataset.publicHealthPolicyVersion=currentPolicyVersion;
     let stalePayload=panelPayload(card);
     await fixPanel(card,stalePayload);
     assertStageOwnsSmartRun(card);
     const migrated=window.LDVideoModes?.prompt?.(card);
     if(!migrated)throw new Error('The public-health prompt could not be rebuilt after policy migration.');
     if(stalePublicHealth.test(migrated)||oldMotionDNA.test(migrated))throw new Error('Old public-health motion DNA remains after automatic policy migration. No audit or Flow credits were used.');
+    card.dataset.publicHealthPolicyVersion=currentPolicyVersion;
   }
 
   const builtSceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
@@ -1418,5 +1418,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.50.7',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.50.8',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
