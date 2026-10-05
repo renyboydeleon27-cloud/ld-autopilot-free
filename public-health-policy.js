@@ -1,7 +1,7 @@
 /* Shared local policy. No network calls. */
 (function(root){
  'use strict';
- const version='1.3.1';
+ const version='1.3.2';
  function matches(topic){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic||'');}
  function beat(text){
   const s=String(text||'');
@@ -17,15 +17,15 @@
   return 1;
  }
  const rules={
- intensity:'INTENSITY: Follow the specific narration and visible human action. Public-health context has no automatic impact, destruction or recovery sequence based on panel number.',
- camera:'CINEMATIC CAMERA DIRECTOR: One restrained human-height lateral move or gentle push serving the selected scene. Stable horizon and coherent perspective; no hazard reveal or forced urgency.',
- audio:'PROFESSIONAL CINEMATIC AUDIO MIX: Quiet scene-specific ambience only. Audible movements must have visible causes. Stable sound level; no dramatic buildup, impact sounds, sirens, alarms, voice-over, dialogue or music.',
- weather:'WEATHER + ATMOSPHERE CONTINUITY LOCK: Preserve established local light and atmosphere only. No weather escalation, smoke or dust added for drama.',
- motion:'MICRO-TRANSITION + MORPH CONTROL: Use EXACTLY ONE primary purposeful micro-action that creates one clear completed state change. Keep the main adult anchored in place unless the approved narration truly requires relocation. Prefer one purposeful nearby hand/object action within reach, such as moving one stable folder, bundle, tray item or other simple object from one stable location to another. Meaningful document/folder handling counts when the same object visibly moves from one stable location to another; tiny paper fidgeting does not. Supporting or background adults may only show subtle gaze, breathing or posture settling; they must NOT touch, turn, adjust, carry, open, close or otherwise manipulate a second object such as a monitor, paper stack, tray, folder, door or tool. Never add a second purposeful task merely to create motion. The primary action may finish naturally before the final seconds; after completion, allow only calm residual movement such as breathing, gaze or a small hand settle. Identity stability outranks amount of motion. Preserve identity, anatomy, clothing, object count and geometry. No teleportation, duplication, morphing, object respawn or sudden object changes.',
- damage:'DEBRIS + DAMAGE PHYSICS LOCK: Keep structures intact unless the current approved scene explicitly establishes otherwise. Ordinary objects obey gravity and contact. No generic disaster debris or destruction sequence.',
- cast:'adults appropriate to the current narration and illustrative setting, without invented diagnoses or exaggerated behavior',
- progression:'PUBLIC-HEALTH STORY RULE: The current approved narration determines the beat. Do not impose a natural-disaster timeline. Illustrative context is not evidence of a specific historical incident, investigation, treatment encounter or chemical identification.',
- canon:'EPISODE CANON — CONTINUITY ENGINE: Preserve project location, year and selected visual style. Different illustrative settings may use different adults. Do not invent prior-panel damage, clinical outcomes, identities or action. Reuse specific continuity only when explicitly supplied and relevant.'
+  intensity:'INTENSITY: Follow the specific narration and visible human action. Public-health context has no automatic impact, destruction or recovery sequence based on panel number.',
+  camera:'CINEMATIC CAMERA DIRECTOR: One restrained human-height lateral move or gentle push serving the selected scene. Stable horizon and coherent perspective; no hazard reveal or forced urgency.',
+  audio:'PROFESSIONAL CINEMATIC AUDIO MIX: Quiet scene-specific ambience only. Audible movements must have visible causes. Stable sound level; no dramatic buildup, impact sounds, sirens, alarms, voice-over, dialogue or music.',
+  weather:'WEATHER + ATMOSPHERE CONTINUITY LOCK: Preserve established local light and atmosphere only. No weather escalation, smoke or dust added for drama.',
+  motion:'MICRO-TRANSITION + MORPH CONTROL: Use EXACTLY ONE primary purposeful micro-action that creates one clear completed state change. Keep the main adult anchored in place unless the approved narration truly requires relocation. Prefer one purposeful nearby hand/object action within reach, such as moving one stable folder, bundle, tray item or other simple object from one stable location to another. Meaningful document/folder handling counts when the same object visibly moves from one stable location to another; tiny paper fidgeting does not. Supporting or background adults may only show subtle gaze, breathing or posture settling; they must NOT touch, turn, adjust, carry, open, close or otherwise manipulate a second object such as a monitor, paper stack, tray, folder, door or tool. Never add a second purposeful task merely to create motion. The primary action may finish naturally before the final seconds; after completion, allow only calm residual movement such as breathing, gaze or a small hand settle. Identity stability outranks amount of motion. Preserve identity, anatomy, clothing, object count and geometry. No teleportation, duplication, morphing, object respawn or sudden object changes.',
+  damage:'DEBRIS + DAMAGE PHYSICS LOCK: Keep structures intact unless the current approved scene explicitly establishes otherwise. Ordinary objects obey gravity and contact. No generic disaster debris or destruction sequence.',
+  cast:'adults appropriate to the current narration and illustrative setting, without invented diagnoses or exaggerated behavior',
+  progression:'PUBLIC-HEALTH STORY RULE: The current approved narration determines the beat. Do not impose a natural-disaster timeline. Illustrative context is not evidence of a specific historical incident, investigation, treatment encounter or chemical identification. GENERAL-GUIDANCE LOCK: a narration instruction such as give naloxone or call emergency services is public guidance, not proof of a specific documented treatment encounter. Unless the narration explicitly identifies a specific documented administration event, visualize preparedness or readiness only—such as moving one naloxone device from an already-open kit to a nearby tray—without showing injection, nasal administration, dosing, route of administration, recovery, or treatment outcome.',
+  canon:'EPISODE CANON — CONTINUITY ENGINE: Preserve project location, year and selected visual style. Different illustrative settings may use different adults. Do not invent prior-panel damage, clinical outcomes, identities or action. Reuse specific continuity only when explicitly supplied and relevant.'
  };
  function secondaryObjectActionIssue(prompt){
   const p=String(prompt||'');
@@ -35,6 +35,21 @@
    const span=match[0];
    if(!/\b(?:does not|do not|must not|never|without)\b/i.test(span))return 'A supporting adult is performing a second purposeful object action. Keep exactly one main action; supporting adults may only breathe, shift gaze, or settle posture without manipulating another object.';
   }
+  return '';
+ }
+ function panelScene(prompt){
+  const p=String(prompt||'');
+  const m=p.match(/PANEL SCENE:\s*([\s\S]*?)(?:\n\s*PANEL SCENE IDENTITY LOCK:|\n\s*NARRATIVE CONTEXT|\n\s*TIMING:)/i);
+  return m?m[1]:'';
+ }
+ function generalGuidanceTreatmentIssue(prompt){
+  const p=String(prompt||'');
+  const guidance=/\b(?:give|use|administer)\s+naloxone\b|\bcall\s+emergency\s+services\b/i.test(p);
+  if(!guidance)return '';
+  const scene=panelScene(p);
+  if(!scene)return '';
+  const actualAdministration=/\b(?:administers?|administering|injects?|injecting|sprays?|spraying|delivers?|delivering|doses?|dosing)\b[\s\S]{0,90}\bnaloxone\b|\bnaloxone\b[\s\S]{0,90}\b(?:administered|injected|sprayed|delivered|dosed)\b|\b(?:inserts?|inserting|places?|placing)\b[\s\S]{0,90}\b(?:naloxone|nasal spray)\b[\s\S]{0,90}\b(?:nostril|nose)\b/i;
+  if(actualAdministration.test(scene))return 'General naloxone guidance was staged as a specific administration encounter. Show preparedness only: one naloxone device may move from an already-open kit to a nearby tray, then settle. Do not show injection, nasal administration, dosing, route, recovery, or treatment outcome unless the narration explicitly identifies a specific documented administration event.';
   return '';
  }
  function motionProgressionIssue(prompt){
@@ -59,6 +74,8 @@
    [/PEAK PRIMARY IMPACT|P1 returns to normal life before the event|pre-impact \/ intact baseline/i,'Generic disaster timeline remains in this public-health prompt.'],
    [/Wind builds before objects accelerate|shingles and small boards may travel farther/i,'Natural-disaster motion rules remain in the public-health prompt.']
   ])if(re.test(prompt||''))errors.push(message);
+  const treatmentIssue=generalGuidanceTreatmentIssue(prompt);
+  if(treatmentIssue)errors.push(treatmentIssue);
   const motionIssue=motionProgressionIssue(prompt);
   if(motionIssue)errors.push(motionIssue);
   return errors;
