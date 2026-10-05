@@ -305,8 +305,11 @@ function promptHash(value){
   for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}
   return (h>>>0).toString(36);
 }
+function promptPolicyVersion(payload){
+  return window.LDPublicHealthPolicy?.matches?.(payload?.topic||topic())?String(window.LDPublicHealthPolicy?.version||'public-health-unversioned'):'default';
+}
 function auditCacheKey(payload){
-  return [payload.stage,payload.visualMode,payload.colorMode,payload.year,payload.location,promptHash(payload.currentPrompt)].join('|');
+  return [payload.stage,payload.visualMode,payload.colorMode,payload.year,payload.location,'policy:'+promptPolicyVersion(payload),promptHash(payload.currentPrompt)].join('|');
 }
 function readinessSignature(card){
   if(!card)return '';
@@ -959,17 +962,20 @@ async function prepareTextToVideo(card){
   const prompt=window.LDVideoModes?.prompt?.(card);
   if(!prompt)throw new Error('Text-to-Video prompt could not be built.');
   const publicHealth=window.LDPublicHealthPolicy?.matches?.(topic())===true;
+  const currentPolicyVersion=publicHealth?String(window.LDPublicHealthPolicy?.version||''):'';
+  const savedPolicyVersion=String(card.dataset.publicHealthPolicyVersion||'');
   const stalePublicHealth=/Only the selected disaster mechanism belongs here|Advance to the next documented stage of danger|Build intensity across the assigned timeline/i;
-  if(publicHealth&&stalePublicHealth.test(prompt)){
-    // Saved panels can carry a pre-update scene/prompt. Repair that scene once,
-    // then rebuild with the current public-health prompt engine before any audit.
-    status('SMART CONTINUE · Updating the saved public-health scene to the current prompt engine…','working');
+  const oldMotionDNA=/one unmistakable foreground action|Continue and visibly complete the physical action through most of this beat|paper handling, or a held pose alone do NOT count/i;
+  const needsPolicyMigration=publicHealth&&currentPolicyVersion&&(savedPolicyVersion!==currentPolicyVersion||stalePublicHealth.test(prompt)||oldMotionDNA.test(prompt));
+  if(needsPolicyMigration){
+    status('SMART CONTINUE · Migrating '+(card.dataset.stage||'panel')+' to Public Health Policy v'+currentPolicyVersion+' before audit…','working');
+    card.dataset.publicHealthPolicyVersion=currentPolicyVersion;
     let stalePayload=panelPayload(card);
     await fixPanel(card,stalePayload);
     assertStageOwnsSmartRun(card);
     const migrated=window.LDVideoModes?.prompt?.(card);
-    if(!migrated)throw new Error('The public-health prompt could not be rebuilt after scene migration.');
-    if(stalePublicHealth.test(migrated))throw new Error('Stale public-health prompt remains after automatic scene migration. No audit or Flow credits were used.');
+    if(!migrated)throw new Error('The public-health prompt could not be rebuilt after policy migration.');
+    if(stalePublicHealth.test(migrated)||oldMotionDNA.test(migrated))throw new Error('Old public-health motion DNA remains after automatic policy migration. No audit or Flow credits were used.');
   }
 
   const builtSceneIssue=window.LDVideoModes?.sceneVarietyIssue?.(card);
@@ -1412,5 +1418,5 @@ if(document.readyState==='loading'){
   },280);
 }
 
-window.LDSmartContinue={version:'3.50.6',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
+window.LDSmartContinue={version:'3.50.7',run,prepare,currentCard,updateTargetLabel,restoreSmartSession,restoreCurrentPanelViewport,migrateLegacyNarrations,saveApprovedMemory,getApprovedMemory:(stage)=>window.ldApprovedMemory?.stages?.[stage]?.latest||null,readinessSignature,smartReadyStillCurrent,recordApiUsage,getApiUsage:()=>({...currentApiUsage()}),allStagesDone,openFinalAudit};
 })();
