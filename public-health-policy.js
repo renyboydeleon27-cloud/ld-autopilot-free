@@ -1,7 +1,7 @@
 /* Shared local policy. No network calls. */
 (function(root){
  'use strict';
- const version='1.3.5';
+ const version='1.3.6';
  function matches(topic){return /xylazine|zombie drug|tranq|opioid|fentanyl|drug crisis|overdose crisis/i.test(topic||'');}
  function beat(text){
   const s=String(text||'');
@@ -46,6 +46,29 @@
   const m=p.match(/PANEL SCENE:\s*([\s\S]*?)(?:\n\s*PANEL SCENE IDENTITY LOCK:|\n\s*NARRATIVE CONTEXT|\n\s*TIMING:)/i);
   return m?m[1]:'';
  }
+ function sentences(text){
+  return String(text||'').split(/\n+|(?<=[.!?])\s+/).map(function(s){return s.trim();}).filter(Boolean);
+ }
+ function negativeSafetySentence(text){
+  const s=String(text||'');
+  return /^(?:no\b|never\b|without\b|avoid\b|do not\b|don't\b|must not\b)/i.test(s)
+    || /\b(?:do not|does not|must not|never|without|forbid(?:den)?|avoid)\b/i.test(s);
+ }
+ function positiveCue(text,re){
+  return sentences(text).some(function(s){return re.test(s)&&!negativeSafetySentence(s);});
+ }
+ function continuingCareSafeScene(scene){
+  const s=String(scene||'');
+  const safeCore=/\bclosed\s*,?\s*unmarked\s+resource\s+folder\b/i.test(s)
+    && /\b(?:counter|stable surface)\b/i.test(s)
+    && /\btray\b/i.test(s)
+    && /\bfully clothed adult visitor\b/i.test(s)
+    && /\b(?:no physical contact(?: with the visitor)?|never touches? the visitor|does not touch the visitor|must not touch the visitor)\b/i.test(s)
+    && /\bcontemporary\s+20\d{2}\b/i.test(s);
+  if(!safeCore)return false;
+  const positiveProcedure=positiveCue(s,/\b(?:wound-care clinic treating a patient|community health clinic during non-graphic wound assessment|sleeve\s+(?:rolled|raised)|rolled\s+(?:up\s+)?sleeve|raised\s+sleeve|exposed\s+wound|visible\s+wound|wound\s+(?:assessment|examination|exam)|non-graphic\s+wound\s+assessment|examines?\s+(?:the\s+)?(?:patient|visitor|wound|forearm|arm)|treats?\s+(?:the\s+)?wound|bandages?\s+(?:the\s+)?(?:wound|arm|forearm)|wraps?\s+(?:the\s+)?(?:arm|forearm|wound)|appl(?:y|ies|ying)\s+(?:a\s+)?(?:bandage|gauze|dressing)|places?\s+(?:a\s+)?(?:bandage|gauze|dressing)\s+(?:on|onto|over)|clinician[^.]{0,100}\b(?:touches?|examines?|treats?|bandages?|wraps?)\s+(?:the\s+)?(?:patient|visitor))\b/i);
+  return !positiveProcedure;
+ }
  function modernEventEraIssue(prompt){
   const p=String(prompt||'');
   const years=(p.match(/\b20\d{2}\b/g)||[]).map(Number);
@@ -56,8 +79,7 @@
   if(!scene)return '';
   const ambiguousWardrobe=/\b(?:period-appropriate|historically appropriate)\b[^.\n]{0,100}\b(?:clothing|wardrobe|attire|uniform|dress)\b/i.test(scene);
   if(ambiguousWardrobe)return 'Modern-era wardrobe wording is still ambiguous. In the PANEL SCENE, replace period/historically-appropriate clothing language with explicit contemporary '+year+' clothing and hairstyles. Historical anime is the art style only; no vintage nurse dress, long apron, bonnet, antique clinic uniform or early-1900s styling.';
-  const oldEraPositive=/\b(?:Victorian|Edwardian|early[- ]1900s|vintage nurse|long apron|bonnet|antique clinic|historical classroom|retro uniform)\b/i.test(scene)&&!/\b(?:no|not|without|forbid|avoid)\b[^.\n]{0,45}\b(?:Victorian|Edwardian|early[- ]1900s|vintage nurse|long apron|bonnet|antique clinic|historical classroom|retro uniform)\b/i.test(scene);
-  if(oldEraPositive)return 'PANEL SCENE contains old-period styling for a '+year+' event. Use contemporary '+year+' wardrobe, clinic/support furnishings, hairstyles and technology only.';
+  if(positiveCue(scene,/\b(?:Victorian|Edwardian|early[- ]1900s|vintage nurse|long apron|bonnet|antique clinic|historical classroom|retro uniform)\b/i))return 'PANEL SCENE contains old-period styling for a '+year+' event. Use contemporary '+year+' wardrobe, clinic/support furnishings, hairstyles and technology only.';
   return '';
  }
  function generalGuidanceTreatmentIssue(prompt){
@@ -67,7 +89,7 @@
   const scene=panelScene(p);
   if(!scene)return '';
   const actualAdministration=/\b(?:administers?|administering|injects?|injecting|sprays?|spraying|delivers?|delivering|doses?|dosing)\b[\s\S]{0,90}\bnaloxone\b|\bnaloxone\b[\s\S]{0,90}\b(?:administered|injected|sprayed|delivered|dosed)\b|\b(?:inserts?|inserting|places?|placing)\b[\s\S]{0,90}\b(?:naloxone|nasal spray)\b[\s\S]{0,90}\b(?:nostril|nose)\b/i;
-  if(actualAdministration.test(scene))return 'General naloxone guidance was staged as a specific administration encounter. Show preparedness only: one naloxone device may move from an already-open kit to a nearby tray, then settle. Do not show injection, nasal administration, dosing, route, recovery, or treatment outcome unless the narration explicitly identifies a specific documented administration event.';
+  if(positiveCue(scene,actualAdministration))return 'General naloxone guidance was staged as a specific administration encounter. Show preparedness only: one naloxone device may move from an already-open kit to a nearby tray, then settle. Do not show injection, nasal administration, dosing, route, recovery, or treatment outcome unless the narration explicitly identifies a specific documented administration event.';
   return '';
  }
  function generalContinuingCareProcedureIssue(prompt){
@@ -76,8 +98,9 @@
   if(!guidance)return '';
   const scene=panelScene(p);
   if(!scene)return '';
-  const procedureCue=/\b(?:wound-care clinic treating a patient|wound-care clinic providing ongoing[^.\n]{0,50}treatment|community health clinic during non-graphic wound assessment|sleeve\s+(?:rolled|raised)|rolled\s+(?:up\s+)?sleeve|raised\s+sleeve|exposed\s+wound|visible\s+wound|wound\s+(?:assessment|examination|exam)|non-graphic\s+wound\s+assessment|examines?\s+(?:the\s+)?(?:patient|wound|forearm|arm)|treats?\s+(?:the\s+)?wound|bandages?\s+(?:the\s+)?(?:wound|arm|forearm)|wraps?\s+(?:the\s+)?(?:arm|forearm|wound)|appl(?:y|ies|ying)\s+(?:a\s+)?(?:bandage|gauze|dressing)|places?\s+(?:a\s+)?(?:bandage|gauze|dressing)\s+(?:on|onto|over)|clinician[^.]{0,100}\b(?:touches?|examines?|treats?|bandages?|wraps?)\s+(?:the\s+)?patient)\b/i;
-  if(procedureCue.test(scene))return 'General continuing-care narration was staged too literally as a wound examination or treatment procedure. Keep the clinic visitor fully clothed with both hands/forearms still and no exposed wound or rolled sleeve. The clinician must not touch the visitor. Use exactly one neutral support action instead, preferably moving one closed unmarked resource folder from a stable counter to a nearby tray, then settle. No bandage, gauze, dressing, wound assessment, medication, injection, procedure, recovery, or treatment outcome.';
+  if(continuingCareSafeScene(scene))return '';
+  const procedureCue=/\b(?:wound-care clinic treating a patient|wound-care clinic providing ongoing[^.\n]{0,50}treatment|community health clinic during non-graphic wound assessment|sleeve\s+(?:rolled|raised)|rolled\s+(?:up\s+)?sleeve|raised\s+sleeve|exposed\s+wound|visible\s+wound|wound\s+(?:assessment|examination|exam)|non-graphic\s+wound\s+assessment|examines?\s+(?:the\s+)?(?:patient|visitor|wound|forearm|arm)|treats?\s+(?:the\s+)?wound|bandages?\s+(?:the\s+)?(?:wound|arm|forearm)|wraps?\s+(?:the\s+)?(?:arm|forearm|wound)|appl(?:y|ies|ying)\s+(?:a\s+)?(?:bandage|gauze|dressing)|places?\s+(?:a\s+)?(?:bandage|gauze|dressing)\s+(?:on|onto|over)|clinician[^.]{0,100}\b(?:touches?|examines?|treats?|bandages?|wraps?)\s+(?:the\s+)?(?:patient|visitor))\b/i;
+  if(positiveCue(scene,procedureCue))return 'General continuing-care narration was staged too literally as a wound examination or treatment procedure. Keep the clinic visitor fully clothed with both hands/forearms still and no exposed wound or rolled sleeve. The clinician must not touch the visitor. Use exactly one neutral support action instead, preferably moving one closed unmarked resource folder from a stable counter to a nearby tray, then settle. No bandage, gauze, dressing, wound assessment, medication, injection, procedure, recovery, or treatment outcome.';
   return '';
  }
  function motionProgressionIssue(prompt){
@@ -108,6 +131,6 @@
   const motionIssue=motionProgressionIssue(prompt); if(motionIssue)errors.push(motionIssue);
   return errors;
  }
- const api={version,matches,beat,rules,issues};
+ const api={version,matches,beat,rules,issues,continuingCareSafeScene};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LDPublicHealthPolicy=api;
 })(typeof window!=='undefined'?window:globalThis);
