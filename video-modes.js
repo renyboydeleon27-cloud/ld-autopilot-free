@@ -1106,16 +1106,21 @@ function build(card){
  scene=sanitizeSceneForStyle(scene);
  var familyProgression=progression(stage,special);
  var scientific=special?!!special.scientific:scientificScene(card,scene);
+ var publicHealth=window.LDPublicHealthPolicy?.matches?.(current())===true;
  var camera=cameraDirector(stage,scientific);
  var modeLine=style()==='real'
    ? (scientific?'Photorealistic historical documentary explanatory visualization. This is a scientific cutaway, not an eyewitness human-camera scene. No anime or illustration.':'Photorealistic REAL HUMAN historical documentary recreation. No anime or illustration.')
    : (colorMode()==='bw'?'Serious 2D historical graphic-novel/anime animation in STRICT true black-and-white grayscale only. No live action, no photorealism, no color, no sepia, no tint, no selective color.':'Serious 2D historical graphic-novel/anime animation. No live action.');
  var timing=special&&special.timing?special.timing:(scientific
    ? '0.0–2.0s: Establish the geological or scientific setting and the focal mechanism clearly; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue the same mechanism with restrained, coherent cause-and-effect motion at plausible scale.\n7.0–10.0s: Sustain the buildup or explanatory beat and end on a clear readable composition without jumping to the next story stage.'
-   : '0.0–2.0s: Establish the described setting, visible adult positions when adults are present, and one clear focal action; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue that same action with coherent cause and effect, natural momentum and local environmental response.\n7.0–10.0s: Sustain the panel’s intended beat and finish on a readable composition; do not jump to the next story stage.');
+   : publicHealth
+     ? '0.0–2.0s: Establish the public-health setting and begin one unmistakable foreground action within the first half-second.\n2.0–7.0s: Continue that same action so a foreground adult or handled object reaches a clearly different position or configuration; camera movement alone does not count.\n7.0–10.0s: Continue and visibly complete the physical action through most of this beat, then settle only near the final moment on the completed different state. Do not hold a static pose for the full final three seconds.'
+     : '0.0–2.0s: Establish the described setting, visible adult positions when adults are present, and one clear focal action; readable natural motion begins within the first half-second.\n2.0–7.0s: Continue that same action with coherent cause and effect, natural momentum and local environmental response.\n7.0–10.0s: Sustain the panel’s intended beat and finish on a readable composition; do not jump to the next story stage.');
  var physics=special&&special.physics?special.physics:(scientific
    ? 'This panel is an explanatory scientific visualization. Do not depict invisible subsurface processes as ordinary eyewitness footage. Keep the mechanism grounded, restrained and physically plausible. No fantasy energy, glowing magic cracks or exaggerated sci-fi effects. Preserve plausible geological scale and cause-and-effect.'
-   : 'Only the selected disaster mechanism belongs here. Calm scenes stay calm. Slow-onset effects are already present; no instant infection, starvation, crop death or insect reproduction. Preserve object count, human identity when people are present, and plausible scale throughout the clip.');
+   : publicHealth
+     ? 'Keep the public-health scene grounded in the approved narration. Preserve object count, adult identity, plausible human movement and physical contact. Do not invent disaster mechanisms, diagnoses, treatment outcomes, drug administration, casualties or chemical identification. The foreground action must create a clearly visible completed state change.'
+     : 'Only the selected disaster mechanism belongs here. Calm scenes stay calm. Slow-onset effects are already present; no instant infection, starvation, crop death or insect reproduction. Preserve object count, human identity when people are present, and plausible scale throughout the clip.');
  var audio=special&&special.audio?special.audio:(scientific
    ? 'Restrained natural documentary ambience appropriate to the mechanism, such as low underwater rumble, rock strain or deep-earth vibration when supported by the scene. No voiceover or music.'
    : 'Natural scene-specific ambience and SFX only. No voiceover or music.');
