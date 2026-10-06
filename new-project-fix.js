@@ -1,4 +1,4 @@
-/* NER Studio new-project hard reset + viewport focus guard v1.2. Local only; no network/API calls. */
+/* NER Studio new-project hard reset + viewport focus guard v1.3. Local only; no network/API calls. */
 (()=>{'use strict';
  const CORE_KEY='ld-autopilot-free-v1';
  const ACTIVE_KEY='ld-autopilot-free-active-project';
@@ -48,6 +48,24 @@
  document.addEventListener('click',noteTrustedAction,true);
  installViewportGuard();
 
+ function installFreshProjectStorageGuard(){
+  const proto=Storage.prototype;
+  if(proto.__ldFreshProjectStorageGuardV13)return;
+  const nativeSetItem=proto.setItem;
+  if(typeof nativeSetItem!=='function')return;
+  Object.defineProperty(proto,'__ldFreshProjectStorageGuardV13',{value:true,configurable:false});
+  proto.setItem=function(key,value){
+   // app.js can fire a final save during pagehide/reload. Once New Project is pending,
+   // never allow that old production to recreate CORE_KEY after we deliberately cleared it.
+   if(String(key)===CORE_KEY){
+    let pending=false;
+    try{pending=localStorage.getItem(NEW_PROJECT_KEY)==='1';}catch{}
+    if(pending)return;
+   }
+   return nativeSetItem.call(this,key,value);
+  };
+ }
+
  function focusFreshSetup(){
   let shouldFocus=false;
   try{shouldFocus=localStorage.getItem(FOCUS_KEY)==='1';}catch{}
@@ -56,6 +74,9 @@
   const move=()=>{
    const setup=document.querySelector('.setup');
    const topic=document.getElementById('topic');
+   const narrative=document.getElementById('narrativeFormat');
+   // New-project setup fields must remain editable until Create Production locks the format.
+   if(narrative)narrative.disabled=false;
    // Setup scrolling is intentionally NOT blocked by the stage focus guard.
    if(setup)setup.scrollIntoView({behavior:'auto',block:'start'});
    if(topic){
@@ -72,11 +93,12 @@
   starting=true;
   e.preventDefault();
   e.stopImmediatePropagation();
-  // Best-effort final save of the current project. A storage/quota error must never
-  // prevent entering a fresh-project session; the library/core already autosave normally.
+  // Best-effort final save of the current project BEFORE the pending-new flag is set.
   try{window.LDProjectLibrary?.flushCurrent?.();}catch(err){console.warn('Final project sync skipped before New Project',err);}
   try{localStorage.setItem(NEW_PROJECT_KEY,'1');}catch{}
   try{localStorage.setItem(FOCUS_KEY,'1');}catch{}
+  // From this point onward, block any unload/pagehide handler from recreating the old CORE state.
+  installFreshProjectStorageGuard();
   try{localStorage.removeItem(ACTIVE_KEY);}catch{}
   try{localStorage.removeItem(CORE_KEY);}catch{}
   // Reload into a clean session. project-library.js consumes NEW_PROJECT_KEY on boot,
