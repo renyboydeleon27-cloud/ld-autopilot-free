@@ -1,6 +1,13 @@
-/* LD AUTO — RECOMMENDED topic-specific HOOK: Halabja Chemical Attack 1988 — Witness Before the Graves */
+/* LD AUTO — Halabja Chemical Attack 1988 topic pack v1.2: recommended HOOK + P1 + progression fix */
 (function(){
 'use strict';
+
+var TOPIC='Halabja Chemical Attack — Iraq — 1988';
+var VERSION='1.2';
+
+function isHalabjaTopic(value){
+  return /^halabja chemical attack\s*[—–-]\s*iraq\s*[—–-]\s*1988$/i.test(String(value||'').trim());
+}
 
 function prompt(){
 return `VIDEO PROMPT — EXACTLY 10 SECONDS
@@ -120,8 +127,49 @@ ELDERLY WITNESS IN DARK INDISTINCT SETTING
 STATUS: RECOMMENDED HOOK NO. 1 — HALABJA CHEMICAL ATTACK — IRAQ — 1988.`;
 }
 
-function isHalabjaTopic(value){
-  return /^halabja chemical attack\s*[—–-]\s*iraq\s*[—–-]\s*1988$/i.test(String(value||'').trim());
+var P1_SCENE='EXACTLY 10 SECONDS, portrait 9:16. Strict true black-and-white grayscale 2D historical anime / graphic-novel animation only; no live action, photorealism, color, sepia, tint, or 3D CGI. Halabja, northern Iraq, 1988, before the chemical attack. Show an intact modest Kurdish residential-market street with period-appropriate masonry buildings, simple doorways and storefront forms, unmarked household or market goods, and no readable signs. One adult Kurdish civilian is the clear foreground subject. At 0.0–0.5 seconds, the adult begins walking naturally through the quiet street carrying one ordinary period-appropriate market or household item. From 0.5–6.5 seconds, continue the same steady walking action while the camera makes a restrained lateral observational move, gradually revealing more of the intact neighborhood and ordinary civilian life. From 6.5–10.0 seconds, the adult slows near the edge of the frame while the camera holds the calm street depth and surrounding buildings. The visual purpose is to establish Halabja as a lived-in Kurdish civilian city before the attack. No chemical cloud, gas, smoke, haze, military action, aircraft, bombing, panic, casualties, graveyard, destruction, warning signs or invented dramatic foreshadowing. Preserve the same adult identity, clothing, anatomy, carried object, building geometry and street layout throughout the shot. Calm normal-world intensity only.';
+
+var CHEMICAL_STAGES={
+  P1:{role:'Halabja civilian life · intact city before the attack',rule:'Establish Halabja as a lived-in Kurdish civilian city before visible attack effects. No bombing, gas, panic, casualties, military spectacle or destruction.'},
+  P2:{role:'War context · forces move around the Halabja area',rule:'Show only evidence-supported wartime context. Do not invent tactical plans, weapon handling, targeting procedures or unsupported combat details.'},
+  P3:{role:'Conventional bombardment · attack begins',rule:'Show the documented conventional bombardment stage without jumping ahead to chemical exposure. Keep destruction limited to what this beat establishes.'},
+  P4:{role:'Chemical attack begins · civilians exposed with little warning',rule:'Represent the onset of chemical attack without operational weapon instructions. Toxic agents may be invisible; do not invent colored gas, glowing contamination or fantasy effects.'},
+  P5:{role:'Chemical-agent evidence · mustard gas and sarin context',rule:'Treat agent identification as historical context, not a weapon demonstration. Do not visualize formulas, mixing, delivery mechanics or procedural details.'},
+  P6:{role:'Human medical effects · acute exposure crisis',rule:'Show non-graphic human distress consistent with the narration. No gore, sensationalized suffering or unsupported symptoms.'},
+  P7:{role:'Human toll · scale of civilian loss',rule:'Communicate scale respectfully and non-graphically. Avoid exposed bodies, gore or exploitative close-ups.'},
+  P8:{role:'Survivors · injuries and continuing consequences',rule:'Show surviving civilians and ongoing harm without inventing diagnoses, procedures or instant recovery.'},
+  P9:{role:'Escape and evacuation · civilians seek safety',rule:'Show people leaving affected areas or being moved toward help when supported. Do not repeat the peak attack as another identical scene.'},
+  P10:{role:'Medical and humanitarian response',rule:'Show restrained period-appropriate care or transport only when supported. Do not invent modern equipment, agencies or specific treatment procedures.'},
+  P11:{role:'Eyewitness and photographic evidence reaches the outside world',rule:'Represent documentation and outside awareness without readable fabricated records, staged propaganda imagery or invented named individuals.'},
+  P12:{role:'Investigation and documentary evidence',rule:'Show the existence of later investigation or records in a restrained way. Do not fabricate readable documents, confessions, exact archive layouts or courtroom events.'},
+  P13:{role:'Historical significance · chemical weapons used against civilians',rule:'Reflect on Halabja’s documented historical significance without introducing a new attack beat or repeating graphic victim imagery.'},
+  P14:{role:'Legacy · survivors, memory and chemical-weapons prohibition',rule:'Close on memory, survivors and documented legacy. Keep the final beat human-centered and reflective; do not introduce new suffering or unsupported political claims.'}
+};
+
+function installProgressionOverride(){
+  var base=window.LDDisasterProgression;
+  if(!base||base.__halabjaChemicalV12)return false;
+  var evidence='This is a story-position lock, not a fact source. Halabja-specific research, approved narration and dedicated event panels control factual details. Do not invent tactical chemical-weapon procedures, unverified symptoms, named individuals, readable documents or unsupported military actions.';
+  function chemicalStage(topic,stageName){
+    if(!isHalabjaTopic(topic))return null;
+    var s=String(stageName||'').toUpperCase(),item=CHEMICAL_STAGES[s];
+    if(!item)return null;
+    return {version:'halabja-chemical-progression-v1.2',family:'chemical',familyLabel:'Chemical Attack / Chemical Weapons',stage:s,role:item.role,rule:item.rule,evidenceRule:evidence};
+  }
+  function family(topic){return isHalabjaTopic(topic)?'chemical':base.family(topic);}
+  function stage(topic,stageName){return chemicalStage(topic,stageName)||base.stage(topic,stageName);}
+  function role(topic,stageName){var x=stage(topic,stageName);return x?.role||'';}
+  function rule(topic,stageName){var x=stage(topic,stageName);return x?.rule||'';}
+  function all(topic){
+    if(!isHalabjaTopic(topic))return base.all(topic);
+    var out={};for(var i=1;i<=14;i++){var s='P'+i;out[s]=stage(topic,s);}return out;
+  }
+  function summary(topic){
+    if(!isHalabjaTopic(topic))return base.summary(topic);
+    return {version:'halabja-chemical-progression-v1.2',family:'chemical',familyLabel:'Chemical Attack / Chemical Weapons',stages:all(topic)};
+  }
+  window.LDDisasterProgression=Object.freeze({version:'halabja-chemical-progression-v1.2',family:family,stage:stage,role:role,rule:rule,all:all,summary:summary,__halabjaChemicalV12:true});
+  return true;
 }
 
 function installChoiceOverride(){
@@ -138,8 +186,6 @@ function installChoiceOverride(){
       && (!c.family||c.family==='industrial');
     if(!eligible||!Array.isArray(list)||!list.length)return list;
     var first=Object.assign({},list[0]);
-    // Keep the family-default id so an already-active Workplace Alarm record is
-    // refreshed in place instead of leaving the old prompt silently active.
     first.rec=true;
     first.status='RECOMMENDED';
     first.title='Witness Before the Graves';
@@ -152,9 +198,6 @@ function installChoiceOverride(){
     return list;
   };
   lib.__halabjaRecommendedHookV11=true;
-
-  // Force the existing active family-default Hook to refresh to this topic-specific
-  // prompt on the next Top 3 render without changing the user's selected hook id.
   try{
     var key='ld-auto-active-hook-v1';
     var active=JSON.parse(localStorage.getItem(key)||'null');
@@ -166,16 +209,74 @@ function installChoiceOverride(){
   return true;
 }
 
+function currentTopic(){
+  var typed=document.getElementById('topic')?.value?.trim();
+  if(typed)return typed;
+  var title=document.getElementById('projectTitle')?.textContent?.trim();
+  return title&&title!=='No production yet'?title:'';
+}
+
+function applyP1Fix(){
+  if(!isHalabjaTopic(currentTopic()))return false;
+  installProgressionOverride();
+  installChoiceOverride();
+
+  var existing=window.ldVideoContinuity&&typeof window.ldVideoContinuity==='object'&&!Array.isArray(window.ldVideoContinuity)?window.ldVideoContinuity:{};
+  var location=String(existing.location||'').trim();
+  if(!location||/^iraq$/i.test(location)){
+    window.ldVideoContinuity=Object.assign({},existing,{year:String(existing.year||'1988')||'1988',location:'Halabja, northern Iraq'});
+    var locationField=document.querySelector('#chapterVideoContext .video-location');
+    if(locationField)locationField.value='Halabja, northern Iraq';
+    var yearField=document.querySelector('#chapterVideoContext .video-year');
+    if(yearField&&!yearField.value)yearField.value='1988';
+  }
+
+  var card=document.querySelector('.stage-card[data-stage="P1"]');
+  if(!card)return false;
+  var done=card.querySelector('.done-toggle');
+  if(done?.checked)return false;
+
+  var sceneField=card.querySelector('.video-scene');
+  var currentScene=String(sceneField?.value||card.dataset.videoScene||'');
+  var needsScene=!currentScene||/warehouse|wooden crate|burlap sack|low pallet|SMART RANDOM CHOICE|KEEP CURRENT SCENE/i.test(currentScene)||card.dataset.halabjaP1Lock!=='1';
+  if(needsScene){
+    card.dataset.sceneChoice='';
+    card.dataset.videoScene=P1_SCENE;
+    card.dataset.halabjaP1Lock='1';
+    if(sceneField)sceneField.value=P1_SCENE;
+    card.dataset.textVideoPrompt='';
+    card.dataset.textVideoSignature='';
+    delete card.dataset.smartReady;
+    delete card.dataset.smartReadySignature;
+    var promptField=card.querySelector('.text-video-prompt');
+    if(promptField)promptField.value='';
+    if(sceneField){
+      sceneField.dispatchEvent(new Event('input',{bubbles:true}));
+      sceneField.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  }
+  try{window.LDVideoModes?.all?.();}catch(e){}
+  return true;
+}
+
 window.LDHalabjaChemicalHook={
-  version:'1.1',
-  topic:'Halabja Chemical Attack — Iraq — 1988',
+  version:VERSION,
+  topic:TOPIC,
   status:'RECOMMENDED',
   recommended:true,
   number:1,
   title:'Witness Before the Graves',
   prompt:prompt,
-  installChoiceOverride:installChoiceOverride
+  p1Scene:P1_SCENE,
+  chemicalStages:CHEMICAL_STAGES,
+  installChoiceOverride:installChoiceOverride,
+  installProgressionOverride:installProgressionOverride,
+  applyP1Fix:applyP1Fix
 };
 
+installProgressionOverride();
 installChoiceOverride();
+window.addEventListener('ld:production-built',function(){[0,250,700].forEach(function(ms){setTimeout(applyP1Fix,ms);});});
+window.addEventListener('load',function(){[0,300,900,1600].forEach(function(ms){setTimeout(applyP1Fix,ms);});});
+if(document.readyState!=='loading')setTimeout(applyP1Fix,900);
 })();
