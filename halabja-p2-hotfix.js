@@ -1,11 +1,11 @@
-/* NER Studio — Halabja P2 audit hotfix v1.1
+/* NER Studio — Halabja P2 audit hotfix v1.2
    Runs synchronously before Smart Continue audit and repairs generic P2 inheritance.
    Does not modify approved P1. */
 (function(){'use strict';
 
-var VERSION='1.1';
+var VERSION='1.2';
 var TOPIC_RE=/^halabja chemical attack\s*[—–-]\s*iraq\s*[—–-]\s*1988$/i;
-var P2_SCENE='EXACTLY 10 SECONDS, portrait 9:16, one continuous shot in strict true black-and-white grayscale 2D historical anime / graphic-novel animation only; no live action, photorealism, color, sepia, tint, or 3D CGI. Halabja, northern Iraq, early 1988. Use a different street edge and camera axis from P1. One adult Kurdish civilian is the clear foreground subject near an intact modest masonry doorway, with NO carried object. At 0.0–0.5 seconds, the adult begins one restrained action by slowly turning head and upper body toward a distant road. From 0.5–6.5 seconds, continue that same turn and hold while a very small number of distant adult wartime figures moves through the far background at walking pace as historical context only. Keep all background figures distant and non-heroic, with no firing, aiming, tactical demonstration, weapon close-up, readable insignia, flags, maps, commands, formation drills, or combat choreography. From 6.5–10.0 seconds, the foreground civilian settles into a still watchful pose while the distant movement continues naturally. The visual beat is wartime presence around Halabja while civilians remain inside the city. No chemical cloud, gas, smoke, haze, bombing, aircraft, explosions, casualties, symptoms, destruction, environmental warning signs, ominous weather change, panic, graveyard, or later impact imagery. Natural quiet residential ambience only; no voiceover, music, alarm, or unsupported sound. Preserve P2 character identity, clothing, anatomy, scale, building geometry and camera perspective throughout. No teleportation, duplication, morphing, or identity changes.';
+var P2_SCENE='EXACTLY 10 SECONDS, portrait 9:16, one continuous shot in strict true black-and-white grayscale 2D historical anime / graphic-novel animation only; no live action, photorealism, color, sepia, tint, or 3D CGI. Halabja, northern Iraq, early 1988. Use a different street edge and camera axis from P1. One adult Kurdish civilian is the clear foreground subject near an intact modest masonry doorway, with NO carried object. At 0.0–0.5 seconds, the adult begins one restrained action by slowly turning head and upper body toward a distant road. From 0.5–7.0 seconds, continue the same single turning-and-watching action while a very small number of distant adult wartime figures moves through the far background at walking pace as historical context only. Keep all background figures distant and non-heroic, with no firing, aiming, tactical demonstration, weapon close-up, readable insignia, flags, maps, commands, formation drills, or combat choreography. From 7.0–10.0 seconds, sustain the same watchful action without introducing a new action; the foreground civilian remains oriented toward the road while the distant movement continues naturally. The visual beat is wartime presence around Halabja while civilians remain inside the city. No chemical cloud, gas, smoke, haze, bombing, aircraft, explosions, casualties, symptoms, destruction, environmental warning signs, ominous weather change, panic, graveyard, or later impact imagery. Natural quiet residential ambience only; no voiceover, music, alarm, or unsupported sound. Preserve P2 character identity, clothing, anatomy, scale, building geometry and camera perspective throughout. No teleportation, duplication, morphing, or identity changes.';
 
 function topic(){
   var typed=document.getElementById('topic')?.value?.trim();
@@ -41,6 +41,10 @@ function sanitize(text){
   s=s.replace(/CINEMATIC CAMERA DIRECTOR:\s*slow lateral reveal or controlled creeping push that exposes developing environmental warning signs without showing the next major hazard beat\. Maintain one lens family and coherent perspective for the whole 10 seconds\. No zoom pumping, fisheye, random orbit, camera teleportation, viewpoint reset, wall pass-through or unmotivated shake\./gi,safeCamera());
   s=s.replace(/CINEMATIC CAMERA DIRECTOR:\s*slow lateral reveal or controlled creeping push that exposes developing environmental warning signs without showing the next major hazard beat\./gi,safeCamera());
   s=s.replace(/same consistent face, anatomy, clothing, and ordinary household item throughout/gi,'consistent face, anatomy and clothing throughout, with no carried object');
+  s=s.replace(/0\.5[–-]6\.5 seconds/gi,'0.5–7.0 seconds');
+  s=s.replace(/6\.5[–-]10\.0 seconds/gi,'7.0–10.0 seconds');
+  s=s.replace(/exposes? developing environmental warning signs/gi,'reveals evidence-supported wartime context around Halabja');
+  s=s.replace(/developing environmental warning signs/gi,'evidence-supported wartime context around Halabja');
   return s;
 }
 
@@ -73,7 +77,7 @@ function clearPrompt(c){
 function installPatch(){
   var vm=window.LDVideoModes;
   if(!vm)return false;
-  if(vm.__halabjaP2AuditHotfixV11)return true;
+  if(vm.__halabjaP2AuditHotfixV12)return true;
   var basePrompt=typeof vm.prompt==='function'?vm.prompt.bind(vm):null;
   var baseBuild=typeof vm.build==='function'?vm.build.bind(vm):null;
   if(!basePrompt||!baseBuild)return false;
@@ -89,7 +93,7 @@ function installPatch(){
     if(matches()&&c?.dataset?.stage==='P2'&&!done(c))out=writePrompt(c,out);
     return out;
   };
-  vm.__halabjaP2AuditHotfixV11=true;
+  vm.__halabjaP2AuditHotfixV12=true;
   return true;
 }
 
