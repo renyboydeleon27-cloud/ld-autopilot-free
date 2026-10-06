@@ -120,13 +120,62 @@ ELDERLY WITNESS IN DARK INDISTINCT SETTING
 STATUS: RECOMMENDED HOOK NO. 1 — HALABJA CHEMICAL ATTACK — IRAQ — 1988.`;
 }
 
+function isHalabjaTopic(value){
+  return /^halabja chemical attack\s*[—–-]\s*iraq\s*[—–-]\s*1988$/i.test(String(value||'').trim());
+}
+
+function installChoiceOverride(){
+  var lib=window.LDHookFamilyLibrary;
+  if(!lib||typeof lib.choices!=='function'||lib.__halabjaRecommendedHookV11)return false;
+  var baseChoices=lib.choices;
+  lib.choices=function(ctx){
+    var list=baseChoices(ctx);
+    var c=ctx||{};
+    var eligible=isHalabjaTopic(c.topic)
+      && c.format!=='longform'
+      && c.mode==='anime'
+      && c.colorMode==='bw'
+      && (!c.family||c.family==='industrial');
+    if(!eligible||!Array.isArray(list)||!list.length)return list;
+    var first=Object.assign({},list[0]);
+    // Keep the family-default id so an already-active Workplace Alarm record is
+    // refreshed in place instead of leaving the old prompt silently active.
+    first.rec=true;
+    first.status='RECOMMENDED';
+    first.title='Witness Before the Graves';
+    first.concept='Elderly Kurdish witness in a dark indistinct foreground → slow push into one eye → eyeball transition → graveyard reveal → crows burst upward.';
+    first.why='Topic-specific Halabja hook: the graveyard stays hidden until the eye transition, then the burial-ground reveal and rising crows deliver a respectful, non-graphic historical aftermath image.';
+    first.prompt=prompt();
+    first.source='Topic-specific';
+    list=list.slice();
+    list[0]=first;
+    return list;
+  };
+  lib.__halabjaRecommendedHookV11=true;
+
+  // Force the existing active family-default Hook to refresh to this topic-specific
+  // prompt on the next Top 3 render without changing the user's selected hook id.
+  try{
+    var key='ld-auto-active-hook-v1';
+    var active=JSON.parse(localStorage.getItem(key)||'null');
+    if(active&&isHalabjaTopic(active.topic)){
+      active.policyVersion='halabja-recommended-v1-refresh';
+      localStorage.setItem(key,JSON.stringify(active));
+    }
+  }catch(e){}
+  return true;
+}
+
 window.LDHalabjaChemicalHook={
-  version:'1.0',
+  version:'1.1',
   topic:'Halabja Chemical Attack — Iraq — 1988',
   status:'RECOMMENDED',
   recommended:true,
   number:1,
   title:'Witness Before the Graves',
-  prompt:prompt
+  prompt:prompt,
+  installChoiceOverride:installChoiceOverride
 };
+
+installChoiceOverride();
 })();
