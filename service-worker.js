@@ -1,5 +1,5 @@
-const CACHE_NAME='ner-studio-pwa-3-50-15v';
-const APP_SHELL=['./public-health-policy.js?v=1.3.8','./p14-reflective-hotfix.js?v=1.5','./narration-import.js?v=1.0.3','./narration-smart-continue.js?v=1.0.14','./ld-story-format.js?v=1.1','./ai-drama.html','./anime-adventure.html','./fiction-core.js?v=1','./fiction-studio.js?v=1','./assets/thumbnail-design-4-approved.png','./title-recommendations.js?v=3.49.23','./youtube-analytics.html','./youtube-analytics.css?v=3.22.3','./youtube-analytics-core.js?v=3.22.3','./youtube-analytics.js?v=3.22.3','./','./index.html','./styles.css?v=3.46.3','./disaster-progression-engine.js?v=3.49.2','./app.js?v=3.50.1','./final-audit-fix.js?v=2.8','./backup-fix.js?v=2.7','./google-drive-backup.js?v=1.0.1','./project-library.js?v=3.49.27','./new-project-fix.js?v=1.3','./automation-assist.js?v=3.46.0','./wellington-avalanche-panels.js?v=1.1.2','./event-smart-narration.js?v=3.42.0','./static-smart-narration.js?v=3.49.6','./historical-context.js?v=3.42.0','./image-prompt-sync.js?v=3.42.0','./stage-fact-sync.js?v=3.20.1','./composition-lock.js?v=2.7','./event-visual-pack.js?v=3.1','./cyclone-visual-packs.js?v=3.3.1','./image-workspace.js?v=3.19.1','./ending-format-lock.js?v=3.49.35','./thumbnail-format-lock.js?v=3.42.1','./thumbnail-randomization.js?v=3.42.3','./hook-survival-lock.js?v=3.42.0','./visual-mode.js?v=3.42.0','./scene-variety-lock.js?v=3.42.0','./master-narration.js?v=3.49.35','./quality-polish-lock.js?v=3.42.0','./camera-motion-lock.js?v=3.42.0','./twist-hook-v3-14.js?v=3.17.0','./locust-laundry-hook.js?v=3.17.0','./cyclone-mahina-hook.js?v=3.20.6','./cyclone-nargis-hook.js?v=3.25.0','./tri-state-tornado-hook.js?v=3.39.3','./wellington-avalanche-hook.js?v=1.0','./hook-family-library.js?v=3.39.4-wellington1','./halabja-chemical-hook.js?v=1.3','./halabja-p2-hotfix.js?v=1.5','./production-dna-engine.js?v=3.42.1','./continuity-engine.js?v=1.0.4','./video-modes.js?v=3.50.4','./hook-choice-system.js?v=3.49.21','./project-locks.js?v=3.49.11','./ai-assist.js?v=3.46.0','./smart-continue.js?v=3.50.9','./final-package.js?v=3.49.24','./manifest.webmanifest?v=2','./app-icon.svg?v=2'];
+const CACHE_NAME='ner-studio-pwa-3-50-16v';
+const APP_SHELL=['./public-health-policy.js?v=1.3.8','./p14-reflective-hotfix.js?v=1.5','./narration-import.js?v=1.0.3','./narration-smart-continue.js?v=1.0.14','./ld-story-format.js?v=1.1','./ai-drama.html','./anime-adventure.html','./fiction-core.js?v=1','./fiction-studio.js?v=1','./assets/thumbnail-design-4-approved.png','./title-recommendations.js?v=3.49.23','./youtube-analytics.html','./youtube-analytics.css?v=3.22.3','./youtube-analytics-core.js?v=3.22.3','./youtube-analytics.js?v=3.22.3','./','./index.html','./styles.css?v=3.46.3','./disaster-progression-engine.js?v=3.49.2','./app.js?v=3.50.1','./final-audit-fix.js?v=2.8','./backup-fix.js?v=2.7','./google-drive-backup.js?v=1.0.1','./project-library.js?v=3.49.27','./new-project-fix.js?v=1.3','./automation-assist.js?v=3.46.0','./wellington-avalanche-panels.js?v=1.1.2','./event-smart-narration.js?v=3.42.0','./static-smart-narration.js?v=3.49.6','./historical-context.js?v=3.42.0','./image-prompt-sync.js?v=3.42.0','./stage-fact-sync.js?v=3.20.1','./composition-lock.js?v=2.7','./event-visual-pack.js?v=3.1','./cyclone-visual-packs.js?v=3.3.1','./image-workspace.js?v=3.19.1','./ending-format-lock.js?v=3.49.35','./thumbnail-format-lock.js?v=3.42.1','./thumbnail-randomization.js?v=3.42.3','./hook-survival-lock.js?v=3.42.0','./visual-mode.js?v=3.42.0','./scene-variety-lock.js?v=3.42.0','./master-narration.js?v=3.49.35','./quality-polish-lock.js?v=3.42.0','./camera-motion-lock.js?v=3.42.0','./twist-hook-v3-14.js?v=3.17.0','./locust-laundry-hook.js?v=3.17.0','./cyclone-mahina-hook.js?v=3.20.6','./cyclone-nargis-hook.js?v=3.25.0','./tri-state-tornado-hook.js?v=3.39.3','./wellington-avalanche-hook.js?v=1.0','./hook-family-library.js?v=3.39.4-wellington1','./halabja-chemical-hook.js?v=1.3','./halabja-p2-hotfix.js?v=1.6','./production-dna-engine.js?v=3.42.1','./continuity-engine.js?v=1.0.4','./video-modes.js?v=3.50.4','./hook-choice-system.js?v=3.49.21','./project-locks.js?v=3.49.11','./ai-assist.js?v=3.46.0','./smart-continue.js?v=3.50.9','./final-package.js?v=3.49.24','./manifest.webmanifest?v=2','./app-icon.svg?v=2'];
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
@@ -28,7 +28,7 @@ self.addEventListener('fetch',event=>{
     return;
   }
   if(url.pathname.endsWith('/halabja-p2-hotfix.js')){
-    event.respondWith(fetch('./halabja-p2-hotfix.js?v=1.5',{cache:'no-store'}).catch(()=>caches.match('./halabja-p2-hotfix.js?v=1.5')));
+    event.respondWith(fetch('./halabja-p2-hotfix.js?v=1.6',{cache:'no-store'}).catch(()=>caches.match('./halabja-p2-hotfix.js?v=1.6')));
     return;
   }
   if(url.pathname.endsWith('/video-modes.js')){
@@ -37,14 +37,15 @@ self.addEventListener('fetch',event=>{
   }
 
   /* Smart Continue must never run before the Halabja P2 sanitizer. The hotfix is
-     prepended to smart-continue.js after LDVideoModes has already loaded, which
-     removes the old load-order race without changing approved panel data. */
+     prepended to smart-continue.js after LDVideoModes has already loaded. v1.6
+     also overrides the generic scene-variety classifier for Halabja P2, because
+     doorway/watchful wording can be falsely classified as a repeated wall-brace. */
   if(url.pathname.endsWith('/smart-continue.js')){
     event.respondWith(Promise.all([
-      fetch('./halabja-p2-hotfix.js?v=1.5',{cache:'no-store'}).then(r=>r.text()),
+      fetch('./halabja-p2-hotfix.js?v=1.6',{cache:'no-store'}).then(r=>r.text()),
       fetch('./smart-continue.js?v=3.50.9',{cache:'no-store'}).then(r=>r.text())
     ]).then(parts=>new Response(parts.join('\n\n'),{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-store'}})).catch(async()=>{
-      const hf=await caches.match('./halabja-p2-hotfix.js?v=1.5');
+      const hf=await caches.match('./halabja-p2-hotfix.js?v=1.6');
       const sc=await caches.match('./smart-continue.js?v=3.50.9');
       if(hf&&sc){
         const parts=await Promise.all([hf.text(),sc.text()]);
