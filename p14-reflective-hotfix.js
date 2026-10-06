@@ -1,4 +1,4 @@
-/* P14 reflective-close prompt compatibility patch v1.2. Local only; no network calls. */
+/* P14 reflective-close prompt compatibility patch v1.3. Local only; no network calls. */
 (()=>{'use strict';
  const policy=window.LDPublicHealthPolicy;
  if(!policy)return;
@@ -34,17 +34,17 @@
  function installVideoPatch(){
   const vm=window.LDVideoModes;
   if(!vm||typeof vm.prompt!=='function')return false;
-  if(vm.__p14ReflectivePromptFix==='1.2')return true;
+  if(vm.__p14ReflectivePromptFix==='1.3')return true;
   const originalPrompt=vm.prompt.bind(vm);
   vm.prompt=function(card){
    if(target(card))ensureScene(card);
    return repairPrompt(card,originalPrompt(card));
   };
-  vm.__p14ReflectivePromptFix='1.2';
+  vm.__p14ReflectivePromptFix='1.3';
   return true;
  }
  function installPolicyCompatibility(){
-  if(policy.__p14ReflectiveHotfix==='1.2')return;
+  if(policy.__p14ReflectiveHotfix==='1.3')return;
   const originalIssues=typeof policy.issues==='function'?policy.issues.bind(policy):null;
   if(!originalIssues)return;
   policy.issues=function(topic,prompt){
@@ -63,11 +63,29 @@
     throw err;
    }
   };
-  policy.__p14ReflectiveHotfix='1.2';
+  policy.__p14ReflectiveHotfix='1.3';
+ }
+ function preflight(card){
+  if(!target(card))return;
+  ensureScene(card);
+  installVideoPatch();
+  const vm=window.LDVideoModes;
+  if(vm&&typeof vm.prompt==='function'){
+   try{repairPrompt(card,vm.prompt(card));}catch{}
+  }
  }
  installPolicyCompatibility();
  if(!installVideoPatch()){
   let tries=0;
-  const timer=setInterval(()=>{if(installVideoPatch()||++tries>80)clearInterval(timer);},50);
+  const timer=setInterval(()=>{if(installVideoPatch()||++tries>120)clearInterval(timer);},50);
  }
+ // Run before Smart Continue's delegated bubble handler so P14 is already rebuilt
+ // with the reflective scene/timing when the normal local check and AI audit begin.
+ document.addEventListener('click',e=>{
+  const btn=e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn');
+  if(!btn)return;
+  const card=document.querySelector('.stage-card[data-stage="P14"]');
+  if(!target(card))return;
+  preflight(card);
+ },true);
 })();
