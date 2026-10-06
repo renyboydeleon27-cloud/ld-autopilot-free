@@ -11,8 +11,6 @@
   if(/thousand.*train|training|received training/i.test(s))return 12;
   if(/distributed|distribution/i.test(s)&&/naloxone/i.test(s))return 12;
   if(/naloxone|rescuers|emergency services/i.test(s))return 10;
-  // Continuing-care narration must route to neutral support/outreach scenes BEFORE
-  // the generic wound keyword can route it into wound-treatment scene choices.
   if(/only the beginning|access to treatment|support(?:\s+that)?\s+continues|support[^\n.]{0,80}\bafterward\b|ongoing support|continued support/i.test(s))return 14;
   if(/wound\s+care/i.test(s)&&/treatment|support/i.test(s))return 14;
   if(/wound|infected|skin/i.test(s))return 7;
@@ -49,22 +47,15 @@
   const m=p.match(/PANEL SCENE:\s*([\s\S]*?)(?:\n\s*PANEL SCENE IDENTITY LOCK:|\n\s*NARRATIVE CONTEXT|\n\s*TIMING:)/i);
   return m?m[1]:'';
  }
- function sentences(text){
-  return String(text||'').split(/\n+|(?<=[.!?])\s+/).map(function(s){return s.trim();}).filter(Boolean);
- }
+ function sentences(text){return String(text||'').split(/\n+|(?<=[.!?])\s+/).map(function(s){return s.trim();}).filter(Boolean);}
  function negativeSafetySentence(text){
   const s=String(text||'');
-  return /^(?:no\b|never\b|without\b|avoid\b|do not\b|don't\b|must not\b)/i.test(s)
-    || /\b(?:do not|does not|must not|never|without|forbid(?:den)?|avoid)\b/i.test(s);
+  return /^(?:no\b|never\b|without\b|avoid\b|do not\b|don't\b|must not\b)/i.test(s)||/\b(?:do not|does not|must not|never|without|forbid(?:den)?|avoid)\b/i.test(s);
  }
- function positiveCue(text,re){
-  return sentences(text).some(function(s){return re.test(s)&&!negativeSafetySentence(s);});
- }
+ function positiveCue(text,re){return sentences(text).some(function(s){return re.test(s)&&!negativeSafetySentence(s);});}
  function humanizingP14(prompt){
   const p=String(prompt||'');
-  const stage=/\bP14\b/i.test(p);
-  const narration=/zombie drug[^\n.]{0,120}hides|people behind(?: the)? crisis|life can still be saved|person struggling to stay conscious|people struggling to stay conscious/i.test(p);
-  return stage&&narration;
+  return /\bP14\b/i.test(p)&&/zombie drug[^\n.]{0,120}hides|people behind(?: the)? crisis|life can still be saved|person struggling to stay conscious|people struggling to stay conscious/i.test(p);
  }
  function reflectiveP14SafeScene(scene){
   const s=String(scene||'');
@@ -75,14 +66,34 @@
   const repeatedFolder=positiveCue(s,/\b(?:moves?|moving|transfers?|transferring|places?|placing|lifts?|lifting)\b[^.\n]{0,100}\bfolder\b[^.\n]{0,100}\btray\b|\bfolder\b[^.\n]{0,100}\b(?:moves?|moving|transfers?|transferring|places?|placing)\b[^.\n]{0,100}\btray\b/i);
   return people&&humanAction&&noContact&&modern&&!repeatedFolder;
  }
+ function canonicalReflectiveP14Scene(){
+  return 'Exactly 10 seconds, portrait 9:16, one continuous restrained gentle push-in inside a modest contemporary Philadelphia community health outreach setting in 2020. One fully clothed adult visitor sits quietly with both hands and forearms still. One adult outreach worker in contemporary 2020 casual work clothing remains nearby and physically separate, without touching the visitor. From 0.0–2.0 seconds, the visitor’s head and eye-line are slightly lowered while both adults remain still except for natural breathing. From 2.0–6.0 seconds, the visitor slowly raises the head and eye-line toward the outreach worker as the ONLY purposeful state change. From 6.0–10.0 seconds, the established gaze is held quietly with natural breathing only. No folder, tray transfer, paperwork action, medication, naloxone, wound, examination, treatment, recovery outcome, walking, second purposeful action, dialogue, readable text, logos, morphing, duplication or physical contact. Preserve contemporary 2020 clothing, anatomy, identity, room geometry and strict true black-and-white 2D historical-anime rendering throughout.';
+ }
+ function applyReflectiveP14BrowserRepair(prompt){
+  if(typeof document==='undefined'||!humanizingP14(prompt))return false;
+  const card=document.querySelector('.stage-card[data-stage="P14"]');
+  if(!card)return false;
+  const field=card.querySelector('.video-scene');
+  if(!field)return false;
+  const current=String(field.value||card.dataset.videoScene||'').trim();
+  if(reflectiveP14SafeScene(current)&&!/\b(?:period-appropriate|historically appropriate)\b/i.test(current))return false;
+  const scene=canonicalReflectiveP14Scene();
+  field.value=scene;
+  try{field.dispatchEvent(new Event('input',{bubbles:true}));}catch{}
+  card.dataset.videoScene=scene;
+  card.dataset.sceneChoice='KEEP CURRENT SCENE';
+  card.dataset.textVideoPrompt='';
+  card.dataset.textVideoSignature='';
+  delete card.dataset.smartReady;
+  delete card.dataset.smartReadySignature;
+  const promptField=card.querySelector('.text-video-prompt');
+  if(promptField)promptField.value='';
+  try{window.dispatchEvent(new CustomEvent('ld:p14-auto-repaired',{detail:{stage:'P14'}}));}catch{}
+  return true;
+ }
  function continuingCareSafeScene(scene){
   const s=String(scene||'');
-  const safeCore=/\bclosed\s*,?\s*unmarked\s+resource\s+folder\b/i.test(s)
-    && /\b(?:counter|stable surface)\b/i.test(s)
-    && /\btray\b/i.test(s)
-    && /\bfully clothed adult visitor\b/i.test(s)
-    && /\b(?:no physical contact(?: with the visitor)?|never touches? the visitor|does not touch the visitor|must not touch the visitor)\b/i.test(s)
-    && /\bcontemporary\s+20\d{2}\b/i.test(s);
+  const safeCore=/\bclosed\s*,?\s*unmarked\s+resource\s+folder\b/i.test(s)&&/\b(?:counter|stable surface)\b/i.test(s)&&/\btray\b/i.test(s)&&/\bfully clothed adult visitor\b/i.test(s)&&/\b(?:no physical contact(?: with the visitor)?|never touches? the visitor|does not touch the visitor|must not touch the visitor)\b/i.test(s)&&/\bcontemporary\s+20\d{2}\b/i.test(s);
   if(!safeCore)return false;
   const positiveProcedure=positiveCue(s,/\b(?:wound-care clinic treating a patient|community health clinic during non-graphic wound assessment|sleeve\s+(?:rolled|raised)|rolled\s+(?:up\s+)?sleeve|raised\s+sleeve|exposed\s+wound|visible\s+wound|wound\s+(?:assessment|examination|exam)|non-graphic\s+wound\s+assessment|examines?\s+(?:the\s+)?(?:patient|visitor|wound|forearm|arm)|treats?\s+(?:the\s+)?wound|bandages?\s+(?:the\s+)?(?:wound|arm|forearm)|wraps?\s+(?:the\s+)?(?:arm|forearm|wound)|appl(?:y|ies|ying)\s+(?:a\s+)?(?:bandage|gauze|dressing)|places?\s+(?:a\s+)?(?:bandage|gauze|dressing)\s+(?:on|onto|over)|clinician[^.]{0,100}\b(?:touches?|examines?|treats?|bandages?|wraps?)\s+(?:the\s+)?(?:patient|visitor))\b/i);
   return !positiveProcedure;
@@ -95,15 +106,13 @@
   if(!/MODERN-EVENT ERA OVERRIDE/i.test(p))return 'Modern public-health event needs the MODERN-EVENT ERA OVERRIDE. For a '+year+' scene, historical anime is only the drawing style; people, clothing, furnishings and technology must read as contemporary to '+year+', not antique or early-1900s.';
   const scene=panelScene(p);
   if(!scene)return '';
-  const ambiguousWardrobe=/\b(?:period-appropriate|historically appropriate)\b[^.\n]{0,100}\b(?:clothing|wardrobe|attire|uniform|dress)\b/i.test(scene);
-  if(ambiguousWardrobe)return 'Modern-era wardrobe wording is still ambiguous. In the PANEL SCENE, replace period/historically-appropriate clothing language with explicit contemporary '+year+' clothing and hairstyles. Historical anime is the art style only; no vintage nurse dress, long apron, bonnet, antique clinic uniform or early-1900s styling.';
+  if(/\b(?:period-appropriate|historically appropriate)\b[^.\n]{0,100}\b(?:clothing|wardrobe|attire|uniform|dress)\b/i.test(scene))return 'Modern-era wardrobe wording is still ambiguous. In the PANEL SCENE, replace period/historically-appropriate clothing language with explicit contemporary '+year+' clothing and hairstyles. Historical anime is the art style only; no vintage nurse dress, long apron, bonnet, antique clinic uniform or early-1900s styling.';
   if(positiveCue(scene,/\b(?:Victorian|Edwardian|early[- ]1900s|vintage nurse|long apron|bonnet|antique clinic|historical classroom|retro uniform)\b/i))return 'PANEL SCENE contains old-period styling for a '+year+' event. Use contemporary '+year+' wardrobe, clinic/support furnishings, hairstyles and technology only.';
   return '';
  }
  function generalGuidanceTreatmentIssue(prompt){
   const p=String(prompt||'');
-  const guidance=/\b(?:give|use|administer)\s+naloxone\b|\bcall\s+emergency\s+services\b/i.test(p);
-  if(!guidance)return '';
+  if(!/\b(?:give|use|administer)\s+naloxone\b|\bcall\s+emergency\s+services\b/i.test(p))return '';
   const scene=panelScene(p);
   if(!scene)return '';
   const actualAdministration=/\b(?:administers?|administering|injects?|injecting|sprays?|spraying|delivers?|delivering|doses?|dosing)\b[\s\S]{0,90}\bnaloxone\b|\bnaloxone\b[\s\S]{0,90}\b(?:administered|injected|sprayed|delivered|dosed)\b|\b(?:inserts?|inserting|places?|placing)\b[\s\S]{0,90}\b(?:naloxone|nasal spray)\b[\s\S]{0,90}\b(?:nostril|nose)\b/i;
@@ -112,8 +121,7 @@
  }
  function generalContinuingCareProcedureIssue(prompt){
   const p=String(prompt||'');
-  const guidance=/\bwound care\b|\baccess to treatment\b|\bsupport(?:\s+that)?\s+continues\b|\bsupport[^\n.]{0,80}\bafterward\b|\bongoing support\b|\bcontinued support\b/i.test(p);
-  if(!guidance)return '';
+  if(!/\bwound care\b|\baccess to treatment\b|\bsupport(?:\s+that)?\s+continues\b|\bsupport[^\n.]{0,80}\bafterward\b|\bongoing support\b|\bcontinued support\b/i.test(p))return '';
   const scene=panelScene(p);
   if(!scene)return '';
   if(continuingCareSafeScene(scene))return '';
@@ -148,6 +156,7 @@
  }
  function issues(topic,prompt){
   if(!matches(topic))return [];
+  if(applyReflectiveP14BrowserRepair(prompt))throw new Error('P14 scene auto-repaired locally to the human-centered closing beat. No API credits were used. Tap P14 RETRY once more to rebuild and audit the corrected prompt.');
   const errors=[];
   for(const [re,message] of [
    [/rising environmental pressure|quieter tension\s*→\s*rising pressure|powerful hazard sound/i,'Generic hazard audio conflicts with public-health context.'],
@@ -162,6 +171,6 @@
   const motionIssue=motionProgressionIssue(prompt); if(motionIssue)errors.push(motionIssue);
   return errors;
  }
- const api={version,matches,beat,rules,issues,continuingCareSafeScene,reflectiveP14SafeScene};
+ const api={version,matches,beat,rules,issues,continuingCareSafeScene,reflectiveP14SafeScene,canonicalReflectiveP14Scene};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.LDPublicHealthPolicy=api;
 })(typeof window!=='undefined'?window:globalThis);
