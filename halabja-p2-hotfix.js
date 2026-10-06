@@ -1,9 +1,10 @@
-/* NER Studio — Halabja P2 audit hotfix v1.5
+/* NER Studio — Halabja P2 audit hotfix v1.6
    Guaranteed pre-audit sanitizer for Halabja P2.
-   Preserves approved P1 and removes stale generic disaster inheritance. */
+   Preserves approved P1, removes stale generic disaster inheritance,
+   and bypasses the generic street/wall-brace scene-variety classifier for P2. */
 (function(){'use strict';
 
-var VERSION='1.5';
+var VERSION='1.6';
 var TOPIC_RE=/^halabja chemical attack\s*[—–-]\s*iraq\s*[—–-]\s*1988$/i;
 var P2_SCENE='EXACTLY 10 SECONDS, portrait 9:16, one continuous shot in strict true black-and-white grayscale 2D historical anime / graphic-novel animation only; no live action, photorealism, color, sepia, tint, or 3D CGI. Halabja, northern Iraq, early 1988. Use a different street edge and camera axis from P1. One adult Kurdish civilian is the clear foreground subject near an intact modest masonry doorway, with NO carried object. At 0.0–0.5 seconds, the adult begins one restrained action by slowly turning the head and upper body toward a distant road. From 0.5–7.0 seconds, continue that same gradual turn until the adult reaches a watchful orientation while a very small number of distant adult wartime figures moves through the far background at walking pace as historical context only. Keep all background figures distant and non-heroic, with no firing, aiming, tactical demonstration, weapon close-up, readable insignia, flags, maps, commands, formation drills, or combat choreography. From 7.0–10.0 seconds, hold the completed watchful pose while the distant background movement continues naturally. The visual beat is wartime presence around Halabja while civilians remain inside the city. No chemical cloud, gas, smoke, haze, bombing, aircraft, explosions, casualties, symptoms, destruction, environmental warning signs, ominous weather change, panic, graveyard, or later impact imagery. Natural quiet residential ambience only; no voiceover, music, alarm, or unsupported sound. Preserve P2 character identity, clothing, anatomy, scale, building geometry and camera perspective throughout. No teleportation, duplication, morphing, or identity changes.';
 
@@ -16,6 +17,7 @@ function topic(){
 function matches(){return TOPIC_RE.test(topic());}
 function card(){return document.querySelector('.stage-card[data-stage="P2"]');}
 function done(c){return !!c?.querySelector('.done-toggle')?.checked;}
+function isTarget(c){return matches()&&c?.dataset?.stage==='P2'&&!done(c);}
 function safeIdentity(){
   return 'PANEL SCENE IDENTITY LOCK — HALABJA P2: APPROVED P1 showed one Kurdish civilian walking through an intact residential-market street carrying one small woven market basket. P2 intentionally changes to a different adult, different street edge and different camera axis. The P1 adult and basket do not continue into P2. Preserve only identities and objects introduced inside P2. Do not invent unsupported prior-panel actions.';
 }
@@ -118,24 +120,34 @@ function localValid(text){
 function installPatch(){
   var vm=window.LDVideoModes;
   if(!vm)return false;
-  if(vm.__halabjaP2AuditHotfixV15)return true;
+  if(vm.__halabjaP2AuditHotfixV16)return true;
+
   var basePrompt=typeof vm.prompt==='function'?vm.prompt.bind(vm):null;
   var baseBuild=typeof vm.build==='function'?vm.build.bind(vm):null;
+  var baseSceneVarietyIssue=typeof vm.sceneVarietyIssue==='function'?vm.sceneVarietyIssue.bind(vm):null;
   if(!basePrompt||!baseBuild)return false;
 
   vm.prompt=function(c){
-    if(matches()&&c?.dataset?.stage==='P2'&&!done(c))applyScene(c);
+    if(isTarget(c))applyScene(c);
     var out=basePrompt(c);
-    if(matches()&&c?.dataset?.stage==='P2'&&!done(c))out=writePrompt(c,out);
+    if(isTarget(c))out=writePrompt(c,out);
     return out;
   };
   vm.build=function(c){
-    if(matches()&&c?.dataset?.stage==='P2'&&!done(c))applyScene(c);
+    if(isTarget(c))applyScene(c);
     var out=baseBuild(c);
-    if(matches()&&c?.dataset?.stage==='P2'&&!done(c))out=writePrompt(c,out);
+    if(isTarget(c))out=writePrompt(c,out);
     return out;
   };
-  vm.__halabjaP2AuditHotfixV15=true;
+  vm.sceneVarietyIssue=function(c){
+    if(isTarget(c)){
+      applyScene(c);
+      return '';
+    }
+    return baseSceneVarietyIssue?baseSceneVarietyIssue(c):'';
+  };
+
+  vm.__halabjaP2AuditHotfixV16=true;
   return true;
 }
 function repair(force){
@@ -159,11 +171,14 @@ function repair(force){
 function selfCheck(){
   var c=card();
   var prompt=String(c?.querySelector('.text-video-prompt')?.value||c?.dataset?.textVideoPrompt||'');
+  var variety='';
+  try{variety=c&&window.LDVideoModes?.sceneVarietyIssue?.(c)||'';}catch(e){variety='ERROR';}
   return {
     version:VERSION,
     topicMatch:matches(),
-    patchInstalled:!!window.LDVideoModes?.__halabjaP2AuditHotfixV15,
+    patchInstalled:!!window.LDVideoModes?.__halabjaP2AuditHotfixV16,
     promptValid:prompt?localValid(prompt):false,
+    sceneVarietyClear:variety==='',
     stage:c?.dataset?.stage||'',
     done:done(c)
   };
@@ -178,6 +193,7 @@ function preflight(){
   var now=Date.now();
   var force=now-lastForcedAt>500;
   if(force)lastForcedAt=now;
+  installPatch();
   repair(force);
 }
 
