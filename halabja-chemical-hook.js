@@ -1,12 +1,18 @@
-/* LD AUTO — Halabja Chemical Attack 1988 topic pack v1.2: recommended HOOK + P1 + progression fix */
+/* LD AUTO — Halabja Chemical Attack 1988 topic pack v1.3: recommended HOOK + chemical progression + stale P1 self-heal */
 (function(){
 'use strict';
 
 var TOPIC='Halabja Chemical Attack — Iraq — 1988';
-var VERSION='1.2';
+var VERSION='1.3';
 
 function isHalabjaTopic(value){
   return /^halabja chemical attack\s*[—–-]\s*iraq\s*[—–-]\s*1988$/i.test(String(value||'').trim());
+}
+function currentTopic(){
+  var typed=document.getElementById('topic')?.value?.trim();
+  if(typed)return typed;
+  var title=document.getElementById('projectTitle')?.textContent?.trim();
+  return title&&title!=='No production yet'?title:'';
 }
 
 function prompt(){
@@ -20,109 +26,42 @@ ABSOLUTE RENDERING MODE — HIGHEST PRIORITY:
 
 UNIVERSAL MONOCHROME LOCK:
 STRICT true black-and-white grayscale from frame 1 through frame 10.
-No color.
-No sepia.
-No tint.
-No selective color.
-Serious historical tone.
-Detailed hand-drawn linework.
-Grayscale tonal shading.
-Grounded adult anatomy.
-No embedded text.
-No watermark.
+No color. No sepia. No tint. No selective color.
+Serious historical tone. Detailed hand-drawn linework. Grayscale tonal shading. Grounded adult anatomy.
+No embedded text. No watermark.
 
 FORMAT:
-Portrait 9:16.
-Exactly 10 seconds.
-Text-to-video only.
-One continuous shot.
-No cuts.
-No montage.
-No voice-over.
-No spoken dialogue.
-No on-screen text.
-No subtitles.
+Portrait 9:16. Exactly 10 seconds. Text-to-video only. One continuous shot. No cuts. No montage. No voice-over. No spoken dialogue. No on-screen text. No subtitles.
 
 HOOK GOAL:
 Create a haunting, respectful historical opening for the Halabja Chemical Attack. Show one elderly Kurdish male survivor or witness standing in the foreground in a dark, solemn aftermath setting. At the beginning, the graveyard must NOT be clearly visible. The emotional focus is entirely on the old man’s face and expression. Only after the eyeball transition should the burial ground be revealed, with crows suddenly flying upward from the graves.
 
 HISTORICAL / TRUTH LOCK:
-Location: Halabja, Iraq.
-Year: 1988.
-Show a historically believable elderly Kurdish civilian man wearing modest late-1980s regional clothing.
-The final revealed burial ground must feel grounded and realistic, with many fresh graves or burial mounds and a mourning atmosphere.
-No exposed bodies.
-No gore.
-No graphic detail.
-Adult subject only.
+Location: Halabja, Iraq. Year: 1988. Show a historically believable elderly Kurdish civilian man wearing modest late-1980s regional clothing. The final revealed burial ground must feel grounded and realistic, with many fresh graves or burial mounds and a mourning atmosphere. No exposed bodies. No gore. No graphic detail. Adult subject only.
 
 CAMERA / COMPOSITION:
-The old man stands in the foreground, center or slightly off-center.
-The camera begins focused tightly on him from the front.
-The background is dark, subdued, and indistinct at first, so the graveyard is not yet readable.
-The camera slowly pushes closer and closer toward his face.
-The emotional priority is grief, numbness, trauma, and silence.
+The old man stands in the foreground, center or slightly off-center. The camera begins focused tightly on him from the front. The background is dark, subdued, and indistinct at first, so the graveyard is not yet readable. The camera slowly pushes closer and closer toward his face. The emotional priority is grief, numbness, trauma, and silence.
 
 TIMING:
-0.0–2.5s — ELDERLY WITNESS
-Establish one elderly man standing silently in the foreground. The background is dark and blurred or subdued, with only vague aftermath atmosphere. Do NOT clearly reveal the graveyard yet.
-
-2.5–5.5s — SLOW PUSH-IN
-Slow cinematic push-in toward the old man’s face. He remains almost motionless except for minimal natural breathing and a subtle grief-stricken expression. Keep the background unreadable and heavy.
-
-5.5–7.0s — EYE PUSH-IN
-The camera pushes very close to one eye. The eye fills most of the frame. His expression remains restrained and emotionally heavy.
-
-7.0–10.0s — EYEBALL TRANSITION + GRAVEYARD REVEAL
-Move directly through the eye into a dark, haunting wide reveal of a burial ground with many fresh graves or burial mounds. As the graveyard is revealed, several crows suddenly burst upward and fly into the sky, rising from the burial ground. Their movement must feel sharp, eerie, and dramatic, while the graves remain solemn and non-graphic.
+0.0–2.5s — ELDERLY WITNESS: Establish one elderly man standing silently in the foreground. The background is dark and blurred or subdued, with only vague aftermath atmosphere. Do NOT clearly reveal the graveyard yet.
+2.5–5.5s — SLOW PUSH-IN: Slow cinematic push-in toward the old man’s face. He remains almost motionless except for minimal natural breathing and a subtle grief-stricken expression. Keep the background unreadable and heavy.
+5.5–7.0s — EYE PUSH-IN: The camera pushes very close to one eye. The eye fills most of the frame. His expression remains restrained and emotionally heavy.
+7.0–10.0s — EYEBALL TRANSITION + GRAVEYARD REVEAL: Move directly through the eye into a dark, haunting wide reveal of a burial ground with many fresh graves or burial mounds. As the graveyard is revealed, several crows suddenly burst upward and fly into the sky, rising from the burial ground. Their movement must feel sharp, eerie, and dramatic, while the graves remain solemn and non-graphic.
 
 VISUAL ATMOSPHERE:
-Dark and heavy.
-Quiet aftermath.
-Mourning mood.
-Solemn stillness at first.
-The final reveal becomes more ominous through the sudden flight of crows.
-No fire.
-No explosions.
-No battle spectacle.
-The horror comes from grief, silence, memory, and the revealed scale of loss.
+Dark and heavy. Quiet aftermath. Mourning mood. Solemn stillness at first. The final reveal becomes more ominous through the sudden flight of crows. No fire. No explosions. No battle spectacle. The horror comes from grief, silence, memory, and the revealed scale of loss.
 
 MOTION RULES:
-One continuous forward-moving camera shot.
-Very restrained character motion only.
-The strongest motion comes at the final reveal when the crows rise suddenly upward from the graveyard.
-Subtle wind or faint atmospheric movement may appear.
-Do not turn this into an action scene.
+One continuous forward-moving camera shot. Very restrained character motion only. The strongest motion comes at the final reveal when the crows rise suddenly upward from the graveyard. Subtle wind or faint atmospheric movement may appear. Do not turn this into an action scene.
 
 NEGATIVE LOCK:
-No graveyard clearly visible before the eyeball transition.
-No exposed bodies.
-No gore.
-No mutilation.
-No graphic wounds.
-No children in foreground.
-No fantasy creatures.
-No smiling faces.
-No heroic pose.
-No modern objects that do not belong.
-No fire.
-No explosions.
-No text.
-No subtitles.
-No logos.
-No watermark.
+No graveyard clearly visible before the eyeball transition. No exposed bodies. No gore. No mutilation. No graphic wounds. No children in foreground. No fantasy creatures. No smiling faces. No heroic pose. No modern objects that do not belong. No fire. No explosions. No text. No subtitles. No logos. No watermark.
 
 ENDING IMAGE:
 End on the revealed graveyard with crows flying upward into the dark sky, creating a devastating and unforgettable final image just before the shot cuts.
 
 CORE VISUAL FLOW:
-ELDERLY WITNESS IN DARK INDISTINCT SETTING
-→ SLOW CAMERA PUSH-IN
-→ EXTREME CLOSE-UP OF ONE EYE
-→ CAMERA ENTERS THE EYE
-→ GRAVEYARD REVEALED ONLY AFTER TRANSITION
-→ CROWS SUDDENLY FLY UPWARD
-→ DARK WIDE FINAL IMAGE
+ELDERLY WITNESS IN DARK INDISTINCT SETTING → SLOW CAMERA PUSH-IN → EXTREME CLOSE-UP OF ONE EYE → CAMERA ENTERS THE EYE → GRAVEYARD REVEALED ONLY AFTER TRANSITION → CROWS SUDDENLY FLY UPWARD → DARK WIDE FINAL IMAGE
 
 STATUS: RECOMMENDED HOOK NO. 1 — HALABJA CHEMICAL ATTACK — IRAQ — 1988.`;
 }
@@ -148,135 +87,107 @@ var CHEMICAL_STAGES={
 
 function installProgressionOverride(){
   var base=window.LDDisasterProgression;
-  if(!base||base.__halabjaChemicalV12)return false;
+  if(!base)return false;
+  if(base.__halabjaChemicalV13)return true;
   var evidence='This is a story-position lock, not a fact source. Halabja-specific research, approved narration and dedicated event panels control factual details. Do not invent tactical chemical-weapon procedures, unverified symptoms, named individuals, readable documents or unsupported military actions.';
   function chemicalStage(topic,stageName){
     if(!isHalabjaTopic(topic))return null;
     var s=String(stageName||'').toUpperCase(),item=CHEMICAL_STAGES[s];
     if(!item)return null;
-    return {version:'halabja-chemical-progression-v1.2',family:'chemical',familyLabel:'Chemical Attack / Chemical Weapons',stage:s,role:item.role,rule:item.rule,evidenceRule:evidence};
+    return {version:'halabja-chemical-progression-v1.3',family:'chemical',familyLabel:'Chemical Attack / Chemical Weapons',stage:s,role:item.role,rule:item.rule,evidenceRule:evidence};
   }
   function family(topic){return isHalabjaTopic(topic)?'chemical':base.family(topic);}
   function stage(topic,stageName){return chemicalStage(topic,stageName)||base.stage(topic,stageName);}
   function role(topic,stageName){var x=stage(topic,stageName);return x?.role||'';}
   function rule(topic,stageName){var x=stage(topic,stageName);return x?.rule||'';}
-  function all(topic){
-    if(!isHalabjaTopic(topic))return base.all(topic);
-    var out={};for(var i=1;i<=14;i++){var s='P'+i;out[s]=stage(topic,s);}return out;
-  }
-  function summary(topic){
-    if(!isHalabjaTopic(topic))return base.summary(topic);
-    return {version:'halabja-chemical-progression-v1.2',family:'chemical',familyLabel:'Chemical Attack / Chemical Weapons',stages:all(topic)};
-  }
-  window.LDDisasterProgression=Object.freeze({version:'halabja-chemical-progression-v1.2',family:family,stage:stage,role:role,rule:rule,all:all,summary:summary,__halabjaChemicalV12:true});
+  function all(topic){if(!isHalabjaTopic(topic))return base.all(topic);var out={};for(var i=1;i<=14;i++){var s='P'+i;out[s]=stage(topic,s);}return out;}
+  function summary(topic){if(!isHalabjaTopic(topic))return base.summary(topic);return {version:'halabja-chemical-progression-v1.3',family:'chemical',familyLabel:'Chemical Attack / Chemical Weapons',stages:all(topic)};}
+  window.LDDisasterProgression=Object.freeze({version:'halabja-chemical-progression-v1.3',family:family,stage:stage,role:role,rule:rule,all:all,summary:summary,__halabjaChemicalV13:true});
   return true;
 }
 
 function installChoiceOverride(){
   var lib=window.LDHookFamilyLibrary;
-  if(!lib||typeof lib.choices!=='function'||lib.__halabjaRecommendedHookV11)return false;
+  if(!lib||typeof lib.choices!=='function')return false;
+  if(lib.__halabjaRecommendedHookV13)return true;
   var baseChoices=lib.choices;
   lib.choices=function(ctx){
-    var list=baseChoices(ctx);
-    var c=ctx||{};
-    var eligible=isHalabjaTopic(c.topic)
-      && c.format!=='longform'
-      && c.mode==='anime'
-      && c.colorMode==='bw'
-      && (!c.family||c.family==='industrial');
+    var list=baseChoices(ctx),c=ctx||{};
+    var eligible=isHalabjaTopic(c.topic)&&c.format!=='longform'&&c.mode==='anime'&&c.colorMode==='bw'&&(!c.family||c.family==='industrial');
     if(!eligible||!Array.isArray(list)||!list.length)return list;
     var first=Object.assign({},list[0]);
-    first.rec=true;
-    first.status='RECOMMENDED';
-    first.title='Witness Before the Graves';
+    first.rec=true;first.status='RECOMMENDED';first.title='Witness Before the Graves';
     first.concept='Elderly Kurdish witness in a dark indistinct foreground → slow push into one eye → eyeball transition → graveyard reveal → crows burst upward.';
     first.why='Topic-specific Halabja hook: the graveyard stays hidden until the eye transition, then the burial-ground reveal and rising crows deliver a respectful, non-graphic historical aftermath image.';
-    first.prompt=prompt();
-    first.source='Topic-specific';
-    list=list.slice();
-    list[0]=first;
-    return list;
+    first.prompt=prompt();first.source='Topic-specific';list=list.slice();list[0]=first;return list;
   };
-  lib.__halabjaRecommendedHookV11=true;
-  try{
-    var key='ld-auto-active-hook-v1';
-    var active=JSON.parse(localStorage.getItem(key)||'null');
-    if(active&&isHalabjaTopic(active.topic)){
-      active.policyVersion='halabja-recommended-v1-refresh';
-      localStorage.setItem(key,JSON.stringify(active));
-    }
-  }catch(e){}
+  lib.__halabjaRecommendedHookV13=true;
+  try{var key='ld-auto-active-hook-v1';var active=JSON.parse(localStorage.getItem(key)||'null');if(active&&isHalabjaTopic(active.topic)){active.policyVersion='halabja-recommended-v1.3-refresh';localStorage.setItem(key,JSON.stringify(active));}}catch(e){}
   return true;
 }
 
-function currentTopic(){
-  var typed=document.getElementById('topic')?.value?.trim();
-  if(typed)return typed;
-  var title=document.getElementById('projectTitle')?.textContent?.trim();
-  return title&&title!=='No production yet'?title:'';
+function fixContinuity(){
+  if(!isHalabjaTopic(currentTopic()))return false;
+  var existing=window.ldVideoContinuity&&typeof window.ldVideoContinuity==='object'&&!Array.isArray(window.ldVideoContinuity)?window.ldVideoContinuity:{};
+  var location=String(existing.location||'').trim(),year=String(existing.year||'').trim();
+  var changed=!location||/^iraq$/i.test(location)||year!=='1988';
+  if(!changed)return false;
+  window.ldVideoContinuity=Object.assign({},existing,{year:'1988',location:'Halabja, northern Iraq'});
+  var locationField=document.querySelector('#chapterVideoContext .video-location');
+  var yearField=document.querySelector('#chapterVideoContext .video-year');
+  if(locationField){locationField.value='Halabja, northern Iraq';locationField.dispatchEvent(new Event('input',{bubbles:true}));}
+  if(yearField){yearField.value='1988';yearField.dispatchEvent(new Event('input',{bubbles:true}));}
+  return true;
+}
+
+function rebuildP1(card){
+  if(!card||card.querySelector('.done-toggle')?.checked)return false;
+  var sceneField=card.querySelector('.video-scene');
+  var promptField=card.querySelector('.text-video-prompt');
+  var currentScene=String(sceneField?.value||card.dataset.videoScene||'');
+  var currentPrompt=String(promptField?.value||card.dataset.textVideoPrompt||'');
+  var stale=/warehouse|wooden crate|burlap sack|low pallet|Family:\s*General Disaster|Main location:\s*Iraq\b|Core region:\s*Iraq\b/i.test(currentScene+'\n'+currentPrompt);
+  var needsScene=stale||!currentScene||card.dataset.halabjaP1Lock!=='1';
+  if(needsScene){
+    card.dataset.sceneChoice='';card.dataset.videoScene=P1_SCENE;card.dataset.halabjaP1Lock='1';
+    if(sceneField)sceneField.value=P1_SCENE;
+  }
+  if(needsScene||stale){
+    card.dataset.textVideoPrompt='';card.dataset.textVideoSignature='';
+    delete card.dataset.smartReady;delete card.dataset.smartReadySignature;
+    if(promptField)promptField.value='';
+  }
+  if(sceneField&&needsScene){sceneField.dispatchEvent(new Event('input',{bubbles:true}));sceneField.dispatchEvent(new Event('change',{bubbles:true}));}
+  if(window.LDVideoModes?.build){
+    try{
+      var built=window.LDVideoModes.build(card);
+      if(built){
+        card.dataset.textVideoPrompt=built;
+        card.dataset.textVideoSignature=window.LDVideoModes.signature?.(card)||'';
+        if(promptField)promptField.value=built;
+        if(promptField){promptField.dispatchEvent(new Event('input',{bubbles:true}));promptField.dispatchEvent(new Event('change',{bubbles:true}));}
+      }
+    }catch(e){console.warn('Halabja P1 rebuild deferred',e);}
+  }
+  try{window.LDVideoModes?.all?.();}catch(e){}
+  return needsScene||stale;
 }
 
 function applyP1Fix(){
   if(!isHalabjaTopic(currentTopic()))return false;
-  installProgressionOverride();
-  installChoiceOverride();
-
-  var existing=window.ldVideoContinuity&&typeof window.ldVideoContinuity==='object'&&!Array.isArray(window.ldVideoContinuity)?window.ldVideoContinuity:{};
-  var location=String(existing.location||'').trim();
-  if(!location||/^iraq$/i.test(location)){
-    window.ldVideoContinuity=Object.assign({},existing,{year:String(existing.year||'1988')||'1988',location:'Halabja, northern Iraq'});
-    var locationField=document.querySelector('#chapterVideoContext .video-location');
-    if(locationField)locationField.value='Halabja, northern Iraq';
-    var yearField=document.querySelector('#chapterVideoContext .video-year');
-    if(yearField&&!yearField.value)yearField.value='1988';
-  }
-
+  installProgressionOverride();installChoiceOverride();fixContinuity();
   var card=document.querySelector('.stage-card[data-stage="P1"]');
-  if(!card)return false;
-  var done=card.querySelector('.done-toggle');
-  if(done?.checked)return false;
-
-  var sceneField=card.querySelector('.video-scene');
-  var currentScene=String(sceneField?.value||card.dataset.videoScene||'');
-  var needsScene=!currentScene||/warehouse|wooden crate|burlap sack|low pallet|SMART RANDOM CHOICE|KEEP CURRENT SCENE/i.test(currentScene)||card.dataset.halabjaP1Lock!=='1';
-  if(needsScene){
-    card.dataset.sceneChoice='';
-    card.dataset.videoScene=P1_SCENE;
-    card.dataset.halabjaP1Lock='1';
-    if(sceneField)sceneField.value=P1_SCENE;
-    card.dataset.textVideoPrompt='';
-    card.dataset.textVideoSignature='';
-    delete card.dataset.smartReady;
-    delete card.dataset.smartReadySignature;
-    var promptField=card.querySelector('.text-video-prompt');
-    if(promptField)promptField.value='';
-    if(sceneField){
-      sceneField.dispatchEvent(new Event('input',{bubbles:true}));
-      sceneField.dispatchEvent(new Event('change',{bubbles:true}));
-    }
-  }
-  try{window.LDVideoModes?.all?.();}catch(e){}
-  return true;
+  return rebuildP1(card);
 }
+function scheduleFix(){[0,120,400,900,1800,3200].forEach(function(ms){setTimeout(applyP1Fix,ms);});}
 
-window.LDHalabjaChemicalHook={
-  version:VERSION,
-  topic:TOPIC,
-  status:'RECOMMENDED',
-  recommended:true,
-  number:1,
-  title:'Witness Before the Graves',
-  prompt:prompt,
-  p1Scene:P1_SCENE,
-  chemicalStages:CHEMICAL_STAGES,
-  installChoiceOverride:installChoiceOverride,
-  installProgressionOverride:installProgressionOverride,
-  applyP1Fix:applyP1Fix
-};
+window.LDHalabjaChemicalHook={version:VERSION,topic:TOPIC,status:'RECOMMENDED',recommended:true,number:1,title:'Witness Before the Graves',prompt:prompt,p1Scene:P1_SCENE,chemicalStages:CHEMICAL_STAGES,installChoiceOverride:installChoiceOverride,installProgressionOverride:installProgressionOverride,applyP1Fix:applyP1Fix};
 
-installProgressionOverride();
-installChoiceOverride();
-window.addEventListener('ld:production-built',function(){[0,250,700].forEach(function(ms){setTimeout(applyP1Fix,ms);});});
-window.addEventListener('load',function(){[0,300,900,1600].forEach(function(ms){setTimeout(applyP1Fix,ms);});});
-if(document.readyState!=='loading')setTimeout(applyP1Fix,900);
+installProgressionOverride();installChoiceOverride();
+window.addEventListener('ld:production-built',scheduleFix);
+window.addEventListener('load',scheduleFix);
+window.addEventListener('pageshow',scheduleFix);
+window.addEventListener('focus',function(){setTimeout(applyP1Fix,120);});
+document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(applyP1Fix,120);});
+if(document.readyState!=='loading')scheduleFix();
 })();
