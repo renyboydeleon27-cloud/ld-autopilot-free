@@ -1,6 +1,6 @@
-/* NER Studio Core 4 runtime bridge v4.0.0
-   Centralizes local scene validation and prompt lifecycle around LDVideoModes
-   without changing approved legacy project data. */
+/* NER Studio Core 4 runtime bridge v4.0.1
+   Centralizes local scene planning/validation and prompt lifecycle around
+   LDVideoModes without changing approved legacy project data. */
 (function(){'use strict';
 if(window.__nerCore4Bridge)return;
 window.__nerCore4Bridge=true;
@@ -9,25 +9,31 @@ if(!core){console.warn('NER Core 4 bridge skipped: core not loaded');return;}
 
 function panel(card){return !!card&&/^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage||'');}
 function write(card,text){return core.writePrompt(card,text);}
+function applyFamilyPlan(card){
+ if(!panel(card)||core.frozen(card))return false;
+ try{return window.NERFamilyPlanner4?.apply?.(card)===true;}catch(e){console.warn('NER Core family plan skipped',e);return false;}
+}
 function applyFinal(card,text){
  if(!panel(card))return text;
  if(core.frozen(card))return core.enforceFrozen(card);
  return write(card,core.applyContract(card,text));
 }
 function patchVideoModes(){
- const vm=window.LDVideoModes;if(!vm||vm.__nerCore4BridgeV400)return false;
+ const vm=window.LDVideoModes;if(!vm||vm.__nerCore4BridgeV401)return false;
  const nativePrompt=typeof vm.prompt==='function'?vm.prompt.bind(vm):null;
  const nativeBuild=typeof vm.build==='function'?vm.build.bind(vm):null;
  const nativeVariety=typeof vm.sceneVarietyIssue==='function'?vm.sceneVarietyIssue.bind(vm):null;
  if(!nativePrompt||!nativeBuild)return false;
  vm.prompt=function(card){
   if(panel(card)&&core.frozen(card))return core.enforceFrozen(card);
+  if(panel(card))applyFamilyPlan(card);
   let out=nativePrompt(card);
   if(panel(card))out=applyFinal(card,out);
   return out;
  };
  vm.build=function(card){
   if(panel(card)&&core.frozen(card))return core.enforceFrozen(card);
+  if(panel(card))applyFamilyPlan(card);
   let out=nativeBuild(card);
   if(panel(card))out=applyFinal(card,out);
   return out;
@@ -36,7 +42,7 @@ function patchVideoModes(){
   if(panel(card))return core.sceneVarietyIssue(card);
   return nativeVariety?nativeVariety(card):'';
  };
- vm.__nerCore4BridgeV400=true;
+ vm.__nerCore4BridgeV401=true;
  return true;
 }
 
@@ -57,6 +63,7 @@ function preflight(card){
  if(!panel(card))return {ok:true,issues:[]};
  patchVideoModes();
  repairEventPack(card);
+ applyFamilyPlan(card);
  const p=window.LDVideoModes?.prompt?.(card)||core.currentPrompt(card);
  if(p&&!core.frozen(card))applyFinal(card,p);
  const result=core.validateCard(card);
@@ -94,10 +101,10 @@ document.addEventListener('click',e=>{
  const card=targetCard();if(card&&!core.frozen(card))preflight(card);
 },true);
 
-window.addEventListener('ld:production-built',()=>setTimeout(()=>{patchVideoModes();const c=targetCard();if(c)preflight(c);},0));
+window.addEventListener('ld:production-built',()=>setTimeout(()=>{patchVideoModes();window.NERFamilyPlanner4?.planAll?.();const c=targetCard();if(c)preflight(c);},0));
 window.addEventListener('load',()=>setTimeout(patchVideoModes,0));
 [0,50,150,400,900].forEach(ms=>setTimeout(patchVideoModes,ms));
 
-window.NERCore4Bridge=Object.freeze({version:'4.0.0',patchVideoModes,preflight,repairEventPack,targetCard});
-window.dispatchEvent(new CustomEvent('ner:core4-bridge-ready',{detail:{version:'4.0.0'}}));
+window.NERCore4Bridge=Object.freeze({version:'4.0.1',patchVideoModes,preflight,repairEventPack,targetCard,applyFamilyPlan});
+window.dispatchEvent(new CustomEvent('ner:core4-bridge-ready',{detail:{version:'4.0.1'}}));
 })();
