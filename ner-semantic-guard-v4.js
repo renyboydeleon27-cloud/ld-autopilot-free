@@ -1,10 +1,12 @@
-/* NER Studio Core 4 Semantic Guard v4.0.3
+/* NER Studio Core 4 Semantic Guard v4.0.4
    Removes generic stage-number assumptions that conflict with the canonical
-   narration/event semantic role. Works for every P1-P14 topic; no panel-specific rules. */
+   narration/event semantic role. Works for every P1-P14 topic; no panel-specific rules.
+   v4.0.4 preserves the legacy DEBRIS + DAMAGE PHYSICS LOCK marker while replacing
+   its contents semantically, so LDVideoModes quality validation and Core 4 agree. */
 (function(){'use strict';
 if(window.NERSemanticGuard4)return;
 const core=window.NERCore4;if(!core)return;
-const VERSION='4.0.3';
+const VERSION='4.0.4';
 const PROFILE={
  'normal-world':{phase:'context',intensity:'1/10 · calm baseline',cast:'ordinary adults in normal life',damage:'intact baseline; no disaster damage unless explicitly established',motion:'ONE ordinary primary action plus 1–2 restrained secondary motions',physics:'ordinary human/object motion only; no disaster mechanism is visible yet'},
  'cause-context':{phase:'context',intensity:'2/10 · restrained explanatory context',cast:'small adult cast observing or establishing context',damage:'preserve only damage explicitly established by narration or approved canon',motion:'ONE contextual primary action plus 1–2 restrained secondary motions',physics:'show only the supported causal/contextual mechanism; no later-stage impact'},
@@ -35,8 +37,10 @@ function replaceAudioMixBlocks(text,role){
  return s;
 }
 function objectPhysics(role){
- if(role==='evidence')return 'OBJECT PHYSICS LOCK: Evidence/documents, furniture and sealed items remain stable and count-consistent. No disaster debris, impact force, collapse, vibration or damage is required unless explicitly established by narration.';
- if(['human-impact','response','displacement','human-toll','legacy'].includes(role))return 'OBJECT / ENVIRONMENT PHYSICS LOCK: Preserve only damage, debris and object motion explicitly supported by the StageSpec, narration or approved canon. Human action is primary; do not inject generic shingles, boards, collapse, flying debris or renewed impact merely because this is a disaster production.';
+ // IMPORTANT: keep the legacy marker name because LDVideoModes.valid() still
+ // checks this exact marker locally. Only the semantic CONTENT is replaced.
+ if(role==='evidence')return 'DEBRIS + DAMAGE PHYSICS LOCK: CORE 4 EVIDENCE OVERRIDE — Evidence/documents, furniture and sealed items remain stable and count-consistent. No disaster debris, impact force, collapse, vibration or damage is required unless explicitly established by narration.';
+ if(['human-impact','response','displacement','human-toll','legacy'].includes(role))return 'DEBRIS + DAMAGE PHYSICS LOCK: CORE 4 HUMAN/AFTERMATH OVERRIDE — Preserve only damage, debris and object motion explicitly supported by the StageSpec, narration or approved canon. Human action is primary; do not inject generic shingles, boards, collapse, flying debris or renewed impact merely because this is a disaster production.';
  return 'DEBRIS + DAMAGE PHYSICS LOCK: Preserve only debris/damage behavior actually supported by this semantic role and approved canon. Never add destruction because of a generic panel-number template.';
 }
 function replaceDebrisBlocks(text,role){
@@ -78,11 +82,11 @@ function normalize(card,text){
 }
 function write(card,text){const out=normalize(card,text);if(!core.frozen(card))core.writePrompt(card,out);return out;}
 function patch(){
- const vm=window.LDVideoModes;if(!vm||vm.__nerSemanticGuardV403)return false;
+ const vm=window.LDVideoModes;if(!vm||vm.__nerSemanticGuardV404)return false;
  const bp=typeof vm.prompt==='function'?vm.prompt.bind(vm):null,bb=typeof vm.build==='function'?vm.build.bind(vm):null;if(!bp||!bb)return false;
  vm.prompt=function(card){const out=bp(card);return panel(card)?write(card,out):out;};
  vm.build=function(card){const out=bb(card);return panel(card)?write(card,out):out;};
- vm.__nerSemanticGuardV403=true;return true;
+ vm.__nerSemanticGuardV404=true;return true;
 }
 function repair(card){if(!panel(card)||core.frozen(card))return false;patch();const out=window.LDVideoModes?.prompt?.(card)||core.currentPrompt(card);write(card,out);return true;}
 window.addEventListener('ld:production-built',()=>setTimeout(patch,0));
