@@ -262,3 +262,20 @@ window.LDProjectLocks={
   syncProduction
 };
 })();
+
+/* Direct Halabja P4 guard loader — intentionally placed in a script that index.html
+   already loads AFTER video-modes.js and BEFORE smart-continue.js. This removes
+   dependence on service-worker concatenation timing for P4. */
+(()=>{
+  if(window.__ldHalabjaP4DirectLoaderV10)return;
+  window.__ldHalabjaP4DirectLoaderV10=true;
+  const src='halabja-p4-hotfix.js?v=1.0-direct';
+  if(document.readyState==='loading'){
+    document.write('<script src="'+src+'"><\/script>');
+    return;
+  }
+  const s=document.createElement('script');
+  s.src=src;
+  s.async=false;
+  document.head.appendChild(s);
+})();
