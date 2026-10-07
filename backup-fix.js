@@ -67,7 +67,11 @@
   script.src = 'ner-approval-persistence-v4.js?v=4.0.7';
   script.async = false;
   script.dataset.nerApprovalPersistence = '4.0.7';
-  script.onload = () => window.NERApprovalPersistence4?.restore?.();
+  script.onload = () => {
+    const version = document.querySelector('.version');
+    if (version) version.textContent = 'v4.0.7';
+    window.NERApprovalPersistence4?.restore?.();
+  };
   script.onerror = () => console.warn('Core 4 approval persistence failed to load.');
   document.head.appendChild(script);
 })();
