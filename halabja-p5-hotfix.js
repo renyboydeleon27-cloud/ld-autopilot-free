@@ -24,8 +24,20 @@ function applyScene(c){if(!target(c))return false;if(validScene(currentScene(c))
 function write(c,text){if(!target(c))return text;var out=sanitize(text);if(!out)return out;c.dataset.halabjaP5Sanitized=VERSION;if(c.dataset.textVideoPrompt!==out)c.dataset.textVideoPrompt=out;var f=c.querySelector('.text-video-prompt');if(f&&f.value!==out)f.value=out;return out;}
 function patch(vm){if(!vm||vm.__halabjaP5HotfixV10)return vm;var bp=typeof vm.prompt==='function'?vm.prompt.bind(vm):null;var bb=typeof vm.build==='function'?vm.build.bind(vm):null;var bs=typeof vm.sceneVarietyIssue==='function'?vm.sceneVarietyIssue.bind(vm):null;if(!bp||!bb)return vm;vm.prompt=function(c){if(target(c))applyScene(c);var out=bp(c);return target(c)?write(c,out):out;};vm.build=function(c){if(target(c))applyScene(c);var out=bb(c);return target(c)?write(c,out):out;};vm.sceneVarietyIssue=function(c){if(target(c)){applyScene(c);return '';}return bs?bs(c):'';};vm.__halabjaP5HotfixV10=true;return vm;}
 function repair(){var c=card(),vm=window.LDVideoModes;if(!target(c)||!vm)return false;patch(vm);if(validPrompt(currentPrompt(c)))return true;applyScene(c);c.dataset.textVideoPrompt='';c.dataset.textVideoSignature='';delete c.dataset.smartReady;delete c.dataset.smartReadySignature;var pf=c.querySelector('.text-video-prompt');if(pf)pf.value='';try{var out=vm.build(c)||vm.prompt(c)||'';write(c,out);try{vm.all?.();}catch(e){}return validPrompt(currentPrompt(c));}catch(e){console.warn('Halabja P5 repair deferred',e);return false;}}
-/* Prevent a paid generic scene replacement for the exact locked Halabja P5. */
 if(!window.__halabjaP5PanelFixBridgeV10){var nativeFetch=window.fetch.bind(window);window.fetch=function(input,init){var url='';try{url=typeof input==='string'?input:(input&&input.url)||'';}catch(e){}if(/\/api\/ai-panel-fix(?:\?|$)/.test(url)&&matches()){var payload=null;try{payload=JSON.parse(String(init?.body||''));}catch(e){}if(payload?.stage==='P5'&&TOPIC_RE.test(String(payload?.topic||topic()))){try{repair();}catch(e){}return Promise.resolve(new Response(JSON.stringify({ok:true,scene:P5_SCENE,source:'halabja-p5-local-lock',apiUsage:{calls:0,inputTokens:0,cachedInputTokens:0,outputTokens:0,totalTokens:0,estimatedCostUsd:0,byModel:{}}}),{status:200,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}}));}}return nativeFetch(input,init);};window.__halabjaP5PanelFixBridgeV10=true;}
 function install(){if(window.LDVideoModes)patch(window.LDVideoModes);var c=card();if(target(c)&&!validPrompt(currentPrompt(c)))repair();}
 window.addEventListener('ld:production-built',function(){setTimeout(install,0);setTimeout(install,180);});window.addEventListener('load',install);document.addEventListener('pointerdown',function(e){if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))install();},true);document.addEventListener('click',function(e){if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))install();},true);[0,80,200,500,1000,1800].forEach(function(ms){setTimeout(install,ms);});window.LDHalabjaP5Hotfix={version:VERSION,repair:repair,sanitize:sanitize,scene:P5_SCENE,validPrompt:validPrompt,patch:patch};
+})();
+
+/* One-time architecture loader: after the proven P5 direct-load chain is active,
+   install the event-level P1-P14 engine synchronously before Smart Continue. */
+(function(){'use strict';
+if(window.__ldHalabjaEventPanelEngineLoaderV10)return;
+window.__ldHalabjaEventPanelEngineLoaderV10=true;
+var src='halabja-event-panel-engine.js?v=1.0';
+if(document.readyState==='loading'){
+  document.write('<script src="'+src+'"><\/script>');
+  return;
+}
+var s=document.createElement('script');s.src=src;s.async=false;document.head.appendChild(s);
 })();
