@@ -1,10 +1,10 @@
-/* NER Studio Core 4 Semantic Guard v4.0.2
-   Removes generic stage-number assumptions that conflict with the narration-derived
-   semantic role. Works for every P1-P14 topic; no panel-specific rules. */
+/* NER Studio Core 4 Semantic Guard v4.0.3
+   Removes generic stage-number assumptions that conflict with the canonical
+   narration/event semantic role. Works for every P1-P14 topic; no panel-specific rules. */
 (function(){'use strict';
 if(window.NERSemanticGuard4)return;
 const core=window.NERCore4;if(!core)return;
-const VERSION='4.0.2';
+const VERSION='4.0.3';
 const PROFILE={
  'normal-world':{phase:'context',intensity:'1/10 · calm baseline',cast:'ordinary adults in normal life',damage:'intact baseline; no disaster damage unless explicitly established',motion:'ONE ordinary primary action plus 1–2 restrained secondary motions',physics:'ordinary human/object motion only; no disaster mechanism is visible yet'},
  'cause-context':{phase:'context',intensity:'2/10 · restrained explanatory context',cast:'small adult cast observing or establishing context',damage:'preserve only damage explicitly established by narration or approved canon',motion:'ONE contextual primary action plus 1–2 restrained secondary motions',physics:'show only the supported causal/contextual mechanism; no later-stage impact'},
@@ -29,37 +29,45 @@ function audioMix(role){
  return 'PROFESSIONAL CINEMATIC AUDIO MIX: Match the semantic role "'+role+'" and the visible scene. Use only physically motivated ambience/SFX that the shot supports. Do not impose a generic tension-to-peak arc, unsupported impact, cinematic boom, alarm, siren, dialogue, music, or generated voiceover. Approved narration is added later in editing.';
 }
 function replaceAudioMixBlocks(text,role){
- const replacement=audioMix(role);
- let s=String(text||'');
- // Replace the complete legacy mix block, not just its heading. The old block may
- // contain several lines (Audio phase, hierarchy, impacts, dynamic range) that can
- // contradict a retrospective/response/legacy StageSpec even after the heading changes.
+ const replacement=audioMix(role);let s=String(text||'');
  s=s.replace(/PROFESSIONAL CINEMATIC AUDIO MIX:\s*[\s\S]*?(?=\nERA \+ ACCURACY:|\nFRAME QUALITY TEST:|\n\nEPISODE CANON — CONTINUITY ENGINE:|\n\nAUDIO:|\n\nNEGATIVE:|$)/gi,replacement+'\n');
- if(role==='evidence'){
-  // Defensive cleanup for legacy variants where phrases escaped the titled block.
-  s=s.replace(/rising environmental pressure with selective impacts/gi,'calm retrospective room tone')
-     .replace(/occasional physically motivated impacts/gi,'subtle specified object contact sounds')
-     .replace(/quieter tension\s*→\s*rising pressure\s*→\s*peak\s*→\s*natural decay(?: when appropriate)?/gi,'steady quiet ambience with natural decay')
-     .replace(/tension-to-peak/gi,'steady retrospective');
- }
+ if(role==='evidence')s=s.replace(/rising environmental pressure with selective impacts/gi,'calm retrospective room tone').replace(/occasional physically motivated impacts/gi,'subtle specified object contact sounds').replace(/quieter tension\s*→\s*rising pressure\s*→\s*peak\s*→\s*natural decay(?: when appropriate)?/gi,'steady quiet ambience with natural decay').replace(/tension-to-peak/gi,'steady retrospective');
+ return s;
+}
+function objectPhysics(role){
+ if(role==='evidence')return 'OBJECT PHYSICS LOCK: Evidence/documents, furniture and sealed items remain stable and count-consistent. No disaster debris, impact force, collapse, vibration or damage is required unless explicitly established by narration.';
+ if(['human-impact','response','displacement','human-toll','legacy'].includes(role))return 'OBJECT / ENVIRONMENT PHYSICS LOCK: Preserve only damage, debris and object motion explicitly supported by the StageSpec, narration or approved canon. Human action is primary; do not inject generic shingles, boards, collapse, flying debris or renewed impact merely because this is a disaster production.';
+ return 'DEBRIS + DAMAGE PHYSICS LOCK: Preserve only debris/damage behavior actually supported by this semantic role and approved canon. Never add destruction because of a generic panel-number template.';
+}
+function replaceDebrisBlocks(text,role){
+ const replacement=objectPhysics(role);let s=String(text||'');
+ s=s.replace(/DEBRIS \+ DAMAGE PHYSICS LOCK:\s*[\s\S]*?(?=\nCINEMATIC CAMERA DIRECTOR:|\nPROFESSIONAL CINEMATIC AUDIO MIX:|\nERA \+ ACCURACY:|\nFRAME QUALITY TEST:|\n\nEPISODE CANON — CONTINUITY ENGINE:|\n\nCAMERA:|\n\nAUDIO:|\n\nNEGATIVE:|$)/gi,replacement+'\n');
+ return s;
+}
+function normalizeEditorial(text,role){
+ let s=String(text||'');
+ s=s.replace(/NEW LD FORMAT — TRIAL V1:[^\n]*/i,'NEW LD FORMAT — TRIAL V1: Follow the semantic role "'+role+'" and advance one documented beat without forcing generic escalation, damage, recovery or response. Preserve event chronology, duration, style/color locks and the approved narration boundary. END NEW LD FORMAT.');
+ s=replaceLine(s,'PROGRESSION DISCIPLINE:','Follow the semantic role "'+role+'" and the StageSpec chronology. Do not force continuous escalation when this beat is evidence, aftermath, response, recovery or legacy.');
  return s;
 }
 function normalize(card,text){
  if(!panel(card)||core.frozen(card))return core.frozen(card)?core.enforceFrozen(card):String(text||'');
  let s=String(text||'');if(!s)return s;
  const sp=core.spec(card)||{},p=profile(card),role=String(sp.role||'');
- s=replaceLine(s,'Story role:',role+' · narration-derived semantic stage.');
+ s=window.NERStageSemantics4?.stripLegacyContinuity?.(s)||s;
+ s=replaceLine(s,'Story role:',role+' · canonical narration/event semantic stage.');
  s=replaceLine(s,'Stage guard:','Follow the approved narration and StageSpec for the semantic role "'+role+'". Do not force escalation, damage, recovery, symptoms or response merely because of the numeric panel position.');
  s=replaceLine(s,'INTENSITY:',p.intensity+'. Intensity must follow the semantic role, not the numeric panel position.');
  s=replaceLine(s,'Cast profile:',p.cast+'.');
  s=replaceLine(s,'Crowd level:','small cast unless the StageSpec explicitly requires otherwise.');
  s=replaceLine(s,'DAMAGE MEMORY / NO-RESET RULE:',p.damage+'. Location/time changes may intentionally leave earlier damage off-screen; never add damage merely to satisfy a generic stage template.');
- s=replaceLine(s,'CINEMATIC INTENSITY CURVE:','Semantic target: '+p.intensity+'. Do not escalate beyond the narration-derived role.');
+ s=replaceLine(s,'CINEMATIC INTENSITY CURVE:','Semantic target: '+p.intensity+'. Do not escalate beyond the narration/event role.');
  s=replaceLine(s,'MOTION BUDGET:',p.motion+'. Background motion supports the primary action only.');
  s=replaceLine(s,'PHYSICS AND TIME:',p.physics+'. Preserve plausible time, identity, object count and scale.');
  s=replaceLine(s,'AUDIO:','Generate natural scene-specific ambience/SFX only; no generated voiceover or music. APPROVED NARRATION IS ADDED LATER IN EDITING and is not part of this T2V render.');
  s=replaceAudioMixBlocks(s,role);
- s=s.replace(/DEBRIS \+ DAMAGE PHYSICS LOCK:[^\n]*/gi,role==='evidence'?'OBJECT PHYSICS LOCK: Evidence/documents and furniture remain stable and count-consistent. No disaster debris, impact force, collapse, vibration or damage is required in a retrospective evidence scene unless explicitly established by narration.':'DEBRIS + DAMAGE PHYSICS LOCK: Preserve only debris/damage behavior actually supported by this semantic role and approved canon. Never add destruction because of a generic panel-number template.');
+ s=replaceDebrisBlocks(s,role);
+ s=normalizeEditorial(s,role);
  s=s.replace(/FIRST-FRAME \/ LAST-FRAME LOCK:[^\n]*/gi,'FIRST-FRAME / LAST-FRAME LOCK: FIRST FRAME establishes the StageSpec location, cast/object count and semantic role "'+role+'". LAST FRAME preserves those identities and geometry, showing only changes physically caused by this shot. Do not require damage, anchors or hazard effects that the StageSpec does not establish.');
  s=s.replace(/Hazard phase:\s*[^.\n]+\./i,'Hazard phase: '+p.phase+'.');
  const editorial='EDITORIAL NARRATION CONTRACT — CORE 4: The approved narration is added during final editing and is NOT generated as voiceover inside this 10-second T2V clip. Therefore "no voiceover" in AUDIO is intentional and does not conflict with narration carrying factual names, dates, statistics or conclusions.';
@@ -70,16 +78,16 @@ function normalize(card,text){
 }
 function write(card,text){const out=normalize(card,text);if(!core.frozen(card))core.writePrompt(card,out);return out;}
 function patch(){
- const vm=window.LDVideoModes;if(!vm||vm.__nerSemanticGuardV402)return false;
+ const vm=window.LDVideoModes;if(!vm||vm.__nerSemanticGuardV403)return false;
  const bp=typeof vm.prompt==='function'?vm.prompt.bind(vm):null,bb=typeof vm.build==='function'?vm.build.bind(vm):null;if(!bp||!bb)return false;
  vm.prompt=function(card){const out=bp(card);return panel(card)?write(card,out):out;};
  vm.build=function(card){const out=bb(card);return panel(card)?write(card,out):out;};
- vm.__nerSemanticGuardV402=true;return true;
+ vm.__nerSemanticGuardV403=true;return true;
 }
 function repair(card){if(!panel(card)||core.frozen(card))return false;patch();const out=window.LDVideoModes?.prompt?.(card)||core.currentPrompt(card);write(card,out);return true;}
 window.addEventListener('ld:production-built',()=>setTimeout(patch,0));
 window.addEventListener('load',()=>setTimeout(patch,0));
 document.addEventListener('pointerdown',e=>{if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn')){patch();const c=window.NERCore4Bridge?.targetCard?.();if(c)repair(c);}},true);
 [0,40,120,300,700].forEach(ms=>setTimeout(patch,ms));
-window.NERSemanticGuard4=Object.freeze({version:VERSION,normalize,patch,repair,profile,replaceAudioMixBlocks});
+window.NERSemanticGuard4=Object.freeze({version:VERSION,normalize,patch,repair,profile,replaceAudioMixBlocks,replaceDebrisBlocks});
 })();
