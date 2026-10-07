@@ -19,13 +19,13 @@ if(!window.NERStageSemantics4)load('ner-stage-semantics-v4.js?v=4.0.0');
 if(!window.NERFamilyPlanner4)load('ner-family-planner-v4.js?v=4.0.0');
 if(!window.LDHalabjaEventPanelEngine)load('halabja-event-panel-engine.js?v=1.0');
 if(!window.NERCore4Bridge)load('ner-core-bridge.js?v=4.0.1');
-if(!window.NERSemanticGuard4)load('ner-semantic-guard-v4.js?v=4.0.4');
+if(!window.NERSemanticGuard4)load('ner-semantic-guard-v4.js?v=4.0.5');
 if(!window.NERHumanLifeEngine)load('ner-human-life-engine.js?v=1.1.0');
 if(!window.NERSourceStory4)load('ner-source-story-v4.js?v=4.0.0');
 if(!window.NERProjectStore4)load('ner-project-store-v4.js?v=4.0.0');
 if(!window.NERCoreDiagnostics4)load('ner-core-diagnostics.js?v=4.0.0');
 if(!window.NERFinalAudit4)load('ner-final-audit-v4.js?v=4.0.0');
-var version=document.querySelector('.topbar .version');if(version)version.textContent='v4.0.6';
+var version=document.querySelector('.topbar .version');if(version)version.textContent='v4.0.8';
 window.LDHalabjaP4Hotfix={
  version:'core4-compat',
  repair:function(){var c=document.querySelector('.stage-card[data-stage="P4"]');return window.LDHalabjaEventPanelEngine?.repair?.(c)??false;},
