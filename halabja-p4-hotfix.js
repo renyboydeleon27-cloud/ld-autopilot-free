@@ -1,7 +1,7 @@
 /* NER Studio Core 4 bootstrap — compatibility path formerly used by Halabja P4 hotfix.
    This file remains at the old URL so existing cached/index loaders keep working,
    but it no longer owns P4 logic. It synchronously boots the Core 4 architecture,
-   the Halabja event pack, runtime bridge, canonical project snapshot, and diagnostics. */
+   universal family planner, event packs, runtime bridge, project store and diagnostics. */
 (function(){'use strict';
 if(window.__nerCore4BootstrapFromP4)return;
 window.__nerCore4BootstrapFromP4=true;
@@ -13,10 +13,12 @@ function load(src){
  var s=document.createElement('script');s.src=src;s.async=false;document.head.appendChild(s);
 }
 if(!window.NERCore4)load('ner-core-4.js?v=4.0.0');
+if(!window.NERFamilyPlanner4)load('ner-family-planner-v4.js?v=4.0.0');
 if(!window.LDHalabjaEventPanelEngine)load('halabja-event-panel-engine.js?v=1.0');
-if(!window.NERCore4Bridge)load('ner-core-bridge.js?v=4.0.0');
+if(!window.NERCore4Bridge)load('ner-core-bridge.js?v=4.0.1');
 if(!window.NERProjectStore4)load('ner-project-store-v4.js?v=4.0.0');
 if(!window.NERCoreDiagnostics4)load('ner-core-diagnostics.js?v=4.0.0');
+var version=document.querySelector('.topbar .version');if(version)version.textContent='v4.0.0';
 
 /* Legacy API shim: callers that still reference LDHalabjaP4Hotfix are delegated
    to the event pack instead of a panel-specific patch. */
