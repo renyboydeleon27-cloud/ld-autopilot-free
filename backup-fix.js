@@ -57,3 +57,17 @@
     }
   }, true);
 })();
+
+/* Core 4 compatibility bootstrap.
+   Approval persistence is global business logic, not a Halabja/P7 hotfix.
+   This temporary loader can move into index.html when Core 4 owns bootstrap. */
+(() => {
+  if (window.NERApprovalPersistence4 || document.querySelector('script[data-ner-approval-persistence]')) return;
+  const script = document.createElement('script');
+  script.src = 'ner-approval-persistence-v4.js?v=4.0.7';
+  script.async = false;
+  script.dataset.nerApprovalPersistence = '4.0.7';
+  script.onload = () => window.NERApprovalPersistence4?.restore?.();
+  script.onerror = () => console.warn('Core 4 approval persistence failed to load.');
+  document.head.appendChild(script);
+})();
