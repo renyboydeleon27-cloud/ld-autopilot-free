@@ -1,12 +1,18 @@
+/* Living Disaster Book — Thumbnail Master Format v2
+   Universal centered Zoom/Fill-safe layout for ALL thumbnail design variants. */
 (()=>{
+  'use strict';
   const stages=document.getElementById('stages');
   if(!stages)return;
 
+  const VERSION='v3.50.8-master-zoom-safe-v2';
   const MARKER='THUMBNAIL FORMAT LOCK';
   const COLOR_OVERRIDE='THUMBNAIL COLOR OVERRIDE LOCK';
+  const MASTER_SAFE='UNIVERSAL CENTERED ZOOM-SAFE MASTER FORMAT — ALL DESIGNS';
 
   function detectTheme(topic){
-    const t=(topic||'').toLowerCase();
+    const t=String(topic||'').toLowerCase();
+    if(/chemical attack|chemical weapon|halabja|sarin|mustard gas/.test(t))return {type:'DISASTER',hook:'WHEN DISASTER STRUCK',visuals:'the event-supported chemical-attack environment or immediate dangerous aftermath, historically appropriate civilian survival response, architecture, streets and atmospheric hazard cues without inventing tactical procedures'};
     if(/tsunami|tidal wave/.test(t))return {type:'TSUNAMI',hook:'WHEN THE SEA RUSHED IN',visuals:'a violently affected coastline, damaged period buildings or coastal structures, boats and debris, rushing or receding water where appropriate, wet streets, rescue or survival activity'};
     if(/earthquake|quake|seismic/.test(t))return {type:'EARTHQUAKE',hook:'WHEN THE GROUND BROKE',visuals:'cracked streets, collapsing or damaged masonry buildings, dust clouds, broken utilities, rubble, falling debris and earthquake survival activity'};
     if(/volcano|eruption|lahar|pyroclastic/.test(t))return {type:'ERUPTION',hook:'WHEN THE MOUNTAIN ERUPTED',visuals:'ash, volcanic debris, eruption clouds, lava or lahar only where event-appropriate, damaged settlements, evacuation or survival activity'};
@@ -33,20 +39,38 @@
     for(const m of markers){const i=text.indexOf(m);if(i>=0&&(at<0||i<at))at=i;}
     const context=at>=0?text.slice(at).trim():'';
     if(!context)return '';
-    const currentLower=current.toLowerCase();
-    if(!/san francisco earthquake/i.test(currentLower)&&/san francisco[^\n.]{0,80}1906|1906[^\n.]{0,80}san francisco/i.test(context))return '';
+    if(!/san francisco earthquake/i.test(current.toLowerCase())&&/san francisco[^\n.]{0,80}1906|1906[^\n.]{0,80}san francisco/i.test(context))return '';
     return context;
   }
 
   function hasVerifiedDeaths(context){
     const s=String(context||'');
     if(!s)return false;
-    const patterns=[
+    return [
       /(?:deaths?|fatalities|killed|died|dead|reported missing)[^.;]{0,90}\b(?:more than\s+|over\s+|about\s+|approximately\s+)?([1-9]\d{0,2}(?:,\d{3})*|[1-9]\d*)\b/i,
       /\b(?:more than\s+|over\s+|about\s+|approximately\s+)?([1-9]\d{0,2}(?:,\d{3})*|[1-9]\d*)\b[^.;]{0,90}(?:people\s+)?(?:were\s+)?(?:killed|died|dead|fatalities|deaths|reported missing)/i,
       /\b(?:dozens|hundreds|thousands|tens of thousands|hundreds of thousands)\b[^.;]{0,70}(?:killed|died|dead|fatalities|deaths)/i
-    ];
-    return patterns.some(rx=>rx.test(s));
+    ].some(rx=>rx.test(s));
+  }
+
+  function portraitLayout(showDeathBadge){
+    return `${MASTER_SAFE}: This is the permanent geometry lock for ALL 10 Thumbnail Design variants, including Survivor Close-Up, Trigger Object, Split Tension, Looking Back/Escape, Eyes of Disaster, Disaster Symbol, Rescue/Survival, Place Identity, Motion/Escape and Symbolic Punch. If any design-specific instruction pushes essential content toward an edge or conflicts with this geometry, THIS CENTERED ZOOM-SAFE MASTER FORMAT WINS.
+
+Deliver portrait 9:16; canonical working canvas 1080×1920. Build ALL ESSENTIAL poster content as one unified composition scaled to roughly 82–85% of the full canvas and centered on nonessential event-specific background bleed. Do not make individual elements edge-dependent. Keep the essential safe frame inside x 8%-92% and y 10%-90%. Leave approximately 8–10% nonessential scene bleed at left/right and 9–10% at top/bottom. The entire essential composition must survive about 12–15% centered InShot Zoom/Fill.
+
+TITLE SAFE ZONE: complete title block y 11%-30%, normally x 9%-91%. Main headline y 11%-21%. Yellow hook strip y 21%-26%. Event/location/year line y 26%-30%. Top 0%-10% is nonessential scene/sky/smoke bleed only. No essential letters near the top or side edges.
+
+SUBJECT SAFE ZONE: for normal human-subject designs, keep the dominant adult at or below about 42% of canvas width, with full head, face, torso and any required hands comfortably inside the safe frame. Never enlarge the person merely to fill empty space. Keep important hands/action above roughly y 78%. Design-specific side placement may vary, but the subject must be pulled inward enough to survive centered zoom. Extreme-close-up designs may enlarge eyes/face only when that is the design concept, but all title, event line, critical facial features and footer must still remain inside this same master safe frame.
+
+HAZARD / TRIGGER / SYMBOL SAFE ZONE: keep the recognizable disaster, trigger object, landmark or symbol visually strong but not dependent on the outer 8–10% bleed. Critical hazard cues must remain readable after centered zoom. Foreground trigger objects should be pulled slightly upward/inward instead of sitting on the bottom edge. Do not let the subject cover the only recognizable hazard cue.
+
+${showDeathBadge?'BADGE SAFE RULE: a verified-death curiosity badge may appear only inside the same essential safe frame and must not cover the face, hands, title or primary hazard.':'BADGE SAFE RULE: no casualty/death badge. Use the freed area for hazard readability and breathing room.'}
+
+FOOTER SAFE ZONE: complete branding within x 8%-92% and y 80%-88%. Keep “LIVING DISASTER BOOK” and the footer tagline fully inset and readable. Leave the lower outer area as nonessential rubble/ground/water/texture bleed. Never place branding directly on the bottom edge.
+
+WHOLE-COMPOSITION COMPRESSION RULE: if anything feels tight, uniformly reduce and recenter the ENTIRE essential composition together — title, strip, event line, subject, trigger/hazard emphasis and footer. Never solve crop pressure by sacrificing one hand, moving one label, cropping the face, or pushing branding off-screen.
+
+ANTI-CROP: no cropped headline letters, event line, face, required hands, key trigger object, logo or footer. No text over the face. Layout stability under Zoom/Fill outranks decorative edge filling.`;
   }
 
   function buildPrompt(topic,format,existing){
@@ -55,11 +79,22 @@
     const context=preservedContext(existing,topic);
     const showDeathBadge=hasVerifiedDeaths(context);
     const layout=format==='longform'
-      ? 'LANDSCAPE SAFE LAYOUT: keep landscape 16:9. Inset all text at least 6% from edges. Use a compact title above the scene, a raised adult survivor at left/center with face and both hands visible, '+(showDeathBadge?'the verified-death curiosity badge at right, ':'no casualty badge, using the right side for visual breathing room, ')+'and an inset footer. Do not apply portrait vertical crop bands to longform.'
-      : 'APPROVED PORTRAIT CROP-SAFE LAYOUT — MASTER BIBLE: deliver portrait 9:16; canonical working canvas 1080×1920. Compose all ESSENTIAL poster content as if uniformly reduced to about 82–85% of the canvas and centered on event-specific background bleed. Keep the essential safe frame inside x 8%-92% and y 10%-90%, with roughly 8–10% nonessential scene bleed at left/right and 9–10% at top/bottom. This is specifically intended to survive about 12–15% centered InShot Zoom/Fill without losing the headline, face, hands, event line or branding. Title block: y 11%-30%; main headline y 11%-21%; yellow hook strip y 21%-26%; event/location/year y 26%-30%; title width normally x 9%-91%. For human-subject designs, do not fill the frame with the person: keep character width at or below about 42% of canvas width, keep the full head inside the frame with breathing room, and keep both hands fully visible above about y 78% whenever hands are required. For DESIGN No. 4 LOOKING BACK / ESCAPE specifically, place the character approximately x 50%-92%, y 32%-86%, full head top around y 32%-35%, head center around x 72%-76% / y 41%-44%, and keep the main hazard/environment readable on the opposite side around x 5%-60%, y 30%-80%. '+(showDeathBadge?'Place the verified-death curiosity badge only inside the same safe frame without covering the face or hazard. ':'Do NOT place any casualty/death badge; use that area for disaster visuals and breathing room. ')+'Keep the complete footer/branding within y 80%-88% and x 8%-92%, leaving nonessential scene/texture bleed below it. No cropped letters, face, hands, logo or footer; no text over the face. If a draft is too tight, reduce the entire essential composition together rather than moving or cropping one element.';
+      ? 'LANDSCAPE SAFE LAYOUT: keep landscape 16:9. Inset all essential text, subject and branding at least 6% from every edge. Keep the title compact, the main adult subject fully readable, the hazard visible, and the footer inset. If the composition becomes tight, uniformly reduce and recenter all essential content together.'
+      : portraitLayout(showDeathBadge);
+
     const base=`Create a high-impact Living Disaster Book YouTube thumbnail for the CURRENT TOPIC “${topic}”, ${ratio}. ${MARKER}: preserve the approved mobile-first visual hierarchy and branding while allowing the selected Thumbnail Design system to vary composition, subject placement, camera emphasis and disaster scale from episode to episode. Adapt every disaster visual, historical detail, environment and subject to the CURRENT TOPIC only. This must look like a clickable disaster-history thumbnail, not a normal story panel and not an ending card.
 
-${COLOR_OVERRIDE}: the THUMBNAIL is ALWAYS FULL COLOR, even when the main production, HOOK, P1–P14, Ending, project color lock, Shared Visual DNA, or inherited historical prompt is strict black-and-white. Do NOT inherit grayscale, monochrome, sepia, tint, or black-and-white instructions into the thumbnail scene. Render the historical anime/graphic-novel scene in rich, controlled full color with period-appropriate materials, skin, clothing, sky, fire, water, vegetation, dust and environment. Approved overlay colors remain WHITE headline, YELLOW hook strip, RED curiosity badge when allowed. This thumbnail-specific color override has higher priority than any global monochrome instruction.\n\nLAYOUT LOCK: ${layout} Within the title block, use one enormous distressed WHITE disaster word or short disaster-type headline based on “${theme.type}”. Keep the main headline extremely large and readable on a phone. YELLOW STRIP: use the short truthful hook “${theme.hook}” in bold black letters. EVENT ID: beneath the yellow strip, show only a concise event name/year/date that can be derived directly from the exact current topic “${topic}”; do not invent a city, country, date, ranking or statistic. ${showDeathBadge?'RIGHT-SIDE CURIOSITY BADGE: verified casualty evidence is present in the supplied historical context, so use a strong red burst/splatter-style graphic with the exact question “HOW MANY DIED?” Do NOT display a casualty number unless it is explicitly supplied by verified event data elsewhere in the prompt. Never invent or estimate a death toll.':'CASUALTY BADGE RULE: no verified positive death toll is supplied in the current historical context, so OMIT the “HOW MANY DIED?” badge entirely. Do not imply deaths, do not invent casualties, and do not replace it with another death-related question.'} INSET FOOTER LEFT: compact “LIVING DISASTER BOOK” branding with a simple globe/book-style icon. INSET FOOTER RIGHT: small readable brand line “REAL DISASTERS. REAL HISTORY. STORIES WE SHOULD NEVER FORGET.” Keep bottom branding secondary to the main hook.\n\nMAIN VISUAL: show one emotionally readable ADULT foreground survivor or responder at the side and scale prescribed by the selected Thumbnail Design. Keep the clear face, visible torso and BOTH hands when that design requires hands/action. Never enlarge the person merely to fill the frame; preserve the crop-safe scale and enough event environment around the subject. Keep the important action above the footer; never place the face or hands at the bottom edge. Behind them, show the active disaster or immediate dangerous aftermath using ${theme.visuals}. The disaster must be instantly recognizable at thumbnail size. Use strong foreground-midground-background separation and leave enough visual breathing room for the headline and any permitted badge. Adult characters only.\n\nSTYLE LOCK: FULL-COLOR historical graphic-novel/anime thumbnail only. Serious colored 2D anime linework, hand-inked outlines, cel-painted textures and shadows, grounded adult proportions, cinematic depth, dramatic disaster lighting, gritty but clean high-contrast finish, bold white/red/yellow typography, excellent mobile readability. Never render the thumbnail scene in black-and-white, grayscale, sepia, muted monochrome, or selective monochrome. Match architecture, clothing, tools, vehicles, utilities, signs, terrain and infrastructure to the verified historical period.\n\nTRUTH / SAFETY LOCK: no “deadliest”, “worst”, record claim, ranking, exact casualty number, location, date, magnitude, category, wind speed, wave height or other factual claim unless it is explicitly supplied by the current topic or verified fact/context text. Use “HOW MANY DIED?” only when the supplied verified historical context contains positive death/fatality evidence. If no verified positive death toll is supplied, omit the casualty badge entirely. Adult characters only. No gore, no corpses as focal subjects, no 3D CGI, no glossy render, no chibi, no unrelated imagery, no watermark. Illustration only.`;
+${COLOR_OVERRIDE}: the THUMBNAIL is ALWAYS FULL COLOR, even when the main production, HOOK, P1–P14, Ending, project color lock, Shared Visual DNA, or inherited historical prompt is strict black-and-white. Do NOT inherit grayscale, monochrome, sepia, tint or black-and-white instructions into the thumbnail scene. Render the historical anime/graphic-novel scene in rich, controlled full color with period-appropriate materials, skin, clothing, sky, fire, water, vegetation, dust and environment. Approved overlay colors remain WHITE headline, YELLOW hook strip and RED curiosity badge only when allowed. This thumbnail-specific color override has higher priority than any global monochrome instruction.
+
+LAYOUT LOCK: ${layout}
+
+TITLE SYSTEM: Within the protected title block, use one enormous distressed WHITE disaster word or short disaster-type headline based on “${theme.type}”. Keep it extremely readable on a phone. YELLOW STRIP: use the short truthful hook “${theme.hook}” in bold black letters. EVENT ID: beneath the yellow strip, show only a concise event name/year/date that can be derived directly from the exact current topic “${topic}”; do not invent a city, country, date, ranking or statistic. ${showDeathBadge?'RIGHT-SIDE CURIOSITY BADGE: verified casualty evidence is present in supplied historical context, so a strong red badge may use the exact question “HOW MANY DIED?” Do NOT display a casualty number unless explicitly supplied by verified event data. Never invent or estimate a death toll.':'CASUALTY BADGE RULE: no verified positive death toll is supplied in current historical context, so OMIT the “HOW MANY DIED?” badge entirely. Do not imply deaths, invent casualties or replace it with another death-related question.'} INSET FOOTER LEFT: compact “LIVING DISASTER BOOK” branding with a simple globe/book-style icon. INSET FOOTER RIGHT: small readable brand line “REAL DISASTERS. REAL HISTORY. STORIES WE SHOULD NEVER FORGET.”
+
+MAIN VISUAL: show one emotionally readable ADULT foreground survivor or responder at the side and scale prescribed by the selected Thumbnail Design, unless that design is intentionally object/symbol/environment-led. Keep the clear face, visible torso and BOTH hands when that design requires hands/action. Never enlarge the person merely to fill the frame. Keep important action above the footer. Behind or around the subject, show the active disaster or immediate dangerous aftermath using ${theme.visuals}. The disaster must be instantly recognizable at thumbnail size. Use strong foreground-midground-background separation and enough breathing room for the title and branding. Adult characters only.
+
+STYLE LOCK: FULL-COLOR historical graphic-novel/anime thumbnail only. Serious colored 2D anime linework, hand-inked outlines, cel-painted textures and shadows, grounded adult proportions, cinematic depth, dramatic disaster lighting, gritty but clean high-contrast finish, bold white/red/yellow typography and excellent mobile readability. Never render the thumbnail scene in black-and-white, grayscale, sepia, muted monochrome or selective monochrome. Match architecture, clothing, tools, vehicles, utilities, signs, terrain and infrastructure to the verified historical period.
+
+TRUTH / SAFETY LOCK: no “deadliest”, “worst”, record claim, ranking, exact casualty number, location, date, magnitude, category, wind speed, wave height or other factual claim unless explicitly supplied by the current topic or verified fact/context text. Adult characters only. No gore, no corpses as focal subjects, no 3D CGI, no glossy render, no chibi, no unrelated imagery and no watermark. Illustration only.`;
     return context?`${base}\n\n${context}`:base;
   }
 
@@ -78,40 +113,39 @@ ${COLOR_OVERRIDE}: the THUMBNAIL is ALWAYS FULL COLOR, even when the main produc
     const next=buildPrompt(topic,format,prompt.value);
     if(prompt.value===next)return false;
     prompt.value=next;
-    prompt.dataset.thumbnailFormatLock='v3.42.3-crop-safe-bible';
+    prompt.dataset.thumbnailFormatLock=VERSION;
     fire(prompt);
     return true;
   }
 
-  function applyAfterGenerators(){[80,220,520].forEach(ms=>setTimeout(apply,ms));}
-
+  function applyAfterGenerators(){[60,180,420,800].forEach(ms=>setTimeout(apply,ms));}
   document.getElementById('buildBtn')?.addEventListener('click',applyAfterGenerators);
   document.getElementById('generateAllBtn')?.addEventListener('click',applyAfterGenerators);
   document.addEventListener('click',e=>{
     const btn=e.target.closest('.generate-template-btn');
-    if(!btn)return;
-    const card=btn.closest('.stage-card');
-    if(card?.dataset?.stage==='THUMBNAIL')applyAfterGenerators();
+    if(btn?.closest('.stage-card')?.dataset?.stage==='THUMBNAIL')applyAfterGenerators();
   },false);
+
   function checkCurrent(){
     const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]');
     const prompt=card?.querySelector('.image-prompt')?.value||'';
     if(!prompt.trim())return {ok:false,issue:'Thumbnail prompt is empty.',hasVerifiedDeaths:false};
-    const context=preservedContext(prompt,document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'');
+    const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'';
+    const context=preservedContext(prompt,topic);
     const deaths=hasVerifiedDeaths(context);
-    const hasVerifiedBranch=/RIGHT-SIDE CURIOSITY BADGE:\s*verified casualty evidence is present/i.test(prompt);
-    const hasOmitBranch=/CASUALTY BADGE RULE:\s*no verified positive death toll/i.test(prompt);
-    const hasColorOverride=/THUMBNAIL COLOR OVERRIDE LOCK:[\s\S]*?ALWAYS FULL COLOR/i.test(prompt);
-    const hasCropBible=/82.?85%[\s\S]*?12.?15% centered InShot Zoom\/Fill/i.test(prompt);
-    if(!hasColorOverride)return {ok:false,issue:'Thumbnail must include the full-color override and must not inherit the project B&W lock.',hasVerifiedDeaths:deaths};
-    if(!hasCropBible)return {ok:false,issue:'Thumbnail is missing the approved crop-safe master bible for scale, margins and InShot zoom protection.',hasVerifiedDeaths:deaths};
-    if(deaths&&!hasVerifiedBranch)return {ok:false,issue:'Thumbnail casualty badge rule is stale for verified death evidence.',hasVerifiedDeaths:true};
-    if(!deaths&&!hasOmitBranch)return {ok:false,issue:'Thumbnail must explicitly omit the death badge because no verified positive death toll is supplied.',hasVerifiedDeaths:false};
-    return {ok:true,issue:'',hasVerifiedDeaths:deaths,thumbnailColorMode:'color',cropSafeBible:'v1'};
+    const hasColor=/THUMBNAIL COLOR OVERRIDE LOCK:[\s\S]*?ALWAYS FULL COLOR/i.test(prompt);
+    const hasMaster=/UNIVERSAL CENTERED ZOOM-SAFE MASTER FORMAT[\s\S]*?82.?85%[\s\S]*?12.?15% centered InShot Zoom\/Fill/i.test(prompt);
+    const hasCompression=/WHOLE-COMPOSITION COMPRESSION RULE/i.test(prompt);
+    const hasVerified=/RIGHT-SIDE CURIOSITY BADGE:\s*verified casualty evidence is present/i.test(prompt);
+    const hasOmit=/CASUALTY BADGE RULE:\s*no verified positive death toll/i.test(prompt);
+    if(!hasColor)return {ok:false,issue:'Thumbnail must remain FULL COLOR regardless of episode monochrome locks.',hasVerifiedDeaths:deaths};
+    if(!hasMaster||!hasCompression)return {ok:false,issue:'Thumbnail is missing the universal centered Zoom/Fill-safe master format.',hasVerifiedDeaths:deaths};
+    if(deaths&&!hasVerified)return {ok:false,issue:'Thumbnail casualty-badge branch is stale for verified death evidence.',hasVerifiedDeaths:true};
+    if(!deaths&&!hasOmit)return {ok:false,issue:'Thumbnail must explicitly omit the death badge because verified positive death evidence is not supplied.',hasVerifiedDeaths:false};
+    return {ok:true,issue:'',hasVerifiedDeaths:deaths,thumbnailColorMode:'color',cropSafeBible:'master-v2',formatVersion:VERSION};
   }
 
-  window.LDThumbnailFormatLock=Object.freeze({apply,buildPrompt,hasVerifiedDeaths,checkCurrent});
-
-  window.addEventListener('load',()=>setTimeout(apply,450));
-  setTimeout(apply,240);
+  window.LDThumbnailFormatLock=Object.freeze({version:VERSION,apply,buildPrompt,hasVerifiedDeaths,checkCurrent,portraitLayout});
+  window.addEventListener('load',()=>setTimeout(apply,350));
+  setTimeout(apply,180);
 })();
