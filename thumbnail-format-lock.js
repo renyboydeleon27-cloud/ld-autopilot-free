@@ -1,32 +1,62 @@
-/* Living Disaster Book — Thumbnail Master Format v3
-   Universal zoom-out / InShot edit-safe layout for ALL thumbnail design variants. */
+/* Living Disaster Book — Thumbnail Master Format v4
+   Universal zoom-out / InShot edit-safe layout + dynamic topic-family text. */
 (()=>{
   'use strict';
   const stages=document.getElementById('stages');
   if(!stages)return;
 
-  const VERSION='v3.50.9-master-zoomout-edit-safe-v3';
+  const VERSION='v3.51.0-zoomout-dynamic-text-v4';
   const MARKER='THUMBNAIL FORMAT LOCK';
   const COLOR_OVERRIDE='THUMBNAIL COLOR OVERRIDE LOCK';
   const MASTER_SAFE='UNIVERSAL ZOOM-OUT / INSHOT EDIT-SAFE MASTER FORMAT — HIGHEST PRIORITY';
 
+  function hashText(text){
+    let h=2166136261;
+    for(const ch of String(text||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}
+    return h>>>0;
+  }
+  function choose(topic,list,salt=''){return list[hashText(`${topic}|${salt}`)%list.length];}
+
+  const THEMES=[
+    {rx:/dam failure|dam collapse|reservoir breach|dam burst/i,heads:['DAM FAILURE','DAM COLLAPSE'],hooks:['WHEN THE DAM BROKE','WHEN THE WALL OF WATER CAME','WHEN THE RESERVOIR BURST'],visuals:'a failed dam or reservoir setting, powerful floodwater, damaged downstream infrastructure and adult evacuation or rescue activity only where historically supported'},
+    {rx:/chemical attack|chemical weapon|chemical warfare|halabja|sarin|mustard gas|toxic gas/i,heads:['CHEMICAL ATTACK','CHEMICAL WARFARE','TOXIC GAS'],hooks:['WHEN CHEMICAL WEAPONS STRUCK','WHEN THE TOXIC CLOUD SPREAD','WHEN THE AIR TURNED DEADLY','WHEN THE GAS DESCENDED'],visuals:'the event-supported chemical-attack environment or immediate dangerous aftermath, historically appropriate civilian survival response, architecture, streets and atmospheric hazard cues without inventing tactical procedures'},
+    {rx:/toxic leak|gas leak|industrial poison|chemical leak/i,heads:['TOXIC LEAK','TOXIC DISASTER'],hooks:['WHEN THE TOXIC CLOUD SPREAD','WHEN THE AIR TURNED DEADLY','WHEN THE LEAK ESCAPED'],visuals:'event-supported industrial or civic surroundings, toxic atmospheric hazard cues, evacuation or response activity and period-appropriate infrastructure without inventing procedures'},
+    {rx:/earthquake|quake|seismic/i,heads:['EARTHQUAKE','GREAT QUAKE'],hooks:['WHEN THE GROUND BROKE','WHEN THE EARTH SHOOK','WHEN THE QUAKE HIT','WHEN THE CITY SHOOK'],visuals:'cracked streets, collapsing or damaged masonry buildings, dust clouds, broken utilities, rubble, falling debris and earthquake survival activity'},
+    {rx:/tsunami|tidal wave|mega-tsunami/i,heads:['TSUNAMI','GIANT WAVE','WALL OF WATER'],hooks:['WHEN THE SEA RUSHED IN','WHEN THE OCEAN STRUCK','WHEN THE WAVES CAME','WHEN THE COAST WAS HIT'],visuals:'a violently affected coastline, damaged period buildings or coastal structures, boats and debris, rushing or receding water where appropriate, wet streets, rescue or survival activity'},
+    {rx:/tornado|twister/i,heads:['TORNADO','TWISTER'],hooks:['WHEN THE WIND STRUCK','WHEN THE TWISTER HIT','WHEN THE SKY TURNED VIOLENT','WHEN THE STORM TORE THROUGH'],visuals:'a clearly visible tornado or violent rotating storm where event-appropriate, wind-driven debris, damaged buildings, bent vegetation and adult survival activity'},
+    {rx:/cyclone|hurricane|typhoon/i,heads:['CYCLONE','HURRICANE','TYPHOON','SUPERSTORM'],hooks:['WHEN THE STORM HIT','WHEN THE WINDS CAME','WHEN THE STORM SURGED IN','WHEN WIND AND WATER ROSE'],visuals:'violent wind and rain, storm surge or flooding where appropriate, damaged homes, bent vegetation, debris and adult survival activity'},
+    {rx:/flash flood|flood|storm surge/i,heads:['FLOOD','FLASH FLOOD','RAGING WATERS'],hooks:['WHEN THE WATER ROSE','WHEN THE FLOOD CAME','WHEN THE RIVER BROKE FREE','WHEN THE TOWN WENT UNDER'],visuals:'fast or deep floodwater, damaged roads and buildings, floating debris, stranded transport where historically appropriate, rescue or survival activity'},
+    {rx:/avalanche/i,heads:['AVALANCHE','SNOW COLLAPSE'],hooks:['WHEN THE SNOW BROKE LOOSE','WHEN THE AVALANCHE HIT','WHEN THE SLOPE GAVE WAY','WHEN THE MOUNTAIN RELEASED'],visuals:'a massive snow avalanche or its immediate aftermath, deep deposited snow, buried or displaced railway infrastructure where event-appropriate, damaged timber, mountain terrain, conifers and adult survival or response activity'},
+    {rx:/landslide|mudslide|debris flow|glacier collapse/i,heads:['LANDSLIDE','MUDSLIDE','MOUNTAIN COLLAPSE'],hooks:['WHEN THE SLOPE COLLAPSED','WHEN THE HILLS GAVE WAY','WHEN THE MOUNTAIN FELL','WHEN THE EARTH SLID DOWN'],visuals:'a large debris field or moving mass appropriate to the event, buried or damaged structures, blocked roads, unstable terrain and adult survival activity'},
+    {rx:/volcano|eruption|lahar|pyroclastic/i,heads:['ERUPTION','VOLCANO','VOLCANIC ERUPTION'],hooks:['WHEN THE VOLCANO ERUPTED','WHEN ASH FILLED THE SKY','WHEN THE MOUNTAIN ERUPTED','WHEN FIRE CAME FROM THE EARTH'],visuals:'ash, volcanic debris, eruption clouds, lava or lahar only where event-appropriate, damaged settlements, evacuation or survival activity'},
+    {rx:/wildfire|forest fire|firestorm/i,heads:['WILDFIRE','FIRESTORM'],hooks:['WHEN THE FIRE SPREAD','WHEN THE FLAMES ARRIVED','WHEN THE FIRESTORM HIT','WHEN THE LAND BURNED'],visuals:'flames, smoke, embers, burned or threatened structures, evacuation or firefighting activity and adult survival action'},
+    {rx:/urban fire|city fire|great fire|conflagration/i,heads:['CITY FIRE','INFERNO','FIRE DISASTER'],hooks:['WHEN THE CITY BURNED','WHEN THE FLAMES TORE THROUGH','WHEN THE BLAZE SPREAD','WHEN FIRE TOOK OVER'],visuals:'historically supported urban fire, smoke, damaged period buildings, evacuation or firefighting activity and strong city-scale depth'},
+    {rx:/famine|starvation|food crisis/i,heads:['FAMINE','HUNGER CRISIS'],hooks:['WHEN FOOD RAN OUT','WHEN HUNGER TOOK HOLD','WHEN THE CROPS FAILED','WHEN SURVIVAL MEANT HUNGER'],visuals:'affected landscapes, damaged agriculture, relief or aid activity, period food and farming objects, adult survivors and strong environmental storytelling without graphic suffering'},
+    {rx:/drought/i,heads:['DROUGHT','HUNGER CRISIS'],hooks:['WHEN THE RAINS FAILED','WHEN THE LAND DRIED UP','WHEN THE CROPS DIED','WHEN WATER RAN SHORT'],visuals:'dry event-supported landscapes, stressed agriculture or water sources, period tools, relief activity and adult survival context without invented details'},
+    {rx:/heat wave|heatwave|extreme heat/i,heads:['HEAT WAVE','DEADLY HEAT'],hooks:['WHEN THE HEAT WOULD NOT END','WHEN THE TEMPERATURE SOARED','WHEN THE SUMMER TURNED DEADLY'],visuals:'period-appropriate urban or rural heat conditions, exhausted adult civilians, shade/water response and environmental heat cues without invented temperature claims'},
+    {rx:/blizzard|snowstorm|winter storm|extreme cold/i,heads:['BLIZZARD','WINTER STORM','FROZEN DISASTER'],hooks:['WHEN THE SNOW TOOK OVER','WHEN WINTER HIT HARD','WHEN THE COLD TURNED DEADLY','WHEN THE STORM FROZE THE LAND'],visuals:'heavy event-supported snow, wind, buried or blocked infrastructure, cold-weather survival and historically appropriate transport or shelter'},
+    {rx:/dust storm|sandstorm|dust bowl/i,heads:['DUST STORM','SANDSTORM','WALL OF DUST'],hooks:['WHEN THE SKY TURNED TO DUST','WHEN THE STORM BLINDED THE LAND','WHEN THE SAND CAME','WHEN THE AIR DISAPPEARED'],visuals:'a dense wall of dust or sand where event-supported, low visibility, period roads/buildings/fields and adult sheltering or survival activity'},
+    {rx:/locust|swarm|insect plague/i,heads:['LOCUST PLAGUE','SWARM','LOCUST CRISIS'],hooks:['WHEN THE SWARM ARRIVED','WHEN THE SKY FILLED WITH LOCUSTS','WHEN THE CROPS DISAPPEARED','WHEN THE FIELDS WERE STRIPPED'],visuals:'dense airborne swarms, damaged crops, farmland, agricultural tools, worried adult farmers or response crews and strong environmental scale'},
+    {rx:/black death|plague|pandemic|epidemic|outbreak|disease/i,heads:['PLAGUE','PANDEMIC','EPIDEMIC','OUTBREAK'],hooks:['WHEN THE DISEASE SPREAD','WHEN THE OUTBREAK BEGAN','WHEN THE PLAGUE ARRIVED','WHEN ILLNESS TOOK OVER'],visuals:'historically appropriate streets, homes, caregivers or healers, period carts or records, tense adult crowds or empty streets and disease-era atmosphere without gore'},
+    {rx:/xylazine|drug crisis|opioid|public health crisis|health crisis/i,heads:['DRUG CRISIS','HEALTH CRISIS','PUBLIC HEALTH CRISIS'],hooks:['WHEN THE CRISIS SPREAD','WHEN THE STREETS CHANGED','WHEN THE EMERGENCY GREW','WHEN SURVIVAL BECAME A STRUGGLE'],visuals:'event-supported public-health street, outreach, clinic or community context with adult civilians and responders, avoiding sensational suffering or invented medical details'},
+    {rx:/nuclear|radiation|reactor|meltdown|chernobyl|fukushima/i,heads:['NUCLEAR DISASTER','RADIATION DISASTER','REACTOR MELTDOWN'],hooks:['WHEN RADIATION SPREAD','WHEN THE REACTOR FAILED','WHEN THE MELTDOWN BEGAN','WHEN THE INVISIBLE THREAT ESCAPED'],visuals:'event-appropriate damaged infrastructure, evacuation or emergency-response activity, smoke or industrial atmosphere only where historically supported, and period-accurate protective equipment'},
+    {rx:/factory explosion|industrial explosion|plant explosion|refinery explosion/i,heads:['INDUSTRIAL DISASTER','FACTORY EXPLOSION'],hooks:['WHEN THE PLANT EXPLODED','WHEN INDUSTRY TURNED DEADLY','WHEN THE EXPLOSION HIT','WHEN TOXIC SMOKE ROSE'],visuals:'period-appropriate industrial infrastructure, event-supported explosion/fire/smoke damage, emergency response and adult survival activity'},
+    {rx:/shipwreck|maritime disaster|ferry disaster|sinking|ocean liner/i,heads:['SHIPWRECK','MARITIME DISASTER','OCEAN TRAGEDY'],hooks:['WHEN THE SHIP WENT DOWN','WHEN THE SEA TOOK THE VESSEL','WHEN THE VOYAGE FAILED','WHEN THE WRECK BEGAN'],visuals:'event-appropriate vessel, sea conditions, maritime rescue or wreck aftermath and period-correct clothing/equipment without inventing ship details'},
+    {rx:/train disaster|rail disaster|derailment|rail crash/i,heads:['TRAIN DISASTER','RAIL DISASTER','DERAILMENT'],hooks:['WHEN THE TRAIN LEFT THE TRACKS','WHEN THE RAILS FAILED','WHEN THE DERAILMENT HIT'],visuals:'period-appropriate railway, damaged rolling stock or track only where event-supported, adult passengers/responders and grounded rescue or aftermath activity'},
+    {rx:/plane crash|air disaster|aviation disaster|flight crash/i,heads:['AIR DISASTER','PLANE CRASH','FLIGHT TRAGEDY'],hooks:['WHEN THE FLIGHT FAILED','WHEN THE SKY TURNED DEADLY','WHEN THE PLANE WENT DOWN'],visuals:'event-appropriate aircraft or crash setting, rescue/aftermath cues and period-correct aviation details without inventing airline branding'},
+    {rx:/mine disaster|mine collapse|mining disaster|pit collapse/i,heads:['MINE DISASTER','PIT COLLAPSE','TRAPPED BELOW'],hooks:['WHEN THE MINE COLLAPSED','WHEN THE TUNNEL FAILED','WHEN THE EARTH TRAPPED THEM'],visuals:'period-appropriate mine entrance, underground or rescue setting, adult miners/responders, debris and historically grounded equipment'},
+    {rx:/bridge collapse|building collapse|structural collapse|stadium collapse/i,heads:['COLLAPSE','BRIDGE DISASTER','BUILDING FAILURE'],hooks:['WHEN THE STRUCTURE GAVE WAY','WHEN THE BRIDGE FELL','WHEN THE BUILDING COLLAPSED'],visuals:'event-supported structural failure, period-appropriate architecture/infrastructure, debris and adult rescue or survival activity'},
+    {rx:/massacre|genocide|civilian attack|war crime/i,heads:['CIVILIAN ATTACK','MASSACRE','GENOCIDE'],hooks:['WHEN CIVILIANS WERE TARGETED','WHEN WAR TURNED ON THE PEOPLE','WHEN THE ATTACK REACHED THE CITY'],visuals:'historically grounded civilian setting, restrained aftermath or escape context and adult witnesses/survivors without gore, propaganda or invented military detail'}
+  ];
+
   function detectTheme(topic){
-    const t=String(topic||'').toLowerCase();
-    if(/chemical attack|chemical weapon|halabja|sarin|mustard gas/.test(t))return {type:'DISASTER',hook:'WHEN DISASTER STRUCK',visuals:'the event-supported chemical-attack environment or immediate dangerous aftermath, historically appropriate civilian survival response, architecture, streets and atmospheric hazard cues without inventing tactical procedures'};
-    if(/tsunami|tidal wave/.test(t))return {type:'TSUNAMI',hook:'WHEN THE SEA RUSHED IN',visuals:'a violently affected coastline, damaged period buildings or coastal structures, boats and debris, rushing or receding water where appropriate, wet streets, rescue or survival activity'};
-    if(/earthquake|quake|seismic/.test(t))return {type:'EARTHQUAKE',hook:'WHEN THE GROUND BROKE',visuals:'cracked streets, collapsing or damaged masonry buildings, dust clouds, broken utilities, rubble, falling debris and earthquake survival activity'};
-    if(/volcano|eruption|lahar|pyroclastic/.test(t))return {type:'ERUPTION',hook:'WHEN THE MOUNTAIN ERUPTED',visuals:'ash, volcanic debris, eruption clouds, lava or lahar only where event-appropriate, damaged settlements, evacuation or survival activity'};
-    if(/tornado|twister/.test(t))return {type:'TORNADO',hook:'WHEN THE WIND STRUCK',visuals:'a clearly visible tornado or violent rotating storm where event-appropriate, wind-driven debris, damaged buildings, bent vegetation and adult survival activity'};
-    if(/cyclone|hurricane|typhoon/.test(t))return {type:'CYCLONE',hook:'WHEN THE STORM HIT',visuals:'violent wind and rain, storm surge or flooding where appropriate, damaged homes, bent vegetation, debris and adult survival activity'};
-    if(/flood|dam failure|storm surge/.test(t))return {type:'FLOOD',hook:'WHEN THE WATER ROSE',visuals:'fast or deep floodwater, damaged roads and buildings, floating debris, stranded transport where historically appropriate, rescue or survival activity'};
-    if(/avalanche/.test(t))return {type:'AVALANCHE',hook:'WHEN THE SNOW BROKE LOOSE',visuals:'a massive snow avalanche or its immediate aftermath, deep deposited snow, buried or displaced railway infrastructure where event-appropriate, damaged timber, mountain terrain, conifers and adult survival or response activity'};
-    if(/landslide|mudslide|glacier collapse/.test(t))return {type:'LANDSLIDE',hook:'WHEN THE SLOPE COLLAPSED',visuals:'a large debris field or moving mass appropriate to the event, buried or damaged structures, blocked roads, unstable terrain and adult survival activity'};
-    if(/wildfire|forest fire|firestorm/.test(t))return {type:'WILDFIRE',hook:'WHEN THE FIRE SPREAD',visuals:'flames, smoke, embers, burned or threatened structures, evacuation or firefighting activity and adult survival action'};
-    if(/locust|insect|swarm/.test(t))return {type:'LOCUST CRISIS',hook:'WHEN THE SWARM ARRIVED',visuals:'dense airborne swarms, damaged crops, farmland, agricultural tools, worried adult farmers or response crews and strong environmental scale'};
-    if(/black death|plague|epidemic|pandemic|disease/.test(t))return {type:'PLAGUE',hook:'WHEN THE DISEASE SPREAD',visuals:'historically appropriate streets, homes, caregivers or healers, period carts, records, tense adult crowds or empty streets and disease-era atmosphere without gore'};
-    if(/nuclear|radiation/.test(t))return {type:'NUCLEAR DISASTER',hook:'WHEN THE CRISIS BEGAN',visuals:'event-appropriate damaged infrastructure, evacuation or emergency-response activity, smoke or industrial atmosphere only where historically supported, and period-accurate protective equipment'};
-    if(/famine|drought/.test(t))return {type:'FAMINE',hook:'WHEN FOOD RAN OUT',visuals:'affected landscapes, damaged agriculture, relief or aid activity, period food and farming objects, adult survivors and strong environmental storytelling without graphic suffering'};
-    return {type:'DISASTER',hook:'WHEN DISASTER STRUCK',visuals:'the most recognizable physically believable hazard, damaged environment, adult survival response, debris or infrastructure effects specifically supported by the current topic'};
+    const t=String(topic||'');
+    for(const f of THEMES){
+      if(f.rx.test(t))return {type:choose(t,f.heads,'headline'),hook:choose(t,f.hooks,'hook'),visuals:f.visuals,fallback:false};
+    }
+    const first=t.split(/\s+[—-]\s+/)[0].trim();
+    const safe=first&&first.length<=24?first.toUpperCase():'DISASTER';
+    return {type:safe,hook:choose(t,['WHEN EVERYTHING CHANGED','WHEN SURVIVAL BEGAN','WHEN THE CRISIS HIT','WHEN DISASTER STRUCK'],'fallback'),visuals:'the most recognizable physically believable hazard, damaged environment, adult survival response, debris or infrastructure effects specifically supported by the current topic',fallback:true};
   }
 
   function preservedContext(existing,topic){
@@ -92,7 +122,9 @@ ${COLOR_OVERRIDE}: the THUMBNAIL is ALWAYS FULL COLOR, even when the main produc
 
 LAYOUT LOCK: ${layout}
 
-TITLE SYSTEM: Within the protected title block, use one enormous distressed WHITE disaster word or short disaster-type headline based on “${theme.type}”. Keep it extremely readable on a phone. YELLOW STRIP: use the short truthful hook “${theme.hook}” in bold black letters. EVENT ID: beneath the yellow strip, show only a concise event name/year/date that can be derived directly from the exact current topic “${topic}”; do not invent a city, country, date, ranking or statistic. ${showDeathBadge?'RIGHT-SIDE CURIOSITY BADGE: verified casualty evidence is present in supplied historical context, so a strong red badge may use the exact question “HOW MANY DIED?” Do NOT display a casualty number unless explicitly supplied by verified event data. Never invent or estimate a death toll.':'CASUALTY BADGE RULE: no verified positive death toll is supplied in current historical context, so OMIT the “HOW MANY DIED?” badge entirely. Do not imply deaths, invent casualties or replace it with another death-related question.'} INSET FOOTER LEFT: compact “LIVING DISASTER BOOK” branding with a simple globe/book-style icon. INSET FOOTER RIGHT: small readable brand line “REAL DISASTERS. REAL HISTORY. STORIES WE SHOULD NEVER FORGET.”
+DYNAMIC TOPIC TEXT LOCK — HIGH PRIORITY: Do NOT default every episode to “DISASTER / WHEN DISASTER STRUCK”. For THIS CURRENT TOPIC use the exact BIG WHITE MAIN HEADLINE “${theme.type}” and the exact YELLOW STRIP hook “${theme.hook}”. These two strings override any generic headline/hook wording elsewhere in the thumbnail prompt. The selection is based on the current disaster/event family and stays stable for this project while varying across different topics.
+
+EVENT ID: beneath the yellow strip, show only a concise identity derived directly from the exact current topic “${topic}”. Preserve the supplied event/place/country/region and year/date when present; do not invent or replace geography, date, ranking or statistic. ${showDeathBadge?'RIGHT-SIDE CURIOSITY BADGE: verified casualty evidence is present in supplied historical context, so a strong red badge may use the exact question “HOW MANY DIED?” Do NOT display a casualty number unless explicitly supplied by verified event data. Never invent or estimate a death toll.':'CASUALTY BADGE RULE: no verified positive death toll is supplied in current historical context, so OMIT the “HOW MANY DIED?” badge entirely. Do not imply deaths, invent casualties or replace it with another death-related question.'} INSET FOOTER LEFT: compact “LIVING DISASTER BOOK” branding with a simple globe/book-style icon. INSET FOOTER RIGHT: small readable brand line “REAL DISASTERS. REAL HISTORY. STORIES WE SHOULD NEVER FORGET.”
 
 MAIN VISUAL: show one emotionally readable ADULT foreground survivor or responder at the side and scale prescribed by the selected Thumbnail Design, unless that design is intentionally object/symbol/environment-led. Keep the clear face, visible torso and BOTH hands when that design requires hands/action. Never enlarge the person merely to fill the frame. Keep important action above the footer. Behind or around the subject, show the active disaster or immediate dangerous aftermath using ${theme.visuals}. The disaster must be instantly recognizable at thumbnail size. Use strong foreground-midground-background separation and enough breathing room for the title and branding. Adult characters only.
 
@@ -102,10 +134,7 @@ TRUTH / SAFETY LOCK: no “deadliest”, “worst”, record claim, ranking, exa
     return context?`${base}\n\n${context}`:base;
   }
 
-  function fire(el){
-    el.dispatchEvent(new Event('input',{bubbles:true}));
-    el.dispatchEvent(new Event('change',{bubbles:true}));
-  }
+  function fire(el){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
 
   function apply(){
     if(window.LDStoryModes?.enabled())return false;
@@ -122,13 +151,10 @@ TRUTH / SAFETY LOCK: no “deadliest”, “worst”, record claim, ranking, exa
     return true;
   }
 
-  function applyAfterGenerators(){[40,120,260,520,900].forEach(ms=>setTimeout(apply,ms));}
+  function applyAfterGenerators(){[40,120,260,520,900,1250].forEach(ms=>setTimeout(apply,ms));}
   document.getElementById('buildBtn')?.addEventListener('click',applyAfterGenerators);
   document.getElementById('generateAllBtn')?.addEventListener('click',applyAfterGenerators);
-  document.addEventListener('click',e=>{
-    const btn=e.target.closest('.generate-template-btn');
-    if(btn?.closest('.stage-card')?.dataset?.stage==='THUMBNAIL')applyAfterGenerators();
-  },false);
+  document.addEventListener('click',e=>{const btn=e.target.closest('.generate-template-btn');if(btn?.closest('.stage-card')?.dataset?.stage==='THUMBNAIL')applyAfterGenerators();},false);
 
   function checkCurrent(){
     const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]');
@@ -137,21 +163,23 @@ TRUTH / SAFETY LOCK: no “deadliest”, “worst”, record claim, ranking, exa
     const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'';
     const context=preservedContext(prompt,topic);
     const deaths=hasVerifiedDeaths(context);
+    const theme=detectTheme(topic);
     const hasColor=/THUMBNAIL COLOR OVERRIDE LOCK:[\s\S]*?ALWAYS FULL COLOR/i.test(prompt);
     const hasMaster=/UNIVERSAL ZOOM-OUT \/ INSHOT EDIT-SAFE MASTER FORMAT[\s\S]*?78.?82%[\s\S]*?x 10%-90%[\s\S]*?y 12%-88%/i.test(prompt);
     const hasIntent=/generate WIDE FIRST, CROP LATER/i.test(prompt);
     const hasFooter=/FOOTER SAFE ZONE:[\s\S]*?y 79%-85%/i.test(prompt);
-    const hasCompression=/WHOLE-COMPOSITION COMPRESSION RULE/i.test(prompt);
+    const hasDynamic=prompt.includes(`BIG WHITE MAIN HEADLINE “${theme.type}”`)&&prompt.includes(`YELLOW STRIP hook “${theme.hook}”`);
     const hasVerified=/RIGHT-SIDE CURIOSITY BADGE:/i.test(prompt);
     const hasOmit=/CASUALTY BADGE RULE:\s*no verified positive death toll/i.test(prompt);
     if(!hasColor)return {ok:false,issue:'Thumbnail must include the full-color override.',hasVerifiedDeaths:deaths};
-    if(!hasMaster||!hasIntent||!hasFooter||!hasCompression)return {ok:false,issue:'Thumbnail is missing the v3 zoom-out / InShot edit-safe Master Format.',hasVerifiedDeaths:deaths};
+    if(!hasMaster||!hasIntent||!hasFooter)return {ok:false,issue:'Thumbnail is missing the zoom-out / InShot edit-safe Master Format.',hasVerifiedDeaths:deaths};
+    if(!hasDynamic)return {ok:false,issue:'Thumbnail is missing the dynamic topic-family headline/hook lock.',hasVerifiedDeaths:deaths};
     if(deaths&&!hasVerified)return {ok:false,issue:'Thumbnail casualty badge rule is stale for verified death evidence.',hasVerifiedDeaths:true};
     if(!deaths&&!hasOmit)return {ok:false,issue:'Thumbnail must explicitly omit the death badge because no verified positive death toll is supplied.',hasVerifiedDeaths:false};
-    return {ok:true,issue:'',hasVerifiedDeaths:deaths,thumbnailColorMode:'color',cropSafeBible:'v3-zoomout-edit-safe',version:VERSION};
+    return {ok:true,issue:'',hasVerifiedDeaths:deaths,thumbnailColorMode:'color',cropSafeBible:'v4-zoomout-dynamic-text',headline:theme.type,hook:theme.hook,version:VERSION};
   }
 
-  window.LDThumbnailFormatLock=Object.freeze({apply,buildPrompt,hasVerifiedDeaths,checkCurrent,version:VERSION});
+  window.LDThumbnailFormatLock=Object.freeze({apply,buildPrompt,hasVerifiedDeaths,detectTheme,checkCurrent,version:VERSION});
   window.addEventListener('load',()=>setTimeout(apply,320));
   setTimeout(apply,180);
 })();
