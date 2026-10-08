@@ -1,14 +1,14 @@
-/* Living Disaster Book — Thumbnail Master Format v2
-   Universal centered Zoom/Fill-safe layout for ALL thumbnail design variants. */
+/* Living Disaster Book — Thumbnail Master Format v3
+   Universal zoom-out / InShot edit-safe layout for ALL thumbnail design variants. */
 (()=>{
   'use strict';
   const stages=document.getElementById('stages');
   if(!stages)return;
 
-  const VERSION='v3.50.8-master-zoom-safe-v2';
+  const VERSION='v3.50.9-master-zoomout-edit-safe-v3';
   const MARKER='THUMBNAIL FORMAT LOCK';
   const COLOR_OVERRIDE='THUMBNAIL COLOR OVERRIDE LOCK';
-  const MASTER_SAFE='UNIVERSAL CENTERED ZOOM-SAFE MASTER FORMAT — ALL DESIGNS';
+  const MASTER_SAFE='UNIVERSAL ZOOM-OUT / INSHOT EDIT-SAFE MASTER FORMAT — HIGHEST PRIORITY';
 
   function detectTheme(topic){
     const t=String(topic||'').toLowerCase();
@@ -32,7 +32,7 @@
   function preservedContext(existing,topic){
     const text=String(existing||'');
     const current=String(topic||'').trim();
-    const prior=text.match(/CURRENT TOPIC\s*[“"]([^”"]+)[”"]/i)?.[1]?.trim()||'';
+    const prior=text.match(/CURRENT TOPIC\s*[“\"]([^”\"]+)[”\"]/i)?.[1]?.trim()||'';
     if(prior&&current&&prior.toLowerCase()!==current.toLowerCase())return '';
     const markers=['HISTORICAL CONTEXT LOCK:','FACT PACK:'];
     let at=-1;
@@ -54,23 +54,27 @@
   }
 
   function portraitLayout(showDeathBadge){
-    return `${MASTER_SAFE}: This is the permanent geometry lock for ALL 10 Thumbnail Design variants, including Survivor Close-Up, Trigger Object, Split Tension, Looking Back/Escape, Eyes of Disaster, Disaster Symbol, Rescue/Survival, Place Identity, Motion/Escape and Symbolic Punch. If any design-specific instruction pushes essential content toward an edge or conflicts with this geometry, THIS CENTERED ZOOM-SAFE MASTER FORMAT WINS.
+    return `${MASTER_SAFE}: This is the permanent framing and geometry lock for ALL 10 Thumbnail Design variants. The generator must intentionally compose the native thumbnail slightly ZOOMED OUT / PULLED BACK so a later centered 12–15% InShot Zoom/Fill tightens the poster without cutting important detail. If any design-specific instruction creates a tight final crop or pushes essential content toward an edge, THIS MASTER FORMAT WINS.
 
-Deliver portrait 9:16; canonical working canvas 1080×1920. Build ALL ESSENTIAL poster content as one unified composition scaled to roughly 82–85% of the full canvas and centered on nonessential event-specific background bleed. Do not make individual elements edge-dependent. Keep the essential safe frame inside x 8%-92% and y 10%-90%. Leave approximately 8–10% nonessential scene bleed at left/right and 9–10% at top/bottom. The entire essential composition must survive about 12–15% centered InShot Zoom/Fill.
+Deliver portrait 9:16; canonical working canvas 1080×1920. Build ALL ESSENTIAL poster content as ONE unified composition scaled to roughly 78–82% of the full canvas and centered within nonessential event-specific background bleed. Do not make individual elements edge-dependent. Keep the essential safe frame inside x 10%-90% and y 12%-88%. The outer area is nonessential bleed only.
 
-TITLE SAFE ZONE: complete title block y 11%-30%, normally x 9%-91%. Main headline y 11%-21%. Yellow hook strip y 21%-26%. Event/location/year line y 26%-30%. Top 0%-10% is nonessential scene/sky/smoke bleed only. No essential letters near the top or side edges.
+CAMERA DISTANCE LOCK: use a slightly wider / more pulled-back camera framing than a normal finished poster. The native generation must NOT look like the final crop is already consumed. Preserve visible room to crop inward later. Do not enlarge a character, trigger object, hazard or symbol merely to fill empty space.
 
-SUBJECT SAFE ZONE: for normal human-subject designs, keep the dominant adult at or below about 42% of canvas width, with full head, face, torso and any required hands comfortably inside the safe frame. Never enlarge the person merely to fill empty space. Keep important hands/action above roughly y 78%. Design-specific side placement may vary, but the subject must be pulled inward enough to survive centered zoom. Extreme-close-up designs may enlarge eyes/face only when that is the design concept, but all title, event line, critical facial features and footer must still remain inside this same master safe frame.
+TITLE SAFE ZONE: complete title block x 10%-90%, y 12%-28%. Main headline y 12%-20%. Yellow hook strip y 20%-24.5%. Event/location/year line y 24.5%-28%. Top 0%-12% is nonessential sky/smoke/environment breathing room only. No essential letters near the top or side edges.
 
-HAZARD / TRIGGER / SYMBOL SAFE ZONE: keep the recognizable disaster, trigger object, landmark or symbol visually strong but not dependent on the outer 8–10% bleed. Critical hazard cues must remain readable after centered zoom. Foreground trigger objects should be pulled slightly upward/inward instead of sitting on the bottom edge. Do not let the subject cover the only recognizable hazard cue.
+SUBJECT SAFE ZONE: for normal human-subject designs, keep the dominant adult usually around 28–38% of canvas width, with full head, face, torso and any required hands comfortably inside the safe frame. Keep important hands/action above roughly y 78%. Pull the subject inward from the side edge. Extreme-close-up designs may enlarge the intended eyes/face only when that is the concept, but critical facial features, title, event line and footer must remain safe after centered zoom.
 
-${showDeathBadge?'BADGE SAFE RULE: a verified-death curiosity badge may appear only inside the same essential safe frame and must not cover the face, hands, title or primary hazard.':'BADGE SAFE RULE: no casualty/death badge. Use the freed area for hazard readability and breathing room.'}
+HAZARD / TRIGGER / SYMBOL SAFE ZONE: keep the recognizable disaster, trigger object, landmark or symbol visually strong but not dependent on the outer bleed. Critical hazard cues must remain readable after centered zoom. Foreground trigger objects must be pulled upward/inward instead of sitting on the bottom boundary. Do not let the subject cover the only recognizable hazard cue.
 
-FOOTER SAFE ZONE: complete branding within x 8%-92% and y 80%-88%. Keep “LIVING DISASTER BOOK” and the footer tagline fully inset and readable. Leave the lower outer area as nonessential rubble/ground/water/texture bleed. Never place branding directly on the bottom edge.
+${showDeathBadge?'BADGE SAFE RULE: a verified-death curiosity badge may appear only inside the same safe frame and must not cover the face, hands, title, primary hazard or footer.':'BADGE SAFE RULE: no casualty/death badge. Use the freed area for hazard readability and breathing room.'}
 
-WHOLE-COMPOSITION COMPRESSION RULE: if anything feels tight, uniformly reduce and recenter the ENTIRE essential composition together — title, strip, event line, subject, trigger/hazard emphasis and footer. Never solve crop pressure by sacrificing one hand, moving one label, cropping the face, or pushing branding off-screen.
+FOOTER SAFE ZONE: keep ALL branding fully inside x 10%-90% and y 79%-85%. Keep “LIVING DISASTER BOOK” and the footer tagline fully inset and readable. Leave visible nonessential ground/rubble/water/texture bleed BELOW the footer. Never place branding directly on the bottom edge.
 
-ANTI-CROP: no cropped headline letters, event line, face, required hands, key trigger object, logo or footer. No text over the face. Layout stability under Zoom/Fill outranks decorative edge filling.`;
+WHOLE-COMPOSITION COMPRESSION RULE: if anything feels even slightly tight, uniformly reduce and recenter the ENTIRE essential composition together — title, strip, event line, subject, trigger/hazard/symbol emphasis and footer. Never solve crop pressure by sacrificing one hand, moving one label to an edge, cropping the face, enlarging the subject, lowering the footer, or pushing branding off-screen.
+
+ANTI-TIGHT / EDITING INTENT RULE: generate WIDE FIRST, CROP LATER. The first image should look complete but slightly pulled back. After moderate centered Zoom/Fill in InShot it should become tighter and stronger while retaining the full headline, event line, face, required hands, key trigger object, primary hazard cue, logo and footer.
+
+ANTI-CROP: no cropped headline letters, event line, face, required hands, key trigger object, logo or footer. No text over the face. Layout stability under later Zoom/Fill outranks decorative edge filling.`;
   }
 
   function buildPrompt(topic,format,existing){
@@ -79,7 +83,7 @@ ANTI-CROP: no cropped headline letters, event line, face, required hands, key tr
     const context=preservedContext(existing,topic);
     const showDeathBadge=hasVerifiedDeaths(context);
     const layout=format==='longform'
-      ? 'LANDSCAPE SAFE LAYOUT: keep landscape 16:9. Inset all essential text, subject and branding at least 6% from every edge. Keep the title compact, the main adult subject fully readable, the hazard visible, and the footer inset. If the composition becomes tight, uniformly reduce and recenter all essential content together.'
+      ? 'LANDSCAPE SAFE LAYOUT: keep landscape 16:9. Inset all essential text, subject and branding at least 7% from every edge. Use a slightly wider native composition so later editor crop has room. If tight, uniformly reduce and recenter all essential content together.'
       : portraitLayout(showDeathBadge);
 
     const base=`Create a high-impact Living Disaster Book YouTube thumbnail for the CURRENT TOPIC “${topic}”, ${ratio}. ${MARKER}: preserve the approved mobile-first visual hierarchy and branding while allowing the selected Thumbnail Design system to vary composition, subject placement, camera emphasis and disaster scale from episode to episode. Adapt every disaster visual, historical detail, environment and subject to the CURRENT TOPIC only. This must look like a clickable disaster-history thumbnail, not a normal story panel and not an ending card.
@@ -111,14 +115,14 @@ TRUTH / SAFETY LOCK: no “deadliest”, “worst”, record claim, ranking, exa
     const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'Untitled Disaster';
     const format=document.getElementById('format')?.value||'shorts';
     const next=buildPrompt(topic,format,prompt.value);
-    if(prompt.value===next)return false;
+    if(prompt.value===next){prompt.dataset.thumbnailFormatLock=VERSION;return false;}
     prompt.value=next;
     prompt.dataset.thumbnailFormatLock=VERSION;
     fire(prompt);
     return true;
   }
 
-  function applyAfterGenerators(){[60,180,420,800].forEach(ms=>setTimeout(apply,ms));}
+  function applyAfterGenerators(){[40,120,260,520,900].forEach(ms=>setTimeout(apply,ms));}
   document.getElementById('buildBtn')?.addEventListener('click',applyAfterGenerators);
   document.getElementById('generateAllBtn')?.addEventListener('click',applyAfterGenerators);
   document.addEventListener('click',e=>{
@@ -134,18 +138,20 @@ TRUTH / SAFETY LOCK: no “deadliest”, “worst”, record claim, ranking, exa
     const context=preservedContext(prompt,topic);
     const deaths=hasVerifiedDeaths(context);
     const hasColor=/THUMBNAIL COLOR OVERRIDE LOCK:[\s\S]*?ALWAYS FULL COLOR/i.test(prompt);
-    const hasMaster=/UNIVERSAL CENTERED ZOOM-SAFE MASTER FORMAT[\s\S]*?82.?85%[\s\S]*?12.?15% centered InShot Zoom\/Fill/i.test(prompt);
+    const hasMaster=/UNIVERSAL ZOOM-OUT \/ INSHOT EDIT-SAFE MASTER FORMAT[\s\S]*?78.?82%[\s\S]*?x 10%-90%[\s\S]*?y 12%-88%/i.test(prompt);
+    const hasIntent=/generate WIDE FIRST, CROP LATER/i.test(prompt);
+    const hasFooter=/FOOTER SAFE ZONE:[\s\S]*?y 79%-85%/i.test(prompt);
     const hasCompression=/WHOLE-COMPOSITION COMPRESSION RULE/i.test(prompt);
-    const hasVerified=/RIGHT-SIDE CURIOSITY BADGE:\s*verified casualty evidence is present/i.test(prompt);
+    const hasVerified=/RIGHT-SIDE CURIOSITY BADGE:/i.test(prompt);
     const hasOmit=/CASUALTY BADGE RULE:\s*no verified positive death toll/i.test(prompt);
-    if(!hasColor)return {ok:false,issue:'Thumbnail must remain FULL COLOR regardless of episode monochrome locks.',hasVerifiedDeaths:deaths};
-    if(!hasMaster||!hasCompression)return {ok:false,issue:'Thumbnail is missing the universal centered Zoom/Fill-safe master format.',hasVerifiedDeaths:deaths};
-    if(deaths&&!hasVerified)return {ok:false,issue:'Thumbnail casualty-badge branch is stale for verified death evidence.',hasVerifiedDeaths:true};
-    if(!deaths&&!hasOmit)return {ok:false,issue:'Thumbnail must explicitly omit the death badge because verified positive death evidence is not supplied.',hasVerifiedDeaths:false};
-    return {ok:true,issue:'',hasVerifiedDeaths:deaths,thumbnailColorMode:'color',cropSafeBible:'master-v2',formatVersion:VERSION};
+    if(!hasColor)return {ok:false,issue:'Thumbnail must include the full-color override.',hasVerifiedDeaths:deaths};
+    if(!hasMaster||!hasIntent||!hasFooter||!hasCompression)return {ok:false,issue:'Thumbnail is missing the v3 zoom-out / InShot edit-safe Master Format.',hasVerifiedDeaths:deaths};
+    if(deaths&&!hasVerified)return {ok:false,issue:'Thumbnail casualty badge rule is stale for verified death evidence.',hasVerifiedDeaths:true};
+    if(!deaths&&!hasOmit)return {ok:false,issue:'Thumbnail must explicitly omit the death badge because no verified positive death toll is supplied.',hasVerifiedDeaths:false};
+    return {ok:true,issue:'',hasVerifiedDeaths:deaths,thumbnailColorMode:'color',cropSafeBible:'v3-zoomout-edit-safe',version:VERSION};
   }
 
-  window.LDThumbnailFormatLock=Object.freeze({version:VERSION,apply,buildPrompt,hasVerifiedDeaths,checkCurrent,portraitLayout});
-  window.addEventListener('load',()=>setTimeout(apply,350));
+  window.LDThumbnailFormatLock=Object.freeze({apply,buildPrompt,hasVerifiedDeaths,checkCurrent,version:VERSION});
+  window.addEventListener('load',()=>setTimeout(apply,320));
   setTimeout(apply,180);
 })();
