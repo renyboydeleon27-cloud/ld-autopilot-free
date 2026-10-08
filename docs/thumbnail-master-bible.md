@@ -1,85 +1,99 @@
-# Living Disaster Book — Thumbnail Master Bible v2
+# Living Disaster Book — Thumbnail Master Bible v3
 
-Approved crop/scale behavior: the current centered Zoom/Fill-safe thumbnail composition. Canonical working canvas: **1080 × 1920 (9:16)**.
+Approved production behavior: generate the portrait thumbnail **slightly zoomed out / pulled back at native size** so a later centered Zoom/Fill in InShot can tighten the composition without losing essential detail.
+
+Canonical working canvas: **1080 × 1920 (9:16)**.
 
 ## Core purpose
-Every Living Disaster Book portrait thumbnail must remain readable after a moderate centered Zoom/Fill in InShot. Do not build essential content edge-to-edge. Compose the complete important poster content as one unified block reduced to about **82–85% scale** and centered on event-specific background bleed.
+Every Living Disaster Book portrait thumbnail must be designed for post-editing headroom. The native generation should not already consume the final crop. It should look complete and dramatic, but slightly wider than the intended final InShot framing.
+
+**Production rule: generate wide first, crop later.**
 
 This rule applies to **ALL 10 Thumbnail Design variants**. Design-specific composition may vary, but no design may push essential text, faces, hands, trigger objects, hazard cues, logos, or footer branding into unsafe outer edges.
 
-## Universal portrait crop-safe geometry
+## Universal zoom-out / edit-safe geometry
 - Canvas: **1080 × 1920**.
-- Essential safe frame: **x 8–92%** and **y 10–90%**.
-- Approx. pixels: **x 86–994**, **y 192–1728**.
-- Keep about **8–10% nonessential scene bleed** at left/right.
-- Keep about **9–10% nonessential scene bleed** at top/bottom.
-- Target robustness: essential content should survive roughly **12–15% centered editor zoom**.
-- Outer bleed may contain sky, smoke, rubble, ground, water, vegetation, wall texture, or other nonessential scene content only.
+- Unified essential composition scale: roughly **78–82%** of the full canvas.
+- Essential safe frame: **x 10–90%** and **y 12–88%**.
+- Outer frame is nonessential scene bleed only.
+- Target robustness: preserve all essential content after roughly **12–15% centered InShot Zoom/Fill**.
+- Outer bleed may contain sky, smoke, haze, distant terrain, background architecture, rubble, ground, water, vegetation, dust, flame glow, or other nonessential scene texture.
 
 ## Master priority
-If a selected Thumbnail Design conflicts with this crop-safe geometry, **the centered Zoom/Fill-safe Master Format wins**.
+If a selected Thumbnail Design conflicts with this geometry or creates an already-tight final crop, **the Universal Zoom-Out / InShot Edit-Safe Master Format wins**.
 
-The 10-design system may change subject placement, camera height, pose, hazard scale, object emphasis, visual symbol, or environment emphasis. It may not break safe margins.
+The 10-design system may change subject side, camera height, posture, hazard scale, object emphasis, symbol, or environmental focus. It may not remove editor headroom.
+
+## Camera-distance lock
+Use a slightly wider / more pulled-back camera framing than a normal final poster.
+
+The native thumbnail must:
+- preserve visible crop allowance on all sides;
+- keep critical elements inward from the frame edges;
+- avoid enlarging a person, trigger object, hazard, or symbol simply to fill empty space;
+- remain visually complete before editing;
+- become tighter and stronger after moderate centered zoom.
 
 ## Title block
-- Complete title system: **y 11–30%**.
-- Main headline: **y 11–21%**.
-- Yellow hook strip: **y 21–26%**.
-- Event/location/year line: **y 26–30%**.
-- Title width normally stays inside **x 9–91%**.
-- Top **0–10%** is nonessential scene/sky/smoke bleed only.
+Keep the complete title system inside **x 10–90%**, **y 12–28%**.
+
+- Main headline: **y 12–20%**.
+- Yellow hook strip: **y 20–24.5%**.
+- Event/location/year line: **y 24.5–28%**.
+- Top **0–12%** is nonessential sky/smoke/environment breathing room only.
 - No headline letters may depend on the outer crop zone.
 
 ## Human-subject designs
 For normal survivor/responder/escape/rescue thumbnails:
-- Keep the dominant adult at or below about **42% of canvas width**.
-- Keep the full head inside the frame with breathing room.
+- Dominant adult width should usually remain around **28–38% of canvas width**.
+- Keep full head and face comfortably inside the safe frame.
 - Keep required hands fully visible and preferably above **y 78%**.
+- Pull the subject inward from the left/right boundary.
 - Never enlarge the person merely to fill empty space.
-- Side placement may vary by design, but the subject must remain inward enough to survive centered Zoom/Fill.
 - Do not let the subject cover the only recognizable disaster cue.
 
-### Design No. 4 — Looking Back / Escape reference
-- Character box approximately **x 50–92%**, **y 32–86%**.
-- Full head top around **y 32–35%**.
-- Head center approximately **x 72–76%**, **y 41–44%**.
-- Hazard/environment normally readable opposite the subject around **x 5–60%**, **y 30–80%**.
-
-These values are a useful reference, not permission to violate the universal safe frame.
-
-## Extreme close-up / eyes designs
-An eyes/face design may enlarge the intended facial crop because that is its concept, but:
-- critical eyes/pupils must remain inside the safe frame;
-- title, yellow strip, event line, and branding must still survive centered zoom;
-- no essential facial feature may depend on the outer bleed zone.
+Extreme-close-up / eye designs may intentionally enlarge the intended facial crop, but critical eyes/pupils, title, event line, and branding must still survive centered zoom.
 
 ## Trigger-object designs
-- The trigger object may be prominent but should be pulled **upward and inward** from the bottom/side edge.
-- The object must remain readable after centered zoom.
-- The object may not displace the subject, event line, or footer into unsafe areas.
+- The trigger object may be prominent but must remain pulled **upward and inward** from the bottom/side edge.
+- The object must still read after centered zoom.
+- Do not let the object force the title, subject, or footer outward.
 
 ## Symbol / landmark / environment-led designs
-- Critical symbol, landmark, or hazard identity must remain inside the safe frame.
-- Background bleed can extend outward, but the only recognizable event cue cannot sit solely in the bleed zone.
+- Keep the critical symbol, landmark, or hazard identity inside the safe frame.
+- Background bleed may extend outward, but the only recognizable event cue cannot sit solely in the bleed zone.
+
+## Hazard readability
+The disaster must remain recognizable after later editor zoom.
+
+- Keep critical hazard cues inside the essential composition.
+- Preserve foreground-midground-background separation.
+- Do not allow the main subject to hide the only readable hazard cue.
 
 ## Footer / branding
-- Keep all important footer branding within **y 80–88%**.
-- Keep footer content inside **x 8–92%**.
-- Leave the lower outer area as nonessential scene/texture bleed.
-- Branding must never sit directly on the bottom edge.
+Keep all important footer branding within:
+- **x 10–90%**
+- **y 79–85%**
+
+Leave visible nonessential scene/ground/texture bleed **below** the footer. Branding must never sit directly on the bottom edge.
 
 ## Whole-composition compression lock
-When a generated draft feels strong but gets cropped in InShot, the correct fix is **not** to move only one label, cut one hand, shrink one logo, or crop one character.
+If a draft feels even slightly tight, do **not** fix one element at a time.
 
-Uniformly reduce and recenter the **entire essential composition together**:
+Uniformly reduce and recenter the entire essential composition together:
 - headline
 - yellow hook strip
 - event line
-- main subject / critical trigger object / symbol
+- main subject / trigger object / symbol
 - hazard emphasis
 - footer branding
 
-Preserve relative hierarchy while increasing outer background bleed.
+Do not solve crop pressure by cutting one hand, cropping a face edge, raising/lowering one text block to the frame boundary, enlarging the subject, or pushing the footer off-screen.
+
+## Anti-tight rule
+The generated thumbnail must not look like the final crop has already been consumed.
+
+There must still be safe room for the editor to crop inward later.
 
 ## Anti-crop lock
 No cropped:
@@ -88,13 +102,14 @@ No cropped:
 - face or critical facial feature
 - required hands
 - key trigger object
+- critical hazard cue
 - logo
 - footer/tagline
 
 No text over the face.
 
 ## Design flexibility
-This Master Bible controls **scale, safety margins, centered composition, and crop survival**, not creative sameness. The 10-design rotation should still vary subject side, camera emphasis, posture, disaster scale, environmental depth, and focal strategy.
+This Master Bible controls **camera distance, scale, safety margins, crop headroom, and Zoom/Fill survival**, not creative sameness. The 10-design rotation should still vary subject side, camera emphasis, posture, disaster scale, environmental depth, and focal strategy.
 
 ## Event accuracy
-Any old approved sample is a geometry/style reference only. Never reuse its disaster-specific fire, buildings, vehicles, clothing, skyline, terrain, hazard, or wording for unrelated events. Every thumbnail must rebuild the historical environment and event visual for the CURRENT TOPIC.
+Any approved sample is a geometry/style reference only. Never reuse its disaster-specific fire, buildings, vehicles, clothing, skyline, terrain, hazard, or wording for unrelated events. Every thumbnail must rebuild the historical environment and event visual for the CURRENT TOPIC.
