@@ -1,12 +1,13 @@
-/* Living Disaster Book — Thumbnail Master Format v6
-   FINAL approved reference: strong InShot edit-safe geometry + dynamic topic-family text + NO footer branding/text. */
+/* Living Disaster Book — Thumbnail Master Format v7
+   FINAL reference: strong InShot-safe geometry + dynamic topic text + no footer + fresh composition + event accuracy. */
 (()=>{
 'use strict';
 const stages=document.getElementById('stages');if(!stages)return;
-const VERSION='v3.51.2-final-no-footer-v6';
+const VERSION='v3.51.3-final-accuracy-unique-v7';
 const MARKER='THUMBNAIL FORMAT LOCK';
 const COLOR='THUMBNAIL COLOR OVERRIDE LOCK';
 const MASTER='UNIVERSAL STRONG INSHOT EDIT-SAFE MASTER FORMAT — HIGHEST PRIORITY';
+const FRESH='UNIVERSAL FRESH COMPOSITION + EVENT ACCURACY LOCK — HIGH PRIORITY';
 function hash(s){let h=2166136261;for(const c of String(s||'')){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
 function pick(topic,a,s=''){return a[hash(topic+'|'+s)%a.length];}
 const F=[
@@ -48,6 +49,8 @@ PORTRAIT 9:16 · canonical 1080×1920. Build ALL essential poster content as one
 
 TOP BREATHING ROOM: y 0%-15% is nonessential sky/smoke/environment only. NO headline pixel, face, hand or event line may enter this region.
 
+CLEAN TITLE BACKDROP LOCK: keep the area above and immediately behind the headline visually quiet. Prefer open sky, smoke, haze, cloud or low-detail atmosphere. Do NOT place a large mountain ridge, landmark, roofline, tower, vehicle, face or busy structure directly above/behind the headline when it competes with text readability. Event-essential terrain may remain in the wider scene, but lower it beneath the title block or keep it subdued and nonessential in this top zone.
+
 TITLE PROTECTED BOX: entire title system x 12%-88%, y 15%-30%. Main headline y 15%-21.5%. Yellow hook y 21.5%-25.5%. Event line y 25.5%-30%. Treat these three lines as ONE centered block. If the headline is long, REDUCE font size or use a compact two-line headline INSIDE this box; NEVER crop letters or push them above y 15%.
 
 SUBJECT: normal human-subject designs target only 26–34% of canvas width. Pull the subject inward and slightly upward. Full head, face, torso and required hands must remain inside x 12%-88%, y 30%-78%. Do not enlarge the person to fill empty space.
@@ -67,6 +70,10 @@ ${COLOR}: THUMBNAIL ALWAYS FULL COLOR. Never inherit the episode B&W/grayscale l
 
 LAYOUT LOCK: ${layout}
 
+${FRESH}: Every generated thumbnail must feel newly staged for the CURRENT TOPIC while keeping this master format. Do NOT clone or trace a previous thumbnail's main face, hairstyle, wardrobe pattern, body pose, hand gesture, subject side, camera height, camera distance, foreground object arrangement, hazard placement, crowd arrangement or background geometry. Avoid the same leaning-forward survivor, same hand-to-mouth pose, same centered face and same left/right hazard split across consecutive projects when another truthful composition is available. Supporting adults must not be duplicated, mirrored or rendered as accidental twins. If the same topic is regenerated, create a fresh composition rather than reproducing the previous image.
+
+EVENT ACCURACY LOCK: The CURRENT TOPIC, its supplied location/region and year/date are authoritative. Rebuild the image for that event only. Match the period and place in architecture, street/ground materials, terrain, vegetation, utilities, vehicles, tools, clothing and infrastructure. Use only event-supported hazard mechanisms and plausible civilian response. Never import scenery, fire, waves, snow, skyline, vehicles, clothing, landmarks, props or disaster effects from another production. Never invent a named landmark, readable sign, flag, institution, exact street plan or modern object merely for drama. When an exact detail is uncertain, prefer restrained period-plausible local forms instead of false specificity.
+
 DYNAMIC TOPIC TEXT LOCK — HIGH PRIORITY: BIG WHITE MAIN HEADLINE exactly “${t.type}”. YELLOW STRIP exactly “${t.hook}”. These override generic “DISASTER / WHEN DISASTER STRUCK” wording. EVENT ID below the yellow strip: concise event/place/country/region/year/date derived only from the exact topic “${topic}”. Do not invent facts.
 
 ${hd?'CURIOSITY BADGE: verified positive death evidence exists in preserved context, so “HOW MANY DIED?” may be used without displaying an invented number.':'CASUALTY BADGE RULE: omit “HOW MANY DIED?” and all death-related badges because no verified positive death evidence is supplied in preserved context.'}
@@ -82,6 +89,6 @@ function fire(el){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatc
 function apply(){if(window.LDStoryModes?.enabled())return false;const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]'),p=card?.querySelector('.image-prompt');if(!p)return false;const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'Untitled Disaster',format=document.getElementById('format')?.value||'shorts',next=buildPrompt(topic,format,p.value);if(p.value===next){p.dataset.thumbnailFormatLock=VERSION;return false;}p.value=next;p.dataset.thumbnailFormatLock=VERSION;fire(p);return true;}
 function after(){[40,120,260,520,900,1300].forEach(ms=>setTimeout(apply,ms));}
 document.getElementById('buildBtn')?.addEventListener('click',after);document.getElementById('generateAllBtn')?.addEventListener('click',after);document.addEventListener('click',e=>{const b=e.target.closest('.generate-template-btn');if(b?.closest('.stage-card')?.dataset?.stage==='THUMBNAIL')after();},false);
-function checkCurrent(){const c=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]'),p=c?.querySelector('.image-prompt')?.value||'';if(!p.trim())return{ok:false,issue:'Thumbnail prompt is empty.'};const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'',t=theme(topic);const geometry=/74.?78%[\s\S]*?x 12%-88%[\s\S]*?y 15%-85%/i.test(p),dynamic=p.includes(`HEADLINE exactly “${t.type}”`)&&p.includes(`YELLOW STRIP exactly “${t.hook}”`),noFooter=/BOTTOM TEXT-FREE LOCK[\s\S]*?do NOT render footer branding/i.test(p)&&!/FOOTER LEFT:|FOOTER RIGHT:/i.test(p);const ok=geometry&&dynamic&&noFooter;return ok?{ok:true,issue:'',version:VERSION,headline:t.type,hook:t.hook,cropSafeBible:'v6-final-no-footer',footerMode:'none'}:{ok:false,issue:'Thumbnail is missing the v6 final no-footer reference lock, strong InShot-safe geometry, or dynamic text lock.'};}
+function checkCurrent(){const c=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]'),p=c?.querySelector('.image-prompt')?.value||'';if(!p.trim())return{ok:false,issue:'Thumbnail prompt is empty.'};const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'',t=theme(topic);const geometry=/74.?78%[\s\S]*?x 12%-88%[\s\S]*?y 15%-85%/i.test(p),dynamic=p.includes(`HEADLINE exactly “${t.type}”`)&&p.includes(`YELLOW STRIP exactly “${t.hook}”`),noFooter=/BOTTOM TEXT-FREE LOCK[\s\S]*?do NOT render footer branding/i.test(p)&&!/FOOTER LEFT:|FOOTER RIGHT:/i.test(p),fresh=p.includes(FRESH)&&/EVENT ACCURACY LOCK:/i.test(p),clean=/CLEAN TITLE BACKDROP LOCK:/i.test(p);const ok=geometry&&dynamic&&noFooter&&fresh&&clean;return ok?{ok:true,issue:'',version:VERSION,headline:t.type,hook:t.hook,cropSafeBible:'v7-final-accuracy-unique',footerMode:'none',freshComposition:true,eventAccuracy:true,cleanTitleBackdrop:true}:{ok:false,issue:'Thumbnail is missing v7 final accuracy/uniqueness, clean-title, no-footer, InShot-safe geometry, or dynamic text lock.'};}
 window.LDThumbnailFormatLock=Object.freeze({apply,buildPrompt,detectTheme:theme,hasVerifiedDeaths:deaths,checkCurrent,version:VERSION});window.addEventListener('load',()=>setTimeout(apply,300));setTimeout(apply,160);
 })();
