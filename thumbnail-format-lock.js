@@ -1,9 +1,9 @@
-/* Living Disaster Book — Thumbnail Master Format v5
-   Stronger InShot edit-safe geometry + dynamic topic-family text. */
+/* Living Disaster Book — Thumbnail Master Format v6
+   FINAL approved reference: strong InShot edit-safe geometry + dynamic topic-family text + NO footer branding/text. */
 (()=>{
 'use strict';
 const stages=document.getElementById('stages');if(!stages)return;
-const VERSION='v3.51.1-strong-inshot-safe-v5';
+const VERSION='v3.51.2-final-no-footer-v6';
 const MARKER='THUMBNAIL FORMAT LOCK';
 const COLOR='THUMBNAIL COLOR OVERRIDE LOCK';
 const MASTER='UNIVERSAL STRONG INSHOT EDIT-SAFE MASTER FORMAT — HIGHEST PRIORITY';
@@ -46,7 +46,7 @@ function portrait(hasDeaths){return `${MASTER}: Native generation MUST be visibl
 
 PORTRAIT 9:16 · canonical 1080×1920. Build ALL essential poster content as one unified centered block using only about 74–78% of the full canvas. Preserve generous nonessential background bleed around it. Keep essential content inside x 12%-88% and y 15%-85%. The image should look slightly too wide at native size rather than already final-cropped.
 
-TOP BREATHING ROOM: y 0%-15% is nonessential sky/smoke/environment only. NO headline pixel, face, hand, logo or event line may enter this region.
+TOP BREATHING ROOM: y 0%-15% is nonessential sky/smoke/environment only. NO headline pixel, face, hand or event line may enter this region.
 
 TITLE PROTECTED BOX: entire title system x 12%-88%, y 15%-30%. Main headline y 15%-21.5%. Yellow hook y 21.5%-25.5%. Event line y 25.5%-30%. Treat these three lines as ONE centered block. If the headline is long, REDUCE font size or use a compact two-line headline INSIDE this box; NEVER crop letters or push them above y 15%.
 
@@ -56,12 +56,12 @@ HAZARD / TRIGGER / SYMBOL: keep the critical cue inside x 10%-90%, y 30%-76%. Fo
 
 ${hasDeaths?'BADGE: if verified death evidence exists, any red curiosity badge must stay inside x 12%-88%, y 34%-72% and must not cover the face, title or hazard.':'BADGE: no casualty/death badge. Use that space for scene breathing room.'}
 
-FOOTER PROTECTED BOX: move branding HIGHER. Keep complete footer inside x 12%-88%, y 74%-82%. Leave y 82%-100% as mostly nonessential ground/texture/background bleed. Never place the logo/tagline at the bottom edge.
+BOTTOM TEXT-FREE LOCK — FINAL APPROVED REFERENCE: NO footer branding, NO “LIVING DISASTER BOOK” text, NO book/globe icon, NO tagline, NO channel logo, NO bottom caption, and NO decorative badge in the lower area. From roughly y 74%-100%, allow only natural illustrated scene continuation such as ground, rubble, road, water, snow, vegetation, clothing, debris, atmosphere or other event-appropriate visual material. The bottom must feel clean and uncluttered, matching the approved final reference.
 
-WHOLE-POSTER SHRINK RULE: if anything feels tight, shrink/recenter headline + hook + event line + subject + hazard/object + footer TOGETHER. Never crop one hand, face, title letter or footer to gain drama.
+WHOLE-POSTER SHRINK RULE: if anything feels tight, shrink/recenter headline + hook + event line + subject + hazard/object TOGETHER. Never crop one hand, face or title letter to gain drama.
 
-INSHOT SURVIVAL TEST: after an imagined centered 15–18% Zoom/Fill, the FULL headline, yellow strip, event line, face, required hands, critical hazard/trigger object, logo and footer must still remain visible. Generate WIDE FIRST, CROP LATER.`;}
-function buildPrompt(topic,format,existing){const t=theme(topic),ctx=context(existing,topic),hd=deaths(ctx),ratio=format==='longform'?'landscape 16:9':'portrait 9:16',layout=format==='longform'?'LANDSCAPE SAFE LAYOUT: keep all essential content at least 9% inside every edge and use a slightly wider native framing.':portrait(hd);const base=`Create a high-impact Living Disaster Book YouTube thumbnail for the CURRENT TOPIC “${topic}”, ${ratio}. ${MARKER}: preserve the approved Living Disaster Book hierarchy while adapting every visual detail to the CURRENT TOPIC only. This is a clickable disaster-history thumbnail, not a story panel or ending card.
+INSHOT SURVIVAL TEST: after an imagined centered 15–18% Zoom/Fill, the FULL headline, yellow strip, event line, face, required hands and critical hazard/trigger object must still remain visible. Generate WIDE FIRST, CROP LATER.`;}
+function buildPrompt(topic,format,existing){const t=theme(topic),ctx=context(existing,topic),hd=deaths(ctx),ratio=format==='longform'?'landscape 16:9':'portrait 9:16',layout=format==='longform'?'LANDSCAPE SAFE LAYOUT: keep all essential content at least 9% inside every edge and use a slightly wider native framing. Bottom area must contain scene only—no footer branding, logo, tagline or channel text.':portrait(hd);const base=`Create a high-impact Living Disaster Book YouTube thumbnail for the CURRENT TOPIC “${topic}”, ${ratio}. ${MARKER}: preserve the approved Living Disaster Book hierarchy while adapting every visual detail to the CURRENT TOPIC only. This is a clickable disaster-history thumbnail, not a story panel or ending card.
 
 ${COLOR}: THUMBNAIL ALWAYS FULL COLOR. Never inherit the episode B&W/grayscale lock. Use rich controlled full-color historical anime/graphic-novel illustration with period-appropriate materials, skin, clothing and environment.
 
@@ -71,7 +71,7 @@ DYNAMIC TOPIC TEXT LOCK — HIGH PRIORITY: BIG WHITE MAIN HEADLINE exactly “${
 
 ${hd?'CURIOSITY BADGE: verified positive death evidence exists in preserved context, so “HOW MANY DIED?” may be used without displaying an invented number.':'CASUALTY BADGE RULE: omit “HOW MANY DIED?” and all death-related badges because no verified positive death evidence is supplied in preserved context.'}
 
-FOOTER LEFT: “LIVING DISASTER BOOK” with compact book/globe icon. FOOTER RIGHT: “REAL DISASTERS. REAL HISTORY. STORIES WE SHOULD NEVER FORGET.” Keep both fully inside the protected footer box.
+BOTTOM TEXT-FREE LOCK — FINAL APPROVED REFERENCE: do NOT render footer branding. Do NOT render “LIVING DISASTER BOOK”, a globe/book icon, channel logo, “REAL DISASTERS. REAL HISTORY. STORIES WE SHOULD NEVER FORGET.”, or any other bottom text/tagline. Continue the illustrated scene naturally to the bottom edge instead.
 
 MAIN VISUAL: one emotionally readable ADULT foreground survivor/responder unless the selected design is object/symbol/environment-led. Keep required hands visible. Show ${t.visuals}. The event must remain recognizable at thumbnail size with strong foreground-midground-background depth.
 
@@ -82,6 +82,6 @@ function fire(el){el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatc
 function apply(){if(window.LDStoryModes?.enabled())return false;const card=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]'),p=card?.querySelector('.image-prompt');if(!p)return false;const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'Untitled Disaster',format=document.getElementById('format')?.value||'shorts',next=buildPrompt(topic,format,p.value);if(p.value===next){p.dataset.thumbnailFormatLock=VERSION;return false;}p.value=next;p.dataset.thumbnailFormatLock=VERSION;fire(p);return true;}
 function after(){[40,120,260,520,900,1300].forEach(ms=>setTimeout(apply,ms));}
 document.getElementById('buildBtn')?.addEventListener('click',after);document.getElementById('generateAllBtn')?.addEventListener('click',after);document.addEventListener('click',e=>{const b=e.target.closest('.generate-template-btn');if(b?.closest('.stage-card')?.dataset?.stage==='THUMBNAIL')after();},false);
-function checkCurrent(){const c=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]'),p=c?.querySelector('.image-prompt')?.value||'';if(!p.trim())return{ok:false,issue:'Thumbnail prompt is empty.'};const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'',t=theme(topic);const ok=/74.?78%[\s\S]*?x 12%-88%[\s\S]*?y 15%-85%/i.test(p)&&/FOOTER PROTECTED BOX:[\s\S]*?y 74%-82%/i.test(p)&&p.includes(`HEADLINE exactly “${t.type}”`)&&p.includes(`YELLOW STRIP exactly “${t.hook}”`);return ok?{ok:true,issue:'',version:VERSION,headline:t.type,hook:t.hook,cropSafeBible:'v5-strong-inshot-safe'}:{ok:false,issue:'Thumbnail is missing the v5 strong InShot-safe geometry or dynamic text lock.'};}
+function checkCurrent(){const c=stages.querySelector('.stage-card[data-stage="THUMBNAIL"]'),p=c?.querySelector('.image-prompt')?.value||'';if(!p.trim())return{ok:false,issue:'Thumbnail prompt is empty.'};const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'',t=theme(topic);const geometry=/74.?78%[\s\S]*?x 12%-88%[\s\S]*?y 15%-85%/i.test(p),dynamic=p.includes(`HEADLINE exactly “${t.type}”`)&&p.includes(`YELLOW STRIP exactly “${t.hook}”`),noFooter=/BOTTOM TEXT-FREE LOCK[\s\S]*?do NOT render footer branding/i.test(p)&&!/FOOTER LEFT:|FOOTER RIGHT:/i.test(p);const ok=geometry&&dynamic&&noFooter;return ok?{ok:true,issue:'',version:VERSION,headline:t.type,hook:t.hook,cropSafeBible:'v6-final-no-footer',footerMode:'none'}:{ok:false,issue:'Thumbnail is missing the v6 final no-footer reference lock, strong InShot-safe geometry, or dynamic text lock.'};}
 window.LDThumbnailFormatLock=Object.freeze({apply,buildPrompt,detectTheme:theme,hasVerifiedDeaths:deaths,checkCurrent,version:VERSION});window.addEventListener('load',()=>setTimeout(apply,300));setTimeout(apply,160);
 })();
