@@ -1,7 +1,7 @@
-/* NER Studio PWA Service Worker 4.0.29
+/* NER Studio PWA Service Worker 4.0.30
    Cache/offline/update only. No JavaScript concatenation, injection, rewriting,
    or runtime business logic. App behavior belongs to normal versioned files. */
-const CACHE_NAME='ner-studio-pwa-4-0-29';
+const CACHE_NAME='ner-studio-pwa-4-0-30';
 const CORE_SHELL=[
  './','./index.html','./styles.css?v=3.46.3','./manifest.webmanifest?v=2','./app-icon.svg?v=2',
  './app.js?v=3.50.10','./project-library.js?v=3.49.27','./project-locks.js?v=3.49.11',
@@ -9,8 +9,8 @@ const CORE_SHELL=[
  './smart-narration-progress.js?v=1.0.1',
  './disaster-progression-engine.js?v=3.49.2','./public-health-policy.js?v=1.3.8',
  './thumbnail-format-lock.js?v=3.51.4','./thumbnail-randomization.js?v=3.42.3',
- './halabja-p4-hotfix.js?v=1.0-direct','./aberfan-p4-hotfix.js?v=1.0','./halabja-event-panel-engine.js?v=1.0',
- './ner-core-4.js?v=4.0.0','./ner-stage-semantics-v4.js?v=4.0.1','./ner-family-planner-v4.js?v=4.0.1','./ner-core-bridge.js?v=4.0.2','./ner-semantic-guard-v4.js?v=4.0.6','./ner-human-life-engine.js?v=1.1.0',
+ './halabja-p4-hotfix.js?v=1.0-direct','./aberfan-p4-hotfix.js?v=1.3','./halabja-event-panel-engine.js?v=1.0',
+ './ner-core-4.js?v=4.0.0','./ner-stage-semantics-v4.js?v=4.0.1','./ner-family-planner-v4.js?v=4.0.1','./ner-core-bridge.js?v=4.0.3','./ner-semantic-guard-v4.js?v=4.0.7','./ner-human-life-engine.js?v=1.1.1',
  './ner-source-story-v4.js?v=4.0.0','./ner-project-store-v4.js?v=4.0.0','./ner-core-diagnostics.js?v=4.0.0','./ner-final-audit-v4.js?v=4.0.0'
 ];
 self.addEventListener('install',event=>{
