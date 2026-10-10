@@ -1,65 +1,66 @@
-/* NER Studio — Aberfan P4 mist/rumble scene lock v1.0
-   Prevents P4 from repeating P3's hazard-onset fingerprint. P3 owns the first
-   visible coal-tip collapse; P4 moves to a village doorway/street viewpoint where
-   mist obscures the approaching slide and an adult hears the deep rumble.
-   Local-only scene repair; no API calls. Approved/frozen P4 is never rewritten. */
+/* NER Studio — Aberfan event locks v1.1
+   P4: mist/rumble approach beat; P5: first structural impact beat.
+   Local-only repairs; no API calls. Approved/frozen panels are never rewritten. */
 (function(){'use strict';
-if(window.__ldAberfanP4FixV10)return;
-window.__ldAberfanP4FixV10=true;
-const VERSION='1.0';
+if(window.__ldAberfanP4FixV11)return;
+window.__ldAberfanP4FixV11=true;
+const VERSION='1.1';
 const TOPIC_RE=/aberfan\s+disaster.*(?:wales|1966)|aberfan.*1966/i;
-const LOCK='ABERFAN P4 MIST-RUMBLE LOCK V1.0';
+const LOCK='ABERFAN P4 MIST-RUMBLE LOCK V1.1';
 const SCENE='KEEP CURRENT SCENE — '+LOCK+' — CORE 4 FAMILY-PLANNED SCENE — P4 · landslide · onset. LOCATION: a different village-level setup from P3: a narrow 1966 Aberfan village street immediately outside an intact terraced-house doorway, with the house wall and doorway as foreground scale, intact neighboring terraces in the midground, and the mist-obscured coal-waste slope aligned in the distant background. PRIMARY ACTION: one unnamed adult resident stands beside the doorway, pauses at the sudden deep rumble, raises the head toward the sound, then takes one short backward step toward the doorway while keeping attention on the mist; this is a listening/orienting beat, not another P3 retreat-from-the-first-collapse shot. CAMERA: mostly locked doorway-side human-height framing with only a very slow lateral drift, preserving the street, doorway and obscured hillside on one coherent axis. TIMING: 0.0–2.0s: establish the intact doorway, adult and mist-limited village depth; the adult visibly pauses as the deep rumble begins, with no building impact. 2.0–7.0s: the adult raises the head toward the sound and makes one short backward step toward the doorway while mist shifts naturally across the background; through the haze, only partial dark movement of the already-moving coal-waste mass becomes intermittently readable. 7.0–10.0s: the mist thins just enough to make the approaching dark coal-waste mass unmistakable behind the village while the adult holds near the doorway, tense and listening. Preserve P3 canon that the coal-tip collapse has already begun, but do NOT replay the initial breakaway. Stop before any structure is struck. No school impact, no crushed buildings, no peak destruction, no children, no crowd, no siren, no dialogue, no music. Natural mist/rain ambience and a physically grounded deep rumble only. FAMILY PHYSICS: the moving material is dense wet man-made coal spoil/slurry and debris traveling downslope under gravity, never smoke, lava, a water-only flood, or a natural mountain rock avalanche.';
-
-function topic(){
- const typed=document.getElementById('topic')?.value?.trim();
- if(typed)return typed;
- const title=document.getElementById('projectTitle')?.textContent?.trim();
- return title&&title!=='No production yet'?title:'';
-}
+function topic(){const typed=document.getElementById('topic')?.value?.trim();if(typed)return typed;const title=document.getElementById('projectTitle')?.textContent?.trim();return title&&title!=='No production yet'?title:'';}
 function card(){return document.querySelector('.stage-card[data-stage="P4"]');}
-function target(c){
- if(!c||!TOPIC_RE.test(topic()))return false;
- if(c.querySelector('.done-toggle')?.checked)return false;
- if(window.NERCore4?.frozen?.(c))return false;
- return true;
-}
+function target(c){if(!c||!TOPIC_RE.test(topic()))return false;if(c.querySelector('.done-toggle')?.checked)return false;if(window.NERCore4?.frozen?.(c))return false;return true;}
 function currentScene(c){return String(c?.querySelector('.video-scene')?.value||c?.dataset?.videoScene||'').trim();}
 function valid(c){return currentScene(c).includes(LOCK);}
-function clearGenerated(c){
- c.dataset.textVideoPrompt='';
- c.dataset.textVideoSignature='';
- delete c.dataset.smartReady;
- delete c.dataset.smartReadySignature;
- const p=c.querySelector('.text-video-prompt');
- if(p)p.value='';
- window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:'P4',ready:false,signature:'',reason:'aberfan-p4-scene-lock'}}));
-}
-function apply(){
- const c=card();
- if(!target(c))return false;
- if(valid(c)){
-   c.dataset.sceneChoice='keep';
-   c.dataset.aberfanP4Lock=VERSION;
-   return true;
- }
- c.dataset.sceneChoice='keep';
- c.dataset.videoScene=SCENE;
- c.dataset.aberfanP4Lock=VERSION;
- const f=c.querySelector('.video-scene');
- if(f){f.value=SCENE;f.dispatchEvent(new Event('input',{bubbles:true}));}
- clearGenerated(c);
- try{window.LDCore?.saveCurrent?.();}catch(e){}
- window.dispatchEvent(new CustomEvent('ld:aberfan-p4-fixed',{detail:{version:VERSION}}));
- return true;
-}
+function clearGenerated(c){c.dataset.textVideoPrompt='';c.dataset.textVideoSignature='';delete c.dataset.smartReady;delete c.dataset.smartReadySignature;const p=c.querySelector('.text-video-prompt');if(p)p.value='';window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:'P4',ready:false,signature:'',reason:'aberfan-p4-scene-lock'}}));}
+function apply(){const c=card();if(!target(c))return false;if(valid(c)){c.dataset.sceneChoice='keep';c.dataset.aberfanP4Lock=VERSION;return true;}c.dataset.sceneChoice='keep';c.dataset.videoScene=SCENE;c.dataset.aberfanP4Lock=VERSION;const f=c.querySelector('.video-scene');if(f){f.value=SCENE;f.dispatchEvent(new Event('input',{bubbles:true}));}clearGenerated(c);try{window.LDCore?.saveCurrent?.();}catch(e){}window.dispatchEvent(new CustomEvent('ld:aberfan-p4-fixed',{detail:{version:VERSION}}));return true;}
 function schedule(){[0,80,220,600].forEach(ms=>setTimeout(apply,ms));}
-window.addEventListener('load',schedule);
-window.addEventListener('ld:production-built',schedule);
-window.addEventListener('ld:narration-approval-changed',schedule);
-window.addEventListener('ld:project-opened',schedule);
-document.addEventListener('pointerdown',e=>{if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))apply();},true);
-document.addEventListener('click',e=>{if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))apply();},true);
+window.addEventListener('load',schedule);window.addEventListener('ld:production-built',schedule);window.addEventListener('ld:narration-approval-changed',schedule);window.addEventListener('ld:project-opened',schedule);
+document.addEventListener('pointerdown',e=>{if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))apply();},true);document.addEventListener('click',e=>{if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))apply();},true);
 [250,700,1400,3000].forEach(ms=>setTimeout(apply,ms));
 window.LDAberfanP4Fix=Object.freeze({version:VERSION,apply,scene:SCENE,valid});
+})();
+
+(function(){'use strict';
+if(window.__ldAberfanP5FixV10)return;
+window.__ldAberfanP5FixV10=true;
+const VERSION='1.0';
+const TOPIC_RE=/aberfan\s+disaster.*(?:wales|1966)|aberfan.*1966/i;
+const LOCK='ABERFAN P5 FIRST-STRUCTURAL-IMPACT LOCK V1.0';
+const SCENE='KEEP CURRENT SCENE — '+LOCK+' — CORE 4 EVENT-SPECIFIC SCENE — P5 · landslide · human-impact / first structural impact. LOCATION: a new lower-village building-frontage viewpoint in 1966 Aberfan, distinct from P4 doorway listening shot. A row of intact period terraced structures occupies the midground; one clearly defined first building edge sits directly in the coal-waste path. One unnamed adult resident is already positioned in the protected near foreground at the side of the route, partly sheltered behind a sturdy stone wall/recess and outside the direct flow path, providing human scale without blocking the impact. The school is NOT visible and is not struck in P5. PRIMARY VISUAL ACTION: the already-moving dense wet black coal-waste spoil/slurry reaches the first building, makes visible physical contact, progressively forces masonry/timber to fail at the contact point, and entrains the fresh debris into the same downslope mass. The adult makes only one short backward step deeper into the protected recess and remains secondary to the structural impact. CAMERA: one mostly locked human-height three-quarter side-depth view with a single slow lateral drift parallel to the building frontage; no push-pull, orbit, cut, camera reset or competing camera instruction. TIMING: 0.0–2.0s: continue directly from P4 with the dense wet coal-waste mass already in motion; its leading edge enters the midground and reaches the first building edge while the protected adult takes one short step farther into the recess. 2.0–7.0s: show contact-to-failure as one continuous physical chain: wet coal spoil presses into the wall, the wall visibly strains/cracks, then a limited section of masonry/timber breaks and is pulled into the moving mass; no spontaneous explosion, no instant total-building disappearance, no morphing. 7.0–10.0s: the same coal-waste mass continues toward central Aberfan carrying newly acquired building debris, while the damaged first structure remains physically consistent behind it. Stop before Pantglas Junior School is shown or struck; reserve school establishment for P6 and school impact for P7. MATERIAL LOCK: the hazard is dense wet man-made coal spoil/slurry mixed with coal waste and newly entrained building debris, not generic rocks, natural mountain landslide, smoke, lava, water-only flood or dust cloud. No children, no school impact, no bodies, no gore, no crowd, no vehicles, no sirens, no dialogue, no music. Natural rain/mist ambience, deep moving-mass rumble and physically motivated masonry/timber break sounds only.';
+function topic(){const typed=document.getElementById('topic')?.value?.trim();if(typed)return typed;const title=document.getElementById('projectTitle')?.textContent?.trim();return title&&title!=='No production yet'?title:'';}
+function card(){return document.querySelector('.stage-card[data-stage="P5"]');}
+function target(c){if(!c||!TOPIC_RE.test(topic())||c.dataset.stage!=='P5')return false;if(c.querySelector('.done-toggle')?.checked)return false;if(window.NERCore4?.frozen?.(c))return false;return true;}
+function scene(c){return String(c?.querySelector('.video-scene')?.value||c?.dataset?.videoScene||'').trim();}
+function prompt(c){return String(c?.querySelector('.text-video-prompt')?.value||c?.dataset?.textVideoPrompt||'');}
+function validScene(c){return scene(c).includes(LOCK);}
+function writeScene(c){if(!target(c))return false;if(validScene(c)){c.dataset.sceneChoice='keep';c.dataset.aberfanP5Lock=VERSION;return false;}c.dataset.sceneChoice='keep';c.dataset.videoScene=SCENE;c.dataset.aberfanP5Lock=VERSION;const f=c.querySelector('.video-scene');if(f){f.value=SCENE;f.dispatchEvent(new Event('input',{bubbles:true}));}return true;}
+function stageContract(){return 'NER CORE 4 STAGE CONTRACT — LOCAL STRUCTURED METADATA ONLY:\nFamily: landslide.\nRole: human-impact.\nEvent beat: first-structural-impact.\nLocation type: lower-village-building-frontage.\nAction type: structural-impact-with-protected-witness.\nCamera type: three-quarter-side-depth.\nHazard phase: impact.\nThis contract organizes continuity and local validation; it is NOT a factual source and may not invent facts beyond the approved narration/research.';}
+function progressionBlock(){return 'DISASTER-FAMILY PROGRESSION LOCK:\nFamily: Landslide / coal-tip collapse.\nStage: P5.\nStory role: human-impact · first structural impact.\nStage guard: P3 owns the first collapse and P4 owns mist/rumble approach. P5 is the first supported building-impact beat: show the already-moving dense wet coal-waste mass physically striking the first building edge and entraining fresh debris. Do not regress to another onset-only reaction shot and do not jump ahead to the school impact.\nEvidence guard: Approved narration and established Aberfan coal-tip canon control the facts. No school impact, casualties or unsupported mechanisms are introduced here.\nDo not replay P3 or P4; advance exactly one beat to first structural contact and debris pickup.';}
+function cameraLine(){return 'CINEMATIC CAMERA DIRECTOR: one mostly locked human-height three-quarter side-depth view with a single slow lateral drift parallel to the first impacted building frontage. Keep the protected adult, impact point and moving coal-waste direction readable on one stable axis. No second camera move, orbit, zoom pumping, camera teleportation, wall pass-through or unmotivated shake.';}
+function sanitize(text){let s=String(text||'');if(!s)return s;
+s=s.replace(/DISASTER-FAMILY PROGRESSION LOCK:[\s\S]*?(?=\n\nPANEL SCENE:)/i,progressionBlock());
+s=s.replace(/PANEL SCENE:\n[\s\S]*?(?=\n\nPANEL SCENE IDENTITY LOCK:)/i,'PANEL SCENE:\n'+SCENE);
+s=s.replace(/PANEL SCENE IDENTITY LOCK:[\s\S]*?(?=\n\nNARRATIVE CONTEXT — not spoken, not on screen:)/i,'PANEL SCENE IDENTITY LOCK: P4 used a doorway-side mist/rumble listening beat with no structural contact. P5 intentionally changes to a lower-village building-frontage impact viewpoint. Preserve P4 weather/mist and the already-moving coal-waste direction, but do not repeat the P4 doorway pose, listening action, camera axis or no-impact endpoint. The P5 event-specific scene above has highest priority.');
+s=s.replace(/INTENSITY:\s*5\/10\s*·\s*first clear hazard onset\.?/gi,'INTENSITY: 7/10 · first structural impact.');
+s=s.replace(/CINEMATIC INTENSITY CURVE:\s*Semantic target:\s*5\/10\s*·\s*first clear hazard onset\.?/gi,'CINEMATIC INTENSITY CURVE: Semantic target: 7/10 · first structural impact. Do not escalate to the school impact or peak destruction.');
+s=s.replace(/CINEMATIC CAMERA DIRECTOR:[^\n]*/gi,cameraLine());
+s=s.replace(/PHYSICS AND TIME:\s*show the first supported hazard change with visible cause and effect\.[^\n]*/gi,'PHYSICS AND TIME: show first structural contact as a continuous cause-and-effect chain: moving wet coal spoil reaches the wall, pressure/contact precedes failure, limited masonry/timber breaks, and that debris joins the same moving mass. No instant total-building disappearance and no later school impact.');
+s=s.replace(/MOTION BUDGET:\s*ONE onset action plus 2–4 restrained secondary motions\./gi,'MOTION BUDGET: ONE structural-impact action chain plus one restrained protected-adult reaction and physically caused debris motion.');
+s=s.replace(/NEW LD FORMAT — TRIAL V1:\s*Follow the semantic role "onset"/gi,'NEW LD FORMAT — TRIAL V1: Follow the semantic role "human-impact"');
+s=s.replace(/PROFESSIONAL CINEMATIC AUDIO MIX:\s*Match the semantic role "onset"/gi,'PROFESSIONAL CINEMATIC AUDIO MIX: Match the semantic role "human-impact"');
+s=s.replace(/\n\nNER CORE 4 STAGE CONTRACT — LOCAL STRUCTURED METADATA ONLY:[\s\S]*$/i,'\n\n'+stageContract());
+s=s.replace(/\n\nABERFAN P5 FIRST-STRUCTURAL-IMPACT LOCK V1\.0[\s\S]*$/i,'');
+s+='\n\n'+LOCK+' — HIGHEST PRIORITY: P5 is the first structural-impact beat. The already-moving dense wet coal-waste spoil/slurry physically strikes the first building edge, limited masonry/timber fails only after contact, and fresh debris becomes entrained in the same moving mass. One adult remains outside the direct flow path in a protected near-foreground recess and makes only one short backward step. Use one stable three-quarter side-depth camera with one slow lateral drift. Stop before Pantglas Junior School is shown or struck. No children, no school impact, no peak destruction, no generic rock avalanche, no smoke-like flow, no morphing, no live action.';
+return s;}
+function writePrompt(c,text){const out=sanitize(text);if(!target(c))return out;c.dataset.textVideoPrompt=out;c.dataset.aberfanP5PromptLock=VERSION;const f=c.querySelector('.text-video-prompt');if(f&&f.value!==out)f.value=out;return out;}
+function clearGenerated(c){const had=!!prompt(c)||!!c.dataset.textVideoSignature||c.dataset.smartReady==='1';c.dataset.textVideoPrompt='';c.dataset.textVideoSignature='';delete c.dataset.smartReady;delete c.dataset.smartReadySignature;const f=c.querySelector('.text-video-prompt');if(f)f.value='';if(had)window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:'P5',ready:false,signature:'',reason:'aberfan-p5-first-impact-lock'}}));}
+function patchVM(){const vm=window.LDVideoModes;if(!vm)return false;if(typeof vm.prompt==='function'&&!vm.prompt.__aberfanP5Wrapper){const native=vm.prompt.bind(vm);const wrapped=function(c){if(target(c))writeScene(c);const out=native(c);return target(c)?writePrompt(c,out):out;};wrapped.__aberfanP5Wrapper=true;vm.prompt=wrapped;}if(typeof vm.build==='function'&&!vm.build.__aberfanP5Wrapper){const native=vm.build.bind(vm);const wrapped=function(c){if(target(c))writeScene(c);const out=native(c);return target(c)?writePrompt(c,out):out;};wrapped.__aberfanP5Wrapper=true;vm.build=wrapped;}return true;}
+function apply(){const c=card();if(!target(c)){patchVM();return false;}patchVM();const changed=writeScene(c);if(changed)clearGenerated(c);else if(prompt(c))writePrompt(c,prompt(c));c.dataset.aberfanP5SemanticRole='human-impact';c.dataset.aberfanP5HazardPhase='impact';try{window.LDCore?.saveCurrent?.();}catch(e){}window.dispatchEvent(new CustomEvent('ld:aberfan-p5-fixed',{detail:{version:VERSION}}));return true;}
+function schedule(){[0,80,220,600].forEach(ms=>setTimeout(apply,ms));}
+window.addEventListener('load',schedule);window.addEventListener('ld:production-built',schedule);window.addEventListener('ld:narration-approval-changed',schedule);window.addEventListener('ld:project-opened',schedule);
+document.addEventListener('pointerdown',e=>{if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))apply();},true);document.addEventListener('click',e=>{if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))apply();},true);
+[0,100,300,700,1500,3000].forEach(ms=>setTimeout(()=>{patchVM();apply();},ms));
+window.LDAberfanP5Fix=Object.freeze({version:VERSION,apply,scene:SCENE,sanitize,patchVM,validScene});
 })();
