@@ -1,12 +1,12 @@
-/* NER Studio Core 4 Stage Semantics v4.0.0
+/* NER Studio Core 4 Stage Semantics v4.0.1
    Canonicalizes event-pack labels/family aliases into the universal Core roles
    before planners, validators, Human Life, Smart Continue and Final Audit run.
-   Also removes stale legacy continuity references that can contradict the
-   authoritative Core 4 PANEL HANDOFF MEMORY. Local only; zero API calls. */
+   Narration evidence may override stale generic stage labels when the current beat
+   clearly advances into structural/human impact. Local only; zero API calls. */
 (function(){'use strict';
 if(window.NERStageSemantics4)return;
 const base=window.NERCore4;if(!base)return;
-const VERSION='4.0.0';
+const VERSION='4.0.1';
 const ROLE_PHASE={
  'normal-world':'context','cause-context':'context',onset:'onset','human-impact':'impact',
  'human-toll':'aftermath',displacement:'aftermath-response',response:'response',
@@ -19,6 +19,7 @@ const ROLE_ACTION={
 };
 function clean(v){return String(v||'').replace(/\s+/g,' ').trim();}
 function stageOf(x){return base.stageOf(x);}
+function stageNum(x){return parseInt(String(stageOf(x)||'').replace(/\D/g,''),10)||0;}
 function narration(x){const c=typeof x==='string'?base.cardFor(x):x;return String(c?.querySelector?.('.narration')?.value||'').trim();}
 function canonicalFamily(value){
  const f=clean(value).toLowerCase();
@@ -29,6 +30,35 @@ function canonicalFamily(value){
  if(f==='insect'||f==='agricultural'||f==='biological'||f==='biological/agricultural')return 'biological-agricultural';
  return f;
 }
+function inferFamilyFromText(value){
+ const s=String(value||'').toLowerCase();
+ if(/chemical attack|chemical weapon|nerve agent|mustard gas|sarin|wmd/.test(s))return 'chemical-wmd';
+ if(/xylazine|opioid|fentanyl|overdose|epidemic|pandemic|outbreak|disease/.test(s))return 'public-health';
+ if(/industrial|factory|reactor|refinery|oil spill|toxic leak/.test(s))return 'industrial-technological';
+ if(/locust|grasshopper|crop failure|famine|pest/.test(s))return 'biological-agricultural';
+ if(/earthquake|quake|seismic/.test(s))return 'earthquake';
+ if(/tsunami|megatsunami/.test(s))return 'tsunami';
+ if(/avalanche|snowslide/.test(s))return 'avalanche';
+ if(/aberfan|coal[- ]?waste|coal[- ]?tip|spoil tip|tip number seven|tip no\.?\s*7|landslide|mudslide|rockslide|debris flow|slope failure/.test(s))return 'landslide';
+ if(/cyclone|hurricane|typhoon/.test(s))return 'cyclone';
+ if(/tornado|twister/.test(s))return 'tornado';
+ if(/flood|dam failure|levee breach/.test(s))return 'flood';
+ if(/volcan|eruption|lahar/.test(s))return 'volcano';
+ if(/wildfire|forest fire|firestorm/.test(s))return 'wildfire';
+ return '';
+}
+function family(t){
+ const text=String(t||base.topic?.()||'');
+ const raw=canonicalFamily(base.family(text));
+ if(raw&&raw!=='generic-evidence')return raw;
+ return inferFamilyFromText(text)||raw||'generic-evidence';
+}
+function structuralImpactText(text,stage){
+ const s=String(text||'').toLowerCase(),n=parseInt(String(stage||'').replace(/\D/g,''),10)||0;
+ if(n>8)return false;
+ if(/tribunal|investigat|report|evidence|record|archive|memorial|legacy/.test(s))return false;
+ return /smash(?:ed|es|ing)?\s+through\s+(?:the\s+)?buildings?|struck\s+(?:the\s+)?buildings?|hit\s+(?:the\s+)?buildings?|building(?:s)?\s+(?:were\s+)?(?:crush|collapse|destroy|damage)|structures?\s+(?:were\s+)?(?:crush|collapse|destroy|damage)|gather(?:ed|ing)?\s+debris|bur(?:y|ied|ying)\s+(?:homes?|buildings?|streets?)/.test(s);
+}
 function inferFromText(text,stage,fam){
  const s=String(text||'').toLowerCase();
  const n=parseInt(String(stage||'').replace(/\D/g,''),10)||0;
@@ -36,6 +66,7 @@ function inferFromText(text,stage,fam){
  if(/killed|dead|death|fatal|mortality|victim|toll/.test(s))return 'human-toll';
  if(/fled|escape|evacuat|displaced|homeless|refuge|movement toward help/.test(s))return 'displacement';
  if(/doctor|medical|hospital|clinic|aid worker|treat|care|responder|rescue|emergency/.test(s))return 'response';
+ if(structuralImpactText(s,stage))return 'human-impact';
  if(/survivor|injur|wound|symptom|breath|blind|vomit|convulsion|illness|exposure|loss of consciousness/.test(s))return 'human-impact';
  if(/decades|legacy|memory|remember|memorial|warning|lesson|historical/.test(s))return 'legacy';
  if(/began|begins|struck|released|collapsed|erupted|landfall|touchdown|breach|attack changed|bombardment|first impact/.test(s))return 'onset';
@@ -50,6 +81,11 @@ function inferFromText(text,stage,fam){
 }
 function canonicalRole(raw,text,stage,fam){
  const r=clean(raw).toLowerCase().replace(/[_]+/g,'-');
+ const narrative=String(text||'');
+ // Narration outranks a stale generic onset label when the beat explicitly shows
+ // first structural contact/damage. This prevents P5-style impact beats from being
+ // forced back into the same onset fingerprint as P3/P4.
+ if(structuralImpactText(narrative,stage))return 'human-impact';
  if(/normal|civilian life|ordinary|before attack|pre-disaster/.test(r))return 'normal-world';
  if(/evidence|identification|identified|eyewitness|document|investigat|photo|archive|record/.test(r))return 'evidence';
  if(/death toll|mortality|fatal|human toll|civilian death/.test(r))return 'human-toll';
@@ -61,13 +97,12 @@ function canonicalRole(raw,text,stage,fam){
  if(/onset|begins|bombardment|first impact|attack begins|chemical attack/.test(r))return 'onset';
  if(/context|wartime|cause|pre-event|background/.test(r))return 'cause-context';
  if(['normal-world','cause-context','onset','human-impact','human-toll','displacement','response','evidence','recovery','legacy'].includes(r))return r;
- return inferFromText(text,stage,fam);
+ return inferFromText(narrative,stage,fam);
 }
-function family(t){return canonicalFamily(base.family(t));}
 function spec(x){
  const s=base.spec(x);if(!s)return s;
- const st=stageOf(x),fam=canonicalFamily(s.family||base.family()),eventRole=clean(s.eventRole||s.label||s.role||'');
- const role=canonicalRole(s.role||s.label,narration(x),st,fam);
+ const st=stageOf(x),nar=narration(x),fam=family([base.topic?.()||'',nar].join(' ')),eventRole=clean(s.eventRole||s.label||s.role||'');
+ const role=canonicalRole(s.role||s.label,nar,st,fam);
  return {...s,family:fam,eventRole,role,actionType:ROLE_ACTION[role]||s.actionType,hazardPhase:ROLE_PHASE[role]||s.hazardPhase};
 }
 function fingerprint(x){
@@ -75,7 +110,7 @@ function fingerprint(x){
  return {...fp,source:sp.source||fp.source||'',family:sp.family||fp.family||'',role:sp.role||fp.role||'',actionType:sp.actionType||fp.actionType||'',hazardPhase:sp.hazardPhase||fp.hazardPhase||'',key:String(sp.key||fp.key||'')};
 }
 function sceneVarietyIssue(card){
- const st=stageOf(card),n=parseInt(st.replace(/\D/g,''),10)||0;if(n<2)return '';
+ const st=stageOf(card),n=stageNum(card);if(n<2)return '';
  const cur=fingerprint(card),prev=fingerprint('P'+(n-1));
  if(base.eventPack(base.topic(),st))return cur.key&&prev.key&&cur.key===prev.key?st+' event pack repeats the exact structured scene key from P'+(n-1)+'.':'';
  const fields=['locationType','actionType','cameraType','role'];
@@ -103,10 +138,10 @@ function validateCard(card){
 }
 function diagnoseProject(){
  const cards=[...document.querySelectorAll('.stage-card')].filter(c=>/^P(?:[1-9]|1[0-4])$/.test(stageOf(c)));
- const stages=cards.map(validateCard);return {version:VERSION,restoreSha:base.restoreSha,topic:base.topic(),family:family(),ok:stages.every(x=>x.ok),stages,generatedAt:new Date().toISOString()};
+ const stages=cards.map(validateCard);return {version:VERSION,restoreSha:base.restoreSha,topic:base.topic(),family:family(base.topic()),ok:stages.every(x=>x.ok),stages,generatedAt:new Date().toISOString()};
 }
-const core=Object.freeze({...base,version:'4.0.4',family,spec,fingerprint,sceneVarietyIssue,stageContract,applyContract,validateCard,diagnoseProject,canonicalFamily,canonicalRole,phaseForRole:r=>ROLE_PHASE[canonicalRole(r,'','',family())]||''});
+const core=Object.freeze({...base,version:'4.0.5',family,spec,fingerprint,sceneVarietyIssue,stageContract,applyContract,validateCard,diagnoseProject,canonicalFamily,canonicalRole,phaseForRole:r=>ROLE_PHASE[canonicalRole(r,'','',family(base.topic()))]||''});
 window.NERCore4=core;
-window.NERStageSemantics4=Object.freeze({version:VERSION,canonicalFamily,canonicalRole,spec,stripLegacyContinuity});
+window.NERStageSemantics4=Object.freeze({version:VERSION,canonicalFamily,canonicalRole,spec,stripLegacyContinuity,structuralImpactText,inferFamilyFromText});
 window.dispatchEvent(new CustomEvent('ner:stage-semantics-ready',{detail:{version:VERSION}}));
 })();
