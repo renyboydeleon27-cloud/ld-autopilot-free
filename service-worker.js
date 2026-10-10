@@ -1,7 +1,7 @@
-/* NER Studio PWA Service Worker 4.0.27
+/* NER Studio PWA Service Worker 4.0.28
    Cache/offline/update only. No JavaScript concatenation, injection, rewriting,
    or runtime business logic. App behavior belongs to normal versioned files. */
-const CACHE_NAME='ner-studio-pwa-4-0-27';
+const CACHE_NAME='ner-studio-pwa-4-0-28';
 const CORE_SHELL=[
  './','./index.html','./styles.css?v=3.46.3','./manifest.webmanifest?v=2','./app-icon.svg?v=2',
  './app.js?v=3.50.10','./project-library.js?v=3.49.27','./project-locks.js?v=3.49.11',
