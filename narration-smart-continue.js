@@ -363,7 +363,7 @@
       status('✅ SMART NARRATION APPROVED · Final Audit is now unlocked.','pass');
       return;
     }
-    if(narrationReady()&&btn.dataset.generated==='1'){
+    if(narrationReady()){
       btn.dataset.mode='approve';
       btn.textContent='✅ APPROVE SMART NARRATION';
       return;
@@ -525,13 +525,30 @@
     if(isApproved())return;
     const previous=readApproval();
     if(previous){
-      try{localStorage.removeItem(approvalKey());}catch{}
-      emitApproval();
+      clearApproval();
       btn.dataset.generated='1';
       refreshApprovalUi();
       status('Narration changed after approval. Review the change and approve Smart Narration again.','working');
     }
   });
 
-  emitApproval();
+  // Reload/project-open restores the record before updating every approval control.
+  // Do not invent approval for changed or incomplete scripts.
+  function restoreApprovalUi(){
+    readApproval();
+    refreshApprovalUi();
+    emitApproval();
+  }
+  window.addEventListener('ld:production-built',()=>setTimeout(restoreApprovalUi,0));
+  window.addEventListener('pageshow',()=>setTimeout(restoreApprovalUi,0));
+  window.addEventListener('ld:narration-approval-changed',refreshApprovalUi);
+  function flushApproval(){
+    if(!isApproved())return;
+    try{localStorage.setItem(approvalKey(),JSON.stringify(readApproval()));}catch{}
+    try{window.LDCore?.saveCurrent?.();}catch{}
+    try{window.LDProjectLibrary?.flushCurrent?.();}catch{}
+  }
+  window.addEventListener('pagehide',flushApproval);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)flushApproval();});
+  restoreApprovalUi();
 })();
