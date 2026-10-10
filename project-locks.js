@@ -279,3 +279,19 @@ window.LDProjectLocks={
   s.async=false;
   document.head.appendChild(s);
 })();
+
+/* Aberfan P4 mist/rumble scene loader. The hotfix is self-guarded and local-only;
+   it replaces only unapproved P4 for the Aberfan 1966 production. */
+(()=>{
+  if(window.__ldAberfanP4DirectLoaderV10)return;
+  window.__ldAberfanP4DirectLoaderV10=true;
+  const src='aberfan-p4-hotfix.js?v=1.0';
+  if(document.readyState==='loading'){
+    document.write('<script src="'+src+'"><\/script>');
+    return;
+  }
+  const s=document.createElement('script');
+  s.src=src;
+  s.async=false;
+  document.head.appendChild(s);
+})();
