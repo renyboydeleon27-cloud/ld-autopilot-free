@@ -1,10 +1,10 @@
-/* NER Studio Core 4.0.0 — structured stage contracts, semantic scene fingerprints,
+/* NER Studio Core 4.0.1 — structured stage contracts, semantic scene fingerprints,
    prompt lifecycle freeze, family-aware planning, and project diagnostics.
-   This is additive/backward-compatible: legacy projects remain readable while
-   Core 4 becomes the single local validation layer used by the runtime bridge. */
+   v4.0.1 fixes narration-led structural-impact classification and avoids treating
+   ordinary classroom "lessons" as a historical legacy cue. */
 (function(){'use strict';
 if(window.NERCore4)return;
-const VERSION='4.0.0';
+const VERSION='4.0.1';
 const RESTORE_SHA='e879300bfbf5137279b4375621c05ad39255292d';
 const PANEL_RE=/^P(?:[1-9]|1[0-4])$/;
 const freezes=new WeakMap();
@@ -34,7 +34,7 @@ function family(t){
  if(/earthquake|quake|seismic/.test(t))return 'earthquake';
  if(/tsunami|megatsunami/.test(t))return 'tsunami';
  if(/avalanche|snowslide/.test(t))return 'avalanche';
- if(/landslide|mudslide|rockslide|debris flow/.test(t))return 'landslide';
+ if(/aberfan|coal[- ]?tip|coal[- ]?waste|spoil tip|landslide|mudslide|rockslide|debris flow/.test(t))return 'landslide';
  if(/cyclone|hurricane|typhoon/.test(t))return 'cyclone';
  if(/tornado|twister/.test(t))return 'tornado';
  if(/flood|dam failure|levee/.test(t))return 'flood';
@@ -43,15 +43,22 @@ function family(t){
  return 'generic-evidence';
 }
 
+function structuralImpactNarration(text){
+ const s=String(text||'').toLowerCase();
+ const impact=/(?:struck|hit|smashed|crush(?:ed|ing)?|bury(?:ing|ied)?|destroy(?:ed|ing)?|structural impact|wall failure)/.test(s);
+ const target=/(?:school|classroom|building|home|house|structure|wall)/.test(s);
+ return impact&&target;
+}
 function semanticRole(text,stage,fam){
  const s=String(text||'').toLowerCase();
  const n=stageNumber(stage);
  if(/evidence|identified|investigat|document|record|archive|photograph|eyewitness|report|study|analysis/.test(s))return 'evidence';
  if(/doctor|medical|hospital|clinic|aid worker|treat|care|responder|rescue|emergency/.test(s))return 'response';
  if(/fled|escape|evacuat|displaced|homeless|shelter|refuge/.test(s))return 'displacement';
+ if(structuralImpactNarration(s))return 'human-impact';
  if(/survivor|injur|wound|symptom|breath|blind|vomit|convulsion|illness|exposure/.test(s))return 'human-impact';
  if(/killed|dead|death|fatal|mortality|victim|toll/.test(s))return 'human-toll';
- if(/decades|legacy|memory|remember|memorial|warning|lesson|historical/.test(s))return 'legacy';
+ if(/decades|legacy|memory|remember|memorial|warning|lessons?\s+learned|historical\s+lesson/.test(s))return 'legacy';
  if(/began|struck|released|collapsed|erupted|landfall|touchdown|breach|attack changed|first/.test(s))return 'onset';
  if(/cause|trigger|forces|entered|buildup|pressure|weather|fault|source|context/.test(s))return 'cause-context';
  if(n===1)return 'normal-world';
@@ -80,14 +87,14 @@ const ACTION_BY_ROLE={
 };
 const CAMERA_CYCLE=['wide-observational','lateral-human-height','three-quarter-depth','restrained-forward','side-tracking','elevated-overview','over-shoulder','locked-reflective'];
 function genericSpec(cardOrStage){
- const stage=stageOf(cardOrStage),fam=family(),nar=narration(cardOrStage),role=semanticRole(nar,stage,fam),n=stageNumber(stage);
+ const stage=stageOf(cardOrStage),fam=family(),nar=narration(cardOrStage),role=semanticRole(nar,stage,fam),n=stageNumber(stage),structural=structuralImpactNarration(nar);
  return {
   source:'core4-generic',stage,family:fam,role,
-  key:[fam,stage,role].join(':'),
+  key:[fam,stage,role,structural?'structural-impact':''].filter(Boolean).join(':'),
   label:role,
-  locationType:LOCATION_BY_ROLE[role]||'event-appropriate-setting',
-  actionType:ACTION_BY_ROLE[role]||'documented-action',
-  cameraType:CAMERA_CYCLE[(Math.max(1,n)-1)%CAMERA_CYCLE.length],
+  locationType:structural?'structural-impact-setting':LOCATION_BY_ROLE[role]||'event-appropriate-setting',
+  actionType:structural?'structural-impact':ACTION_BY_ROLE[role]||'documented-action',
+  cameraType:structural?'stable-impact-side-depth':CAMERA_CYCLE[(Math.max(1,n)-1)%CAMERA_CYCLE.length],
   hazardPhase:n<=2?'context':n<=5?'onset':n<=8?'impact':n<=10?'aftermath':n<=12?'response':'legacy',
   handoff:''
  };
