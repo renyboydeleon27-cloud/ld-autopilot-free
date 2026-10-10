@@ -240,6 +240,41 @@
   const copyFull=document.getElementById('ldNarrationCopyFullBtn');
   const undo=document.getElementById('ldNarrationUndoBtn');
 
+  // Device-side evidence for reload failures; never include script text or credentials.
+  const SAVE_BUILD='1.0.17';
+  const saveCheck=document.createElement('button');
+  saveCheck.type='button';saveCheck.className='ghost small';
+  saveCheck.textContent='COPY SAVE CHECK · '+SAVE_BUILD;
+  saveCheck.style.marginTop='8px';
+  controls.appendChild(saveCheck);
+  function saveDiagnostics(){
+    const readJson=key=>{try{return JSON.parse(localStorage.getItem(key)||'null');}catch(e){return {readError:e.name};}};
+    const summarize=a=>a?{version:a.version,signature:a.signature,approvedAt:a.approvedAt,topicMatches:a.topic===topic(),formatMatches:a.format===format()}:null;
+    const core=readJson('ld-autopilot-free-v1');
+    const id=localStorage.getItem('ld-autopilot-free-active-project')||'';
+    const library=readJson('ld-autopilot-free-project-library-v1');
+    const saved=library?.projects?.find(p=>p.id===id)?.state;
+    const differentStages=state=>state?.stages?Object.keys(state.stages).filter(stage=>String(state.stages[stage]?.narration||'').trim()!==value(stageCard(stage),'.narration')):null;
+    return {build:SAVE_BUILD,page:location.origin+location.pathname,
+      scripts:[...document.scripts].map(s=>s.getAttribute('src')||'').filter(s=>/^(app|narration-smart-continue)\.js/.test(s)),
+      approved:isApproved(),ready:narrationReady(),currentSignature:narrationSignature(),
+      missing:['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'].filter(s=>!value(stageCard(s),'.narration')),
+      activeProjectHash:hash(id),memory:summarize(window.ldNarrationApprovalState),
+      local:summarize(readJson(approvalKey())),core:summarize(core?.narrationApproval),library:summarize(saved?.narrationApproval),
+      coreTextDifferences:differentStages(core),libraryTextDifferences:differentStages(saved),
+      serviceWorker:navigator.serviceWorker?.controller?.scriptURL||null};
+  }
+  saveCheck.addEventListener('click',async()=>{
+    const report=JSON.stringify(saveDiagnostics(),null,2);
+    try{await navigator.clipboard.writeText(report);status('Save check copied. Paste it in our chat.','pass');}
+    catch{
+      let output=document.getElementById('ldNarrationSaveCheckText');
+      if(!output){output=document.createElement('textarea');output.id='ldNarrationSaveCheckText';output.readOnly=true;output.rows=8;output.style.width='100%';controls.appendChild(output);}
+      output.value=report;output.focus();output.select();
+      status('Save check selected. Long-press Copy, then paste in our chat.','working');
+    }
+  });
+
   // Reports are diagnostic only: never read them as trusted research input.
   const reportDetails=document.createElement('details');
   const reportTitle=document.createElement('summary');
@@ -375,6 +410,8 @@
 
   window.LDNarrationApproval={
     isApproved,
+    version:SAVE_BUILD,
+    diagnostics:saveDiagnostics,
     approve:approveNarration,
     clear:clearApproval,
     signature:narrationSignature,
