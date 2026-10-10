@@ -64,6 +64,22 @@
       return projectState||localState;
     }catch{return projectState||null;}
   }
+  function restoreApprovedNarration(){
+    let a;
+    try{a=JSON.parse(localStorage.getItem(approvalKey())||'null');}catch{return false;}
+    if(!a||a.topic!==topic()||a.format!==format()||!a.narrations)return false;
+    const names=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
+    // Validate the complete snapshot before restoring anything. Existing edits win.
+    if(!names.every(stage=>typeof a.narrations[stage]==='string'&&a.narrations[stage].trim()))return false;
+    const signature=hash([topic(),format(),'vo',...names.map(stage=>stage+'\u241f'+a.narrations[stage].trim())].join('\u241e'));
+    if(signature!==a.signature)return false;
+    if(!names.every(stage=>stageCard(stage)?.querySelector('.narration')&&(!value(stageCard(stage),'.narration')||value(stageCard(stage),'.narration')===a.narrations[stage].trim())))return false;
+    for(const stage of names)stageCard(stage).querySelector('.narration').value=a.narrations[stage];
+    window.ldNarrationApprovalState=a;
+    try{window.LDCore?.saveCurrent?.();}catch{}
+    try{window.LDProjectLibrary?.flushCurrent?.();}catch{}
+    return true;
+  }
   function isApproved(){
     return approvalMatches(readApproval());
   }
@@ -78,9 +94,12 @@
   }
   function approveNarration(){
     if(!narrationReady())return false;
-    const a={version:'2.0',topic:topic(),format:format(),signature:narrationSignature(),approvedAt:new Date().toISOString()};
+    const a={version:'3.0',topic:topic(),format:format(),signature:narrationSignature(),approvedAt:new Date().toISOString(),narrations:Object.fromEntries(['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'].map(stage=>[stage,value(stageCard(stage),'.narration')]))};
+    // Approval and script are one durable write, independent of the larger project save.
+    try{localStorage.setItem(approvalKey(),JSON.stringify(a));
+      if(localStorage.getItem(approvalKey())!==JSON.stringify(a))return false;
+    }catch(error){status('Narration could not be saved on this device. Keep your pasted script and free storage before approving.','error');return false;}
     window.ldNarrationApprovalState=a;
-    try{localStorage.setItem(approvalKey(),JSON.stringify(a));}catch{}
     try{window.LDCore?.saveCurrent?.();}catch{}
     try{window.LDProjectLibrary?.flushCurrent?.();}catch{}
     emitApproval();
@@ -241,7 +260,7 @@
   const undo=document.getElementById('ldNarrationUndoBtn');
 
   // Device-side evidence for reload failures; never include script text or credentials.
-  const SAVE_BUILD='1.0.17';
+  const SAVE_BUILD='1.0.18';
   const saveCheck=document.createElement('button');
   saveCheck.type='button';saveCheck.className='ghost small';
   saveCheck.textContent='COPY SAVE CHECK · '+SAVE_BUILD;
@@ -573,6 +592,7 @@
   // Reload/project-open restores the record before updating every approval control.
   // Do not invent approval for changed or incomplete scripts.
   function restoreApprovalUi(){
+    restoreApprovedNarration();
     readApproval();
     refreshApprovalUi();
     emitApproval();

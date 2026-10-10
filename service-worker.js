@@ -1,10 +1,10 @@
-/* NER Studio PWA Service Worker 4.0.19
+/* NER Studio PWA Service Worker 4.0.20
    Cache/offline/update only. No JavaScript concatenation, injection, rewriting,
    or runtime business logic. App behavior belongs to normal versioned files. */
-const CACHE_NAME='ner-studio-pwa-4-0-19';
+const CACHE_NAME='ner-studio-pwa-4-0-20';
 const CORE_SHELL=[
  './','./index.html','./styles.css?v=3.46.3','./manifest.webmanifest?v=2','./app-icon.svg?v=2',
- './app.js?v=3.50.9','./project-library.js?v=3.49.27','./project-locks.js?v=3.49.11',
+ './app.js?v=3.50.10','./project-library.js?v=3.49.27','./project-locks.js?v=3.49.11',
  './video-modes.js?v=3.50.4','./smart-continue.js?v=3.50.9','./continuity-engine.js?v=1.0.4',
  './disaster-progression-engine.js?v=3.49.2','./public-health-policy.js?v=1.3.8',
  './thumbnail-format-lock.js?v=3.51.4','./thumbnail-randomization.js?v=3.42.3',

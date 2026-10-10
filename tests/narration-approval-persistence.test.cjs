@@ -5,7 +5,7 @@ function boot(storage=new Map(),saved=null){
  let currentTopic='Event A';
  const window={ldNarrationApprovalState:saved,dispatchEvent(){},LDCore:{saveCurrent(){}}};
  const ctx={window,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{getElementById:id=>({value:id==='format'?'shorts':currentTopic})},stages:{querySelector:selector=>{const stage=selector.match(/data-stage="([^"]+)"/)[1];return {querySelector:()=>fields[stage]};}},CustomEvent:class{}};
- vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('  function topic(){'),source.indexOf('  function detectSeconds('))+';this.api={approveNarration,isApproved,clearApproval};',ctx);
+ vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('  function topic(){'),source.indexOf('  function detectSeconds('))+';this.api={approveNarration,isApproved,clearApproval,restoreApprovedNarration};',ctx);
  return {api:ctx.api,window,fields,storage,setTopic:t=>currentTopic=t};
 }
 test('approval survives cold restart from local storage and from a project snapshot',()=>{
@@ -45,4 +45,19 @@ test('historical startup enhancer preserves approved imported speech',()=>{
 test('real core API exposes synchronous save used by import approval',()=>{
  const app=fs.readFileSync('app.js','utf8');
  assert.match(app,/window.LDCore=Object.freeze\(\{saveCurrent,isNarrationProtected,/);
+});
+
+test('surviving approval snapshot recovers P1-P14 lost from the main project',()=>{
+ const a=boot();a.api.approveNarration();
+ const reopened=boot(a.storage);
+ for(let n=1;n<=14;n++)reopened.fields['P'+n].value='';
+ assert.equal(reopened.api.isApproved(),false);
+ assert.equal(reopened.api.restoreApprovedNarration(),true);
+ assert.equal(reopened.api.isApproved(),true);
+ assert.equal(reopened.fields.P14.value,'Narration P14');
+});
+test('recovery never overwrites existing edits or a corrupted snapshot',()=>{
+ const a=boot();a.api.approveNarration();a.fields.P1.value='Changed deliberately';a.fields.P2.value='';
+ assert.equal(a.api.restoreApprovedNarration(),false);assert.equal(a.fields.P1.value,'Changed deliberately');assert.equal(a.fields.P2.value,'');
+ const b=boot();b.api.approveNarration();const key=[...b.storage.keys()][0];const saved=JSON.parse(b.storage.get(key));saved.narrations.P1='Tampered';b.storage.set(key,JSON.stringify(saved));b.fields.P1.value='';assert.equal(b.api.restoreApprovedNarration(),false);
 });
