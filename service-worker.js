@@ -1,7 +1,7 @@
-/* NER Studio PWA Service Worker 4.0.22
+/* NER Studio PWA Service Worker 4.0.23
    Cache/offline/update only. No JavaScript concatenation, injection, rewriting,
    or runtime business logic. App behavior belongs to normal versioned files. */
-const CACHE_NAME='ner-studio-pwa-4-0-22';
+const CACHE_NAME='ner-studio-pwa-4-0-23';
 const CORE_SHELL=[
  './','./index.html','./styles.css?v=3.46.3','./manifest.webmanifest?v=2','./app-icon.svg?v=2',
  './app.js?v=3.50.10','./project-library.js?v=3.49.27','./project-locks.js?v=3.49.11',
@@ -10,7 +10,7 @@ const CORE_SHELL=[
  './disaster-progression-engine.js?v=3.49.2','./public-health-policy.js?v=1.3.8',
  './thumbnail-format-lock.js?v=3.51.4','./thumbnail-randomization.js?v=3.42.3',
  './halabja-p4-hotfix.js?v=1.0-direct','./halabja-event-panel-engine.js?v=1.0',
- './ner-core-4.js?v=4.0.0','./ner-stage-semantics-v4.js?v=4.0.0','./ner-family-planner-v4.js?v=4.0.0','./ner-core-bridge.js?v=4.0.1','./ner-semantic-guard-v4.js?v=4.0.5','./ner-human-life-engine.js?v=1.1.0',
+ './ner-core-4.js?v=4.0.0','./ner-stage-semantics-v4.js?v=4.0.0','./ner-family-planner-v4.js?v=4.0.1','./ner-core-bridge.js?v=4.0.1','./ner-semantic-guard-v4.js?v=4.0.5','./ner-human-life-engine.js?v=1.1.0',
  './ner-source-story-v4.js?v=4.0.0','./ner-project-store-v4.js?v=4.0.0','./ner-core-diagnostics.js?v=4.0.0','./ner-final-audit-v4.js?v=4.0.0'
 ];
 self.addEventListener('install',event=>{
