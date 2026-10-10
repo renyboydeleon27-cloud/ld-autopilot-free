@@ -17,17 +17,22 @@ const plans={
  P14:'slow pull-back, approximately 3–5%, ending on the wider legacy/recovery scene'
 };
 const ABERFAN_RE=/aberfan\s+disaster.*(?:wales|1966)|aberfan.*1966/i;
-const P7_LOCK='ABERFAN P7 SCHOOL-IMPACT LOCK V1.0';
+const P7_LOCK='ABERFAN P7 SCHOOL-IMPACT LOCK V1.1';
 const P7_CAMERA='CINEMATIC CAMERA DIRECTOR: one stable human-height three-quarter exterior side-depth view with at most one restrained slow lateral drift parallel to the school frontage. Keep the school impact point, building geometry and incoming coal-waste direction readable on one coherent axis for the full 10 seconds. No elevated overview, no orbit, no deep-perspective camera change, no second camera move, no zoom pumping, no camera reset and no sensational victim close-up.';
+const P7_HANDOFF='PANEL HANDOFF MEMORY: APPROVED P6 established the still-intact Pantglas Junior School with the already-moving coal-waste mass approaching through mist. P7 advances exactly one beat to direct school contact, progressive limited wall/frontage failure and partial burial. Preserve P6 school geometry, wet/misty atmosphere and hazard approach direction until physical contact changes the affected frontage; do not replay the P6 pre-impact reveal and do not jump ahead to rescue or aftermath.';
+const P7_CONTRACT='NER CORE 4 STAGE CONTRACT — LOCAL STRUCTURED METADATA ONLY:\nFamily: landslide.\nRole: human-impact.\nEvent beat: school-structural-impact.\nLocation type: Pantglas-Junior-School-frontage.\nAction type: structural-impact.\nCamera type: stable-human-height-three-quarter-side-depth.\nHazard phase: impact.\nThis contract organizes continuity and local validation; it is NOT a factual source and may not invent facts beyond the approved narration/research.';
 const P7_SCENE='KEEP CURRENT SCENE — '+P7_LOCK+' — CORE 4 EVENT-SPECIFIC SCENE — P7 · landslide · human-impact / school structural impact. LOCATION: the still-recognizable exterior frontage of Pantglas Junior School in Aberfan, Wales, 1966, continuing the wet/misty atmosphere and the approach direction established in approved P6. The school is the primary structural subject. No visible minors are required. PRIMARY VISUAL ACTION: the already-moving dense wet black coal-waste spoil/slurry and entrained village debris reaches the school edge, makes direct physical contact, progressively loads and crushes a limited wall/window/frontage section, then pushes and piles the same dense material into and against the affected classroom zone. Structural contact is the primary action; any adult scale reference is optional, protected and strictly secondary. CAMERA: one stable human-height three-quarter exterior side-depth view with at most one restrained slow lateral drift parallel to the school frontage; keep impact point, school geometry and hazard direction readable on one axis. TIMING: 0.0–2.0s: continue directly from P6 with the coal-waste mass entering frame and making first physical contact with the school edge before any school failure. 2.0–7.0s: show one continuous contact-to-failure chain: wet coal spoil presses against the frontage, the wall/window area visibly strains and cracks, then a limited section fails under the moving mass; no spontaneous explosion, no instant whole-building disappearance and no morphing. 7.0–10.0s: the same mass accumulates against and partially buries the affected school/classroom frontage while the remaining visible school geometry stays physically consistent. Stop before rescue, aftermath or casualty imagery. MATERIAL LOCK: dense wet man-made coal spoil/slurry mixed with previously entrained building debris, never smoke, lava, water-only flooding, dust cloud or a natural mountain rock avalanche. No visible children, no bodies, no gore, no crowd, no sirens, no dialogue, no music. Natural rain/mist ambience, heavy moving-mass rumble and physically motivated masonry/timber failure sounds only.';
 function stageName(card){return (card?.dataset?.stage||card?.querySelector?.('.stage-name')?.textContent||'').trim().toUpperCase().replace(/^P0?/,'P');}
 function topic(){const typed=document.getElementById('topic')?.value?.trim();if(typed)return typed;const title=document.getElementById('projectTitle')?.textContent?.trim();return title&&title!=='No production yet'?title:'';}
 function isAberfanP7(card){return !!card&&stageName(card)==='P7'&&ABERFAN_RE.test(topic())&&/slide struck the school|struck the school|crushing walls|burying classrooms/i.test(String(card.querySelector('.narration')?.value||''));}
+function p7EventPack(){return {version:'1.1',matches:v=>ABERFAN_RE.test(String(v||topic())),manages:(v,stage)=>String(stage||'').toUpperCase()==='P7',spec:stage=>({key:'PANTGLAS SCHOOL DIRECT STRUCTURAL IMPACT',label:'human-impact',scene:P7_SCENE,timing:'0.0–2.0s direct school contact; 2.0–7.0s progressive limited frontage failure; 7.0–10.0s partial burial while geometry remains coherent.',camera:P7_CAMERA.replace(/^CINEMATIC CAMERA DIRECTOR:\s*/i,''),handoff:P7_HANDOFF.replace(/^PANEL HANDOFF MEMORY:\s*/i,'')})};}
+function registerP7Pack(){const core=window.NERCore4;if(!core?.registerPack)return false;if(!window.LDAberfanP7EventPack)window.LDAberfanP7EventPack=Object.freeze(p7EventPack());try{core.registerPack(window.LDAberfanP7EventPack);return true;}catch{return false;}}
 function forceAberfanP7Scene(){
+ registerP7Pack();
  const card=document.querySelector('.stage-card[data-stage="P7"]');
  if(!isAberfanP7(card)||card.querySelector('.done-toggle')?.checked||window.NERCore4?.frozen?.(card))return false;
  const current=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
- if(current.includes(P7_LOCK)){card.dataset.sceneChoice='keep';return false;}
+ if(current.includes('ABERFAN P7 SCHOOL-IMPACT LOCK')){card.dataset.sceneChoice='keep';return false;}
  card.dataset.sceneChoice='keep';
  card.dataset.videoScene=P7_SCENE;
  card.dataset.nerCoreSceneOwned='1';
@@ -38,13 +43,14 @@ function forceAberfanP7Scene(){
  delete card.dataset.smartReady;
  delete card.dataset.smartReadySignature;
  const promptField=card.querySelector('.text-video-prompt');if(promptField)promptField.value='';
- window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:'P7',ready:false,signature:'',reason:'aberfan-p7-school-impact-v1'}}));
+ window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage:'P7',ready:false,signature:'',reason:'aberfan-p7-school-impact-v11'}}));
  try{window.LDCore?.saveCurrent?.();}catch{}
  return true;
 }
 function sanitizeAberfanP7Prompt(text){
  let s=String(text||'');if(!s)return s;
  s=s.replace(/PANEL SCENE:\n[\s\S]*?(?=\n\nPANEL SCENE IDENTITY LOCK:)/i,'PANEL SCENE:\n'+P7_SCENE);
+ s=s.replace(/PANEL HANDOFF MEMORY(?:\s*—[^:\n]*)?:[\s\S]*?(?=\n\nANCHOR OBJECT SYSTEM:)/i,P7_HANDOFF);
  s=s.replace(/Story role:[^\n]*/i,'Story role: human-impact · school structural impact / burial.');
  s=s.replace(/Stage guard:[^\n]*/i,'Stage guard: P6 established the intact Pantglas Junior School in the approaching slide path. P7 owns direct school contact, progressive wall/frontage failure and partial burial. Do not regress to another adult-support or onset-only beat.');
  s=s.replace(/INTENSITY:[^\n]*/i,'INTENSITY: 9/10 · school structural impact and burial. Intensity follows the approved P7 narration and contact-to-failure chain.');
@@ -52,21 +58,23 @@ function sanitizeAberfanP7Prompt(text){
  s=s.replace(/CURRENT PROGRESSION ROLE:[^\n]*/gi,'CURRENT PROGRESSION ROLE: Pantglas Junior School structural impact · direct contact · progressive failure · partial burial.');
  s=s.replace(/MOTION BUDGET:[^\n]*/i,'MOTION BUDGET: ONE hazard-to-school contact/failure/burial chain as the primary action; any human motion remains optional and secondary.');
  s=s.replace(/DEBRIS \+ DAMAGE PHYSICS LOCK:[^\n]*/gi,'DEBRIS + DAMAGE PHYSICS LOCK: ABERFAN P7 SCHOOL-IMPACT OVERRIDE — hazard-to-school contact is primary. Physical contact and load must precede wall/frontage failure; failed masonry/timber and existing debris then move only because the dense coal-waste mass pushes or entrains them. No unrelated collapse, no spontaneous explosion, no whole-building disappearance and no casualty imagery.');
+ s=s.replace(/\n\nNER CORE 4 STAGE CONTRACT — LOCAL STRUCTURED METADATA ONLY:[\s\S]*$/i,'\n\n'+P7_CONTRACT);
  s=s.replace(/\n\nABERFAN P7 SCHOOL-IMPACT LOCK V1\.[0-9]+[\s\S]*$/i,'');
  s+='\n\n'+P7_LOCK+' — HIGHEST PRIORITY: P7 is the Pantglas Junior School impact beat. The dense wet coal-waste mass directly contacts the school before progressive limited structural failure and partial burial. Structural impact is primary; human motion is optional and secondary. Use one stable human-height three-quarter exterior camera only. No visible children, no bodies, no gore, no morphing, no live action.';
  return s;
 }
 function patchVideoModes(){
- const vm=window.LDVideoModes;if(!vm||vm.__aberfanP7SchoolImpactV1)return false;
+ const vm=window.LDVideoModes;if(!vm||vm.__aberfanP7SchoolImpactV11)return false;
  const nativePrompt=typeof vm.prompt==='function'?vm.prompt.bind(vm):null;
  const nativeBuild=typeof vm.build==='function'?vm.build.bind(vm):null;
  if(!nativePrompt||!nativeBuild)return false;
- vm.prompt=function(card){if(isAberfanP7(card))forceAberfanP7Scene();let out=nativePrompt(card);if(isAberfanP7(card))out=sanitizeAberfanP7Prompt(out);if(isAberfanP7(card)){card.dataset.textVideoPrompt=out;const f=card.querySelector('.text-video-prompt');if(f&&f.value!==out)f.value=out;}return out;};
- vm.build=function(card){if(isAberfanP7(card))forceAberfanP7Scene();let out=nativeBuild(card);if(isAberfanP7(card))out=sanitizeAberfanP7Prompt(out);if(isAberfanP7(card)){card.dataset.textVideoPrompt=out;const f=card.querySelector('.text-video-prompt');if(f&&f.value!==out)f.value=out;}return out;};
- vm.__aberfanP7SchoolImpactV1=true;
+ vm.prompt=function(card){if(isAberfanP7(card)){registerP7Pack();forceAberfanP7Scene();}let out=nativePrompt(card);if(isAberfanP7(card))out=sanitizeAberfanP7Prompt(out);if(isAberfanP7(card)){card.dataset.textVideoPrompt=out;const f=card.querySelector('.text-video-prompt');if(f&&f.value!==out)f.value=out;}return out;};
+ vm.build=function(card){if(isAberfanP7(card)){registerP7Pack();forceAberfanP7Scene();}let out=nativeBuild(card);if(isAberfanP7(card))out=sanitizeAberfanP7Prompt(out);if(isAberfanP7(card)){card.dataset.textVideoPrompt=out;const f=card.querySelector('.text-video-prompt');if(f&&f.value!==out)f.value=out;}return out;};
+ vm.__aberfanP7SchoolImpactV11=true;
  return true;
 }
 function apply(){
+ registerP7Pack();
  forceAberfanP7Scene();
  patchVideoModes();
  if(window.LDStoryModes?.enabled())return false;
@@ -82,13 +90,14 @@ function apply(){
  });
 }
 document.addEventListener('click',e=>{
- if(e.target.closest('#ldSmartContinueBtn,#ldSmartStickyBtn')){forceAberfanP7Scene();patchVideoModes();return;}
+ if(e.target.closest('#ldSmartContinueBtn,#ldSmartStickyBtn')){registerP7Pack();forceAberfanP7Scene();patchVideoModes();return;}
  if(e.target.closest('#buildBtn,#generateAllBtn,.generate-template-btn'))setTimeout(apply,120);
 },true);
+window.addEventListener('ner:core4-loaded',()=>queueMicrotask(()=>{registerP7Pack();apply();}));
 window.addEventListener('ld:production-built',()=>queueMicrotask(apply));
 window.addEventListener('ld:project-opened',()=>queueMicrotask(apply));
 window.addEventListener('load',()=>setTimeout(apply,250));
-patchVideoModes();forceAberfanP7Scene();
+registerP7Pack();patchVideoModes();forceAberfanP7Scene();
 window.ldApplyCameraMotion=apply;
-window.LDAberfanP7SchoolImpactFix=Object.freeze({version:'1.0',apply:forceAberfanP7Scene,scene:P7_SCENE,sanitize:sanitizeAberfanP7Prompt});
+window.LDAberfanP7SchoolImpactFix=Object.freeze({version:'1.1',apply:forceAberfanP7Scene,scene:P7_SCENE,sanitize:sanitizeAberfanP7Prompt,registerPack:registerP7Pack});
 })();
