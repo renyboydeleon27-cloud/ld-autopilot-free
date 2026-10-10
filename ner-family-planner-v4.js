@@ -1,12 +1,14 @@
-/* NER Studio Core 4 Family Planner v4.0.1
+/* NER Studio Core 4 Family Planner v4.0.2
    Global narration-aware local scene planner. Builds concrete, filmable P1-P14
    scene descriptions before paid AI audit. No historical facts are invented:
    narration/source facts define the beat; representative adult/object staging is
-   explicitly visual staging only. Approved/frozen panels are never rewritten. */
+   explicitly visual staging only.
+   v4.0.2 adds narration-led school/building structural-impact planning and removes
+   repeated startup planAll timer fan-out for better mobile performance. */
 (function(){'use strict';
 if(window.NERFamilyPlanner4)return;
 const core=window.NERCore4;if(!core)return;
-const VERSION='4.0.1';
+const VERSION='4.0.2';
 const PANEL_RE=/^P(?:[1-9]|1[0-4])$/;
 
 const FAMILY_HAZARD={
@@ -137,6 +139,14 @@ function specificRecipe(card,fam,rl,nar){
     timing:'0.0–2.0s: Establish the adult and stable village geography; the first small supported movement appears on the coal-waste slope. 2.0–7.0s: Continue one coherent adult retreat/reaction while the same coal-waste movement grows only to the level stated by narration and follows the slope under gravity. 7.0–10.0s: Hold the adult clear of the moving route as the shot resolves the direction of travel and affected geography; do not jump ahead to a later impact not stated by this panel.'
    };
  }
+ if(fam==='landslide'&&rl==='human-impact'&&a==='school'&&/(?:struck|hit|smashed|crush|bury|buried|impact)/i.test(nar)){
+   return {
+    location:'a period-appropriate school exterior in '+place+' with one clearly readable school wall/frontage and the already-moving downslope hazard entering from the established approach side; no visible minors are required and no invented readable school sign appears',
+    action:'the already-moving slope material physically reaches the school structure, makes direct contact, progressively forces a limited wall/window/doorway section to fail, and carries or piles the same material into and against the lower school frontage; the structural contact is primary and any adult scale reference is optional and secondary',
+    camera:'one stable human-height three-quarter exterior side-depth view that keeps the impact point, school geometry and moving hazard direction readable in one continuous axis; no orbit, no zoom pumping, no cut and no sensational victim close-up',
+    timing:'0.0–2.0s: Continue the established moving mass into direct contact with the school edge; contact begins before any school failure. 2.0–7.0s: Show one continuous contact-to-failure chain as the wall/frontage visibly strains, a limited section gives way, and dense material with existing debris pushes into/against the structure. 7.0–10.0s: Let the same mass accumulate around and partially bury the affected school frontage/classroom zone while remaining physically coherent. Stop before rescue, aftermath or casualty imagery; no visible children, bodies or gore.'
+   };
+ }
  if((rl==='response'||a==='rescue')&&/rescu|digging|trapped|wreckage|ruins/i.test(nar)){
    return {
     location:'a non-graphic rescue edge in '+place+' with settled rubble/coal waste and one clear safe working zone',
@@ -218,7 +228,7 @@ function plan(card){
   version:VERSION,stage:card.dataset.stage,family:fam,role:rl,
   location:recipe.location,
   action:recipe.action,
-  camera:cameraFor(rl),
+  camera:recipe.camera||cameraFor(rl),
   timing:recipe.timing,
   guard:familyGuard(fam,nar),
   narration:nar
@@ -265,10 +275,8 @@ function planAll(){
   if(panel(card)&&!core.frozen(card))apply(card);
  });
 }
-window.addEventListener('ld:production-built',()=>setTimeout(planAll,0));
-window.addEventListener('ld:narration-approval-changed',()=>setTimeout(planAll,20));
-window.addEventListener('load',()=>setTimeout(planAll,120));
-[250,700].forEach(ms=>setTimeout(planAll,ms));
+window.addEventListener('ld:production-built',()=>queueMicrotask(planAll));
+window.addEventListener('ld:narration-approval-changed',()=>queueMicrotask(planAll));
 window.NERFamilyPlanner4=Object.freeze({version:VERSION,plan,apply,planAll,audit,genericPlaceholder,effectiveFamily});
 window.dispatchEvent(new CustomEvent('ner:family-planner-ready',{detail:{version:VERSION}}));
 })();
