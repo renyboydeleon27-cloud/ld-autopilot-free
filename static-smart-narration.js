@@ -84,6 +84,7 @@
   const LEGACY_EARTHQUAKE_P9='When the main shaking ends, survivors emerge into dust, debris, and unstable streets.';
 
   function fillBlankNarrations(){
+    if(window.LDCore?.isNarrationProtected?.())return false;
     if(window.LDStoryModes?.enabled())return false;
     let changed=false;
     stagesEl.querySelectorAll('.stage-card').forEach(card=>{

@@ -154,7 +154,7 @@
     const image=card.querySelector('.image-prompt');
     const flow=card.querySelector('.flow-prompt');
 
-    if(narration&&stage!=='ENDING'&&stage!=='THUMBNAIL'&&!(preserveSaved&&card.dataset.textVideoPrompt)){
+    if(!window.LDCore?.isNarrationProtected?.()&&narration&&stage!=='ENDING'&&stage!=='THUMBNAIL'&&!(preserveSaved&&card.dataset.textVideoPrompt)){
       const improved=improveNarration(stage,narration.value,ctx);
       if(improved!==narration.value){
         narration.value=improved;

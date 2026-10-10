@@ -73,7 +73,7 @@
       changed=true;
     }
 
-    if(narration&&narration.value.trim()!==item.fact){
+    if(!window.LDCore?.isNarrationProtected?.()&&narration&&narration.value.trim()!==item.fact){
       narration.value=item.fact;
       fireInput(narration);
       changed=true;

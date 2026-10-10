@@ -82,6 +82,7 @@
     window.ldNarrationApprovalState=a;
     try{localStorage.setItem(approvalKey(),JSON.stringify(a));}catch{}
     try{window.LDCore?.saveCurrent?.();}catch{}
+    try{window.LDProjectLibrary?.flushCurrent?.();}catch{}
     emitApproval();
     return isApproved();
   }

@@ -27,3 +27,22 @@ test('core snapshot includes the approval and project build hydrates it',()=>{
  assert.match(app,/narrationApproval:window\.ldNarrationApprovalState\|\|null/);
  assert.match(app,/window\.ldNarrationApprovalState=seed\?\.narrationApproval/);
 });
+test('startup narration protection works before narration UI loads',()=>{
+ const a=boot();a.api.approveNarration();
+ const app=fs.readFileSync('app.js','utf8');
+ const ctx={window:a.window,topicEl:{value:'Event A'},formatEl:{value:'shorts'},stagesEl:{querySelector:q=>a.fields[q.match(/data-stage="([^"]+)"/)[1]]}};
+ vm.createContext(ctx);vm.runInContext(app.slice(app.indexOf('function isNarrationProtected(){'),app.indexOf('function applyApprovalLedgerSnapshot(')),ctx);
+ assert.equal(ctx.isNarrationProtected(),true);
+ a.fields.P1.value='Manual edit';assert.equal(ctx.isNarrationProtected(),false);
+});
+test('historical startup enhancer preserves approved imported speech',()=>{
+ const src=fs.readFileSync('historical-context.js','utf8');
+ const start=src.indexOf('    if(!window.LDCore?.isNarrationProtected?.()&&narration');
+ const code=src.slice(start,src.indexOf('\n    if(image)',start));
+ const ctx={window:{LDCore:{isNarrationProtected:()=>true}},narration:{value:'My approved wording'},stage:'P1',preserveSaved:false,card:{dataset:{}},ctx:{},improveNarration:()=> 'Template replacement'};
+ vm.createContext(ctx);vm.runInContext(code,ctx);assert.equal(ctx.narration.value,'My approved wording');
+});
+test('real core API exposes synchronous save used by import approval',()=>{
+ const app=fs.readFileSync('app.js','utf8');
+ assert.match(app,/window.LDCore=Object.freeze\(\{saveCurrent,isNarrationProtected,/);
+});

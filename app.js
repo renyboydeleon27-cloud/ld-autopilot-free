@@ -296,10 +296,21 @@ function ledgerSaysApproved(card){
  const item=approvalLedgerEntry(card.dataset.stage||'');
  return !!item?.approved;
 }
+// Available before startup enhancers run; never let templates rewrite approved speech.
+function isNarrationProtected(){
+ const t=topicEl.value.trim(),f=formatEl.value;
+ let a=window.ldNarrationApprovalState;
+ if(!a){try{const id=localStorage.getItem('ld-autopilot-free-active-project')||[t,f].join('|');a=JSON.parse(localStorage.getItem('ner-studio-narration-approval-v1:'+id)||'null');}catch{}}
+ if(!a||a.topic!==t||a.format!==f)return false;
+ const parts=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'].map(stage=>stage+'\u241f'+String(stagesEl.querySelector('.stage-card[data-stage="'+stage+'"] .narration')?.value||'').trim());
+ let h=2166136261;const text=[t,f,'vo',...parts].join('\u241e');
+ for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}
+ return a.signature===(h>>>0).toString(36);
+}
 function applyApprovalLedgerSnapshot(card,snapshot){
  if(!card||!snapshot)return;
  const nar=card.querySelector('.narration'),img=card.querySelector('.image-prompt'),flow=card.querySelector('.flow-prompt'),text=card.querySelector('.text-video-prompt'),scene=card.querySelector('.video-scene');
- if(typeof snapshot.narration==='string'&&snapshot.narration){if(nar)nar.value=snapshot.narration;}
+ if(!isNarrationProtected()&&typeof snapshot.narration==='string'&&snapshot.narration){if(nar)nar.value=snapshot.narration;}
  if(typeof snapshot.imagePrompt==='string'&&snapshot.imagePrompt){if(img)img.value=snapshot.imagePrompt;}
  if(typeof snapshot.flowPrompt==='string'&&snapshot.flowPrompt){if(flow)flow.value=snapshot.flowPrompt;}
  if(snapshot.videoMode==='text'||snapshot.videoMode==='image')card.dataset.videoMode=snapshot.videoMode;
@@ -460,4 +471,4 @@ jumpStage.addEventListener('change',()=>scrollToCard(stagesEl.querySelector(`[da
 nextIncompleteBtn.addEventListener('click',nextIncomplete);auditNextBtn.addEventListener('click',nextIncomplete);copyAllBtn.addEventListener('click',copyAllPackages);backupBtn.addEventListener('click',downloadBackup);importBackupBtn.addEventListener('click',()=>backupFileInput.click());backupFileInput.addEventListener('change',()=>importBackupFile(backupFileInput.files?.[0]));collapseAllBtn.addEventListener('click',()=>{[...stagesEl.querySelectorAll('.stage-card')].forEach(card=>{card.querySelector('.stage-body').classList.add('hidden');card.querySelector('.collapse-btn').textContent='Open';});});window.addEventListener('ld:api-usage-updated',()=>{if(stagesEl.querySelector('.stage-card'))saveCurrent();});window.addEventListener('ld:approved-memory-saved',()=>{[...stagesEl.querySelectorAll('.stage-card')].forEach(refreshCard);scheduleCurrentSave(80);});window.addEventListener('ld:smart-ready-changed',()=>{if(stagesEl.querySelector('.stage-card'))scheduleCurrentSave(80);});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&stagesEl.querySelector('.stage-card'))saveCurrent();});
 window.addEventListener('pagehide',()=>{if(stagesEl.querySelector('.stage-card'))saveCurrent();});
-window.LDCore=Object.freeze({buildProduction,collectState,compactStorage:compactLdLocalStorage,compactApprovedMemory:compactApprovedMemoryForStorage,loadProductionState:(state)=>buildProduction(state),recoverAccidentalDoneReset,recoverDoneShadow,recoverApprovalLedger,isApprovalCommitted:(stage)=>{const card=stagesEl.querySelector('.stage-card[data-stage="'+stage+'"]');return card?ledgerSaysApproved(card):!!approvalLedgerEntry(stage)?.approved;},revokeApproval,revokeAllApprovals,commitApproval:(stage)=>{const card=stagesEl.querySelector('.stage-card[data-stage="'+stage+'"]');if(card)writeApprovalLedger(card,true);}});compactLdLocalStorage();load();
+window.LDCore=Object.freeze({saveCurrent,isNarrationProtected,buildProduction,collectState,compactStorage:compactLdLocalStorage,compactApprovedMemory:compactApprovedMemoryForStorage,loadProductionState:(state)=>buildProduction(state),recoverAccidentalDoneReset,recoverDoneShadow,recoverApprovalLedger,isApprovalCommitted:(stage)=>{const card=stagesEl.querySelector('.stage-card[data-stage="'+stage+'"]');return card?ledgerSaysApproved(card):!!approvalLedgerEntry(stage)?.approved;},revokeApproval,revokeAllApprovals,commitApproval:(stage)=>{const card=stagesEl.querySelector('.stage-card[data-stage="'+stage+'"]');if(card)writeApprovalLedger(card,true);}});compactLdLocalStorage();load();
