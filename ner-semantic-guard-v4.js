@@ -1,15 +1,17 @@
-/* NER Studio Core 4 Semantic Guard v4.0.6
+/* NER Studio Core 4 Semantic Guard v4.0.7
    Removes generic stage-number assumptions that conflict with the canonical
    narration/event semantic role. Works for every P1-P14 topic; no panel-specific rules.
    v4.0.5 adds a generic legacy time-jump chronology override when approved narration
    explicitly places a legacy panel years/decades after the original event.
    v4.0.6 adds a narration-led structural-impact subprofile so a verified building/
    infrastructure impact can be the primary visual action while human motion remains
-   a secondary scale/reaction beat. */
+   a secondary scale/reaction beat.
+   v4.0.7 mobile performance: no Smart Continue pointerdown repair and no retry timer fan-out;
+   prompt normalization now runs only through the LDVideoModes wrapper when the target is built. */
 (function(){'use strict';
 if(window.NERSemanticGuard4)return;
 const core=window.NERCore4;if(!core)return;
-const VERSION='4.0.6';
+const VERSION='4.0.7';
 const PROFILE={
  'normal-world':{phase:'context',intensity:'1/10 · calm baseline',cast:'ordinary adults in normal life',damage:'intact baseline; no disaster damage unless explicitly established',motion:'ONE ordinary primary action plus 1–2 restrained secondary motions',physics:'ordinary human/object motion only; no disaster mechanism is visible yet'},
  'cause-context':{phase:'context',intensity:'2/10 · restrained explanatory context',cast:'small adult cast observing or establishing context',damage:'preserve only damage explicitly established by narration or approved canon',motion:'ONE contextual primary action plus 1–2 restrained secondary motions',physics:'show only the supported causal/contextual mechanism; no later-stage impact'},
@@ -22,80 +24,29 @@ const PROFILE={
  recovery:{phase:'recovery',intensity:'3/10 · restrained recovery',cast:'small adult recovery/cleanup cast',damage:'earlier supported damage persists; only deliberate cleanup or repair may change it',motion:'ONE recovery action plus 1–3 restrained secondary motions',physics:'repair/cleanup changes require visible human action; no spontaneous restoration'},
  legacy:{phase:'legacy',intensity:'1/10 · calm reflective close',cast:'one adult or small reflective group when appropriate',damage:'legacy setting follows narration and approved canon; do not force disaster remnants into a later reflective location',motion:'ONE restrained reflective movement plus 0–2 secondary motions',physics:'no active disaster mechanism; stable reflective environment'}
 };
-const STRUCTURAL_IMPACT_PROFILE={
- phase:'impact',
- intensity:'7/10 · narration-led structural impact',
- cast:'optional small adult scale/reaction reference outside the direct hazard path; humans may remain secondary when the approved narration centers structural impact',
- damage:'show only structural damage explicitly established by narration, StageSpec or approved canon; physical contact/force must precede failure and irreversible damage must accumulate',
- motion:'ONE hazard-to-structure impact chain as the primary action plus 1–3 restrained physically caused secondary motions; any human reaction remains secondary unless narration explicitly makes the human action primary',
- physics:'show the documented hazard contacting the structure, progressive load/failure, and supported debris motion with clear cause and effect; do not invent casualties, a new hazard mechanism, or unsupported total destruction'
-};
 function panel(card){return !!card&&/^P(?:[1-9]|1[0-4])$/.test(String(card.dataset.stage||''));}
-function profile(card){const sp=core.spec(card)||{},role=String(sp.role||'');return isStructuralImpact(card,role)?STRUCTURAL_IMPACT_PROFILE:(PROFILE[role]||PROFILE['cause-context']);}
 function esc(s){return String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function replaceLine(text,label,value){const re=new RegExp('(^|\\n)'+esc(label)+'[^\\n]*','i');return re.test(text)?text.replace(re,(m,p)=>p+label+' '+value):text;}
 function syncRoleUI(card,role,phase){const el=card?.querySelector?.('.scene-role');if(el)el.textContent='Core 4 · '+role+' · '+phase;}
 function narrationText(card){return String(card?.querySelector?.('.narration')?.value||'').replace(/\s+/g,' ').trim();}
-function isStructuralImpact(card,role){
+function structuralImpact(card,role){
  if(role!=='human-impact')return false;
  const n=narrationText(card).toLowerCase();
- const structure=/\b(buildings?|structures?|homes?|houses?|schools?|walls?|roofs?|masonry|timber|bridges?|roads?|infrastructure|debris)\b/;
- const impact=/\b(smash(?:ed|es|ing)?|struck|strike|hit|hits|crush(?:ed|es|ing)?|destroy(?:ed|s|ing)?|collaps(?:e|ed|es|ing)|broke|break(?:s|ing)?|fail(?:ed|s|ure)?|tore|tears?|ripped|swept|buried|damag(?:e|ed|es|ing)|gathered debris|entrain(?:ed|s|ing)?)\b/;
- return structure.test(n)&&impact.test(n);
+ return /\b(?:smashed?|crashed?|struck|hit|buried|destroyed?|collapsed?|swept)\b[^.]{0,100}\b(?:building|buildings|house|houses|home|homes|structure|structures|wall|walls|road|bridge|school|infrastructure)\b|\b(?:building|buildings|house|houses|home|homes|structure|structures|wall|walls|road|bridge|school|infrastructure)\b[^.]{0,100}\b(?:smashed?|crashed?|struck|hit|buried|destroyed?|collapsed?|failed|failure)\b|gathered debris|entrained debris|structural impact|structural damage/.test(n);
 }
-function hasLaterEraShift(card,role){
- if(role!=='legacy')return false;
- const n=narrationText(card).toLowerCase();
- return /\b(?:decades?|years?|generations?)\s+later\b|\blong after\b|\blong-term memory\b|\bstill carry[^.]{0,80}\bmemory\b/.test(n);
-}
-function legacyChronologyText(){
- return 'CORE 4 LEGACY TIME-JUMP OVERRIDE — HIGH PRIORITY: The approved narration explicitly places THIS PANEL after the original event year. For this panel only, the later legacy period supersedes any chapter-wide instruction requiring every visible element to remain in the original event year. The exact later year is intentionally unspecified. Preserve the established regional/place identity and use restrained, non-specific later-era civilian clothing, maintained or rebuilt surroundings, and ordinary public-space elements only when needed by the StageSpec. Do NOT invent smartphones, digital screens, contemporary branded vehicles, modern emergency gear, futuristic architecture, readable dates or signage, political banners, exact later-year labels, or technology that forces a specific later decade. Historical chronology and approved narration outrank the generic event-year lock for this panel. All strict 2D historical-anime, true black-and-white grayscale, no-photorealism, continuity, identity and accuracy locks remain unchanged.';
-}
-function applyLegacyChronology(card,text,role){
- let s=String(text||'');if(!hasLaterEraShift(card,role))return s;
- const block=legacyChronologyText();
- if(!/CORE 4 LEGACY TIME-JUMP OVERRIDE/i.test(s)){
-  if(/END CHAPTER CONTINUITY LOCK\./i.test(s))s=s.replace(/END CHAPTER CONTINUITY LOCK\./i,'END CHAPTER CONTINUITY LOCK.\n\n'+block);
-  else s=block+'\n\n'+s;
- }
- const era='ERA + ACCURACY: LEGACY TIME-JUMP ACTIVE — This panel intentionally occurs after the original event year because the approved narration establishes a later legacy period. The exact later year remains unspecified. Use only restrained period-neutral later-era details supported by the scene; do not add technology, branding, signage, vehicles, equipment or architecture that forces an unsupported modern date. The CORE 4 LEGACY TIME-JUMP OVERRIDE supersedes the generic original-event-year visual requirement for this panel only. Historical accuracy and chronology outrank drama.';
- s=s.replace(/(^|\n)ERA \+ ACCURACY:[^\n]*/i,(m,p)=>p+era);
- card.dataset.nerCoreLaterEra='1';
- return s;
-}
-function audioMix(role){
- if(role==='evidence')return 'PROFESSIONAL CINEMATIC AUDIO MIX: Calm retrospective room tone only. Allow quiet cloth, paper, chair, footstep, or sealed-object contact sounds only when the specified visible action causes them. No impact events, rising pressure, tension-to-peak arc, cinematic boom, hazard sound, alarm, siren, dialogue, music, or generated voiceover. Approved narration is added later in editing.';
- if(role==='legacy')return 'PROFESSIONAL CINEMATIC AUDIO MIX: Calm reflective natural ambience only, with subtle physically motivated sounds from visible actions. No rising-pressure arc, forced peak, cinematic boom, unsupported impact, alarm, siren, dialogue, music, or generated voiceover. Approved narration is added later in editing.';
- if(role==='response')return 'PROFESSIONAL CINEMATIC AUDIO MIX: Focused period-appropriate room/environment ambience and quiet physically motivated care sounds only. No generic danger crescendo, forced peak, unsupported impact, cinematic boom, alarm, siren, dialogue, music, or generated voiceover. Approved narration is added later in editing.';
- return 'PROFESSIONAL CINEMATIC AUDIO MIX: Match the semantic role "'+role+'" and the visible scene. Use only physically motivated ambience/SFX that the shot supports. Do not impose a generic tension-to-peak arc, unsupported impact, cinematic boom, alarm, siren, dialogue, music, or generated voiceover. Approved narration is added later in editing.';
-}
-function replaceAudioMixBlocks(text,role){
- const replacement=audioMix(role);let s=String(text||'');
- s=s.replace(/PROFESSIONAL CINEMATIC AUDIO MIX:\s*[\s\S]*?(?=\nERA \+ ACCURACY:|\nFRAME QUALITY TEST:|\n\nEPISODE CANON — CONTINUITY ENGINE:|\n\nAUDIO:|\n\nNEGATIVE:|$)/gi,replacement+'\n');
- if(role==='evidence')s=s.replace(/rising environmental pressure with selective impacts/gi,'calm retrospective room tone').replace(/occasional physically motivated impacts/gi,'subtle specified object contact sounds').replace(/quieter tension\s*→\s*rising pressure\s*→\s*peak\s*→\s*natural decay(?: when appropriate)?/gi,'steady quiet ambience with natural decay').replace(/tension-to-peak/gi,'steady retrospective');
- return s;
-}
-function objectPhysics(card,role){
- if(role==='evidence')return 'DEBRIS + DAMAGE PHYSICS LOCK: CORE 4 EVIDENCE OVERRIDE — Evidence/documents, furniture and sealed items remain stable and count-consistent. No disaster debris, impact force, collapse, vibration or damage is required unless explicitly established by narration.';
- if(isStructuralImpact(card,role))return 'DEBRIS + DAMAGE PHYSICS LOCK: CORE 4 STRUCTURAL-IMPACT OVERRIDE — The approved narration explicitly establishes structural impact, so the hazard-to-structure contact/failure chain is the primary visual action. Human action may remain a restrained secondary scale/reaction beat. Show only supported damage: contact/force first, progressive failure second, physically caused debris motion third. Do not add unrelated collapse, casualties, flying debris or renewed impact beyond the narration/StageSpec.';
- if(['human-impact','response','displacement','human-toll','legacy'].includes(role))return 'DEBRIS + DAMAGE PHYSICS LOCK: CORE 4 HUMAN/AFTERMATH OVERRIDE — Preserve only damage, debris and object motion explicitly supported by the StageSpec, narration or approved canon. Human action is primary; do not inject generic shingles, boards, collapse, flying debris or renewed impact merely because this is a disaster production.';
- return 'DEBRIS + DAMAGE PHYSICS LOCK: Preserve only debris/damage behavior actually supported by this semantic role and approved canon. Never add destruction because of a generic panel-number template.';
-}
-function replaceDebrisBlocks(card,text,role){
- const replacement=objectPhysics(card,role);let s=String(text||'');
- s=s.replace(/DEBRIS \+ DAMAGE PHYSICS LOCK:\s*[\s\S]*?(?=\nCINEMATIC CAMERA DIRECTOR:|\nPROFESSIONAL CINEMATIC AUDIO MIX:|\nERA \+ ACCURACY:|\nFRAME QUALITY TEST:|\n\nEPISODE CANON — CONTINUITY ENGINE:|\n\nCAMERA:|\n\nAUDIO:|\n\nNEGATIVE:|$)/gi,replacement+'\n');
- return s;
-}
-function normalizeEditorial(text,role){
- let s=String(text||'');
- s=s.replace(/NEW LD FORMAT — TRIAL V1:[^\n]*/i,'NEW LD FORMAT — TRIAL V1: Follow the semantic role "'+role+'" and advance one documented beat without forcing generic escalation, damage, recovery or response. Preserve event chronology, duration, style/color locks and the approved narration boundary. END NEW LD FORMAT.');
- s=replaceLine(s,'PROGRESSION DISCIPLINE:','Follow the semantic role "'+role+'" and the StageSpec chronology. Do not force continuous escalation when this beat is evidence, aftermath, response, recovery or legacy.');
- return s;
-}
+function profile(card){const sp=core.spec(card)||{},role=String(sp.role||'');if(structuralImpact(card,role))return {phase:'impact',intensity:'7/10 · narration-led structural impact',cast:'optional small adult scale/reaction reference outside the direct hazard path; humans may remain secondary when the approved narration centers structural impact',damage:'show only structural damage explicitly established by narration, StageSpec or approved canon; physical contact/force must precede failure and irreversible damage must accumulate',motion:'ONE hazard-to-structure impact chain as the primary action plus 1–3 restrained physically caused secondary motions; any human reaction remains secondary unless narration explicitly makes the human action primary',physics:'show the documented hazard contacting the structure, progressive load/failure, and supported debris motion with clear cause and effect; do not invent casualties, a new hazard mechanism, or unsupported total destruction',structural:true};return PROFILE[role]||PROFILE['cause-context'];}
+function hasLaterEraShift(card,role){if(role!=='legacy')return false;const n=narrationText(card).toLowerCase();return /\b(?:decades?|years?|generations?)\s+later\b|\blong after\b|\blong-term memory\b|\bstill carry[^.]{0,80}\bmemory\b/.test(n);}
+function legacyChronologyText(){return 'CORE 4 LEGACY TIME-JUMP OVERRIDE — HIGH PRIORITY: The approved narration explicitly places THIS PANEL after the original event year. For this panel only, the later legacy period supersedes any chapter-wide instruction requiring every visible element to remain in the original event year. The exact later year is intentionally unspecified. Preserve the established regional/place identity and use restrained, non-specific later-era civilian clothing, maintained or rebuilt surroundings, and ordinary public-space elements only when needed by the StageSpec. Do NOT invent smartphones, digital screens, contemporary branded vehicles, modern emergency gear, futuristic architecture, readable dates or signage, political banners, exact later-year labels, or technology that forces a specific later decade. Historical chronology and approved narration outrank the generic event-year lock for this panel. All strict 2D historical-anime, true black-and-white grayscale, no-photorealism, continuity, identity and accuracy locks remain unchanged.';}
+function applyLegacyChronology(card,text,role){let s=String(text||'');if(!hasLaterEraShift(card,role))return s;const block=legacyChronologyText();if(!/CORE 4 LEGACY TIME-JUMP OVERRIDE/i.test(s)){if(/END CHAPTER CONTINUITY LOCK\./i.test(s))s=s.replace(/END CHAPTER CONTINUITY LOCK\./i,'END CHAPTER CONTINUITY LOCK.\n\n'+block);else s=block+'\n\n'+s;}const era='ERA + ACCURACY: LEGACY TIME-JUMP ACTIVE — This panel intentionally occurs after the original event year because the approved narration establishes a later legacy period. The exact later year remains unspecified. Use only restrained period-neutral later-era details supported by the scene; do not add technology, branding, signage, vehicles, equipment or architecture that forces an unsupported modern date. The CORE 4 LEGACY TIME-JUMP OVERRIDE supersedes the generic original-event-year visual requirement for this panel only. Historical accuracy and chronology outrank drama.';s=s.replace(/(^|\n)ERA \+ ACCURACY:[^\n]*/i,(m,p)=>p+era);card.dataset.nerCoreLaterEra='1';return s;}
+function audioMix(role){if(role==='evidence')return 'PROFESSIONAL CINEMATIC AUDIO MIX: Calm retrospective room tone only. Allow quiet cloth, paper, chair, footstep, or sealed-object contact sounds only when the specified visible action causes them. No impact events, rising pressure, tension-to-peak arc, cinematic boom, hazard sound, alarm, siren, dialogue, music, or generated voiceover. Approved narration is added later in editing.';if(role==='legacy')return 'PROFESSIONAL CINEMATIC AUDIO MIX: Calm reflective natural ambience only, with subtle physically motivated sounds from visible actions. No rising-pressure arc, forced peak, cinematic boom, unsupported impact, alarm, siren, dialogue, music, or generated voiceover. Approved narration is added later in editing.';if(role==='response')return 'PROFESSIONAL CINEMATIC AUDIO MIX: Focused period-appropriate room/environment ambience and quiet physically motivated care sounds only. No generic danger crescendo, forced peak, unsupported impact, cinematic boom, alarm, siren, dialogue, music, or generated voiceover. Approved narration is added later in editing.';return 'PROFESSIONAL CINEMATIC AUDIO MIX: Match the semantic role "'+role+'" and the visible scene. Use only physically motivated ambience/SFX that the shot supports. Do not impose a generic tension-to-peak arc, unsupported impact, cinematic boom, alarm, siren, dialogue, music, or generated voiceover. Approved narration is added later in editing.';}
+function replaceAudioMixBlocks(text,role){const replacement=audioMix(role);let s=String(text||'');s=s.replace(/PROFESSIONAL CINEMATIC AUDIO MIX:\s*[\s\S]*?(?=\nERA \+ ACCURACY:|\nFRAME QUALITY TEST:|\n\nEPISODE CANON — CONTINUITY ENGINE:|\n\nAUDIO:|\n\nNEGATIVE:|$)/gi,replacement+'\n');if(role==='evidence')s=s.replace(/rising environmental pressure with selective impacts/gi,'calm retrospective room tone').replace(/occasional physically motivated impacts/gi,'subtle specified object contact sounds').replace(/quieter tension\s*→\s*rising pressure\s*→\s*peak\s*→\s*natural decay(?: when appropriate)?/gi,'steady quiet ambience with natural decay').replace(/tension-to-peak/gi,'steady retrospective');return s;}
+function objectPhysics(role,p){if(p?.structural)return 'DEBRIS + DAMAGE PHYSICS LOCK: CORE 4 STRUCTURAL-IMPACT OVERRIDE — The approved narration explicitly establishes structural impact, so the hazard-to-structure contact/failure chain is the primary visual action. Human action may remain a restrained secondary scale/reaction beat. Show only supported damage: contact/force first, progressive failure second, physically caused debris motion third. Do not add unrelated collapse, casualties, flying debris or renewed impact beyond the narration/StageSpec.';if(role==='evidence')return 'DEBRIS + DAMAGE PHYSICS LOCK: CORE 4 EVIDENCE OVERRIDE — Evidence/documents, furniture and sealed items remain stable and count-consistent. No disaster debris, impact force, collapse, vibration or damage is required unless explicitly established by narration.';if(['human-impact','response','displacement','human-toll','legacy'].includes(role))return 'DEBRIS + DAMAGE PHYSICS LOCK: CORE 4 HUMAN/AFTERMATH OVERRIDE — Preserve only damage, debris and object motion explicitly supported by the StageSpec, narration or approved canon. Human action is primary; do not inject generic shingles, boards, collapse, flying debris or renewed impact merely because this is a disaster production.';return 'DEBRIS + DAMAGE PHYSICS LOCK: Preserve only debris/damage behavior actually supported by this semantic role and approved canon. Never add destruction because of a generic panel-number template.';}
+function replaceDebrisBlocks(text,role,p){const replacement=objectPhysics(role,p);let s=String(text||'');s=s.replace(/DEBRIS \+ DAMAGE PHYSICS LOCK:\s*[\s\S]*?(?=\nCINEMATIC CAMERA DIRECTOR:|\nPROFESSIONAL CINEMATIC AUDIO MIX:|\nERA \+ ACCURACY:|\nFRAME QUALITY TEST:|\n\nEPISODE CANON — CONTINUITY ENGINE:|\n\nCAMERA:|\n\nAUDIO:|\n\nNEGATIVE:|$)/gi,replacement+'\n');return s;}
+function normalizeEditorial(text,role){let s=String(text||'');s=s.replace(/NEW LD FORMAT — TRIAL V1:[^\n]*/i,'NEW LD FORMAT — TRIAL V1: Follow the semantic role "'+role+'" and advance one documented beat without forcing generic escalation, damage, recovery or response. Preserve event chronology, duration, style/color locks and the approved narration boundary. END NEW LD FORMAT.');s=replaceLine(s,'PROGRESSION DISCIPLINE:','Follow the semantic role "'+role+'" and the StageSpec chronology. Do not force continuous escalation when this beat is evidence, aftermath, response, recovery or legacy.');return s;}
 function normalize(card,text){
  if(!panel(card)||core.frozen(card))return core.frozen(card)?core.enforceFrozen(card):String(text||'');
  let s=String(text||'');if(!s)return s;
- const sp=core.spec(card)||{},role=String(sp.role||''),p=profile(card),structural=isStructuralImpact(card,role);
+ const sp=core.spec(card)||{},p=profile(card),role=String(sp.role||'');
  s=window.NERStageSemantics4?.stripLegacyContinuity?.(s)||s;
  s=replaceLine(s,'Story role:',role+' · canonical narration/event semantic stage.');
  s=replaceLine(s,'Stage guard:','Follow the approved narration and StageSpec for the semantic role "'+role+'". Do not force escalation, damage, recovery, symptoms or response merely because of the numeric panel position.');
@@ -108,12 +59,11 @@ function normalize(card,text){
  s=replaceLine(s,'PHYSICS AND TIME:',p.physics+'. Preserve plausible time, identity, object count and scale.');
  s=replaceLine(s,'AUDIO:','Generate natural scene-specific ambience/SFX only; no generated voiceover or music. APPROVED NARRATION IS ADDED LATER IN EDITING and is not part of this T2V render.');
  s=replaceAudioMixBlocks(s,role);
- s=replaceDebrisBlocks(card,s,role);
+ s=replaceDebrisBlocks(s,role,p);
  s=normalizeEditorial(s,role);
  s=s.replace(/FIRST-FRAME \/ LAST-FRAME LOCK:[^\n]*/gi,'FIRST-FRAME / LAST-FRAME LOCK: FIRST FRAME establishes the StageSpec location, cast/object count and semantic role "'+role+'". LAST FRAME preserves those identities and geometry, showing only changes physically caused by this shot. Do not require damage, anchors or hazard effects that the StageSpec does not establish.');
  s=s.replace(/Hazard phase:\s*[^.\n]+\./i,'Hazard phase: '+p.phase+'.');
  s=applyLegacyChronology(card,s,role);
- if(structural)card.dataset.nerCoreStructuralImpact='1';else delete card.dataset.nerCoreStructuralImpact;
  const editorial='EDITORIAL NARRATION CONTRACT — CORE 4: The approved narration is added during final editing and is NOT generated as voiceover inside this 10-second T2V clip. Therefore "no voiceover" in AUDIO is intentional and does not conflict with narration carrying factual names, dates, statistics or conclusions.';
  s=s.replace(/\n\nEDITORIAL NARRATION CONTRACT — CORE 4:[\s\S]*?(?=\n\nNER CORE 4 STAGE CONTRACT|$)/i,'');
  if(/NER CORE 4 STAGE CONTRACT/i.test(s))s=s.replace(/\n\nNER CORE 4 STAGE CONTRACT/i,'\n\n'+editorial+'\n\nNER CORE 4 STAGE CONTRACT');else s+='\n\n'+editorial;
@@ -122,17 +72,19 @@ function normalize(card,text){
 }
 function write(card,text){const out=normalize(card,text);if(!core.frozen(card))core.writePrompt(card,out);return out;}
 function patch(){
- const vm=window.LDVideoModes;if(!vm||vm.__nerSemanticGuardV406)return false;
+ const vm=window.LDVideoModes;if(!vm||vm.__nerSemanticGuardV407)return false;
  const bp=typeof vm.prompt==='function'?vm.prompt.bind(vm):null,bb=typeof vm.build==='function'?vm.build.bind(vm):null;if(!bp||!bb)return false;
  vm.prompt=function(card){const out=bp(card);return panel(card)?write(card,out):out;};
  vm.build=function(card){const out=bb(card);return panel(card)?write(card,out):out;};
- vm.__nerSemanticGuardV406=true;return true;
+ vm.__nerSemanticGuardV407=true;return true;
 }
 function repair(card){if(!panel(card)||core.frozen(card))return false;patch();const out=window.LDVideoModes?.prompt?.(card)||core.currentPrompt(card);write(card,out);return true;}
-window.addEventListener('ld:production-built',()=>setTimeout(patch,0));
-window.addEventListener('load',()=>setTimeout(patch,0));
-document.addEventListener('pointerdown',e=>{if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn')){patch();const c=window.NERCore4Bridge?.targetCard?.();if(c)repair(c);}},true);
-[0,40,120,300,700].forEach(ms=>setTimeout(patch,ms));
+// Wrapper install only. Smart Continue preflight is owned by NERCore4Bridge so we do
+// not rebuild the same prompt again from a separate pointerdown listener.
+window.addEventListener('ld:production-built',()=>queueMicrotask(patch));
+window.addEventListener('ld:project-opened',()=>queueMicrotask(patch));
+window.addEventListener('load',()=>queueMicrotask(patch));
+patch();
 const versionEl=document.querySelector('.topbar .version');if(versionEl)versionEl.textContent='v4.0.9';
-window.NERSemanticGuard4=Object.freeze({version:VERSION,normalize,patch,repair,profile,replaceAudioMixBlocks,replaceDebrisBlocks,isStructuralImpact,hasLaterEraShift,applyLegacyChronology});
+window.NERSemanticGuard4=Object.freeze({version:VERSION,normalize,patch,repair,profile,replaceAudioMixBlocks,replaceDebrisBlocks,hasLaterEraShift,applyLegacyChronology,structuralImpact});
 })();
