@@ -1,11 +1,16 @@
-/* NER Studio Core 4 runtime bridge v4.0.2
+/* NER Studio Core 4 runtime bridge v4.0.3
    Centralizes local scene planning/validation and prompt lifecycle around
-   LDVideoModes without changing approved legacy project data. */
+   LDVideoModes without changing approved legacy project data.
+   v4.0.3 mobile performance: one preflight per Smart Continue tap, lazy target-only
+   planning, no project-wide planAll on build, and no duplicate click preflight. */
 (function(){'use strict';
 if(window.__nerCore4Bridge)return;
 window.__nerCore4Bridge=true;
 const core=window.NERCore4;
 if(!core){console.warn('NER Core 4 bridge skipped: core not loaded');return;}
+
+let lastPreflightAt=0;
+let lastPreflightStage='';
 
 function panel(card){return !!card&&/^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage||'');}
 function write(card,text){return core.writePrompt(card,text);}
@@ -35,7 +40,7 @@ function applyFinal(card,text){
  return write(card,core.applyContract(card,text));
 }
 function patchVideoModes(){
- const vm=window.LDVideoModes;if(!vm||vm.__nerCore4BridgeV402)return false;
+ const vm=window.LDVideoModes;if(!vm||vm.__nerCore4BridgeV403)return false;
  const nativePrompt=typeof vm.prompt==='function'?vm.prompt.bind(vm):null;
  const nativeBuild=typeof vm.build==='function'?vm.build.bind(vm):null;
  const nativeVariety=typeof vm.sceneVarietyIssue==='function'?vm.sceneVarietyIssue.bind(vm):null;
@@ -58,7 +63,7 @@ function patchVideoModes(){
   if(panel(card))return core.sceneVarietyIssue(card);
   return nativeVariety?nativeVariety(card):'';
  };
- vm.__nerCore4BridgeV402=true;
+ vm.__nerCore4BridgeV403=true;
  return true;
 }
 
@@ -88,9 +93,17 @@ function preflight(card){
  const result={...base,ok:base.ok&&plannerIssues.length===0,issues};
  card.dataset.nerCorePreflight=result.ok?'pass':'fail';
  card.dataset.nerCoreVersion=core.version;
- card.dataset.nerCoreBridgeVersion='4.0.2';
+ card.dataset.nerCoreBridgeVersion='4.0.3';
  window.dispatchEvent(new CustomEvent('ner:core4-preflight',{detail:{stage:card.dataset.stage,result}}));
  return result;
+}
+function preflightOnce(card){
+ if(!panel(card))return null;
+ const now=performance.now();
+ const stage=card.dataset.stage||'';
+ if(stage===lastPreflightStage&&now-lastPreflightAt<350)return null;
+ lastPreflightAt=now;lastPreflightStage=stage;
+ return preflight(card);
 }
 
 window.addEventListener('ld:smart-ready-changed',e=>{
@@ -112,19 +125,20 @@ document.addEventListener('change',e=>{
  else if(!done.checked)core.unfreeze(card);
 },true);
 
+// ONE preflight per user tap. Pointerdown runs before the app's click handler,
+// so a second document click preflight is unnecessary and expensive on mobile.
 document.addEventListener('pointerdown',e=>{
  if(!e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))return;
- const card=targetCard();if(card)preflight(card);
-},true);
-document.addEventListener('click',e=>{
- if(!e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn'))return;
- const card=targetCard();if(card&&!core.frozen(card))preflight(card);
+ const card=targetCard();if(card)preflightOnce(card);
 },true);
 
-window.addEventListener('ld:production-built',()=>setTimeout(()=>{patchVideoModes();window.NERFamilyPlanner4?.planAll?.();const c=targetCard();if(c)preflight(c);},0));
-window.addEventListener('load',()=>setTimeout(patchVideoModes,0));
-[0,50,150,400,900].forEach(ms=>setTimeout(patchVideoModes,ms));
+// Lazy planning: production build only ensures wrappers are installed. The current
+// target is planned/validated when Smart Continue is actually pressed.
+window.addEventListener('ld:production-built',()=>queueMicrotask(patchVideoModes));
+window.addEventListener('ld:project-opened',()=>queueMicrotask(patchVideoModes));
+window.addEventListener('load',()=>queueMicrotask(patchVideoModes));
+patchVideoModes();
 
-window.NERCore4Bridge=Object.freeze({version:'4.0.2',patchVideoModes,preflight,repairEventPack,targetCard,applyFamilyPlan,invalidateGeneratedPrompt});
-window.dispatchEvent(new CustomEvent('ner:core4-bridge-ready',{detail:{version:'4.0.2'}}));
+window.NERCore4Bridge=Object.freeze({version:'4.0.3',patchVideoModes,preflight,preflightOnce,repairEventPack,targetCard,applyFamilyPlan,invalidateGeneratedPrompt});
+window.dispatchEvent(new CustomEvent('ner:core4-bridge-ready',{detail:{version:'4.0.3'}}));
 })();
