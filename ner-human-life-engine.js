@@ -1,9 +1,11 @@
-/* NER HUMAN LIFE ENGINE v1.1.0
+/* NER HUMAN LIFE ENGINE v1.1.1
    Universal anti-doll micro-performance + life-state awareness.
-   Local prompt enhancer + validator only. No API calls. */
+   Local prompt enhancer + validator only. No API calls.
+   v1.1.1 mobile performance: wrapper-only Smart Continue integration; no duplicate
+   pointerdown repair and no startup timer fan-out. */
 (function(){'use strict';
 if(window.NERHumanLifeEngine)return;
-const VERSION='1.1.0';
+const VERSION='1.1.1';
 
 const ROLE_PROFILE={
  'normal-world':'soft natural blinking, calm breathing, mild gaze shifts, tiny posture settling',
@@ -26,10 +28,7 @@ const HUMAN_TOLL_MOTION='HUMAN-TOLL MOTION CLARITY: Give each clearly living for
 
 function isPanel(card){return !!card&&/^(HOOK|P(?:[1-9]|1[0-4])|ENDING)$/.test(String(card.dataset.stage||''));}
 function hasHumans(text){return /\b(adult|adults|person|people|civilian|civilians|survivor|survivors|worker|doctor|responder|reviewer|observer|man|woman|character|characters|crowd|caregiver|helper|witness|victim|victims|casualty|casualties|bodies|body|human remains|covered forms?)\b/i.test(String(text||''));}
-function rawRole(card){
- try{return String(window.NERCore4?.spec?.(card)?.role||card?.dataset?.nerCoreSemanticRole||'').toLowerCase();}
- catch{return String(card?.dataset?.nerCoreSemanticRole||'').toLowerCase();}
-}
+function rawRole(card){try{return String(window.NERCore4?.spec?.(card)?.role||card?.dataset?.nerCoreSemanticRole||'').toLowerCase();}catch{return String(card?.dataset?.nerCoreSemanticRole||'').toLowerCase();}}
 function roleClass(card){
  const r=rawRole(card);
  if(/evidence|document|investigat|archive|photo|record|identif/.test(r))return 'evidence';
@@ -47,8 +46,6 @@ function profile(card){return ROLE_PROFILE[roleClass(card)]||ROLE_PROFILE['cause
 function normalizeHumanTollMotion(card,text){
  let s=String(text||'');
  if(roleClass(card)!=='human-toll')return s;
- // Generic ambiguity cleanup for aftermath prompts: one living survivor cannot be
- // both optional-standing and camera-followed at the same time.
  s=s.replace(/\b(one\s+(?:adult\s+)?survivor)\s+stands?\s+or\s+walks?\s+slowly\b/gi,'$1 walks slowly in one continuous direction');
  s=s.replace(/\b(the\s+survivor)\s+stands?\s+or\s+walks?\s+slowly\b/gi,'$1 walks slowly in one continuous direction');
  return s;
@@ -59,9 +56,7 @@ function block(card){
  if(role==='human-toll')out+='\n'+AFTERMATH+'\n'+HUMAN_TOLL_MOTION;
  return out;
 }
-function stripExisting(text){
- return String(text||'').replace(/\n\nHUMAN MICRO-LIFE LOCK — HIGH PRIORITY:[\s\S]*?(?=\n\n(?:EDITORIAL NARRATION CONTRACT|NER CORE 4 STAGE CONTRACT|[A-Z][A-Z0-9 +/&—-]{4,}:)|$)/i,'');
-}
+function stripExisting(text){return String(text||'').replace(/\n\nHUMAN MICRO-LIFE LOCK — HIGH PRIORITY:[\s\S]*?(?=\n\n(?:EDITORIAL NARRATION CONTRACT|NER CORE 4 STAGE CONTRACT|[A-Z][A-Z0-9 +/&—-]{4,}:)|$)/i,'');}
 function enhance(card,prompt){
  let text=String(prompt||'');
  if(!isPanel(card)||!hasHumans(text))return text;
@@ -90,25 +85,22 @@ function write(card,text){
  return out;
 }
 function patchVideoModes(){
- const vm=window.LDVideoModes;if(!vm||vm.__nerHumanLifeV110)return false;
+ const vm=window.LDVideoModes;if(!vm||vm.__nerHumanLifeV111)return false;
  const nativePrompt=typeof vm.prompt==='function'?vm.prompt.bind(vm):null;
  const nativeBuild=typeof vm.build==='function'?vm.build.bind(vm):null;
  if(!nativePrompt||!nativeBuild)return false;
  vm.prompt=function(card){const out=nativePrompt(card);return isPanel(card)?write(card,out):out;};
  vm.build=function(card){const out=nativeBuild(card);return isPanel(card)?write(card,out):out;};
- vm.__nerHumanLifeV110=true;return true;
+ vm.__nerHumanLifeV111=true;return true;
 }
 function targetCard(){return window.NERCore4Bridge?.targetCard?.()||[...document.querySelectorAll('.stage-card')].find(c=>isPanel(c)&&!c.querySelector('.done-toggle')?.checked)||null;}
-function repair(card){
- if(!isPanel(card)||window.NERCore4?.frozen?.(card))return false;
- patchVideoModes();
- const p=window.LDVideoModes?.prompt?.(card)||window.NERCore4?.currentPrompt?.(card)||'';
- if(!p)return false;write(card,p);return true;
-}
-window.addEventListener('load',()=>setTimeout(patchVideoModes,0));
-window.addEventListener('ld:production-built',()=>setTimeout(patchVideoModes,0));
-document.addEventListener('pointerdown',e=>{if(e.target.closest?.('#ldSmartContinueBtn,#ldSmartStickyBtn')){patchVideoModes();const c=targetCard();if(c)repair(c);}},true);
-[0,40,120,300,700,1400].forEach(ms=>setTimeout(patchVideoModes,ms));
-window.NERHumanLifeEngine=Object.freeze({version:VERSION,enhance,audit,block,profile,roleClass,normalizeHumanTollMotion,patchVideoModes,repair});
+function repair(card){if(!isPanel(card)||window.NERCore4?.frozen?.(card))return false;patchVideoModes();const p=window.LDVideoModes?.prompt?.(card)||window.NERCore4?.currentPrompt?.(card)||'';if(!p)return false;write(card,p);return true;}
+// Smart Continue preflight is centralized in NERCore4Bridge. Human Life only wraps
+// LDVideoModes once, avoiding a second full prompt rebuild on the same tap.
+window.addEventListener('load',()=>queueMicrotask(patchVideoModes));
+window.addEventListener('ld:production-built',()=>queueMicrotask(patchVideoModes));
+window.addEventListener('ld:project-opened',()=>queueMicrotask(patchVideoModes));
+patchVideoModes();
+window.NERHumanLifeEngine=Object.freeze({version:VERSION,enhance,audit,block,profile,roleClass,normalizeHumanTollMotion,patchVideoModes,repair,targetCard});
 window.dispatchEvent(new CustomEvent('ner:human-life-ready',{detail:{version:VERSION}}));
 })();
