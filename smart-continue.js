@@ -520,6 +520,8 @@ function panelPayload(card){
   try{eventSpec=window.NERCore4?.eventPack?.(topic(),stage)?.spec?.(stage)||null;}catch{}
   const eventSpecificOverride=publicHealth||!!window.LDVideoModes?.eventPanel?.(stage)||!!eventSpec;
   const progression=eventSpecificOverride?null:window.LDDisasterProgression?.stage?.(topic(),stage);
+  // Audit the event-pack scene, not a stale UI-restored generic scene.
+  const eventScene=eventSpec?.scene&&eventSpecificOverride?String(eventSpec.scene):'';
   return {
     narrativeFormat:window.ldNarrativeFormat||'original',
     previousScene:publicHealth?'':String(card.previousElementSibling?.dataset.videoScene||card.previousElementSibling?.querySelector('.narration')?.value||'').slice(0,3500),
@@ -532,7 +534,7 @@ function panelPayload(card){
     location:String(continuity.location||'').trim(),
     sharedDetails:publicHealth?window.LDPublicHealthPolicy.rules.progression:String(continuity.details||'').trim(),
     narration:String(card.querySelector('.narration')?.value||'').trim(),
-    currentScene:String(sceneField?.value||card.dataset.videoScene||'').trim(),
+    currentScene:String(eventScene||sceneField?.value||card.dataset.videoScene||'').trim(),
     currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim(),
     eventSpecificOverride,
     progressionVersion:String(eventSpec?('event-pack-'+String(eventSpec.key||stage).toLowerCase().replace(/[^a-z0-9-]+/g,'-')):progression?.version||''),
