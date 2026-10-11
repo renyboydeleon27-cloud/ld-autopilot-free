@@ -513,7 +513,12 @@ function panelPayload(card){
   const promptField=card.querySelector('.text-video-prompt');
   const stage=card.dataset.stage||'';
   const publicHealth=!!window.LDPublicHealthPolicy?.matches(topic());
-  const eventSpecificOverride=publicHealth||!!window.LDVideoModes?.eventPanel?.(stage);
+  // Event-pack StageSpec is authoritative over generic numeric-stage progression.
+  // Preserve the semantic role in the AI audit payload so its validator cannot
+  // request an unrelated wider-impact camera or scene for a tribunal evidence beat.
+  let eventSpec=null;
+  try{eventSpec=window.NERCore4?.eventPack?.(topic(),stage)?.spec?.(stage)||null;}catch{}
+  const eventSpecificOverride=publicHealth||!!window.LDVideoModes?.eventPanel?.(stage)||!!eventSpec;
   const progression=eventSpecificOverride?null:window.LDDisasterProgression?.stage?.(topic(),stage);
   return {
     narrativeFormat:window.ldNarrativeFormat||'original',
@@ -531,9 +536,9 @@ function panelPayload(card){
     currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim(),
     eventSpecificOverride,
     progressionVersion:String(progression?.version||window.LDDisasterProgression?.version||''),
-    progressionFamily:String(progression?.familyLabel||''),
-    progressionRole:String(progression?.role||''),
-    progressionRule:String(progression?([progression.rule,progression.evidenceRule].filter(Boolean).join(' ')):'')
+    progressionFamily:String(eventSpec?.family||progression?.familyLabel||''),
+    progressionRole:String(eventSpec?.role||eventSpec?.label||progression?.role||''),
+    progressionRule:String(eventSpec?('Event-specific StageSpec: '+[eventSpec.eventBeat,eventSpec.actionType,eventSpec.locationType,eventSpec.cameraType].filter(Boolean).join('; ')+'. Follow the approved narration and event-specific scene; do not impose generic wider-consequence imagery or camera cutaways.'):progression?([progression.rule,progression.evidenceRule].filter(Boolean).join(' '):'')
   };
 }
 function isWellington1910(){
