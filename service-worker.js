@@ -1,11 +1,11 @@
-/* NER Studio PWA Service Worker 4.0.45
+/* NER Studio PWA Service Worker 4.0.46
    Cache/offline/update only. No JavaScript concatenation, injection, rewriting,
    or runtime business logic. App behavior belongs to normal versioned files. */
-const CACHE_NAME='ner-studio-pwa-4-0-45';
+const CACHE_NAME='ner-studio-pwa-4-0-46';
 const CORE_SHELL=[
  './','./index.html','./styles.css?v=3.46.3','./manifest.webmanifest?v=2','./app-icon.svg?v=2',
  './app.js?v=3.50.10','./project-library.js?v=3.49.27','./project-locks.js?v=3.49.11',
- './new-project-fix.js?v=1.8','./anime-render-enforcement.js?v=1.1.0','./aberfan-p9-rescue.js?v=1.0.0','./aberfan-p10-toll.js?v=1.0.0','./aberfan-p11-grief.js?v=1.0.1','./ner-final-prompt-canonicalizer.js?v=1.0.0',
+ './new-project-fix.js?v=1.8','./anime-render-enforcement.js?v=1.1.0','./aberfan-p9-rescue.js?v=1.0.0','./aberfan-p10-toll.js?v=1.0.0','./aberfan-p11-grief.js?v=1.0.1','./aberfan-p12-evidence.js?v=1.0.0','./ner-final-prompt-canonicalizer.js?v=1.0.0',
  './video-modes.js?v=3.50.4','./smart-continue.js?v=3.50.12','./continuity-engine.js?v=1.0.4',
  './smart-narration-progress.js?v=1.0.1','./camera-motion-lock.js?v=3.42.0',
  './disaster-progression-engine.js?v=3.49.2','./public-health-policy.js?v=1.3.8',
