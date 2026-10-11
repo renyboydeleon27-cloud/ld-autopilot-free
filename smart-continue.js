@@ -1389,6 +1389,9 @@ window.addEventListener('ld:production-built',()=>{
     migrateStaleWellingtonP12();
     restoreSmartSession();
     scheduleTargetUpdate();
+    // Production restoration is the authoritative readiness event for magnetic focus.
+    // Do not wait for a later pageshow/focus event to position the active panel.
+    if(!document.hidden)restoreCurrentPanelViewport({delay:0});
     refreshApiCostCounter();
     scheduleLocalReviewRevalidation();
   },180);
