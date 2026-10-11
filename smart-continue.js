@@ -538,7 +538,7 @@ function panelPayload(card){
     progressionVersion:String(progression?.version||window.LDDisasterProgression?.version||''),
     progressionFamily:String(eventSpec?.family||progression?.familyLabel||''),
     progressionRole:String(eventSpec?.role||eventSpec?.label||progression?.role||''),
-    progressionRule:String(eventSpec?('Event-specific StageSpec: '+[eventSpec.eventBeat,eventSpec.actionType,eventSpec.locationType,eventSpec.cameraType].filter(Boolean).join('; ')+'. Follow the approved narration and event-specific scene; do not impose generic wider-consequence imagery or camera cutaways.'):progression?([progression.rule,progression.evidenceRule].filter(Boolean).join(' '):'')
+    progressionRule:String(eventSpec?('Event-specific StageSpec: '+[eventSpec.eventBeat,eventSpec.actionType,eventSpec.locationType,eventSpec.cameraType].filter(Boolean).join('; ')+'. Follow the approved narration and event-specific scene; do not impose generic wider-consequence imagery or camera cutaways.'):progression?([progression.rule,progression.evidenceRule].filter(Boolean).join(' ')):'')
   };
 }
 function isWellington1910(){
