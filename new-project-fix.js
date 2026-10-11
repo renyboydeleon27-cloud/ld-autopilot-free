@@ -1,4 +1,4 @@
-/* NER Studio new-project hard reset + viewport focus guard v1.3. Local only; no network/API calls. */
+/* NER Studio new-project hard reset + viewport focus guard v1.4. Local only; no network/API calls. */
 (()=>{'use strict';
  const CORE_KEY='ld-autopilot-free-v1';
  const ACTIVE_KEY='ld-autopilot-free-active-project';
@@ -22,9 +22,7 @@
   catch{return false;}
  }
  function autoStageFocusEnabled(){
-  // FINAL AUDIT / completed project: never let background focus/pageshow pull the viewport.
   if(allStagesDone())return false;
-  // Fresh project: stay on setup until the user has named the project and completed Project Locks.
   if(!topicReady()||!locksReady())return false;
   return true;
  }
@@ -37,7 +35,6 @@
   Object.defineProperty(proto,'__ldAutoScreenFocusGuardV12',{value:true,configurable:false});
   proto.scrollIntoView=function(options){
    const isStage=!!this?.matches?.('#stages .stage-card');
-   // Block only AUTOMATIC stage pulling. Manual user navigation remains allowed.
    if(isStage&&!autoStageFocusEnabled()&&!recentTrustedUserAction())return;
    return original.call(this,options);
   };
@@ -55,8 +52,6 @@
   if(typeof nativeSetItem!=='function')return;
   Object.defineProperty(proto,'__ldFreshProjectStorageGuardV13',{value:true,configurable:false});
   proto.setItem=function(key,value){
-   // app.js can fire a final save during pagehide/reload. Once New Project is pending,
-   // never allow that old production to recreate CORE_KEY after we deliberately cleared it.
    if(String(key)===CORE_KEY){
     let pending=false;
     try{pending=localStorage.getItem(NEW_PROJECT_KEY)==='1';}catch{}
@@ -75,15 +70,12 @@
    const setup=document.querySelector('.setup');
    const topic=document.getElementById('topic');
    const narrative=document.getElementById('narrativeFormat');
-   // New-project setup fields must remain editable until Create Production locks the format.
    if(narrative)narrative.disabled=false;
-   // Setup scrolling is intentionally NOT blocked by the stage focus guard.
    if(setup)setup.scrollIntoView({behavior:'auto',block:'start'});
    if(topic){
     try{topic.focus({preventScroll:true});}catch{try{topic.focus();}catch{}}
    }
   };
-  // Run after the fresh-project boot/reset has finished painting on mobile PWA.
   requestAnimationFrame(()=>requestAnimationFrame(move));
   setTimeout(move,180);
  }
@@ -93,19 +85,14 @@
   starting=true;
   e.preventDefault();
   e.stopImmediatePropagation();
-  // Best-effort final save of the current project BEFORE the pending-new flag is set.
   try{window.LDProjectLibrary?.flushCurrent?.();}catch(err){console.warn('Final project sync skipped before New Project',err);}
   try{localStorage.setItem(NEW_PROJECT_KEY,'1');}catch{}
   try{localStorage.setItem(FOCUS_KEY,'1');}catch{}
-  // From this point onward, block any unload/pagehide handler from recreating the old CORE state.
   installFreshProjectStorageGuard();
   try{localStorage.removeItem(ACTIVE_KEY);}catch{}
   try{localStorage.removeItem(CORE_KEY);}catch{}
-  // Reload into a clean session. project-library.js consumes NEW_PROJECT_KEY on boot,
-  // skips legacy migration, and leaves the saved Project Library untouched.
   location.reload();
  }
- // Document capture runs before the older button listener, avoiding the in-place reset race.
  document.addEventListener('click',beginFreshProject,true);
  focusFreshSetup();
 
@@ -113,4 +100,16 @@
   enabled:autoStageFocusEnabled,
   state:()=>({enabled:autoStageFocusEnabled(),topicReady:topicReady(),locksReady:locksReady(),finalAudit:allStagesDone()})
  });
+})();
+
+/* NER Studio — load global 2D anime T2V enforcement v1.0.0 */
+(()=>{'use strict';
+ if(window.__ldAnimeRenderEnforcementLoaderV100)return;
+ window.__ldAnimeRenderEnforcementLoaderV100=true;
+ if(document.querySelector('script[data-ld-anime-render-enforcement]'))return;
+ const script=document.createElement('script');
+ script.src='./anime-render-enforcement.js?v=1.0.0';
+ script.async=true;
+ script.dataset.ldAnimeRenderEnforcement='1';
+ document.head.appendChild(script);
 })();
