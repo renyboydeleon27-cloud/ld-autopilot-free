@@ -1,4 +1,4 @@
-/* NER Studio new-project hard reset + viewport focus guard v1.4. Local only; no network/API calls. */
+/* NER Studio new-project hard reset + viewport focus guard v1.5. Local only; no network/API calls. */
 (()=>{'use strict';
  const CORE_KEY='ld-autopilot-free-v1';
  const ACTIVE_KEY='ld-autopilot-free-active-project';
@@ -102,14 +102,17 @@
  });
 })();
 
-/* NER Studio — load global 2D anime T2V enforcement v1.0.0 */
+/* NER Studio — load global 2D anime T2V enforcement v1.1.0 */
 (()=>{'use strict';
- if(window.__ldAnimeRenderEnforcementLoaderV100)return;
- window.__ldAnimeRenderEnforcementLoaderV100=true;
- if(document.querySelector('script[data-ld-anime-render-enforcement]'))return;
+ if(window.__ldAnimeRenderEnforcementLoaderV110)return;
+ window.__ldAnimeRenderEnforcementLoaderV110=true;
+ const existing=document.querySelector('script[data-ld-anime-render-enforcement]');
+ if(existing&&String(existing.src||'').includes('v=1.1.0'))return;
+ if(existing)existing.remove();
  const script=document.createElement('script');
- script.src='./anime-render-enforcement.js?v=1.0.0';
+ script.src='./anime-render-enforcement.js?v=1.1.0';
  script.async=true;
  script.dataset.ldAnimeRenderEnforcement='1';
+ script.dataset.ldAnimeRenderVersion='1.1.0';
  document.head.appendChild(script);
 })();
