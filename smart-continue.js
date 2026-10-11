@@ -535,7 +535,7 @@ function panelPayload(card){
     currentScene:String(sceneField?.value||card.dataset.videoScene||'').trim(),
     currentPrompt:String(promptField?.value||card.dataset.textVideoPrompt||'').trim(),
     eventSpecificOverride,
-    progressionVersion:String(progression?.version||window.LDDisasterProgression?.version||''),
+    progressionVersion:String(eventSpec?('event-pack-'+String(eventSpec.key||stage).toLowerCase().replace(/[^a-z0-9-]+/g,'-')):progression?.version||''),
     progressionFamily:String(eventSpec?.family||progression?.familyLabel||''),
     progressionRole:String(eventSpec?.role||eventSpec?.label||progression?.role||''),
     progressionRule:String(eventSpec?('Event-specific StageSpec: '+[eventSpec.eventBeat,eventSpec.actionType,eventSpec.locationType,eventSpec.cameraType].filter(Boolean).join('; ')+'. Follow the approved narration and event-specific scene; do not impose generic wider-consequence imagery or camera cutaways.'):progression?([progression.rule,progression.evidenceRule].filter(Boolean).join(' ')):'')
