@@ -1,4 +1,4 @@
-/* NER Studio new-project hard reset + viewport focus guard v1.6. Local only; no network/API calls. */
+/* NER Studio new-project hard reset + viewport focus guard v1.7. Local only; no network/API calls. */
 (()=>{'use strict';
  const CORE_KEY='ld-autopilot-free-v1';
  const ACTIVE_KEY='ld-autopilot-free-active-project';
@@ -127,4 +127,20 @@
  script.async=true;
  script.dataset.ldAberfanP9Rescue='1';
  document.head.appendChild(script);
+})();
+
+/* NER Studio — final canonicalizer loads after all normal load listeners/wrappers. */
+(()=>{'use strict';
+ if(window.__ldFinalPromptCanonicalizerLoaderV100)return;
+ window.__ldFinalPromptCanonicalizerLoaderV100=true;
+ function load(){
+  if(document.querySelector('script[data-ld-final-prompt-canonicalizer]'))return;
+  const script=document.createElement('script');
+  script.src='./ner-final-prompt-canonicalizer.js?v=1.0.0';
+  script.async=true;
+  script.dataset.ldFinalPromptCanonicalizer='1';
+  document.head.appendChild(script);
+ }
+ if(document.readyState==='complete')queueMicrotask(load);
+ else window.addEventListener('load',()=>queueMicrotask(load),{once:true});
 })();
