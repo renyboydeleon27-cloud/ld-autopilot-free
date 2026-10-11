@@ -14,6 +14,7 @@ s=s.replace(/INTENSITY:[^\n]*/gi,'INTENSITY: 2/10 · solemn tribunal accountabil
 s=s.replace(/Semantic target:[^\n]*/gi,'Semantic target: 2/10 · solemn tribunal accountability finding.');
 s=s.replace(/CINEMATIC CAMERA DIRECTOR:[^\n]*/gi,'CINEMATIC CAMERA DIRECTOR: '+CAMERA+'; frontal standing findings presentation, no diagram tracing.');
 s=s.replace(/MOTION BUDGET:[^\n]*/gi,'MOTION BUDGET: ONE closed-folder lowering gesture from 2s to 6s; 6–10s settled hold and minimal breathing.');
+s=s.replace(/TIMING:\n[\s\S]*?(?=\n\nMASTER CINEMATIC CONSISTENCY LOCK)/i,'TIMING:\n0.0–2.0s: Establish one standing representative holding a closed blank findings folder and two distinct seated listeners; natural micro-life begins immediately.\n2.0–6.0s: ONE deliberate lowering gesture of the closed folder to the front of the plain desk, completing by 6.0s.\n6.0–10.0s: Maintain the settled folder position and frontal medium composition; only restrained breathing, blinks and gaze shifts. No further purposeful action.');
 s=s.replace(/Cast profile:[^\n]*/gi,'Cast profile: exactly three distinct adults: one standing representative, two seated listeners.');
 s=s.replace(/FIRST FRAME establishes the StageSpec location, cast\/object count and semantic role "[^"]*"/i,'FIRST FRAME establishes the StageSpec location, cast/object count and semantic role "tribunal-accountability"');
 s=s.replace(/Follow the semantic role "[^"]*" and advance/i,'Follow the semantic role "tribunal-accountability" and advance');
