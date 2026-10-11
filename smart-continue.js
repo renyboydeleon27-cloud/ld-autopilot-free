@@ -1341,9 +1341,17 @@ function scheduleTargetUpdate(){
     updateTargetLabel();
   });
 }
-const observer=new MutationObserver(()=>{
-  mountAdvanced();
-  scheduleTargetUpdate();
+let advancedMountQueued=false;
+const observer=new MutationObserver(mutations=>{
+  // Ignore text/attribute churn and coalesce bursts into one UI pass per frame.
+  if(!mutations.some(m=>m.addedNodes.length||m.removedNodes.length))return;
+  if(advancedMountQueued)return;
+  advancedMountQueued=true;
+  requestAnimationFrame(()=>{
+    advancedMountQueued=false;
+    mountAdvanced();
+    scheduleTargetUpdate();
+  });
 });
 observer.observe(document.body,{childList:true,subtree:true});
 window.addEventListener('scroll',scheduleTargetUpdate,{passive:true});
