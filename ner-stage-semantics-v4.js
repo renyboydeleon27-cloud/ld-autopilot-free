@@ -102,6 +102,10 @@ function canonicalRole(raw,text,stage,fam){
 function spec(x){
  const s=base.spec(x);if(!s)return s;
  const st=stageOf(x),nar=narration(x),fam=family([base.topic?.()||'',nar].join(' ')),eventRole=clean(s.eventRole||s.label||s.role||'');
+ // A registered event pack supplies the verified semantic action and phase.
+ // Do not downgrade tribunal accountability into generic recovery or evidence gestures.
+ const eventPack=base.eventPack?.(base.topic?.()||'',st);
+ if(eventPack&&s.source==='event-pack')return {...s,family:fam,eventRole,role:s.role||s.label,actionType:s.actionType,hazardPhase:s.hazardPhase};
  const role=canonicalRole(s.role||s.label,nar,st,fam);
  return {...s,family:fam,eventRole,role,actionType:ROLE_ACTION[role]||s.actionType,hazardPhase:ROLE_PHASE[role]||s.hazardPhase};
 }
