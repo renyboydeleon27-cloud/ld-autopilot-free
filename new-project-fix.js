@@ -1,4 +1,4 @@
-/* NER Studio new-project hard reset + viewport focus guard v1.7. Local only; no network/API calls. */
+/* NER Studio new-project hard reset + viewport focus guard v1.8. Local only; no network/API calls. */
 (()=>{'use strict';
  const CORE_KEY='ld-autopilot-free-v1';
  const ACTIVE_KEY='ld-autopilot-free-active-project';
@@ -23,7 +23,9 @@
  }
  function autoStageFocusEnabled(){
   if(allStagesDone())return false;
-  if(!topicReady()||!locksReady())return false;
+  // Restored stage cards can scroll before the slower project-lock hydration completes.
+  // Only enable for a real loaded project, never an empty/new setup.
+  if(!topicReady()||stageCards().length===0)return false;
   return true;
  }
  function recentTrustedUserAction(){return Date.now()-lastTrustedUserActionAt<900;}
