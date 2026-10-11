@@ -1,4 +1,4 @@
-/* NER Studio new-project hard reset + viewport focus guard v1.5. Local only; no network/API calls. */
+/* NER Studio new-project hard reset + viewport focus guard v1.6. Local only; no network/API calls. */
 (()=>{'use strict';
  const CORE_KEY='ld-autopilot-free-v1';
  const ACTIVE_KEY='ld-autopilot-free-active-project';
@@ -114,5 +114,17 @@
  script.async=true;
  script.dataset.ldAnimeRenderEnforcement='1';
  script.dataset.ldAnimeRenderVersion='1.1.0';
+ document.head.appendChild(script);
+})();
+
+/* NER Studio — load Aberfan P9 rescue continuity guard v1.0.0 */
+(()=>{'use strict';
+ if(window.__ldAberfanP9RescueLoaderV100)return;
+ window.__ldAberfanP9RescueLoaderV100=true;
+ if(document.querySelector('script[data-ld-aberfan-p9-rescue]'))return;
+ const script=document.createElement('script');
+ script.src='./aberfan-p9-rescue.js?v=1.0.0';
+ script.async=true;
+ script.dataset.ldAberfanP9Rescue='1';
  document.head.appendChild(script);
 })();
