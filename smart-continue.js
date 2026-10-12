@@ -1055,7 +1055,7 @@ async function prepareTextToVideo(card){
       throw new Error('Final prompt changed after audit and still needs review: '+issues);
     }
   }
-  const exactPrompt=window.LDVideoModes?.prompt?.(card)||finalPrompt;
+  // Reuse the exact last PASS-audited payload; do not regenerate after audit.\n  const exactPrompt=String(finalPayload.currentPrompt||finalPrompt||'');
   if(window.LDVideoModes?.promptStyleCompatible&&!window.LDVideoModes.promptStyleCompatible(exactPrompt)){
     throw new Error('Visual-style lock mismatch after final rebuild. SMART CONTINUE will not approve this panel.');
   }
