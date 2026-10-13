@@ -32,7 +32,7 @@ const deadline=setTimeout(()=>{console.error('PWA regression timed out');process
   const failed=await page.evaluate(async()=>{const reg=await navigator.serviceWorker.getRegistration();const done=new Promise(resolve=>reg.addEventListener('updatefound',()=>{const worker=reg.installing;worker.addEventListener('statechange',()=>{if(worker.state==='redundant')resolve(worker.state);});},{once:true}));await reg.update();return done;});
   assert.equal(failed,'redundant');assert.equal(await page.evaluate(()=>typeof window.NERCore5),'undefined');
   assert(await page.evaluate(async()=> (await caches.keys()).includes('ner-studio-pwa-4-0-56')),'failed install retains old cache');
-  assert(!await page.evaluate(async()=> (await caches.keys()).includes('ner-studio-pwa-5-0-5')),'failed partial shell is removed');
+  assert(!await page.evaluate(async()=> (await caches.keys()).includes('ner-studio-pwa-5-0-6')),'failed partial shell is removed');
   failInstall=false;
   await page.evaluate(async()=>{const reg=await navigator.serviceWorker.getRegistration();const done=new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));await reg.update();await done;});
   await page.goto(origin);await page.waitForFunction(()=>window.NERCore5Runtime);await page.waitForTimeout(800);
