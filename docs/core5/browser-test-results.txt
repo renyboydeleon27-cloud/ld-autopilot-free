@@ -1,0 +1,11 @@
+initial {"managed":true,"target":"P12","errors":[]}
+after prepare {
+  status: '🟡 P12 READY FOR FLOW · Core 5 exact audited prompt copied. Review the result, then approve.',
+  ready: true
+}
+handoff {
+  status: '🟡 P13 READY FOR FLOW · Core 5 exact audited prompt copied. Review the result, then approve.',
+  target: 'P13'
+}
+PASS: simultaneous tabs share one audit; interrupted tab blocks automatic retry; explicit retry works; storage quota failure makes zero provider calls.
+PASS: actual page -> mock audit -> exact prompt -> reused audit -> reload -> Smart Continue approval; approved legacy P1 unchanged. Mock calls: 9

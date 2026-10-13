@@ -1,0 +1,306 @@
+{
+  "result": "PASS",
+  "project": "isolated new synthetic Aberfan test; no production panels reopened",
+  "stages": 16,
+  "mockedAuditRequests": 16,
+  "paidRequests": 0,
+  "pageErrors": [],
+  "checks": [
+    "all sixteen local review forms",
+    "Smart Continue HOOK through ENDING",
+    "one audit per panel",
+    "repeat audit reuse",
+    "copied/audited/approved bytes",
+    "approved persistence after reload"
+  ],
+  "sceneReview": {
+    "HOOK": {
+      "role": "hook",
+      "chronology": {
+        "relation": "event",
+        "sceneYear": 1966,
+        "period": "1966",
+        "basis": "A warning interrupts ordinary life."
+      },
+      "setting": "representative outdoor viewing area",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly turns their head to the left"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P1": {
+      "role": "normal-world",
+      "chronology": {
+        "relation": "event",
+        "sceneYear": 1966,
+        "period": "1966",
+        "basis": "Ordinary life continued in the village."
+      },
+      "setting": "ordinary local street before the event",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 walks to the edge of a plain doorway"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P2": {
+      "role": "cause-context",
+      "chronology": {
+        "relation": "before",
+        "sceneYear": null,
+        "period": "unspecified earlier period",
+        "basis": "Years before the disaster, material accumulated above the village."
+      },
+      "setting": "representative outdoor viewing area",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly turns their head to the left"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P3": {
+      "role": "cause-context",
+      "chronology": {
+        "relation": "event",
+        "sceneYear": 1966,
+        "period": "1966",
+        "basis": "The slope contained water and loose material."
+      },
+      "setting": "representative outdoor viewing area",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly turns their head to the left"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P4": {
+      "role": "onset",
+      "chronology": {
+        "relation": "event",
+        "sceneYear": 1966,
+        "period": "1966",
+        "basis": "The slope collapsed toward the village."
+      },
+      "setting": "representative outdoor viewing area",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly turns their head to the left"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P5": {
+      "role": "human-impact",
+      "chronology": {
+        "relation": "event",
+        "sceneYear": 1966,
+        "period": "1966",
+        "basis": "The moving material struck a school."
+      },
+      "setting": "representative outdoor viewing area",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly turns their head to the left"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P6": {
+      "role": "human-impact",
+      "chronology": {
+        "relation": "event",
+        "sceneYear": 1966,
+        "period": "1966",
+        "basis": "Survivors faced the immediate impact."
+      },
+      "setting": "representative outdoor viewing area",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly turns their head to the left"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P7": {
+      "role": "human-toll",
+      "chronology": {
+        "relation": "event",
+        "sceneYear": 1966,
+        "period": "1966",
+        "basis": "The disaster killed local residents."
+      },
+      "setting": "settled non-graphic local aftermath",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly lowers their head"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P8": {
+      "role": "displacement",
+      "chronology": {
+        "relation": "event",
+        "sceneYear": 1966,
+        "period": "1966",
+        "basis": "Families fled toward shelter."
+      },
+      "setting": "visible local route toward shelter",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 walks steadily to a visible sheltered threshold"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P9": {
+      "role": "response",
+      "chronology": {
+        "relation": "after",
+        "sceneYear": null,
+        "period": "unspecified post-event period",
+        "basis": "Rescue workers searched the aftermath."
+      },
+      "setting": "representative local support setting",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly raises their head and eye-line toward adult-2"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P10": {
+      "role": "response",
+      "chronology": {
+        "relation": "event",
+        "sceneYear": 1966,
+        "period": "1966",
+        "basis": "Local aid supported displaced families."
+      },
+      "setting": "representative local support setting",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly raises their head and eye-line toward adult-2"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P11": {
+      "role": "aftermath",
+      "chronology": {
+        "relation": "after",
+        "sceneYear": null,
+        "period": "unspecified post-event period",
+        "basis": "The community faced the aftermath."
+      },
+      "setting": "settled representative local aftermath",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly lowers their head"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "P12": {
+      "role": "evidence",
+      "chronology": {
+        "relation": "after",
+        "sceneYear": null,
+        "period": "unspecified post-event period",
+        "basis": "A public tribunal investigated water beneath the coal tip."
+      },
+      "setting": "representative inquiry room",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 traces one finger along the water layer in one unlabelled coal-tip cross-section sketch"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height close-medium evidence table"
+      }
+    },
+    "P13": {
+      "role": "accountability",
+      "chronology": {
+        "relation": "after",
+        "sceneYear": null,
+        "period": "unspecified post-event period",
+        "basis": "The tribunal placed responsibility on the National Coal Board; it was preventable."
+      },
+      "setting": "representative inquiry findings room",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 lowers one closed blank findings folder to rest against the front of a plain desk"
+      },
+      "camera": {
+        "movement": "locked",
+        "framing": "human-height frontal medium"
+      }
+    },
+    "P14": {
+      "role": "legacy",
+      "chronology": {
+        "relation": "later",
+        "sceneYear": null,
+        "period": "unspecified later period",
+        "basis": "Decades later, remembrance and coal-tip safety remain its legacy."
+      },
+      "setting": "unmarked representative outdoor remembrance setting",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly lowers their head"
+      },
+      "camera": {
+        "movement": "slow-push-in",
+        "framing": "human-height medium-wide"
+      }
+    },
+    "ENDING": {
+      "role": "ending",
+      "chronology": {
+        "relation": "after",
+        "sceneYear": null,
+        "period": "unspecified reflective post-event period",
+        "basis": "Representative ending illustration; exact date not asserted"
+      },
+      "setting": "quiet reflective local setting",
+      "action": {
+        "actor": "adult-1",
+        "description": "adult-1 slowly lowers their head"
+      },
+      "camera": {
+        "movement": "locked",
+        "framing": "human-height medium-wide"
+      }
+    }
+  }
+}

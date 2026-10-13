@@ -18,6 +18,7 @@
   }
 
   function syncEnding(card){
+    if(window.NERCore5Runtime?.owns(card))return false;
     const imagePrompt=card?.querySelector('.image-prompt');
     if(!imagePrompt)return false;
     let next=imagePrompt.value;
@@ -31,6 +32,7 @@
   }
 
   function syncCard(card){
+    if(window.NERCore5Runtime?.owns(card))return false;
  if(window.LDStoryModes?.enabled())return false;
     const stage=card?.dataset?.stage;
     if(!stage||stage==='THUMBNAIL')return false;

@@ -16,7 +16,7 @@ function load(src){
 }
 if(!window.NERCore4)load('ner-core-4.js?v=4.0.0');
 if(!window.NERStageSemantics4)load('ner-stage-semantics-v4.js?v=4.0.0');
-if(!window.NERFamilyPlanner4)load('ner-family-planner-v4.js?v=4.0.0');
+if(!window.NERFamilyPlanner4)load('ner-family-planner-v4.js?v=5.0.3');
 if(!window.LDHalabjaEventPanelEngine)load('halabja-event-panel-engine.js?v=1.0');
 if(!window.NERCore4Bridge)load('ner-core-bridge.js?v=4.0.1');
 if(!window.NERSemanticGuard4)load('ner-semantic-guard-v4.js?v=4.0.5');

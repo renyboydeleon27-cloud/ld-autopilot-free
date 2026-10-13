@@ -241,6 +241,7 @@ function sceneText(p){
   'FACTUAL BOUNDARY: Treat approved narration/research as the factual source. Representative unnamed adult/object staging exists only to make the shot filmable and must remain period-plausible; do not invent named people, readable records, exact measurements, warnings, agencies, mechanisms or consequences not established by the narration/context.';
 }
 function writeScene(card,text){
+ if(window.NERCore5Runtime?.owns(card))return rawScene(card);
  const field=card.querySelector('.video-scene');
  card.dataset.videoScene=text;
  card.dataset.nerCoreSceneOwned='1';
@@ -250,7 +251,7 @@ function writeScene(card,text){
  return text;
 }
 function apply(card,options={}){
- if(!panel(card)||core.frozen(card))return false;
+ if(!panel(card)||window.NERCore5Runtime?.owns(card)||core.frozen(card))return false;
  const raw=rawScene(card),stale=genericPlaceholder(raw);
  if(keep(card)&&!stale)return false;
  const plannerOwned=card.dataset.nerCoreSceneOwned==='1'||/^CORE 4 FAMILY-PLANNED SCENE\s*—/i.test(sceneBody(raw))||stale;

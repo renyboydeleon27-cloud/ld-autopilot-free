@@ -1094,6 +1094,8 @@ function xylazineP2Prompt(card){
  +'STATUS: APPROVED SCENE REFERENCE — test the generated clip before marking this production panel Done.';
 }
 function build(card){
+ if(window.NERCore5Runtime?.protectedPanel(card))return window.NERCore5Runtime.preserve(card);
+ if(window.NERCore5Runtime?.manages(card))return window.NERCore5Runtime.build(card);
  if(window.LDStoryModes?.enabled())return window.LDStoryModes.video(card,current(),format(),style(),colorMode());
  var scene=cleanSceneText(stripSceneModePrefix(sceneFrom(card)));
  if(!scene)throw Error('Add the panel scene description first.');
@@ -1155,6 +1157,8 @@ function completeTextPrompt(text){
  return s.includes('VIDEO PROMPT — EXACTLY 10 SECONDS')&&s.includes('PANEL SCENE:')&&s.includes('TIMING:')&&s.includes('CAMERA:')&&s.includes('PHYSICS AND TIME:')&&s.includes('AUDIO:')&&s.includes('NEGATIVE:');
 }
 function rebuildTextPrompt(card){
+ if(window.NERCore5Runtime?.protectedPanel(card))return window.NERCore5Runtime.preserve(card);
+ if(window.NERCore5Runtime?.manages(card))return window.NERCore5Runtime.build(card);
  if(window.LDStoryModes?.enabled()){
   var text=build(card);card.dataset.textVideoPrompt=text;card.dataset.textVideoSignature=signature(card);
   var field=card.querySelector('.text-video-prompt');if(field)field.value=text;
@@ -1183,13 +1187,13 @@ function currentPublicHealthPromptCompatible(card){
  if(/one unmistakable foreground action|Continue and visibly complete the physical action through most of this beat|paper handling, or a held pose alone do NOT count/i.test(text))return false;
  return text.includes('one purposeful nearby hand/object action')&&text.includes('Identity stability outranks amount of motion');
 }
-function valid(card){if(!currentPublicHealthPromptCompatible(card))return false;if(window.LDStoryModes?.enabled())return completeTextPrompt(state(card).text)&&state(card).text.includes('CHARACTER + WORLD BIBLE:')&&normalizedSignature(state(card).signature)===signature(card);var approvedDone=!!card.querySelector('.done-toggle')?.checked&&card.dataset.approvalRevoked!=='1';if(approvedDone&&state(card).mode==='text'&&completeTextPrompt(state(card).text))return true;if(approvedXylazineP2(card)&&!state(card).text.includes('APPROVED XYLAZINE P2 — VETERINARY CONTEXT:'))return false;if(!card.querySelector('.done-toggle')?.checked&&isWellingtonMasterStage(card.dataset.stage)&&!state(card).text.includes('WELLINGTON CHAPTER MASTER DNA — APPROVED P4 INHERITANCE:'))return false;if(!card.querySelector('.done-toggle')?.checked&&isWellingtonMasterStage(card.dataset.stage)&&!state(card).text.includes('ABSOLUTE AUDIO LOCK — WELLINGTON P4–P14 — HIGHEST PRIORITY:'))return false;if(!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('ENVIRONMENT BIBLE — SHARED PHYSICAL WORLD:'))return false;if(!card.querySelector('.done-toggle')?.checked&&window.LDContinuityEngine&&!state(card).text.includes('EPISODE CANON — CONTINUITY ENGINE:'))return false;if(card.dataset.stage==='P14'&&sanFrancisco1906P14('P14')&&!state(card).text.includes('P14 APPROVED SINGLE-MAP CONTINUITY LOCK:'))return false;if(card.dataset.stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P13 SINGLE-ACTION ANTI-MORPH LOCK:'))return false;if(card.dataset.stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
+function valid(card){if(window.NERCore5Runtime?.manages(card))return window.NERCore5Runtime.protectedPanel(card)||window.NERCore5Runtime.ready(card);if(!currentPublicHealthPromptCompatible(card))return false;if(window.LDStoryModes?.enabled())return completeTextPrompt(state(card).text)&&state(card).text.includes('CHARACTER + WORLD BIBLE:')&&normalizedSignature(state(card).signature)===signature(card);var approvedDone=!!card.querySelector('.done-toggle')?.checked&&card.dataset.approvalRevoked!=='1';if(approvedDone&&state(card).mode==='text'&&completeTextPrompt(state(card).text))return true;if(approvedXylazineP2(card)&&!state(card).text.includes('APPROVED XYLAZINE P2 — VETERINARY CONTEXT:'))return false;if(!card.querySelector('.done-toggle')?.checked&&isWellingtonMasterStage(card.dataset.stage)&&!state(card).text.includes('WELLINGTON CHAPTER MASTER DNA — APPROVED P4 INHERITANCE:'))return false;if(!card.querySelector('.done-toggle')?.checked&&isWellingtonMasterStage(card.dataset.stage)&&!state(card).text.includes('ABSOLUTE AUDIO LOCK — WELLINGTON P4–P14 — HIGHEST PRIORITY:'))return false;if(!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('ENVIRONMENT BIBLE — SHARED PHYSICAL WORLD:'))return false;if(!card.querySelector('.done-toggle')?.checked&&window.LDContinuityEngine&&!state(card).text.includes('EPISODE CANON — CONTINUITY ENGINE:'))return false;if(card.dataset.stage==='P14'&&sanFrancisco1906P14('P14')&&!state(card).text.includes('P14 APPROVED SINGLE-MAP CONTINUITY LOCK:'))return false;if(card.dataset.stage==='P13'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P13 SINGLE-ACTION ANTI-MORPH LOCK:'))return false;if(card.dataset.stage==='P11'&&/\bSan Francisco Earthquake\b/i.test(current())&&/\b1906\b/.test(current())&&style()==='anime'&&colorMode()==='bw'&&!card.querySelector('.done-toggle')?.checked&&!state(card).text.includes('P11 2D ANIME FRAME LOCK:'))return false;return completeTextPrompt(state(card).text)&&promptStyleCompatible(state(card).text)&&qualityPromptCompatible(state(card).text)&&antiClonePromptCompatible(state(card).text)&&normalizedSignature(state(card).signature)===signature(card)&&ready();}
 function legacyCompletionReady(card){
  if(!supports(card)||state(card).mode!=='text')return false;
  if(!card.querySelector('.narration')?.value.trim())return false;
  return completeTextPrompt(state(card).text);
 }
-function completionReady(card){
+function completionReady(card){if(window.NERCore5Runtime?.manages(card))return window.NERCore5Runtime.protectedPanel(card)||window.NERCore5Runtime.ready(card);
  if(!supports(card))return false;
  if(state(card).mode!=='text')return true;
  if(!ready())return false;
@@ -1204,6 +1208,8 @@ function completionIssue(card){
  return 'Refresh the Text-to-Video prompt, then mark Done.';
 }
 function prompt(card){
+ if(window.NERCore5Runtime?.protectedPanel(card))return window.NERCore5Runtime.preserve(card);
+ if(window.NERCore5Runtime?.manages(card))return window.NERCore5Runtime.build(card);
  if(supports(card)&&state(card).mode==='text'){
    if(card.querySelector('.done-toggle')?.checked&&card.dataset.approvalRevoked!=='1'&&completeTextPrompt(state(card).text))return state(card).text;
    if(!valid(card))return rebuildTextPrompt(card);
@@ -1280,6 +1286,7 @@ if(pending)message+=' '+pending+' text prompts need building or refresh; check t
 var status=root.querySelector('.production-video-status');if(status.textContent!==message)status.textContent=message;}
 function ensureTextMode(card){
  if(!card||!supports(card))return false;
+ if(window.NERCore5Runtime?.protectedPanel(card))return state(card).mode==='text';
  if(state(card).mode!=='text'){
    card.dataset.videoMode='text';
    card.querySelector('.done-toggle').checked=false;
@@ -1293,6 +1300,7 @@ function setAllMode(mode){
  if(window.ldProjectLocks?.locked&&locked&&mode!==locked){showToast('Video Mode is locked for this project.');return;}
  if(mode!=='image'&&mode!=='text')return;var cards=panelCards();if(!cards.length)return;
 var built=0;cards.forEach(function(card){
+ if(window.NERCore5Runtime?.protectedPanel(card))return;
  var done=card.querySelector('.done-toggle');
  var sameMode=state(card).mode===mode;
  var preserveApproved=!!done?.checked&&card.dataset.approvalRevoked!=='1'&&sameMode&&mode==='text'&&completeTextPrompt(state(card).text);
@@ -1388,8 +1396,8 @@ box.querySelector('.build-missing-video').onclick=function(){if(!ready())return 
 document.getElementById('stages').before(box);}
 function all(){document.querySelectorAll('.stage-card').forEach(function(card){decorate(card);update(card);});syncGlobalControl();}
 window.LDVideoModes={version:'3.50.4',sceneVarietyIssue:sceneVarietyIssue,isKeepScene:isKeepScene,stripSceneModePrefix:stripSceneModePrefix,updateSceneChoiceStatus:updateSceneChoiceStatus,supports:supports,state:state,defaults:defaults,titleDefaults:titleDefaults,hydrateContinuityFromTitle:hydrateContinuityFromTitle,lock:lock,generatedVisualDna:generatedVisualDna,effectiveVisualDna:effectiveVisualDna,absoluteStyleLock:absoluteStyleLock,sanitizeSceneForStyle:sanitizeSceneForStyle,promptStyleCompatible:promptStyleCompatible,qualityPromptCompatible:qualityPromptCompatible,antiClonePromptCompatible:antiClonePromptCompatible,cinematicMasterLock:cinematicMasterLock,characterDiversityLock:characterDiversityLock,cameraDirector:cameraDirector,weatherContinuityLock:weatherContinuityLock,audioDirector:audioDirector,withLock:withLock,build:build,signature:signature,valid:valid,legacyCompletionReady:legacyCompletionReady,completionReady:completionReady,completionIssue:completionIssue,prompt:prompt,all:all,setAllMode:setAllMode,ensureTextMode:ensureTextMode,selectedMode:selectedMode,rebuildAll:rebuildAll,hardResetVisualMode:hardResetVisualMode,colorMode:colorMode,monochromeRequired:monochromeRequired,textOnlyAccuracyLock:textOnlyAccuracyLock,generatedEnvironmentBible:generatedEnvironmentBible,effectiveEnvironmentBible:effectiveEnvironmentBible,rockyMountainLocustPanel:rockyMountainLocustPanel,lituyaCause:lituyaCause,nargisPanel:nargisPanel,triStateTornadoPanel:triStateTornadoPanel,eventPanel:eventPanel,progression:progression,progressionLock:progressionLock,resignAll:resignAll};
+window.NERCore5Runtime?.attachVideoModes(window.LDVideoModes);
 var css=document.createElement('style');css.textContent='.video-mode-controls{padding:14px;margin:14px 0;border:1px solid #455365;border-radius:12px}#chapterVideoContext{border:3px solid #ff3b30!important;box-shadow:0 0 0 2px rgba(255,59,48,.18)!important}.video-mode-controls label{display:block;margin:10px 0}.video-mode-controls input,.video-mode-controls textarea,.video-mode-controls select{display:block;width:100%;box-sizing:border-box}.video-mode-controls p{font-size:.85rem;opacity:.8}.scene-choice-status{margin:6px 0 10px!important;padding:8px 10px;border-radius:8px;background:rgba(36,151,70,.10);font-weight:700;opacity:1!important}.production-video-buttons{display:flex;gap:10px;flex-wrap:wrap}.production-video-buttons button{flex:1;min-width:140px}.production-video-buttons [aria-pressed=true]{background:#244837;border-color:#65c28d;color:#fff}.stage-card[data-video-mode="text"] .copy-active-video,.stage-card[data-video-mode="text"] .copy-text-video{background:#249746!important;border:1px solid #54cb6c!important;color:#fff!important;font-weight:700;box-shadow:0 2px 8px rgba(22,143,61,.22)}.stage-card[data-video-mode="text"] .copy-active-video:hover,.stage-card[data-video-mode="text"] .copy-text-video:hover{background:#1c7d39!important}.stage-card[data-video-mode="text"] .copy-active-video:focus-visible,.stage-card[data-video-mode="text"] .copy-text-video:focus-visible{outline:3px solid #b6efc0;outline-offset:2px}.text-prompt-details{margin:10px 0 4px;border:0;padding:0}.text-prompt-details summary{display:inline-flex;align-items:center;justify-content:center;width:auto;box-sizing:border-box;min-height:38px;padding:7px 13px;border:1px solid #4c8cd0;border-radius:8px;background:#174d87;color:#fff;cursor:pointer;font-size:.86rem;font-weight:600;text-align:center;list-style:none}.text-prompt-details summary::marker{content:none}.text-prompt-details summary::-webkit-details-marker{display:none}.text-prompt-details summary:hover{background:#1d609f}.text-prompt-details summary:focus-visible{outline:3px solid #a9d5ff;outline-offset:2px}.text-prompt-details[open] label{margin-top:14px}.text-prompt-details[open] .text-video-prompt{height:72vh;min-height:380px;resize:vertical}.text-prompt-details:not([open]) .text-video-prompt{display:none}.stage-card [hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('ld:production-built',function(event){panel();all();if(event.detail?.fresh)activateSmartDefault();});document.addEventListener('change',function(e){if(e.target.matches('#visualMode,#format')){refreshAutoDnaUi();all();saveCurrent();if(window.LDHookChoiceSystem)window.LDHookChoiceSystem.render();}});document.addEventListener('input',function(e){if(e.target.matches('.image-prompt,.narration')){var card=e.target.closest('.stage-card');if(card&&supports(card)){var field=card.querySelector('.video-scene');if(field&&!state(card).scene)field.value=sceneFrom(card);update(card);}}});
 new MutationObserver(function(){globalControl();all();}).observe(document.getElementById('stages'),{childList:true});panel();all();setTimeout(all,700);
 })();
-

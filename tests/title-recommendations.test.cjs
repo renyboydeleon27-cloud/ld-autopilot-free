@@ -13,7 +13,7 @@ assert.equal(recommend('Locust Plague 1874')[0].family,'insect');
 const app=fs.readFileSync(require.resolve('../app.js'),'utf8');
 const build=app.match(/function buildProduction\(seed\)\{[^\n]+/)[0];
 const collect=app.match(/function collectState\(\)\{[^\n]+/)[0];
-const context={window:{dispatchEvent(){}},CustomEvent:function(){},topicEl:{value:''},formatEl:{value:'shorts'},stagesEl:{innerHTML:'',querySelectorAll(){return[]}},projectTitle:{textContent:''},modeText:{},stageCount:{},shortsStages:()=>[],longformStages:()=>[],updateJumpMenu(){},updateStats(){},saveCurrent(){},Date};
+const context={document:{getElementById:()=>null},categoryEl:null,storyPremiseEl:null,storyBibleEl:null,syncStorySetup(){},compactApprovedMemoryForStorage:x=>x,legacyProjectApprovalCompat:()=>false,seedApprovalLedger(){},recoverApprovalLedger:()=>0,recoverDoneShadow:()=>0,recoverAccidentalDoneReset:()=>0,seedDoneShadow(){},window:{dispatchEvent(){}},CustomEvent:function(){},topicEl:{value:''},formatEl:{value:'shorts'},stagesEl:{innerHTML:'',querySelectorAll(){return[]}},projectTitle:{textContent:''},modeText:{},stageCount:{},shortsStages:()=>[],longformStages:()=>[],updateJumpMenu(){},updateStats(){},saveCurrent(){},Date};
 vm.createContext(context);vm.runInContext(build+'\n'+collect,context);
 for(const [topic,title] of [['A','Custom title A'],['B','Custom title B'],['A','Custom title A']]){context.seed={topic,youtubeTitle:title,stages:{}};vm.runInContext('buildProduction(seed)',context);assert.equal(vm.runInContext('collectState().youtubeTitle',context),title);}
 context.seed={topic:'Legacy',stages:{}};vm.runInContext('buildProduction(seed)',context);assert.equal(vm.runInContext('collectState().youtubeTitle',context),null);

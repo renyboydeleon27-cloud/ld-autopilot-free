@@ -1,0 +1,19 @@
+{
+  "result": "PASS",
+  "topic": "Halabja Chemical Attack — Iraq — 1988",
+  "backupSha256": "b51b40d3a4313ac8639d14a5f7228c3973c19a11123ff46b298ad6bac3bdf433",
+  "approvedPanels": 17,
+  "checks": [
+    "real UI import",
+    "all saved approved stage fields",
+    "project settings and API usage",
+    "save/reload",
+    "downloaded backup export",
+    "approval memory",
+    "exact preserved prompts",
+    "completed Smart Continue is inert",
+    "original backup unchanged"
+  ],
+  "apiRequests": 0,
+  "pageErrors": 0
+}

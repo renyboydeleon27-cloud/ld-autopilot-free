@@ -189,6 +189,7 @@ function approvedSnapshot(card){
   };
 }
 function saveApprovedMemory(card,options={}){
+  if(window.NERCore5Runtime?.manages(card)&&card.dataset.core5Record)window.NERCore5Runtime.approve(card);
   if(!card)return null;
   const stage=card.dataset.stage||'';
   if(!stage)return null;
@@ -211,6 +212,7 @@ function saveApprovedMemory(card,options={}){
 }
 function clearSmartState(){
   stages.querySelectorAll('.stage-card').forEach(c=>{
+    if(window.NERCore5Runtime?.protectedPanel(c))return;
     delete c.dataset.smartReady;
     delete c.dataset.smartReadySignature;
   });
@@ -309,9 +311,11 @@ function promptPolicyVersion(payload){
   return window.LDPublicHealthPolicy?.matches?.(payload?.topic||topic())?String(window.LDPublicHealthPolicy?.version||'public-health-unversioned'):'default';
 }
 function auditCacheKey(payload){
+  if(payload.core5)return smartScope()+'|'+window.NERCore5.stable(payload);
   return [payload.stage,payload.visualMode,payload.colorMode,payload.year,payload.location,'policy:'+promptPolicyVersion(payload),promptHash(payload.currentPrompt)].join('|');
 }
 function readinessSignature(card){
+  if(window.NERCore5Runtime?.manages(card)&&!window.NERCore5Runtime.protectedPanel(card))return window.NERCore5Runtime.signature(card);
   if(!card)return '';
   if(window.LDStoryModes?.enabled()&&card.dataset.videoMode==='text'&&/^P[1-9]\d*$/.test(card.dataset.stage))return 'fiction|'+promptHash(JSON.stringify([window.LDStoryModes.polishKey(card),card.dataset.textVideoPrompt||'',card.dataset.videoScene||'']));
   const stage=card.dataset.stage||'';
@@ -369,6 +373,7 @@ function clearCardSmartReady(card){
   window.dispatchEvent(new CustomEvent('ld:smart-ready-changed',{detail:{stage,ready:false,signature:''}}));
 }
 function currentPublicHealthReadyCompatible(card){
+  if(window.NERCore5Runtime?.manages(card))return window.NERCore5Runtime.ready(card);
   if(!card||window.LDPublicHealthPolicy?.matches?.(topic())!==true)return true;
   const currentPolicyVersion=String(window.LDPublicHealthPolicy?.version||'');
   const savedPolicyVersion=String(card.dataset.publicHealthPolicyVersion||'');
@@ -377,6 +382,7 @@ function currentPublicHealthReadyCompatible(card){
   return !!currentPolicyVersion&&savedPolicyVersion===currentPolicyVersion&&!oldMotionDNA.test(prompt);
 }
 function smartReadyStillCurrent(card){
+  if(window.NERCore5Runtime?.manages(card))return window.NERCore5Runtime.ready(card);
   return currentPublicHealthReadyCompatible(card)
     && card?.dataset?.smartReady==='1'
     && !!card.dataset.smartReadySignature
@@ -508,6 +514,7 @@ async function fetchWithTimeout(url,options,timeoutMs=80000){
   }
 }
 function panelPayload(card){
+  if(window.NERCore5Runtime?.manages(card)&&(!window.NERCore5Runtime.protectedPanel(card)||card.dataset.core5Record))return window.NERCore5Runtime.payload(card);
   const continuity=window.ldVideoContinuity||{};
   const sceneField=card.querySelector('.video-scene');
   const promptField=card.querySelector('.text-video-prompt');
@@ -551,6 +558,7 @@ function migrateStaleWellingtonP5(){
   if(!isWellington1910())return false;
   const card=stages.querySelector('.stage-card[data-stage="P5"]');
   if(!card)return false;
+  if(window.NERCore5Runtime?.manages(card)||card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.(card.dataset.stage))return false;
   if(card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.('P5'))return false;
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim();
   const narration=String(card.querySelector('.narration')?.value||'').trim();
@@ -592,6 +600,7 @@ function migrateStaleWellingtonP7(){
   if(!isWellington1910())return false;
   const card=stages.querySelector('.stage-card[data-stage="P7"]');
   if(!card)return false;
+  if(window.NERCore5Runtime?.manages(card)||card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.(card.dataset.stage))return false;
   if(card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.('P7'))return false;
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'').trim();
   const narration=String(card.querySelector('.narration')?.value||'').trim();
@@ -633,6 +642,7 @@ function migrateStaleWellingtonP10(){
   if(!isWellington1910())return false;
   const card=stages.querySelector('.stage-card[data-stage="P10"]');
   if(!card)return false;
+  if(window.NERCore5Runtime?.manages(card)||card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.(card.dataset.stage))return false;
   if(card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.('P10'))return false;
   const prompt=String(card.querySelector('.text-video-prompt')?.value||card.dataset.textVideoPrompt||'');
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
@@ -669,6 +679,7 @@ function migrateStaleWellingtonP11(){
   if(!isWellington1910())return false;
   const card=stages.querySelector('.stage-card[data-stage="P11"]');
   if(!card)return false;
+  if(window.NERCore5Runtime?.manages(card)||card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.(card.dataset.stage))return false;
   const prompt=String(card.querySelector('.text-video-prompt')?.value||card.dataset.textVideoPrompt||'');
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
   const approvedScene=String(window.ldApprovedMemory?.stages?.P11?.latest?.videoScene||'');
@@ -710,6 +721,7 @@ function migrateStaleWellingtonP12(){
   if(!isWellington1910())return false;
   const card=stages.querySelector('.stage-card[data-stage="P12"]');
   if(!card)return false;
+  if(window.NERCore5Runtime?.manages(card)||card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.(card.dataset.stage))return false;
   if(card.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.('P12'))return false;
   const prompt=String(card.querySelector('.text-video-prompt')?.value||card.dataset.textVideoPrompt||'');
   const scene=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
@@ -747,6 +759,7 @@ function isRocky1874(){
   return t.includes('rocky mountain locust')&&t.includes('1874');
 }
 function migrateLegacyNarration(card){
+  if(window.NERCore5Runtime?.manages(card)||card?.querySelector('.done-toggle')?.checked||window.LDCore?.isApprovalCommitted?.(card?.dataset.stage))return false;
   if(!isRocky1874()||!card)return false;
   const field=card.querySelector('.narration');
   if(!field)return false;
@@ -834,7 +847,8 @@ async function ensureNarration(card){
   return true;
 }
 async function audit(payload){
-  const localIssues=window.LDPublicHealthPolicy?.issues(payload.topic,payload.currentPrompt)||[];
+  if(payload.core5){const v=window.NERCore5.validatePayload(payload);if(!v.ok)throw Error(v.issues.join(" "));}
+  const localIssues=payload.core5?[]:window.LDPublicHealthPolicy?.issues(payload.topic,payload.currentPrompt)||[];
   if(localIssues.length)throw new Error('Local prompt check — no audit credits used: '+localIssues.join(' '));
   const key=auditCacheKey(payload);
   const cached=auditPassCache.get(key);
@@ -1055,7 +1069,8 @@ async function prepareTextToVideo(card){
       throw new Error('Final prompt changed after audit and still needs review: '+issues);
     }
   }
-  // Reuse the exact last PASS-audited payload; do not regenerate after audit.\n  const exactPrompt=String(finalPayload.currentPrompt||finalPrompt||'');
+  // Reuse the exact last PASS-audited payload; do not regenerate after audit.
+  const exactPrompt=String(finalPayload.currentPrompt||finalPrompt||'');
   if(window.LDVideoModes?.promptStyleCompatible&&!window.LDVideoModes.promptStyleCompatible(exactPrompt)){
     throw new Error('Visual-style lock mismatch after final rebuild. SMART CONTINUE will not approve this panel.');
   }
@@ -1078,6 +1093,17 @@ async function prepareTextToVideo(card){
   status('🟡 '+card.dataset.stage+' READY FOR FLOW · NOT YET APPROVED · exact prompt signature verified'+(copied?' · prompt copied automatically':'')+'. Generate in Flow, review the clip, then press '+approveLabel(card)+'.','pass');
 }
 async function prepare(card){
+  if(window.NERCore5Runtime?.manages(card)){
+    if(window.NERCore5Runtime.protectedPanel(card))return;
+    status('SMART CONTINUE · Core 5 local preflight, then one exact-prompt audit…','working');
+    const exactPrompt=await window.NERCore5Runtime.prepare(card,audit);
+    assertStageOwnsSmartRun(card);
+    const copied=await copyText(exactPrompt);
+    markSmartReady(card);
+    buttonLabel(approveLabel(card));
+    status('🟡 '+card.dataset.stage+' READY FOR FLOW · Core 5 exact audited prompt'+(copied?' copied':' ready to copy')+'. Review the result, then approve.','pass');
+    return;
+  }
   clearCardSmartReady(card);
   buttonLabel('🚀 SMART CONTINUE');
 

@@ -149,6 +149,7 @@
   }
 
   function enhanceCard(card,ctx,preserveSaved=false){
+    if(window.NERCore5Runtime?.owns(card))return false;
     const stage=card.dataset.stage;
     const narration=card.querySelector('.narration');
     const image=card.querySelector('.image-prompt');

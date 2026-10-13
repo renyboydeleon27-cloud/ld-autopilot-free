@@ -57,7 +57,7 @@ HISTORICAL / TRUTH LOCK: architecture, clothing, boats, vehicles, utilities, too
   function lockNarration(){
     if(window.LDStoryModes?.enabled())return;
     const field=stages.querySelector('.stage-card[data-stage="ENDING"] .narration');
-    if(!field)return;
+    if(!field||window.NERCore5Runtime?.owns(field.closest('.stage-card')))return;
     field.readOnly=true;
     field.title='Locked channel ending narration';
     if(field.value===ENDING_NARRATION)return;
@@ -72,6 +72,7 @@ HISTORICAL / TRUTH LOCK: architecture, clothing, boats, vehicles, utilities, too
     lockNarration();
  if(window.LDStoryModes?.enabled())return false;
     const card=stages.querySelector('.stage-card[data-stage="ENDING"]');
+    if(window.NERCore5Runtime?.owns(card))return false;
     const prompt=card?.querySelector('.image-prompt');
     if(!prompt)return false;
     const topic=document.getElementById('projectTitle')?.textContent?.trim()||document.getElementById('topic')?.value?.trim()||'Untitled Disaster';

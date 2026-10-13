@@ -59,6 +59,7 @@
   }
 
   function applyStage(card,force=false){
+    if(window.NERCore5Runtime?.owns(card))return false;
     if(normalize(topicEl.value)!=='1976 tangshan earthquake')return;
     const stage=card.dataset.stage;
     const img=card.querySelector('.image-prompt');

@@ -101,7 +101,7 @@ function syncVideoMode(lock){
   if(!hasProduction())return;
   if(window.LDVideoModes?.setAllMode)window.LDVideoModes.setAllMode(lock.videoMode);
   else stages.querySelectorAll('.stage-card').forEach(card=>{
-    if(/^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage||''))card.dataset.videoMode=lock.videoMode;
+    if(!window.NERCore5Runtime?.protectedPanel(card)&&/^P(?:[1-9]|1[0-4])$/.test(card.dataset.stage||''))card.dataset.videoMode=lock.videoMode;
   });
 }
 function applyLock(lock,{forceVisual=false}={}){
@@ -269,7 +269,7 @@ window.LDProjectLocks={
 (()=>{
   if(window.__ldHalabjaP4DirectLoaderV10)return;
   window.__ldHalabjaP4DirectLoaderV10=true;
-  const src='halabja-p4-hotfix.js?v=1.0-direct';
+  const src='halabja-p4-hotfix.js?v=5.0.3';
   if(document.readyState==='loading'){
     document.write('<script src="'+src+'"><\/script>');
     return;

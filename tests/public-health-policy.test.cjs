@@ -11,7 +11,10 @@ test('all fourteen public-health panels use coherent quiet audio, motion and cam
  const api=harness('Xylazine Crisis — Philadelphia — 2020');
  for(let i=1;i<=14;i++){
   const stage='P'+i,text=api.lock()+'\n'+api.cinematicMasterLock(stage,false)+'\n'+api.progressionLock(stage,null);
-  assert.deepEqual(policy.issues('Xylazine',text),[]);
+  // Lock fragments alone are not a complete scene: the validator must flag missing motion.
+  assert.match(policy.issues('Xylazine',text).join(' '),/Visible state change/);
+  const scene='\nPANEL SCENE:\nAn adult raises their head toward a separate support worker.\nTIMING:\n0–2s: Establish.\n2–7s: The adult raises their head, then completes the motion.\n7–10s: Hold the completed state.\n';
+  assert.deepEqual(policy.issues('Xylazine',text+scene),[]);
   assert.match(text,/Quiet scene-specific ambience/);assert.match(text,/No generic disaster debris/);
   assert.ok(api.qualityPromptCompatible(text));assert.ok(api.antiClonePromptCompatible(text));
  }
