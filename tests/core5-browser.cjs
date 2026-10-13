@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const {chromium}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES?process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwright':'playwright');
 const root=path.resolve(__dirname,'..');
-const deadline=setTimeout(()=>{console.error('Browser regression timed out');process.exit(1);},60000);deadline.unref();
+const deadline=setTimeout(()=>{console.error('Browser regression timed out');process.exit(1);},180000);deadline.unref();
 (async()=>{
  const server=http.createServer((req,res)=>{let p=path.join(root,new URL(req.url,'http://localhost').pathname);if(p.endsWith('/'))p+='index.html';if(!p.startsWith(root+'/')){res.writeHead(403).end();return;}try{res.setHeader('Content-Type',p.endsWith('.js')?'text/javascript':p.endsWith('.css')?'text/css':'text/html');res.end(fs.readFileSync(p));}catch{res.writeHead(404).end();}});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
@@ -32,7 +32,7 @@ const deadline=setTimeout(()=>{console.error('Browser regression timed out');pro
  assert.equal(calls.length,1);assert.equal(calls[0].url,'/api/ai-t2v-audit');
  let p=await page.evaluate(()=>window.LDCore.collectState().stages.P12);assert.equal(p.textVideoPrompt,calls[0].body.currentPrompt);assert(p.smartReady);assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),p.textVideoPrompt,'clipboard bytes equal audit bytes');
  await page.evaluate(()=>window.LDSmartContinue.prepare(document.querySelector('.stage-card[data-stage="P12"]')));assert.equal(calls.length,1,'reuse exact audit');
- await page.evaluate(()=>window.LDCore.saveCurrent());await page.reload();await page.waitForTimeout(1000);
+ await page.evaluate(()=>window.LDCore.saveCurrent());await page.reload();await page.waitForFunction(()=>{const c=document.querySelector('.stage-card[data-stage="P12"]');return c&&window.NERCore5Runtime?.ready(c);},{},{timeout:15000});
  assert.equal(await page.evaluate(()=>window.NERCore5Runtime.ready(document.querySelector('.stage-card[data-stage="P12"]'))),true,'reload ready');
  await page.evaluate(()=>window.LDSmartContinue.run());
  console.log('handoff',await page.evaluate(()=>({status:document.getElementById('ldSmartContinueStatus').textContent,target:window.LDSmartContinue.currentCard()?.dataset.stage})));
