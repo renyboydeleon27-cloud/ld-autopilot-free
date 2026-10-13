@@ -126,6 +126,7 @@
   }
 
   function applyCard(card,notify=false){
+    if(window.NERCore5Runtime?.owns(card))return false;
  if(window.LDStoryModes?.enabled())return false;
     const real=select.value==='real';
     const img=card.querySelector('.image-prompt');

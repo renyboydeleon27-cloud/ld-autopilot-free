@@ -56,7 +56,7 @@ function card(narration,scene=''){
   assert.match(c.dataset.videoScene,/PRIMARY ACTION:/);
   assert.match(c.dataset.videoScene,/stable coal-waste tip/i);
   assert.doesNotMatch(c.dataset.videoScene,/one adult performs one ordinary era-appropriate activity/i);
-  assert.deepEqual(window.NERFamilyPlanner4.audit(c),[]);
+  assert.deepEqual(Array.from(window.NERFamilyPlanner4.audit(c)),[]);
 }
 
 {
@@ -73,3 +73,11 @@ function card(narration,scene=''){
 }
 
 console.log('Core 4 family planner concreteness tests passed');
+
+{
+ const window=boot({frozen:false});
+ window.NERCore5Runtime={owns:()=>true};
+ const c=card('A later account describes the aftermath.','Original approved scene');
+ assert.equal(window.NERFamilyPlanner4.apply(c,{force:true}),false);
+ assert.equal(c.dataset.videoScene,'Original approved scene','persisted approvals survive legacy forced planning');
+}

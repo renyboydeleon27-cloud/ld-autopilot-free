@@ -51,6 +51,7 @@
   function showToast(text){if(!toast)return;toast.textContent=text;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),1800);}
 
   function applyCard(card,p){
+    if(window.NERCore5Runtime?.owns(card))return false;
     const stage=card.dataset.stage;
     const comp=p?.stages?.[stage];
     if(!comp||stage==='ENDING'||stage==='THUMBNAIL')return false;

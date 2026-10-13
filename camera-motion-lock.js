@@ -136,6 +136,7 @@ function apply(){
  patchVideoModes();
  if(window.LDStoryModes?.enabled())return false;
  document.querySelectorAll('.stage-card').forEach(card=>{
+  if(window.NERCore5Runtime?.owns(card))return;
   const st=stageName(card); if(!(st in plans))return;
   if(st==='HOOK'||card.dataset.videoMode==='text'||window.LDProjectLocks?.videoMode?.()==='text')return;
   const el=card.querySelector('.flow-prompt'); if(!el||!el.value.trim())return;

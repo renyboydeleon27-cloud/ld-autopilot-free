@@ -1,0 +1,1 @@
+PASS: actual Core 4 worker -> interrupted Core 5 installation retains Core 4 -> complete Core 5 activation -> mobile offline reload; every approved panel field preserved; zero API calls.

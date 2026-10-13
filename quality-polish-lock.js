@@ -25,6 +25,7 @@ function polish(){
  if(window.LDStoryModes?.enabled())return false;
  const lockedMode=window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode||'';
  document.querySelectorAll('.stage-card').forEach(card=>{
+  if(window.NERCore5Runtime?.owns(card))return;
   const stage=(card.dataset.stage||card.querySelector('.stage-name')?.textContent||'').trim().toUpperCase();
   if(stage==='ENDING'||stage==='THUMBNAIL')return;
   // Text-to-Video prompts are owned by the T2V/Hook systems; do not mutate them after readiness.

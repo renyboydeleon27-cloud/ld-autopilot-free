@@ -60,6 +60,7 @@
   function pack(){const t=topicEl.value.trim();return PACKS.find(p=>p.test.test(t));}
 
   function syncCard(card,p){
+    if(window.NERCore5Runtime?.owns(card))return false;
     const stage=card.dataset.stage;
     const item=p?.stages?.[stage];
     if(!item||stage==='ENDING'||stage==='THUMBNAIL')return false;

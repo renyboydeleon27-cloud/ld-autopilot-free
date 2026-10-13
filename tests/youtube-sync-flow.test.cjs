@@ -21,7 +21,7 @@ class Element{
   return {ok:true,status:200,json:async()=>body};
  };
  vm.createContext(context);vm.runInContext(fs.readFileSync('youtube-analytics.js','utf8'),context);
- await elements.ytSave.events.click();assert.match(elements.ytStatus.textContent,/Client ID/);assert.equal(stored.length,0);
+ await new Promise(r=>setImmediate(r));elements.ytClientId.value='';await elements.ytSave.events.click();assert.match(elements.ytStatus.textContent,/Client ID/);assert.equal(stored.length,0);
  elements.ytClientId.value='123-test.apps.googleusercontent.com';await elements.ytSave.events.click();assert.equal(stored.length,1);assert.equal(config.scope,C.scopes.join(' '));
  grant=false;await config.callback({access_token:'fixture-token',expires_in:3600});assert.match(elements.ytStatus.textContent,/Both read-only/);assert.equal(calls.length,0);
  grant=true;await config.callback({access_token:'fixture-token',expires_in:3600});assert.equal(elements.ytChannel.value,'UC-test');

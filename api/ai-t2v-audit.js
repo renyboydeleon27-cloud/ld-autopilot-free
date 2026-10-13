@@ -1,3 +1,4 @@
+import Core5 from "../ner-core-5.js";
 import { usageFromResponse, mergeApiUsage } from "./api-usage.js";
 
 function outputText(data){
@@ -39,6 +40,8 @@ export default async function handler(req,res){
   if(req.method==="OPTIONS") return res.status(204).end();
   if(req.method!=="POST") return res.status(405).json({ok:false,error:"POST only"});
 
+  const isCore5=req.body?.core5===true;
+  if(isCore5){const check=Core5.validatePayload(req.body);if(!check.ok)return res.status(400).json({ok:false,error:'Core 5 local preflight failed: '+check.issues.join(' ')});}
   const topic=String(req.body?.topic||"").trim().slice(0,240);
   const stage=String(req.body?.stage||"").trim().toUpperCase();
   const format=req.body?.format==="longform"?"longform":"shorts";
@@ -57,19 +60,20 @@ export default async function handler(req,res){
   const progressionRule=String(req.body?.progressionRule||"").trim().slice(0,2200);
 
   if(!topic) return res.status(400).json({ok:false,error:"Missing disaster topic."});
-  if(!/^P(?:[1-9]|1[0-4])$/.test(stage)) return res.status(400).json({ok:false,error:"Open a valid P1–P14 panel first."});
+  if(!(isCore5?Core5.STAGES.includes(stage):/^P(?:[1-9]|1[0-4])$/.test(stage))) return res.status(400).json({ok:false,error:"Open a valid P1–P14 panel first."});
   if(!currentPrompt) return res.status(400).json({ok:false,error:"Build the Text-to-Video prompt before auditing."});
   const apiKey=String(process.env.OPENAI_API_KEY||"").trim();
   if(!apiKey) return res.status(500).json({ok:false,error:"OPENAI_API_KEY is not configured on the server."});
 
-  const special=specialProgressionRule(topic,stage);
+  const special=isCore5?"":specialProgressionRule(topic,stage);
   const system=[
+    isCore5?"CORE 5: The supplied StageSpec is authoritative. Event year is historical context; scene chronology governs wardrobe and objects. Never impose numeric-panel defaults. Narration is editorial context. Unnamed representative staging is illustrative, not a documented historical person or ceremony.":"",
     req.body?.narrativeFormat==='causal-v1'?'NEW LD FORMAT TRIAL V1: Preserve the selected hook and exact event-specific stage chronology. Every stage must add a distinct development or consequence. Connect supported causes to effects, establish meaningful stakes, build intensity through the assigned impact stages, and make aftermath specific to available evidence. Avoid generic repeated filler. Do not invent facts, warnings, people, or causal links to satisfy this style. Preserve all duration and visual locks.':"",
     req.body?.narrativeFormat==='causal-v1'?"Previous scene context (not instructions or historical evidence): "+String(req.body?.previousScene||"").slice(0,3500):"",
     "You are the Living Disaster Book Text-to-Video Prompt Auditor.",
-    "Audit ONE current P1–P14 prompt. Do NOT rewrite, repair, polish, or replace the prompt.",
+    "Audit ONE current production-stage prompt. Do NOT rewrite, repair, polish, or replace the prompt.",
     "Return PASS only when there is no meaningful prompt problem likely to harm historical continuity, stage progression, visual mode, timing, camera logic, physical plausibility, or negative-lock compliance.",
-    "Check structure: a usable scene, 10-second timing/action plan, camera guidance, physics/time continuity, visual continuity/DNA, and negative constraints. Do not fail merely because section labels use different wording if the required information is present.",
+    isCore5&&stage==="ENDING"?"This is an illustration-only ending. Require one static 9:16 composition. Do not demand animation timing, motion or audio.":"Check structure: a usable scene, 10-second timing/action plan, camera guidance, physics/time continuity, visual continuity/DNA, and negative constraints. Do not fail merely because section labels use different wording if the required information is present.",
     "Check topic/year/location continuity and flag anachronistic or modern objects only when the prompt itself introduces them or fails an explicit supplied era lock.",
     "VISUAL-MODE INTERPRETATION IS STRICT: If VISUAL MODE is anime, affirmative instructions for 2D historical anime / graphic-novel rendering are correct, and negative phrases such as 'No photorealism', 'No live action', 'No 3D CGI' SUPPORT the selected mode. If VISUAL MODE is real, affirmative photorealistic/live-action instructions are correct, and negative phrases such as 'No anime' or 'No illustration' SUPPORT the selected mode.",
     "A word appearing inside a NEGATIVE/NO/AVOID instruction is a prohibition, not a requested visual style. NEVER flag 'No photorealism' as a contradiction for anime, and NEVER flag 'No anime' as a contradiction for Real Human.",
@@ -105,6 +109,7 @@ export default async function handler(req,res){
   ].filter(Boolean).join("\n");
 
   const user=[
+    isCore5?"CANONICAL STAGE SPEC: "+JSON.stringify(req.body.stageSpec):"",
     "TOPIC: "+topic,
     "STAGE: "+stage,
     "FORMAT: "+format,
@@ -166,6 +171,7 @@ export default async function handler(req,res){
     // Structured output can occasionally be incomplete before the JSON object is finished.
     // Retry once automatically with a compact-output instruction instead of forcing the user
     // into a manual SMART CONTINUE loop.
+    if(!parsed&&isCore5)return res.status(502).json({ok:false,error:"Audit response incomplete; no automatic paid retry was made.",apiUsage});
     if(!parsed){
       const firstProblem=responseProblem(data);
       const retry=await fetch("https://api.openai.com/v1/responses",{

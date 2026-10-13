@@ -1,0 +1,19 @@
+{
+  "result": "PASS",
+  "topic": "ABERFAN DISASTER — WALES — 1966",
+  "backupSha256": "1907ed15ca8759858e1ed369cbd9cee6384197320020c979fb48fe29c461dfa8",
+  "approvedPanels": 17,
+  "checks": [
+    "real UI import",
+    "all saved approved stage fields",
+    "project settings and API usage",
+    "save/reload",
+    "downloaded backup export",
+    "approval memory",
+    "exact preserved prompts",
+    "completed Smart Continue is inert",
+    "original backup unchanged"
+  ],
+  "apiRequests": 0,
+  "pageErrors": 0
+}
