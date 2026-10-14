@@ -235,7 +235,7 @@
     if(!stage){
       stage=document.createElement('section');
       stage.id='ldNarrationStageZero';
-      stage.className='stage-card';
+      stage.className='card narration-stage-zero-card';
       stage.dataset.stage='NARRATION';
       stage.style.marginBottom='14px';
       stage.innerHTML=
@@ -251,6 +251,7 @@
     if(body&&controls.parentNode!==body)body.appendChild(controls);
   }
   mountNarrationStageZero();
+  window.addEventListener('ld:production-built',mountNarrationStageZero);
   dedupeNarrationControls();
   [80,250,700,1500].forEach(ms=>setTimeout(dedupeNarrationControls,ms));
   new MutationObserver(()=>dedupeNarrationControls()).observe(masterCard,{childList:true,subtree:true});

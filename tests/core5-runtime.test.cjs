@@ -4,13 +4,13 @@ function boot(saved){
  let project='A',calls=0;
  const nodes={topic:{value:'Aberfan Disaster — Wales — 1966'},format:{value:'shorts'}};
  const window={NERCore5:C,ldVideoContinuity:{year:'1966',location:'Aberfan, Wales'},ldProjectLocks:{videoMode:'text',visualStyle:'anime'},LDCore:{saveCurrent(){},isApprovalCommitted(){return false;}}};
- const localStorage={getItem:()=>project};
- vm.runInNewContext(fs.readFileSync('ner-core-5-runtime.js','utf8'),{window,document:{getElementById:id=>nodes[id]},localStorage,console});
+ const localStorage={getItem:()=>project};const document={getElementById:id=>nodes[id],querySelectorAll:()=>[]};
+ vm.runInNewContext(fs.readFileSync('ner-core-5-runtime.js','utf8'),{window,document,localStorage,console});
  function card(stage='P12'){
  const fields={'.narration':{value:'A public tribunal investigated water beneath the coal tip.'},'.text-video-prompt':{value:''},'.video-scene':{value:''},'.done-toggle':{checked:false}};
  return {fields,dataset:{stage,videoMode:'text',...(saved||{})},isConnected:true,querySelector:q=>fields[q]};
  }
- return {r:window.NERCore5Runtime,nodes,window,card,setProject:v=>project=v,audit:async()=>{calls++;return {ok:true,result:'PASS',issues:[]};},calls:()=>calls};
+ return {r:window.NERCore5Runtime,nodes,window,document,card,setProject:v=>project=v,audit:async()=>{calls++;return {ok:true,result:'PASS',issues:[]};},calls:()=>calls};
 }
 test('runtime audits once, persists exact bytes, reloads, copies, approves without rebuilding',async()=>{
  const b=boot(),c=b.card(),p=await b.r.prepare(c,b.audit);assert.equal(b.calls(),1);assert(b.r.ready(c));assert.equal(b.r.build(c),p);
@@ -109,4 +109,19 @@ test('explicit metadata wins over inferred title and dash titles remain compatib
  const b=boot(),c=b.card();b.nodes.topic.value='The Great Smog of London (1952)';
  assert.equal(b.r.spec(c).location.region,'Aberfan, Wales');assert.equal(b.r.spec(c).eventYear,1966);
  b.nodes.topic.value='Aberfan Disaster — Wales — 1966';b.window.ldVideoContinuity={};assert.equal(b.r.spec(c).location.region,'Wales');assert.equal(b.r.spec(c).eventYear,1966);
+});
+
+test('episode preparation preserves reviewed PASS, NEEDS FIX and approved panels',async()=>{
+ for(const verdict of ['PASS','NEEDS FIX']){
+  const b=boot(),c=b.card();b.document.querySelectorAll=()=>[c];
+  try{await b.r.prepare(c,async()=>({ok:true,result:verdict,issues:verdict==='PASS'?[]:['Review staging']}));}catch{}
+  const before=JSON.stringify(c);assert.equal(b.r.prepareEpisode(),0);assert.equal(JSON.stringify(c),before);
+  c.fields['.done-toggle'].checked=true;const approved=JSON.stringify(c);assert.equal(b.r.prepareEpisode(),0);assert.equal(JSON.stringify(c),approved);
+ }
+});
+test('episode replacement backs up old scene/spec/record and is idempotent',()=>{
+ const b=boot(),c=b.card();b.document.querySelectorAll=()=>[c];c.fields['.video-scene'].value='Saved custom legacy draft';c.dataset.core5Spec=JSON.stringify({...C.clone(b.r.reviewSpec(c)),topic:'Old project title'});c.dataset.core5Record='old saved record';
+ const oldSpec=c.dataset.core5Spec;assert.equal(b.r.prepareEpisode(),1);
+ const history=JSON.parse(c.dataset.core5SceneHistory);assert.deepEqual(history,[{scene:'Saved custom legacy draft',spec:oldSpec,record:'old saved record'}]);
+ const before=JSON.stringify(c);assert.equal(b.r.prepareEpisode(),0);assert.equal(JSON.stringify(c),before);assert.equal(b.calls(),0);
 });

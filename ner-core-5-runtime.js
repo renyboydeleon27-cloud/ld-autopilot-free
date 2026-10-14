@@ -6,13 +6,7 @@ const field=(c,s)=>String(c?.querySelector(s)?.value||'');
 function manages(c){return !!c&&C.STAGES.includes(c.dataset.stage)&&!window.LDStoryModes?.enabled?.()&&document.getElementById('format')?.value==='shorts'&&(window.LDProjectLocks?.colorMode?.()||window.ldProjectLocks?.colorMode||'bw')==='bw'&&(window.LDProjectLocks?.visualStyle?.()||window.ldProjectLocks?.visualStyle||document.getElementById('visualMode')?.value||'anime')==='anime'&&(window.LDProjectLocks?.videoMode?.()||window.ldProjectLocks?.videoMode||c.dataset.videoMode)==='text';}
 function protectedPanel(c){return !!(c?.querySelector('.done-toggle')?.checked||c?.dataset.approvalCommitted==='1'||window.LDCore?.isApprovalCommitted?.(c?.dataset.stage));}
 function scope(){return JSON.stringify([localStorage.getItem('ld-autopilot-free-active-project')||'',document.getElementById('topic')?.value||'',document.getElementById('format')?.value||'',window.ldNarrativeFormat||'original']);}
-function metadata(){
- const topic=document.getElementById('topic')?.value||'', saved=window.ldVideoContinuity||{};
- const parts=topic.split(/\s+[—–-]\s+/), named=topic.match(/\b(?:smog|fire|flood|earthquake|tsunami|eruption|disaster)\s+(?:of|in)\s+([^():]+?)\s*\((1\d{3}|20\d{2})\)/i);
- const year=String(saved.year||'').trim()||(topic.match(/\b(?:1\d{3}|20\d{2})\b/)||[])[0]||'';
- const location=String(saved.location||'').trim()||(parts.length>=3&&/^\d{4}$/.test(parts.at(-1).trim())?parts.at(-2).trim():named?.[1]?.trim()||'');
- return {year,location};
-}
+function metadata(){return C.metadata(document.getElementById('topic')?.value||'',window.ldVideoContinuity||{});}
 function inputs(c){const meta=metadata();return {scope:scope(),topic:document.getElementById('topic')?.value||'',stage:c.dataset.stage,narration:field(c,'.narration'),eventYear:meta.year,location:meta.location,legacyScene:field(c,'.video-scene')||c.dataset.videoScene||'',spec:c.dataset.core5Spec?JSON.parse(c.dataset.core5Spec):null};}
 function key(c){return C.stable(inputs(c));}
 function stored(c){let r=records.get(c);if(!r&&c.dataset.core5Record){try{r=JSON.parse(c.dataset.core5Record);if(protectedPanel(c)&&r.status==='APPROVED'&&r.prompt===r.payload?.currentPrompt&&r.result?.ok===true&&r.result?.result==='PASS'&&Array.isArray(r.result.issues)&&!r.result.issues.length){r=C.deepFreeze(r);records.set(c,r);return r;}if(r.version!==C.VERSION||!C.validatePayload(r.payload).ok||r.prompt!==r.payload.currentPrompt||!['AUDITED','APPROVED','REVIEW_REQUIRED'].includes(r.status))return null;if(r.status!=='REVIEW_REQUIRED')C.transaction(r.payload,r.result);r=C.deepFreeze(r);records.set(c,r);}catch{return null;}}return r||null;}
@@ -53,7 +47,23 @@ function applyReview(c,s){
  window.ldVideoContinuity={...window.ldVideoContinuity,year:String(s.eventYear),location:s.location.region};
  return setSpec(c,s);
 }
-function setSpec(c,s){if(protectedPanel(c))throw Error('Approved panels are immutable.');const v=C.validate(s);if(!v.ok)throw Error(v.issues.join(' '));if(c.dataset.core5Spec&&C.stable(JSON.parse(c.dataset.core5Spec))===C.stable(s)&&inputs(c).legacyScene===sceneText(s))return s;syncScene(c,s);c.dataset.core5Spec=JSON.stringify(s);records.delete(c);delete c.dataset.core5Record;delete c.dataset.smartReady;delete c.dataset.smartReadySignature;window.LDCore?.saveCurrent?.();return s;}
+function setSpec(c,s){if(protectedPanel(c))throw Error('Approved panels are immutable.');const v=C.validate(s);if(!v.ok)throw Error(v.issues.join(' '));if(c.dataset.core5Spec&&C.stable(JSON.parse(c.dataset.core5Spec))===C.stable(s)&&inputs(c).legacyScene===sceneText(s))return s;syncScene(c,s);c.dataset.core5Spec=JSON.stringify(s);window.LDVideoModes?.updateSceneChoiceStatus?.(c);records.delete(c);delete c.dataset.core5Record;delete c.dataset.smartReady;delete c.dataset.smartReadySignature;window.LDCore?.saveCurrent?.();return s;}
+function planEpisode(){
+ const cards=Array.from(document.querySelectorAll('.stage-card')).filter(manages),drafts=[],sequence=[],issues=[];
+ for(const card of cards){
+  if(protectedPanel(card)){try{const old=JSON.parse(card.dataset.core5Spec);if(C.validate(old).ok)sequence.push(old);}catch{}continue;}
+  // Keep valid reviewed scenes and their exact audit records, including conclusive failures.
+  const existing=card.dataset.core5Spec&&preflight(card);
+  if(existing?.ok){sequence.push(existing.spec);continue;}
+  const s=reviewSpec(card),v=C.validate(s);if(!v.ok)issues.push(...v.issues.map(x=>s.stage+': '+x));drafts.push({card,spec:s});sequence.push(s);
+ }
+ issues.push(...C.validateSequence(sequence).issues);return {drafts,issues};
+}
+function prepareEpisode(){
+ const plan=planEpisode();if(plan.issues.length)throw Error('Local episode review: '+plan.issues.join(' '));
+ for(const {card,spec:s} of plan.drafts){if(protectedPanel(card))continue;const previous={scene:inputs(card).legacyScene,spec:card.dataset.core5Spec||'',record:card.dataset.core5Record||''};if(previous.scene||previous.spec||previous.record){const history=JSON.parse(card.dataset.core5SceneHistory||'[]');history.push(previous);card.dataset.core5SceneHistory=JSON.stringify(history);}if(!card.dataset.core5LegacyScene)card.dataset.core5LegacyScene=previous.scene;applyReview(card,s);write(card,C.compile(s));}
+ window.LDCore?.saveCurrent?.();return plan.drafts.length;
+}
 // Dispatch before the legacy extension chain. Legacy setters only affect legacy panels.
 function attachVideoModes(api){
  for(const name of ['prompt','build']){
@@ -66,5 +76,5 @@ function attachVideoModes(api){
  return api;
 }
 function owns(c){return protectedPanel(c)||manages(c);}
-window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
+window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,planEpisode,prepareEpisode,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
 })();

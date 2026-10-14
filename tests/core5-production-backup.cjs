@@ -23,6 +23,7 @@ const timeout=setTimeout(()=>{console.error('Production backup validation timed 
    for(const k of ['topic','format','category','narrativeFormat','storyPremise','storyBible','youtubeTitle','finalPackageMeta','videoContinuity','projectLocks','apiUsage','approvedMemory'])if(k in seed)assert.deepEqual(state[k],seed[k],label+': '+k);
   }
   verify(await page.evaluate(()=>window.LDCore.collectState()),'import');
+  if(approved.length===Object.keys(seed.stages).length){assert.equal(await page.evaluate(()=>window.NERCore5Runtime.prepareEpisode()),0);verify(await page.evaluate(()=>window.LDCore.collectState()),'episode preparation preserves completed production');}
   await page.evaluate(()=>window.LDCore.saveCurrent());await page.reload();await page.waitForFunction(()=>window.LDCore&&window.LDSmartContinue);await page.waitForTimeout(1600);verify(await page.evaluate(()=>window.LDCore.collectState()),'reload');
   const prompts=await page.evaluate(()=>Object.fromEntries([...document.querySelectorAll('.stage-card')].filter(c=>window.NERCore5Runtime.protectedPanel(c)).map(c=>[c.dataset.stage,window.NERCore5Runtime.preserve(c)])));
   for(const [stage,s] of approved){const expected=stage==='ENDING'||stage==='THUMBNAIL'?s.imagePrompt:s.textVideoPrompt||s.flowPrompt;assert.equal(prompts[stage],expected,'exact preserved copy '+stage);}
