@@ -5,7 +5,7 @@ function attach(card){
  if(!R.manages(card)||R.protectedPanel(card)||card.querySelector('.core5-review'))return;
  if(card.dataset.core5Spec){try{const label=card.querySelector('.scene-role');if(label)label.textContent=R.spec(card).role;}catch{}}
  const details=document.createElement('details');details.className='core5-review';
- const summary=document.createElement('summary');summary.textContent='Review Core 5 scene';details.append(summary);
+ const summary=document.createElement('summary');summary.textContent='Advanced scene tools · optional';details.append(summary);
  const familyHint=document.createElement('p');familyHint.setAttribute('role','status');familyHint.style.cssText='font-weight:600;';details.append(familyHint);
  const note=document.createElement('p');note.textContent='Review the staging against your narration and historical sources. Applying this scene preserves the previous draft and clears its audit readiness. This local review uses no AI credits.';details.append(note);
  const old=document.createElement('pre');old.style.whiteSpace='pre-wrap';details.append(old);
@@ -34,7 +34,7 @@ function attachAll(){
  const note=document.createElement('p');note.textContent='Prepare missing or invalid scenes from narration in one step. Valid reviewed scenes and approved panels are preserved. Previous scene drafts are kept for comparison. No AI request is made.';
  const status=document.createElement('p');status.className='core5-episode-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.style.cssText='font-weight:600;margin:10px 0 14px;';
  button.addEventListener('click',()=>{if(button.disabled)return;button.disabled=true;button.textContent='⏳ Preparing scenes…';status.textContent='Preparing scenes locally — no AI request.';try{const count=R.prepareEpisode();status.textContent=count>0?'✓ Preparation complete — '+count+' scene'+(count===1?'':'s')+' prepared. Review before Smart Continue.':'✓ Preparation complete — 0 scenes changed. Existing scenes preserved; review P1 before Smart Continue.';button.textContent='✓ Prepare Again · FREE';}catch(e){status.textContent='⚠ Preparation failed: '+e.message;button.textContent='↻ Retry Free Preparation';}finally{button.disabled=false;}});
- host.prepend(button,note,status);
+ const advanced=document.createElement('details');advanced.className='core5-episode-advanced';const toggle=document.createElement('summary');toggle.textContent='Advanced · Prepare episode scenes (optional)';advanced.append(toggle,button,note,status);host.prepend(advanced);
 }
 window.addEventListener('ld:production-built',()=>queueMicrotask(attachAll));
 document.addEventListener('DOMContentLoaded',attachAll);
