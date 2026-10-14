@@ -1,0 +1,68 @@
+{
+  "spec": {
+    "schema": 5,
+    "compilerVersion": "5.0.2",
+    "stage": "P1",
+    "topic": "The Great Smog of London — 1952",
+    "family": "atmospheric-pollution",
+    "role": "normal-world",
+    "narration": "Families fed their coal fires.",
+    "facts": [],
+    "eventYear": 1952,
+    "chronology": {
+      "relation": "event",
+      "sceneYear": 1952,
+      "period": "1952",
+      "basis": "Families fed their coal fires."
+    },
+    "location": {
+      "region": "London, England",
+      "setting": "interior of a modest local home with a contained coal-burning fireplace"
+    },
+    "cast": [
+      {
+        "id": "adult-1",
+        "description": "unnamed adult resident in clothing appropriate to the scene period"
+      }
+    ],
+    "action": {
+      "actor": "adult-1",
+      "description": "adult-1 adds one small shovelful of coal to the fireplace"
+    },
+    "camera": {
+      "framing": "eye-level medium-wide",
+      "movement": "slow-push-in"
+    },
+    "timing": [
+      {
+        "start": 0,
+        "end": 2,
+        "phase": "establish"
+      },
+      {
+        "start": 2,
+        "end": 6,
+        "phase": "action"
+      },
+      {
+        "start": 6,
+        "end": 10,
+        "phase": "hold"
+      }
+    ],
+    "locks": {
+      "style": "2d-historical-anime",
+      "color": "bw",
+      "aspect": "9:16",
+      "duration": 10,
+      "shots": 1,
+      "text": "none"
+    },
+    "audio": "quiet indoor room tone, soft fire crackling and coal settling on the grate during the action",
+    "source": {
+      "kind": "narration-derived-representative-staging",
+      "narration": "Families fed their coal fires."
+    }
+  },
+  "prompt": "VIDEO PROMPT — EXACTLY 10 SECONDS\n\nThe Great Smog of London — 1952 · P1\n\nRENDER: Hand-drawn 2D historical anime only. Strict true black-and-white grayscale, portrait 9:16. No color, sepia, tint, selective color, live action, photorealism or 3D CGI.\n\nSTAGE ROLE: normal-world; family: atmospheric-pollution.\n\nCHRONOLOGY: Historical event year 1952. Scene period: 1952; relation: event; scene year 1952. Clothing, objects and surroundings follow the SCENE period.\n\nFACTUAL BOUNDARY: Narration and supplied facts are context, not additional scene actions. Representative unnamed staging is not a claim about a specific historical person or ceremony.\n\nNARRATION CONTEXT (editorial only, never generated speech): \"Families fed their coal fires.\"\n\nSOURCED FACTS (context only): []\n\nPANEL SCENE:\ninterior of a modest local home with a contained coal-burning fireplace in London, England. adult-1: unnamed adult resident in clothing appropriate to the scene period. Exactly 1 distinct people.\n\nPRIMARY ACTION: adult-1 adds one small shovelful of coal to the fireplace.\n\nCAMERA: eye-level medium-wide; slow-push-in. One continuous shot; maintain this single camera behavior for the entire shot.\n\nTIMING:\n0–2s: Establish the stated cast and setting; primary action has not yet completed.\n2–6s: Perform the single PRIMARY ACTION, completing by 6s.\n6–10s: Hold its completed state; only natural breathing, blinking and residual motion.\n\nPHYSICS AND TIME: Preserve identities, cast count, object geometry, mass, gravity and irreversible changes. No teleportation, duplication, morphing, object respawn or spontaneous repair.\n\nFAMILY BOUNDARY: Pollution and visibility follow the narrated phase. No explosions, collapsing buildings, disaster debris, invented treatment or instant citywide clean-up. Indoor coal fires stay contained in the fireplace. Render haze only in true grayscale.\n\nWEATHER: Preserve scene-supported weather, lighting and wind direction; no unexplained reset.\n\nCHARACTER DIVERSITY: Keep each person distinct in face, build, hair and clothing, and consistent throughout the shot.\n\nAUDIO: quiet indoor room tone, soft fire crackling and coal settling on the grate during the action. Only sounds caused by the stated scene. No generated narration, dialogue, music, unsupported alarm or cinematic boom.\n\nNEGATIVE: No generated text, inscriptions, lettering, numbers, symbols, subtitles, logos or watermarks. No cuts, extra purposeful action, unsupported historical detail or invented ceremony."
+}

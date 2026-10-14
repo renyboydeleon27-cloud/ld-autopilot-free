@@ -95,7 +95,7 @@ test('parenthesized event title resolves missing location without false identity
  b.window.ldVideoContinuity={year:'1952'};c.fields['.narration'].value='London, December 1952. Families fed their coal fires.';
  const s=b.r.spec(c);assert.equal(s.eventYear,1952);assert.equal(s.location.region,'London');assert(b.r.preflight(c).ok);
  c.fields['.video-scene'].value='SCENE BANK — open plaza';assert(!b.r.preflight(c).ok);
- const reviewed=C.clone(s);reviewed.location.setting='Interior of a modest London home with a coal fireplace';reviewed.action.description='adult-1 adds one shovelful of coal to the fireplace';
+ const reviewed=C.clone(s);delete reviewed.choreography;reviewed.location.setting='Interior of a modest London home with a coal fireplace';reviewed.action.description='adult-1 adds one shovelful of coal to the fireplace';
  b.r.applyReview(c,reviewed);assert(b.r.preflight(c).ok);await b.r.prepare(c,b.audit);await b.r.prepare(c,b.audit);assert.equal(b.calls(),1);
 });
 test('missing metadata is editable locally; invalid or approved reviews do not change project data',()=>{
@@ -124,4 +124,14 @@ test('episode replacement backs up old scene/spec/record and is idempotent',()=>
  const oldSpec=c.dataset.core5Spec;assert.equal(b.r.prepareEpisode(),1);
  const history=JSON.parse(c.dataset.core5SceneHistory);assert.deepEqual(history,[{scene:'Saved custom legacy draft',spec:oldSpec,record:'old saved record'}]);
  const before=JSON.stringify(c);assert.equal(b.r.prepareEpisode(),0);assert.equal(JSON.stringify(c),before);assert.equal(b.calls(),0);
+});
+
+test('explicit refinement archives old audited bytes and requires only one new audit',async()=>{
+ const b=boot(),c=b.card('P1');b.nodes.topic.value='The Great Smog of London — 1952';b.window.ldVideoContinuity={year:'1952',location:'London, England'};c.fields['.narration'].value='Families fed their coal fires.';
+ const s=C.clone(b.r.reviewSpec(c));delete s.choreography;s.timing=[{start:0,end:2,phase:'establish'},{start:2,end:6,phase:'action'},{start:6,end:10,phase:'hold'}];b.r.setSpec(c,s);
+ const old=await b.r.prepare(c,b.audit),record=c.dataset.core5Record;assert(b.r.ready(c));
+ assert(b.r.refineScene(c));assert.equal(b.calls(),1);assert(!b.r.ready(c));assert.equal(JSON.parse(c.dataset.core5SceneHistory).at(-1).record,record);assert.equal(JSON.parse(JSON.parse(c.dataset.core5SceneHistory).at(-1).record).prompt,old);
+ const next=await b.r.prepare(c,b.audit);assert.notEqual(next,old);assert.match(next,/Starting state:/);assert.equal(b.calls(),2);
+ assert.equal(b.r.refineScene(c),false);await b.r.prepare(c,b.audit);assert.equal(b.calls(),2);
+ c.fields['.done-toggle'].checked=true;const before=JSON.stringify(c);assert.throws(()=>b.r.refineScene(c),/immutable/);assert.equal(JSON.stringify(c),before);
 });

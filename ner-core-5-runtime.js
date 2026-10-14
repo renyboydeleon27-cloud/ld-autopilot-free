@@ -21,7 +21,7 @@ function build(c){if(protectedPanel(c))return preserve(c);const r=stored(c);if(r
 function payload(c){if(protectedPanel(c)){const r=stored(c);if(r)return r.payload;throw Error('Legacy approved panel has no Core 5 audit payload.');}const v=preflight(c);if(!v.ok)throw Error('Local preflight — no audit credits used: '+v.issues.join(' '));if(!c.dataset.core5Spec)setSpec(c,v.spec);return C.payload(v.spec);}
 function ready(c){const r=stored(c);return !!r&&['AUDITED','APPROVED'].includes(r.status)&&r.inputKey===key(c)&&current(c)===r.prompt&&C.validatePayload(r.payload).ok;}
 function signature(c){return C.stable(payload(c));}
-function persist(c,r){const frozen=C.deepFreeze(r);records.set(c,frozen);c.dataset.core5Record=JSON.stringify(frozen);window.LDCore?.saveCurrent?.();return frozen;}
+function persist(c,r){const frozen=C.deepFreeze(r);records.set(c,frozen);c.dataset.core5Record=JSON.stringify(frozen);window.LDVideoModes?.refreshStatus?.(c);window.LDCore?.saveCurrent?.();return frozen;}
 async function prepare(c,audit){
  if(protectedPanel(c))return preserve(c);
  const p=payload(c),inputKey=key(c),project=scope(),cacheKey=project+'|'+C.stable(p);
@@ -47,7 +47,7 @@ function applyReview(c,s){
  window.ldVideoContinuity={...window.ldVideoContinuity,year:String(s.eventYear),location:s.location.region};
  return setSpec(c,s);
 }
-function setSpec(c,s){if(protectedPanel(c))throw Error('Approved panels are immutable.');const v=C.validate(s);if(!v.ok)throw Error(v.issues.join(' '));if(c.dataset.core5Spec&&C.stable(JSON.parse(c.dataset.core5Spec))===C.stable(s)&&inputs(c).legacyScene===sceneText(s))return s;syncScene(c,s);c.dataset.core5Spec=JSON.stringify(s);window.LDVideoModes?.updateSceneChoiceStatus?.(c);records.delete(c);delete c.dataset.core5Record;delete c.dataset.smartReady;delete c.dataset.smartReadySignature;window.LDCore?.saveCurrent?.();return s;}
+function setSpec(c,s){if(protectedPanel(c))throw Error('Approved panels are immutable.');const v=C.validate(s);if(!v.ok)throw Error(v.issues.join(' '));if(c.dataset.core5Spec&&C.stable(JSON.parse(c.dataset.core5Spec))===C.stable(s)&&inputs(c).legacyScene===sceneText(s))return s;syncScene(c,s);c.dataset.core5Spec=JSON.stringify(s);window.LDVideoModes?.updateSceneChoiceStatus?.(c);records.delete(c);delete c.dataset.core5Record;delete c.dataset.smartReady;delete c.dataset.smartReadySignature;window.LDVideoModes?.refreshStatus?.(c);window.LDCore?.saveCurrent?.();return s;}
 function planEpisode(){
  const cards=Array.from(document.querySelectorAll('.stage-card')).filter(manages),drafts=[],sequence=[],issues=[];
  for(const card of cards){
@@ -64,6 +64,13 @@ function prepareEpisode(){
  for(const {card,spec:s} of plan.drafts){if(protectedPanel(card))continue;const previous={scene:inputs(card).legacyScene,spec:card.dataset.core5Spec||'',record:card.dataset.core5Record||''};if(previous.scene||previous.spec||previous.record){const history=JSON.parse(card.dataset.core5SceneHistory||'[]');history.push(previous);card.dataset.core5SceneHistory=JSON.stringify(history);}if(!card.dataset.core5LegacyScene)card.dataset.core5LegacyScene=previous.scene;applyReview(card,s);write(card,C.compile(s));}
  window.LDCore?.saveCurrent?.();return plan.drafts.length;
 }
+function refineScene(c){
+ if(protectedPanel(c))throw Error('Approved panels are immutable.');
+ const v=preflight(c);if(!v.ok)throw Error(v.issues.join(' '));const next=C.refine(v.spec);
+ if(C.stable(next)===C.stable(v.spec))return false;
+ const history=JSON.parse(c.dataset.core5SceneHistory||'[]');history.push({scene:inputs(c).legacyScene,spec:c.dataset.core5Spec||'',record:c.dataset.core5Record||''});c.dataset.core5SceneHistory=JSON.stringify(history);
+ setSpec(c,next);write(c,C.compile(next));window.LDCore?.saveCurrent?.();return true;
+}
 // Dispatch before the legacy extension chain. Legacy setters only affect legacy panels.
 function attachVideoModes(api){
  for(const name of ['prompt','build']){
@@ -76,5 +83,5 @@ function attachVideoModes(api){
  return api;
 }
 function owns(c){return protectedPanel(c)||manages(c);}
-window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,planEpisode,prepareEpisode,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
+window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,planEpisode,prepareEpisode,refineScene,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
 })();
