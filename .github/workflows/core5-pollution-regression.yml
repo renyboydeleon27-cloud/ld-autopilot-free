@@ -7,6 +7,7 @@ on:
     paths:
       - ner-core-5.js
       - tests/core5-pollution-regression.test.js
+      - tests/core5-cross-family-preservation.test.js
       - .github/workflows/core5-pollution-regression.yml
 permissions:
   contents: read
@@ -15,8 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Run offline Core 5 P1/P2 regression
         run: node tests/core5-pollution-regression.test.js
+      - name: Check cross-family prompt preservation against main
+        run: node tests/core5-cross-family-preservation.test.js
