@@ -10,7 +10,7 @@ function boot(saved){
  const fields={'.narration':{value:'A public tribunal investigated water beneath the coal tip.'},'.text-video-prompt':{value:''},'.video-scene':{value:''},'.done-toggle':{checked:false}};
  return {fields,dataset:{stage,videoMode:'text',...(saved||{})},isConnected:true,querySelector:q=>fields[q]};
  }
- return {r:window.NERCore5Runtime,window,card,setProject:v=>project=v,audit:async()=>{calls++;return {ok:true,result:'PASS',issues:[]};},calls:()=>calls};
+ return {r:window.NERCore5Runtime,nodes,window,card,setProject:v=>project=v,audit:async()=>{calls++;return {ok:true,result:'PASS',issues:[]};},calls:()=>calls};
 }
 test('runtime audits once, persists exact bytes, reloads, copies, approves without rebuilding',async()=>{
  const b=boot(),c=b.card(),p=await b.r.prepare(c,b.audit);assert.equal(b.calls(),1);assert(b.r.ready(c));assert.equal(b.r.build(c),p);
@@ -87,4 +87,26 @@ test('approved prior compiler record keeps frozen bytes after compiler upgrade',
 test('ambiguous placeholder scene stops before any provider call',async()=>{
  const b=boot(),c=b.card('HOOK');c.fields['.narration'].value='A warning interrupted the morning.';
  await assert.rejects(b.r.prepare(c,b.audit),/concrete setting and action/);assert.equal(b.calls(),0);
+});
+
+
+test('parenthesized event title resolves missing location without false identity mismatch',async()=>{
+ const b=boot(),c=b.card('P1');b.nodes.topic.value='The Great Smog of London (1952): how deadly air pollution engulfed London and led to the Clean Air Act of 1956.';
+ b.window.ldVideoContinuity={year:'1952'};c.fields['.narration'].value='London, December 1952. Families fed their coal fires.';
+ const s=b.r.spec(c);assert.equal(s.eventYear,1952);assert.equal(s.location.region,'London');assert(b.r.preflight(c).ok);
+ c.fields['.video-scene'].value='SCENE BANK — open plaza';assert(!b.r.preflight(c).ok);
+ const reviewed=C.clone(s);reviewed.location.setting='Interior of a modest London home with a coal fireplace';reviewed.action.description='adult-1 adds one shovelful of coal to the fireplace';
+ b.r.applyReview(c,reviewed);assert(b.r.preflight(c).ok);await b.r.prepare(c,b.audit);await b.r.prepare(c,b.audit);assert.equal(b.calls(),1);
+});
+test('missing metadata is editable locally; invalid or approved reviews do not change project data',()=>{
+ const b=boot(),c=b.card();b.nodes.topic.value='Unspecified disaster';b.window.ldVideoContinuity={};
+ const s=C.clone(b.r.reviewSpec(c));assert(!b.r.preflight(c).ok);assert(!b.r.preflight(c).issues.some(x=>x.includes('source identity')));
+ s.eventYear=1966;s.location.region='Aberfan, Wales';s.chronology={relation:'after',sceneYear:null,period:'post-event inquiry',basis:s.narration};
+ const invalid=C.clone(s);invalid.location.setting='';assert.throws(()=>b.r.applyReview(c,invalid));assert.deepEqual(b.window.ldVideoContinuity,{});
+ b.r.applyReview(c,s);assert(b.r.preflight(c).ok);const before=JSON.stringify(b.window.ldVideoContinuity);c.fields['.done-toggle'].checked=true;assert.throws(()=>b.r.applyReview(c,s));assert.equal(JSON.stringify(b.window.ldVideoContinuity),before);
+});
+test('explicit metadata wins over inferred title and dash titles remain compatible',()=>{
+ const b=boot(),c=b.card();b.nodes.topic.value='The Great Smog of London (1952)';
+ assert.equal(b.r.spec(c).location.region,'Aberfan, Wales');assert.equal(b.r.spec(c).eventYear,1966);
+ b.nodes.topic.value='Aberfan Disaster — Wales — 1966';b.window.ldVideoContinuity={};assert.equal(b.r.spec(c).location.region,'Wales');assert.equal(b.r.spec(c).eventYear,1966);
 });
