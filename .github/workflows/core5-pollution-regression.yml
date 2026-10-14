@@ -9,6 +9,7 @@ on:
       - tests/core5-pollution-regression.test.js
       - tests/core5-cross-family-preservation.test.js
       - tests/core5-full-stage-baseline.test.js
+      - tests/core5-audit-snapshot-integrity.test.js
       - .github/workflows/core5-pollution-regression.yml
 permissions:
   contents: read
@@ -28,3 +29,5 @@ jobs:
         run: node tests/core5-cross-family-preservation.test.js
       - name: Check all 16 stages across three disaster families
         run: node tests/core5-full-stage-baseline.test.js
+      - name: Check canonical audit snapshot immutability
+        run: node tests/core5-audit-snapshot-integrity.test.js
