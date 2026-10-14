@@ -29,10 +29,10 @@ function attach(card){
 function attachAll(){
  document.querySelectorAll('.stage-card').forEach(attach);
  const host=document.getElementById('chapterVideoContext');if(!host||host.querySelector('.core5-plan-episode')||!Array.from(document.querySelectorAll('.stage-card')).some(c=>R.manages(c)&&!R.protectedPanel(c)))return;
- const button=document.createElement('button');button.type='button';button.className='core5-plan-episode';button.textContent='Prepare episode scenes · FREE';
+ const button=document.createElement('button');button.type='button';button.className='core5-plan-episode';button.textContent='▶ Prepare Episode Scenes · FREE';button.setAttribute('aria-label','Prepare missing or invalid episode scenes for free');button.style.cssText='display:block;width:100%;min-height:52px;padding:12px 16px;border:1px solid #59d48a;border-radius:12px;background:#168342;color:#fff;font-size:16px;font-weight:700;cursor:pointer;touch-action:manipulation;box-shadow:0 3px 12px rgba(24,163,74,.24);';
  const note=document.createElement('p');note.textContent='Prepare missing or invalid scenes from narration in one step. Valid reviewed scenes and approved panels are preserved. Previous scene drafts are kept for comparison. No AI request is made.';
- const status=document.createElement('p');status.className='core5-episode-status';status.setAttribute('role','status');
- button.addEventListener('click',()=>{try{const count=R.prepareEpisode();status.textContent=count+' scenes prepared locally. Review the scenes, then use Smart Continue.';}catch(e){status.textContent=e.message;}});
+ const status=document.createElement('p');status.className='core5-episode-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.style.cssText='font-weight:600;margin:10px 0 14px;';
+ button.addEventListener('click',()=>{if(button.disabled)return;button.disabled=true;button.textContent='⏳ Preparing scenes…';status.textContent='Preparing scenes locally — no AI request.';try{const count=R.prepareEpisode();status.textContent=count>0?'✓ Preparation complete — '+count+' scene'+(count===1?'':'s')+' prepared. Review before Smart Continue.':'✓ Preparation complete — 0 scenes changed. Existing scenes preserved; review P1 before Smart Continue.';button.textContent='✓ Prepare Again · FREE';}catch(e){status.textContent='⚠ Preparation failed: '+e.message;button.textContent='↻ Retry Free Preparation';}finally{button.disabled=false;}});
  host.prepend(button,note,status);
 }
 window.addEventListener('ld:production-built',()=>queueMicrotask(attachAll));
