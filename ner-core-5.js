@@ -60,7 +60,16 @@ function pollutionRecipe(r,n){
  const base={cast:[{id:'adult-1',description:'unnamed adult resident in clothing appropriate to the scene period'}],camera:{framing:'eye-level medium-wide',movement:'slow-push-in'},audio:'quiet scene-supported ambience'};
  const make=(location,action,audio=base.audio)=>({...base,location,action,audio});
  if(r==='ending')return make('quiet reflective local setting','adult-1 stands at rest');
- if(/coal fires|coal-burning fireplace|fed.*fires/i.test(n))return make('interior of a modest local home with a contained coal-burning fireplace','adult-1 adds one small shovelful of coal to the fireplace','quiet indoor room tone, soft fire crackling and coal settling on the grate during the action');
+ if(/coal fires|coal-burning fireplace|fed.*fires/i.test(n))return {...make('interior of a modest local home with a contained coal-burning fireplace','adult-1 adds one small shovelful of coal to the fireplace','quiet indoor room tone, soft fire crackling and coal settling on the grate during the action'),choreography:{
+  actor:'adult-1',prop:'one short rigid metal coal shovel',
+  start:'adult-1 kneels securely beside the hearth, holding an already-loaded shovel level in the right hand, close to the grate; the left hand rests on the bent knee',
+  motion:'keeping the same grip, move the blade just above the grate, tip the coal onto the fire once, then return the empty blade to a level position just outside the fireplace opening',
+  end:'the adult remains balanced; the right hand holds the empty shovel steady outside the opening and the left hand stays on the knee; coal remains on the grate, with no second scoop or refilling',
+  setting:'plain plaster walls, a simple wooden chair and a metal coal scuttle beside the hearth; intact room with no indoor smog or modern appliances; these are representative furnishings, not a documented individual household',
+  continuity:'keep the blade, handle and grip unchanged; coal falls under gravity and stays on the grate; fire remains small and contained, with no flare-up; use a plain wool cardigan, collared shirt, straight trousers and practical shoes appropriate to the scene period; preserve the same clothing, face and hands',
+  visibility:'keep the working hand, shovel blade and fireplace opening visible throughout the action',
+  sound:'one soft coal rattle synchronized with coal contacting the grate; gentle fire crackling and quiet room tone; no scraping without visible contact'
+ }};
  if(/passed.*(?:act|law)|parliament|clean air act/i.test(n))return {...make('representative legislative office in the stated later period, with a plain desk and no readable writing','adult-1 places one closed blank document folder on the desk','quiet indoor room tone'),camera:{framing:'eye-level medium view of the desk',movement:'locked'}};
  if(/demanded cleaner air|accountability/i.test(n))return make('representative local meeting room after the pollution episode','adult-1 raises one hand toward the front of the room','subdued room ambience without speech');
  if(r==='legacy')return make('local street in an unspecified later period, with buildings visible and no suggestion of an overnight transformation','adult-1 walks slowly toward a visible doorway','soft footsteps and quiet street ambience');
@@ -111,7 +120,15 @@ function plan(input){
  timing:input.stage==='ENDING'?[]:[{start:0,end:2,phase:'establish'},{start:2,end:6,phase:'action'},{start:6,end:10,phase:'hold'}],
  locks:{style:'2d-historical-anime',color:'bw',aspect:'9:16',duration:input.stage==='ENDING'?null:10,shots:1,text:'none'},
  audio:p.audio,source:{kind:'narration-derived-representative-staging',narration:String(input.narration||'')},
+ ...(!input.spec&&p.choreography?{choreography:{...clone(p.choreography),forAction:p.action,forSetting:p.location,forCast:stable(p.cast)},timing:[{start:0,end:2,phase:'establish'},{start:2,end:7,phase:'action'},{start:7,end:10,phase:'hold'}]}:{}),
  ...(input.spec?clone(input.spec):{})});
+}
+// Explicit enrichment only: never replace a custom scene or silently mutate an audited spec.
+function refine(s){
+ const v=validate(s);if(!v.ok)throw Error(v.issues.join(' '));if(s.choreography)return s;
+ const p=recipe(s.role,s.family,s.narration);
+ if(!p.choreography||s.stage==='ENDING'||s.action.actor!==p.choreography.actor||s.action.description!==p.action||s.location.setting!==p.location||stable(s.cast)!==stable(p.cast))return s;
+ return deepFreeze({...clone(s),choreography:{...clone(p.choreography),forAction:p.action,forSetting:p.location,forCast:stable(p.cast)},timing:[{start:0,end:2,phase:'establish'},{start:2,end:7,phase:'action'},{start:7,end:10,phase:'hold'}]});
 }
 function validate(s){
  const issues=[];if(!s||typeof s!=='object')return {ok:false,issues:['Missing StageSpec.']};
@@ -141,8 +158,15 @@ function validate(s){
  const t=s.timing;
  if(s.stage==='ENDING'){if(!Array.isArray(t)||t.length||s.camera?.movement!=='locked')issues.push('Illustration ending requires a static composition and no video timing.');}
  else if(!Array.isArray(t)||t.length!==3||t[0]?.start!==0||t[2]?.end!==10||t.some((x,i)=>!x||!Number.isFinite(x.start)||!Number.isFinite(x.end)||x.end<=x.start||(i&&x.start!==t[i-1]?.end)||x.phase!==['establish','action','hold'][i]))issues.push('Timing must cover exactly 0–10 seconds with contiguous establish/action/hold phases.');
+ if(s.choreography!==undefined){
+  const d=s.choreography,keys=['forAction','forSetting','forCast','actor','prop','start','motion','end','setting','continuity','visibility','sound'];
+  if(!d||typeof d!=='object'||Array.isArray(d)||keys.some(k=>typeof d[k]!=='string'||!d[k].trim())||Object.keys(d).some(k=>!keys.includes(k)))issues.push('Action detail contract is incomplete or contains unknown fields.');
+  if(d?.forAction!==s.action?.description||d?.forSetting!==s.location?.setting||d?.forCast!==stable(s.cast))issues.push('Action details no longer match the scene, action or cast. Review the choreography.');
+  if(d?.actor!==s.action?.actor)issues.push('Action details must use the primary actor.');
+  if(s.stage==='ENDING')issues.push('Static ending cannot include motion choreography.');
+ }
  // Instruction-bearing fields are typed data, never entire legacy prompts. Fail closed.
- const prose=[s.location?.region,s.chronology?.period,s.location?.setting,s.action?.description,s.camera?.framing,...(Array.isArray(s.cast)?s.cast:[]).map(x=>x?.description),s.audio].join(' ');
+ const prose=[s.location?.region,s.chronology?.period,s.location?.setting,s.action?.description,s.camera?.framing,...(Array.isArray(s.cast)?s.cast:[]).map(x=>x?.description),s.audio,...Object.values(s.choreography||{})].join(' ');
  if(/\b(?:OVERRIDE|TIMING:|CAMERA:|STAGE CONTRACT|PANEL SCENE:|\d+\s*(?:seconds|–\d+s))|\b(?:push.in|pull.back|orbit|cutaway|cut to|photoreal|live.action|full.colou?r)\b/i.test(prose))issues.push('Embedded prompt/camera/style instructions must be resolved into structured fields.');
  if(!Array.isArray(s.facts)||s.facts.some(f=>!f?.claim||!f?.source))issues.push('Every supplied historical fact needs source attribution.');
  return {ok:issues.length===0,issues};
@@ -173,18 +197,19 @@ function compile(s){
  'SOURCED FACTS (context only): '+JSON.stringify(s.facts),
  'PANEL SCENE:\n'+scene,
  (still?'DEPICT THE COMPLETED STATE OF: ':'PRIMARY ACTION: ')+s.action.description+'.',
+ s.choreography?'ACTION DETAIL CONTRACT:\nProp: '+s.choreography.prop+'.\nStarting state: '+s.choreography.start+'.\nMotion: '+s.choreography.motion+'.\nCompleted state: '+s.choreography.end+'.\nRepresentative setting detail: '+s.choreography.setting+'.\nContinuity: '+s.choreography.continuity+'.\nVisibility: '+s.choreography.visibility+'.':'',
  'CAMERA: '+s.camera.framing+'; '+s.camera.movement+(still?'. Static composition.':'. One continuous shot; maintain this single camera behavior for the entire shot.'),
  still?'':'TIMING:\n'+s.timing.map(t=>t.start+'–'+t.end+'s: '+({establish:'Establish the stated cast and setting; primary action has not yet completed.',action:'Perform the single PRIMARY ACTION, completing by '+t.end+'s.',hold:'Hold its completed state; only natural breathing, blinking and residual motion.'}[t.phase])).join('\n'),
  'PHYSICS AND TIME: Preserve identities, cast count, object geometry, mass, gravity and irreversible changes. No teleportation, duplication, morphing, object respawn or spontaneous repair.',
  'FAMILY BOUNDARY: '+GUARDS[s.family],
  'WEATHER: Preserve scene-supported weather, lighting and wind direction; no unexplained reset.',
  'CHARACTER DIVERSITY: Keep each person distinct in face, build, hair and clothing, and consistent throughout the shot.',
- still?'':'AUDIO: '+s.audio+'. Only sounds caused by the stated scene. No generated narration, dialogue, music, unsupported alarm or cinematic boom.',
+ still?'':'AUDIO: '+(s.choreography?.sound||s.audio)+'. Only sounds caused by the stated scene. No generated narration, dialogue, music, unsupported alarm or cinematic boom.',
  'NEGATIVE: No generated text, inscriptions, lettering, numbers, symbols, subtitles, logos or watermarks. No cuts, extra purposeful action, unsupported historical detail or invented ceremony.'
  ].filter(Boolean).join('\n\n');
 }
 function payload(s){return deepFreeze({core5:true,core5Version:VERSION,stageSpec:s,topic:s.topic,stage:s.stage,format:'shorts',visualMode:'anime',colorMode:'bw',year:String(s.eventYear),sceneYear:s.chronology.sceneYear,scenePeriod:s.chronology.period,location:s.location.region,narration:s.narration,currentScene:s.location.setting+'; '+s.action.description,currentPrompt:compile(s),eventSpecificOverride:true,progressionFamily:s.family,progressionRole:s.role,progressionRule:'Use only the supplied canonical StageSpec. No numeric-stage defaults.'});}
 function validatePayload(p){const v=validate(p?.stageSpec);if(!v.ok)return v;const expected=payload(p.stageSpec);return stable(expected)===stable(p)?{ok:true,issues:[]}:{ok:false,issues:['Audit payload differs from the canonical StageSpec/compiler output.']};}
 function transaction(p,result){const v=validatePayload(p);if(!v.ok)throw Error(v.issues.join(' '));if(result?.result!=='PASS'||result?.ok!==true||!Array.isArray(result.issues)||result.issues.length)throw Error('Audit did not pass.');return deepFreeze({version:VERSION,status:'AUDITED',payload:clone(p),prompt:p.currentPrompt,result:clone(result)});}
-return deepFreeze({VERSION,STAGES,ROLES,GUARDS,stable,clone,deepFreeze,metadata,family,role,chronology,plan,validate,validateSequence,compile,payload,validatePayload,transaction});
+return deepFreeze({VERSION,STAGES,ROLES,GUARDS,stable,clone,deepFreeze,metadata,family,role,chronology,plan,refine,validate,validateSequence,compile,payload,validatePayload,transaction});
 });
