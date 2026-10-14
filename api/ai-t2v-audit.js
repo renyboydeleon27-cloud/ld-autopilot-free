@@ -88,6 +88,11 @@ export default async function handler(req,res){
       : (progressionRole
         ? "DISASTER-FAMILY PROGRESSION IS BINDING FOR STORY POSITION. Current role: "+progressionRole+". Current guard: "+progressionRule+" Fail the prompt if its main scene clearly belongs to a later or earlier story beat, or merely repeats a neighboring panel instead of serving this role. This progression context is NOT a factual source; never require a sub-hazard, response, casualty, measurement or mechanism unless supported by the supplied event context."
         : ""),
+    ...(isCore5 ? [
+      "CORE 5 SEMANTIC AUDIT: Evaluate the actual constraints and scene, not legacy section names or prompt length. PHYSICS AND TIME supplies identity, geometry, mass, gravity, irreversible state, no duplication and no morphing. CHARACTER DIVERSITY supplies distinct consistent people. WEATHER and AUDIO supply scene continuity and sound causality. Accept these protections without requesting duplicate sections.",
+      "Require one coherent camera behavior; a locked shot or slow push-in is sufficient when physically plausible. Do not require a CAMERA DIRECTOR heading, additional lens jargon, or extra movement. Scene-supported quiet ambience is valid; do not demand dynamic mixing or extra sound events. Apply crowd and debris requirements only when such elements exist. Static ENDING needs no motion, timing, or audio.",
+      "Still report concrete contradictions, unsupported events, impossible actions, inconsistent cast or objects, anachronisms, timing conflicts, or missing applicable rendering locks. Explain the specific defect; never require legacy boilerplate as a substitute for a real issue."
+    ] : [
     "CINEMATIC REFINEMENT AUDIT: require the prompt to preserve subject identity, object geometry, irreversible damage, natural micro-transitions, coherent weather/atmosphere, professional motivated camera movement, debris mass physics, and synchronized non-annoying environmental audio.",
     "CHARACTER DIVERSITY AUDIT: require the prompt to prevent cloned-looking adults, duplicated faces, repeated identical wardrobe, mirrored crowd members, copy-paste background extras, or accidental twin copies.",
     "RECURRING SUBJECT AUDIT: if a principal subject is foregrounded, preserve that subject's identity through the shot while keeping supporting adults visually distinct.",
@@ -97,7 +102,8 @@ export default async function handler(req,res){
     "WEATHER CONTINUITY CHECK: weather, wind direction, cloud/light direction, visibility, precipitation and ground condition must evolve logically from the panel story state. Fail abrupt unexplained weather resets or contradictory simultaneous weather states.",
     "CAMERA PROFESSIONALISM CHECK: camera movement must have one dominant motivated behavior with coherent lens perspective. Fail random orbiting, zoom pumping, impossible pass-through, viewpoint resets, contradictory push/pull instructions, excessive shake, or generic floating AI-camera behavior.",
     "AUDIO QUALITY CHECK: audio must be scene-specific and dynamically mixed. Fail repetitive identical impact loops, constant metallic clanging, random cinematic booms/whooshes, unsupported sirens/alarms/explosions, continuous high-pitched screech, or sound events without visible/verified cause.",
-    "DEBRIS/DAMAGE CHECK: debris must respect mass, gravity, wind direction and momentum; heavy objects must not hover. Damage must accumulate irreversibly and not reset inside the shot.",
+    "DEBRIS/DAMAGE CHECK: debris must respect mass, gravity, wind direction and momentum; heavy objects must not hover. Damage must accumulate irreversibly and not reset inside the shot."
+    ]),
     "Check camera instructions for contradictions such as simultaneous push-in and pull-back, cuts despite a one-shot lock, impossible travel through objects, or conflicting focal behavior.",
     "Check physics/time instructions for instant materialization, magical multiplication, impossible scale changes, contradictory object states, or destruction that happens without a supported cause.",
     "For insect/locust topics: normal-sized separate insects, layered depth, plausible movement. A dense swarm must NOT be described as or encouraged to resemble black smoke, soot, dust, fog, haze, ash, vapor, storm cloud, shadow cloud, or a solid dark mass.",
@@ -105,7 +111,7 @@ export default async function handler(req,res){
     special,
     "Output JSON only with exactly these fields: result, summary, issues, recommendedAction.",
     "result must be exactly PASS or NEEDS FIX. summary and recommendedAction must be short strings. issues must be an array of concise strings. If PASS, issues must be an empty array and recommendedAction should say the prompt can be sent to Flow after the creator's normal visual review.",
-    "Do not PASS a prompt that is missing the MASTER CINEMATIC CONSISTENCY, MICRO-TRANSITION/MORPH, WEATHER, CAMERA DIRECTOR, AUDIO MIX, DEBRIS/DAMAGE, and CHARACTER DIVERSITY / ANTI-CLONE protections when the supplied prompt policy includes those sections."
+    isCore5?"":"Do not PASS a prompt that is missing the MASTER CINEMATIC CONSISTENCY, MICRO-TRANSITION/MORPH, WEATHER, CAMERA DIRECTOR, AUDIO MIX, DEBRIS/DAMAGE, and CHARACTER DIVERSITY / ANTI-CLONE protections when the supplied prompt policy includes those sections."
   ].filter(Boolean).join("\n");
 
   const user=[
