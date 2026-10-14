@@ -1,0 +1,22 @@
+name: Core 5 Pollution Regression
+on:
+  push:
+    branches:
+      - fix/core5-scene-intelligence-pollution
+  pull_request:
+    paths:
+      - ner-core-5.js
+      - tests/core5-pollution-regression.test.js
+      - .github/workflows/core5-pollution-regression.yml
+permissions:
+  contents: read
+jobs:
+  pollution-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run offline Core 5 P1/P2 regression
+        run: node tests/core5-pollution-regression.test.js
