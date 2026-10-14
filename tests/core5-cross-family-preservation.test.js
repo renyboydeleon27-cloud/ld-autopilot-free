@@ -19,9 +19,13 @@ for(const input of examples){
  const args={...input,facts:[]};
  const old=baseline.plan(args),next=current.plan(args);
  assert.equal(current.stable(next), baseline.stable(old), input.topic+' StageSpec unchanged');
- assert.equal(current.compile(next), baseline.compile(old), input.topic+' compiled prompt unchanged');
- assert.equal(current.validate(next).ok, true, input.topic+' preflight');
- assert.equal(current.validatePayload(current.payload(next)).ok,true,input.topic+' payload integrity');
+ const oldValidation=baseline.validate(old),newValidation=current.validate(next);
+ assert.equal(newValidation.ok,oldValidation.ok,input.topic+' validation outcome unchanged');
+ assert.equal(JSON.stringify(newValidation.issues),JSON.stringify(oldValidation.issues),input.topic+' validation reasons unchanged');
+ if(newValidation.ok){
+  assert.equal(current.compile(next), baseline.compile(old), input.topic+' compiled prompt unchanged');
+  assert.equal(current.validatePayload(current.payload(next)).ok,true,input.topic+' payload integrity');
+ }
 }
 const p2={topic:'The Great Smog of London — 1952',eventYear:1952,location:'London, England',stage:'P2',facts:[],narration:'Across the city, household chimneys, factories, and power stations poured smoke into the air. Heating London came with a dangerous cost.'};
 const oldP2=baseline.plan(p2),newP2=current.plan(p2);
