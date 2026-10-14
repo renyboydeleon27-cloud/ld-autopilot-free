@@ -23,7 +23,15 @@ function attach(card){
  apply.addEventListener('click',()=>{try{if(R.protectedPanel(card))throw Error('Approved panels are immutable.');const s=C.clone(base),v=k=>controls[k].value.trim();s.location.region=v('region');s.eventYear=Number(v('eventYear'));s.location.setting=v('setting');s.cast=v('cast').split('\n').map(line=>{const at=line.indexOf('|');if(at<1)throw Error('Each cast line needs id | description.');return {id:line.slice(0,at).trim(),description:line.slice(at+1).trim()};});s.action={actor:v('actor'),description:v('action')};s.camera={movement:v('movement'),framing:v('framing')};s.chronology={...s.chronology,relation:v('relation'),sceneYear:v('sceneYear')?Number(v('sceneYear')):null,period:v('period')};s.audio=v('audio');R.applyReview(card,s);R.build(card);window.LDCore?.saveCurrent?.();status.textContent='Reviewed scene saved. Smart Continue can now run local preflight and audit.';}catch(e){status.textContent=e.message;}});
  (card.querySelector('.stage-body')||card).append(details);
 }
-function attachAll(){document.querySelectorAll('.stage-card').forEach(attach);}
+function attachAll(){
+ document.querySelectorAll('.stage-card').forEach(attach);
+ const host=document.getElementById('chapterVideoContext');if(!host||host.querySelector('.core5-plan-episode')||!Array.from(document.querySelectorAll('.stage-card')).some(c=>R.manages(c)&&!R.protectedPanel(c)))return;
+ const button=document.createElement('button');button.type='button';button.className='core5-plan-episode';button.textContent='Prepare episode scenes · FREE';
+ const note=document.createElement('p');note.textContent='Prepare missing or invalid scenes from narration in one step. Valid reviewed scenes and approved panels are preserved. Previous scene drafts are kept for comparison. No AI request is made.';
+ const status=document.createElement('p');status.className='core5-episode-status';status.setAttribute('role','status');
+ button.addEventListener('click',()=>{try{const count=R.prepareEpisode();status.textContent=count+' scenes prepared locally. Review the scenes, then use Smart Continue.';}catch(e){status.textContent=e.message;}});
+ host.prepend(button,note,status);
+}
 window.addEventListener('ld:production-built',()=>queueMicrotask(attachAll));
 document.addEventListener('DOMContentLoaded',attachAll);
 window.addEventListener('ld:video-mode-changed',attachAll);

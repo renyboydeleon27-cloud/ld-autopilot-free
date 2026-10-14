@@ -32,13 +32,16 @@ const deadline=setTimeout(()=>{console.error('PWA regression timed out');process
   const failed=await page.evaluate(async()=>{const reg=await navigator.serviceWorker.getRegistration();const done=new Promise(resolve=>reg.addEventListener('updatefound',()=>{const worker=reg.installing;worker.addEventListener('statechange',()=>{if(worker.state==='redundant')resolve(worker.state);});},{once:true}));await reg.update();return done;});
   assert.equal(failed,'redundant');assert.equal(await page.evaluate(()=>typeof window.NERCore5),'undefined');
   assert(await page.evaluate(async()=> (await caches.keys()).includes('ner-studio-pwa-4-0-56')),'failed install retains old cache');
-  assert(!await page.evaluate(async()=> (await caches.keys()).includes('ner-studio-pwa-5-0-6')),'failed partial shell is removed');
+  assert(!await page.evaluate(async()=> (await caches.keys()).includes('ner-studio-pwa-5-1-0')),'failed partial shell is removed');
   failInstall=false;
   await page.evaluate(async()=>{const reg=await navigator.serviceWorker.getRegistration();const done=new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));await reg.update();await done;});
   await page.goto(origin);await page.waitForFunction(()=>window.NERCore5Runtime);await page.waitForTimeout(800);
   function compare(after){for(const [stage,saved] of Object.entries(before.stages)){assert.equal(after.stages[stage].done,true,stage+' approval');for(const key of Object.keys(saved))assert.equal(after.stages[stage][key],saved[key],stage+' '+key);}}
   compare(await page.evaluate(()=>window.LDCore.collectState()));
+  await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>!document.getElementById('appUpdateButton').disabled);
+  assert.match(await page.locator('#appUpdateStatus').textContent(),/5.1.0/);
   await context.setOffline(true);await page.reload();await page.waitForFunction(()=>window.NERCore5Runtime&&window.NERFamilyPlanner4&&window.NERFinalAudit4);compare(await page.evaluate(()=>window.LDCore.collectState()));
+  await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>!document.getElementById('appUpdateButton').disabled);compare(await page.evaluate(()=>window.LDCore.collectState()));
   assert.equal(apiCalls,0);assert.deepEqual(errors,[]);
   console.log('PASS: actual Core 4 worker -> interrupted Core 5 installation retains Core 4 -> complete Core 5 activation -> mobile offline reload; every approved panel field preserved; zero API calls.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));clearTimeout(deadline);}

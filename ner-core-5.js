@@ -4,6 +4,7 @@ const VERSION='5.0.2';
 const STAGES=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
 const ROLES=['hook','normal-world','cause-context','onset','human-impact','human-toll','displacement','response','evidence','accountability','recovery','aftermath','legacy','ending'];
 const FAMILIES={
+ 'atmospheric-pollution':/smog|air pollution|coal smoke/i,
  'chemical-wmd':/chemical attack|chemical weapon|sarin|halabja/i,
  'public-health':/xylazine|opioid|fentanyl|epidemic|pandemic|outbreak|disease/i,
  'industrial-technological':/reactor|chernobyl|industrial|factory|refinery|toxic leak/i,
@@ -13,6 +14,7 @@ const FAMILIES={
  flood:/flood|dam|levee/i,volcano:/volcan|tambora|eruption/i,wildfire:/wildfire|firestorm|fire/i
 };
 const GUARDS={
+ 'atmospheric-pollution':'Pollution and visibility follow the narrated phase. No explosions, collapsing buildings, disaster debris, invented treatment or instant citywide clean-up. Indoor coal fires stay contained in the fireplace. Render haze only in true grayscale.',
  'public-health':'Human-centered support only; no forced disaster escalation, invented treatment, diagnosis, or recovery outcome.',
  'chemical-wmd':'Show only sourced exposure effects; never invent a visible gas color or unsupported munition.',
  'industrial-technological':'Only sourced machinery and mechanisms; no invented explosion or technical procedure.',
@@ -31,18 +33,51 @@ const GUARDS={
 function deepFreeze(x){if(x&&typeof x==='object'){Object.values(x).forEach(deepFreeze);Object.freeze(x);}return x;}
 function clone(x){return JSON.parse(JSON.stringify(x));}
 function stable(x){if(Array.isArray(x))return '['+x.map(stable).join(',')+']';if(x&&typeof x==='object')return '{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+stable(x[k])).join(',')+'}';return JSON.stringify(x);}
+function metadata(topic,saved={}){
+ const raw=String(topic||''),parts=raw.split(/\s+[—–-]\s+/),named=raw.match(/\b(?:smog|fire|flood|earthquake|tsunami|eruption|disaster)\s+(?:of|in)\s+([^():]+?)\s*\((1\d{3}|20\d{2})\)/i);
+ let inferred=parts.length>=3?(/^\d{4}$/.test(parts.at(-1).trim())?parts.at(-2):parts[1]):named?.[1]||'';
+ inferred=inferred.replace(/\b(?:1\d{3}|20\d{2}|2100)\b/g,'').replace(/^[\s,;:\-]+|[\s,;:\-]+$/g,'').trim();
+ if(/\bSan Francisco Earthquake\b/i.test(raw)&&/^California,\s*USA$/i.test(inferred))inferred='San Francisco, California, USA';
+ return {year:String(saved.year||'').trim()||(raw.match(/\b(?:1\d{3}|20\d{2}|2100)\b/)||[])[0]||'',location:String(saved.location||'').trim()||inferred};
+}
 function family(topic){return Object.keys(FAMILIES).find(k=>FAMILIES[k].test(topic))||'generic-evidence';}
 function role(n,stage){
  if(stage==='HOOK')return 'hook';if(stage==='ENDING')return 'ending';
- const rules=[['legacy',/decades later|years later|remembrance|memorial|legacy|remember/i],['accountability',/responsibility|accountability|preventab|tribunal.*found|negligence/i],['evidence',/tribunal|investigat|evidence|inquiry|report|identified/i],['human-toll',/killed|death toll|fatalities|died/i],['response',/\b(?:aid|relief|outreach|workers|volunteers)\b[^.!?;]{0,45}\b(?:supported|assisted|helped|provided|delivered)\b|\b(?:provided|delivered|received)\b[^.!?;]{0,30}\b(?:aid|relief|support)\b/i],['displacement',/evacuat|fled|displaced|refuge/i],['response',/rescue|aid|medical|outreach|support|care/i],['recovery',/rebuild|recovery|reconstruct/i],['human-impact',/struck.*school|buried|injur|survivor|symptom|wound/i],['onset',/collapsed|erupted|struck|landfall|released|began/i],['aftermath',/aftermath|mourning|grief/i]];
+ if(/parliament.*passed|passed.*(?:act|law)|clean air act/i.test(n))return 'accountability';
+ const rules=[['legacy',/decades later|years later|years to achieve|lasting warning|remembrance|memorial|legacy|remember/i],['accountability',/clean air act|passed.*(?:act|law)|responsibility|accountability|preventab|tribunal.*found|negligence/i],['evidence',/tribunal|investigat|evidence|inquiry|report|identified/i],['human-toll',/killed|death toll|fatalities|died/i],['response',/\b(?:aid|relief|outreach|workers|volunteers)\b[^.!?;]{0,45}\b(?:supported|assisted|helped|provided|delivered)\b|\b(?:provided|delivered|received)\b[^.!?;]{0,30}\b(?:aid|relief|support)\b/i],['displacement',/evacuat|fled|displaced|refuge/i],['response',/rescue|aid|medical|outreach|support|care/i],['recovery',/rebuild|recovery|reconstruct/i],['human-impact',/breathing became|difficult to breathe|visibility.*collapsed|buses stopped|polluted air slipped|struck.*school|buried|injur|survivor|symptom|wound/i],['onset',/fog settled|fog thickened|collapsed|erupted|struck|landfall|released|began/i],['aftermath',/cleared the smog|aftermath|mourning|grief/i]];
  return rules.find(([,r])=>r.test(n))?.[0]||(stage==='P1'?'normal-world':'cause-context');
 }
 function chronology(n,eventYear){
- const later=/decades (?:later|after)|years later|generations later|long after/i.test(n),before=/years (?:earlier|before)|before the disaster|flashback/i.test(n),after=/tribunal|inquiry|aftermath|after the disaster|following the disaster/i.test(n);
- return {relation:later?'later':before?'before':after?'after':'event',sceneYear:later||before||after?null:eventYear,period:later?'unspecified later period':before?'unspecified earlier period':after?'unspecified post-event period':String(eventYear),basis:n||'Project event year'};
+ const later=/decades (?:later|after)|years later|generations later|long after|years to achieve|lasting warning/i.test(n),before=/years (?:earlier|before)|before the disaster|flashback/i.test(n),after=/tribunal|inquiry|aftermath|after the disaster|following the disaster|years that followed|deaths afterward/i.test(n);
+ const years=[...String(n).matchAll(/\b(?:1\d{3}|20\d{2})\b/g)].map(x=>Number(x[0]));
+ const explicit=years.length===1?years[0]:null;
+ const relation=explicit!==null?(explicit<eventYear?'before':explicit>eventYear?'later':later?'later':before?'before':after?'after':'event'):later?'later':before?'before':after?'after':'event';
+ const sceneYear=explicit!==null&&!(explicit===eventYear&&relation!=='event')?explicit:relation==='event'?eventYear:null;
+ return {relation,sceneYear,period:sceneYear!==null?String(sceneYear):relation==='later'?'unspecified later period':relation==='before'?'unspecified earlier period':'unspecified post-event period',basis:n||'Project event year'};
+}
+// Narrative motifs select representative staging, independent of panel number or event name.
+function pollutionRecipe(r,n){
+ const base={cast:[{id:'adult-1',description:'unnamed adult resident in clothing appropriate to the scene period'}],camera:{framing:'eye-level medium-wide',movement:'slow-push-in'},audio:'quiet scene-supported ambience'};
+ const make=(location,action,audio=base.audio)=>({...base,location,action,audio});
+ if(r==='ending')return make('quiet reflective local setting','adult-1 stands at rest');
+ if(/coal fires|coal-burning fireplace|fed.*fires/i.test(n))return make('interior of a modest local home with a contained coal-burning fireplace','adult-1 adds one small shovelful of coal to the fireplace','quiet indoor room tone, soft fire crackling and coal settling on the grate during the action');
+ if(/passed.*(?:act|law)|parliament|clean air act/i.test(n))return {...make('representative legislative office in the stated later period, with a plain desk and no readable writing','adult-1 places one closed blank document folder on the desk','quiet indoor room tone'),camera:{framing:'eye-level medium view of the desk',movement:'locked'}};
+ if(/demanded cleaner air|accountability/i.test(n))return make('representative local meeting room after the pollution episode','adult-1 raises one hand toward the front of the room','subdued room ambience without speech');
+ if(r==='legacy')return make('local street in an unspecified later period, with buildings visible and no suggestion of an overnight transformation','adult-1 walks slowly toward a visible doorway','soft footsteps and quiet street ambience');
+ if(/cleared the smog|buildings emerged/i.test(n))return make('local street as the pollution haze disperses, with buildings visible again','adult-1 slowly raises their gaze toward the newly visible buildings','quiet street ambience');
+ if(/death|died|toll/i.test(n))return make('quiet interior representing the human loss caused by the pollution episode, without bodies or invented ceremony','adult-1 slowly lowers their head','quiet room tone');
+ if(/lung disease|breathing|breathe/i.test(n))return make('modest local home during the pollution episode','adult-1 rests seated and takes one slow breath, without treatment or an asserted recovery','quiet room tone and restrained natural breathing');
+ if(/under doors|inside.*homes|cracks/i.test(n))return make('interior beside a closed exterior door, with a thin pollution haze near the threshold','adult-1 slowly turns toward the door','muted indoor ambience');
+ if(/buses|drivers|cars/i.test(n))return make('local road in dense pollution haze, beside a stationary period-appropriate bus','adult-1 stops walking beside the stationary bus','soft footsteps that stop with the person');
+ if(/visibility|pavement|familiar streets/i.test(n))return make('local pavement in dense pollution haze, with only nearby railings clearly visible','adult-1 takes one cautious step along the visible railing','one soft footstep and subdued street ambience');
+ if(/chimneys|factories|power stations/i.test(n)&&!/warmer air|trapped|disperse/i.test(n))return make('local street with period-appropriate household and industrial chimneys releasing coal smoke in the background','adult-1 pauses beside a plain gate','footsteps settling into distant urban ambience');
+ if(/warmer air|trapped|disperse/i.test(n))return make('local viewpoint overlooking period-appropriate rooftops and chimneys, with a low lingering layer of coal smoke','adult-1 slowly raises their gaze toward the smoke above the rooftops','subdued distant urban ambience');
+ if(r==='hook'||/fog|haze|smog/i.test(n))return make('local street during the onset of a pollution episode, with nearby buildings gradually obscured by grayscale haze','adult-1 pauses beside a doorway and turns their head toward the obscured street','soft footsteps followed by quiet street ambience');
+ return null;
 }
 // Recipes are reusable semantic staging, not new historical claims or panel overrides.
 function recipe(r,f,narration=''){
+ if(f==='atmospheric-pollution'){const p=pollutionRecipe(r,narration);if(p)return p;}
  const quiet={location:'quiet representative local setting',cast:[{id:'adult-1',description:'unnamed adult observer'}],action:'adult-1 slowly lowers their head',camera:{framing:'human-height medium-wide',movement:'slow-push-in'},audio:'quiet local ambience'};
  const recipes={
  evidence:{location:'representative inquiry room',cast:[{id:'adult-1',description:'unnamed adult investigator'},{id:'adult-2',description:'distinct adult observer'},{id:'adult-3',description:'distinct adult observer'}],action:'adult-1 traces one finger along a single unlabelled evidence sketch, stopping at its edge',camera:{framing:'human-height close-medium evidence table',movement:'slow-push-in'},audio:'quiet indoor room tone'},
@@ -94,7 +129,8 @@ function validate(s){
  if(c.sceneYear!==null&&/^\d{4}$/.test(String(c.period))&&Number(c.period)!==c.sceneYear)issues.push('Scene period label contradicts scene year.');
  if(!['event','before','after','later'].includes(c.relation)||!c.period||!c.basis)issues.push('Scene chronology needs a relation, period and source basis.');
  if(c.sceneYear!==null&&(!Number.isInteger(c.sceneYear)||(c.relation==='event'?c.sceneYear!==s.eventYear:c.relation==='before'?c.sceneYear>s.eventYear:c.relation==='after'?c.sceneYear<s.eventYear:c.sceneYear<=s.eventYear)))issues.push('Scene year contradicts its relation to the event year.');
- const implied=chronology(s.narration,s.eventYear).relation;
+ const narrativeTime=chronology(s.narration,s.eventYear),implied=narrativeTime.relation;
+ if(narrativeTime.sceneYear!==null&&narrativeTime.sceneYear!==s.eventYear&&c.sceneYear!==narrativeTime.sceneYear)issues.push('Scene year differs from the explicit narrated year.');
  if(implied!=='event'&&implied!==c.relation&&!(implied==='after'&&c.relation==='later'))issues.push('Scene chronology contradicts narration.');
  if(/supported (?:warning|hazard|contextual feature)|narrated (?:cause|onset|warning|non-graphic impact)/i.test([s.location?.setting,s.action?.description].join(' ')))issues.push('Scene needs concrete setting and action: replace placeholder hazard/context wording in Review Core 5 scene before audit.');
  if(!s.location?.region||!s.location?.setting)issues.push('Scene location is missing.');
@@ -150,5 +186,5 @@ function compile(s){
 function payload(s){return deepFreeze({core5:true,core5Version:VERSION,stageSpec:s,topic:s.topic,stage:s.stage,format:'shorts',visualMode:'anime',colorMode:'bw',year:String(s.eventYear),sceneYear:s.chronology.sceneYear,scenePeriod:s.chronology.period,location:s.location.region,narration:s.narration,currentScene:s.location.setting+'; '+s.action.description,currentPrompt:compile(s),eventSpecificOverride:true,progressionFamily:s.family,progressionRole:s.role,progressionRule:'Use only the supplied canonical StageSpec. No numeric-stage defaults.'});}
 function validatePayload(p){const v=validate(p?.stageSpec);if(!v.ok)return v;const expected=payload(p.stageSpec);return stable(expected)===stable(p)?{ok:true,issues:[]}:{ok:false,issues:['Audit payload differs from the canonical StageSpec/compiler output.']};}
 function transaction(p,result){const v=validatePayload(p);if(!v.ok)throw Error(v.issues.join(' '));if(result?.result!=='PASS'||result?.ok!==true||!Array.isArray(result.issues)||result.issues.length)throw Error('Audit did not pass.');return deepFreeze({version:VERSION,status:'AUDITED',payload:clone(p),prompt:p.currentPrompt,result:clone(result)});}
-return deepFreeze({VERSION,STAGES,ROLES,GUARDS,stable,clone,deepFreeze,family,role,chronology,plan,validate,validateSequence,compile,payload,validatePayload,transaction});
+return deepFreeze({VERSION,STAGES,ROLES,GUARDS,stable,clone,deepFreeze,metadata,family,role,chronology,plan,validate,validateSequence,compile,payload,validatePayload,transaction});
 });

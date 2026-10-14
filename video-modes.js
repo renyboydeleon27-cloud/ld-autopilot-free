@@ -15,12 +15,14 @@ function updateSceneChoiceStatus(card,message){
  var el=card?.querySelector?.('.scene-choice-status');if(!el)return;
  var raw=String(card.dataset.videoScene||card.querySelector('.video-scene')?.value||'');
  if(message){el.textContent=message;return;}
+ if(window.NERCore5Runtime?.manages(card)&&card.dataset.core5Spec){el.textContent='Core 5 scene saved · Smart Continue checks this scene before audit.';return;}
  if(raw.startsWith(KEEP_SCENE_PREFIX)){el.textContent='🔒 KEEP CURRENT SCENE ACTIVE · Smart Continue will preserve this scene description.';return;}
  if(raw.startsWith(SMART_SCENE_PREFIX)){el.textContent='✨ SMART RANDOM CHOICE ACTIVE · Smart Continue will use the selected stage-matched scene.';return;}
  var idx=sceneChoiceIndex(card);
  el.textContent=idx!==''?'📍 SELECTED SCENE ACTIVE · Smart Continue will use this location.':'Scene mode not locked yet.';
 }
 function titleDefaults(topic){
+ if(window.NERCore5){const m=window.NERCore5.metadata(topic);return {...m,details:''};}
  var raw=String(topic||'').trim();
  var year=(raw.match(/\b(?:1\d{3}|20\d{2}|2100)\b/)||[])[0]||'';
  var parts=raw.split(/\s+(?:—|–|-)\s+/).map(function(x){return String(x||'').trim();}).filter(Boolean);
@@ -1270,7 +1272,7 @@ picker.onchange=function(){
  try{rebuildTextPrompt(card);updateSceneChoiceStatus(card);showToast('Scene selected and prompt refreshed locally · no API call. Review before Smart Continue.');}
  catch(e){showToast(e.message);update(card);saveCurrent();}
 };
-var scene=box.querySelector('.video-scene');scene.value=sceneFrom(card);if(!state(card).scene&&!state(card).text&&scene.value){card.dataset.videoScene=scene.value;}updateSceneChoiceStatus(card);var text=box.querySelector('.text-video-prompt');text.value=state(card).text;
+var scene=box.querySelector('.video-scene');scene.value=window.NERCore5Runtime?.manages(card)?state(card).scene:sceneFrom(card);if(!state(card).scene&&!state(card).text&&scene.value){card.dataset.videoScene=scene.value;}updateSceneChoiceStatus(card);var text=box.querySelector('.text-video-prompt');text.value=state(card).text;
 
 scene.oninput=function(){card.dataset.sceneChoice='';picker.value='';card.dataset.videoScene=scene.value;card.querySelector('.done-toggle').checked=false;updateSceneChoiceStatus(card,'✏️ CUSTOM SCENE EDIT · Choose 🔒 KEEP CURRENT SCENE to lock it before Smart Continue.');update(card);saveCurrent();};
 text.oninput=function(){card.dataset.textVideoPrompt=text.value;card.querySelector('.done-toggle').checked=false;saveCurrent();};
