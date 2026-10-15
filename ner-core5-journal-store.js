@@ -17,9 +17,11 @@ async function operation(mode,action){
  const db=await database();
  return new Promise((resolve,reject)=>{
   let tx;try{tx=db.transaction(STORE,mode);}catch(e){reject(e);return;}
-  const request=action(tx.objectStore(STORE));
-  request.onsuccess=()=>resolve(request.result??null);
+  let result=null,request;
+  try{request=action(tx.objectStore(STORE));}catch(e){try{tx.abort();}catch{}reject(e);return;}
+  request.onsuccess=()=>{result=request.result??null;};
   request.onerror=()=>reject(request.error||Error('IndexedDB request failed'));
+  tx.oncomplete=()=>resolve(result);
   tx.onabort=()=>reject(tx.error||Error('IndexedDB transaction aborted'));
   tx.onerror=()=>reject(tx.error||Error('IndexedDB transaction failed'));
  });
