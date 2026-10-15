@@ -1,0 +1,25 @@
+name: Core 5 PWA shell generator
+on:
+  push:
+    branches:
+      - fix/core5-audit-indexeddb-recovery-20261015
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate PWA shell
+        run: |
+          node scripts/build-pwa-shell.cjs
+          node scripts/build-pwa-shell.cjs --check
+      - name: Emit generated worker payload
+        run: |
+          gzip -9 -c service-worker.js | base64 -w0
+          echo
