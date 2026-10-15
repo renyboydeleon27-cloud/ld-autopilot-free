@@ -1,0 +1,22 @@
+name: Core 5 Journal Safety
+on:
+  push:
+    branches:
+      - fix/core5-journal-safe-release
+  pull_request:
+    paths:
+      - ner-core-5-audit-coordinator.js
+      - tests/core5-audit-journal-storage.test.js
+      - .github/workflows/core5-journal-safety.yml
+permissions:
+  contents: read
+jobs:
+  journal-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify no-credit audit journal safety
+        run: node tests/core5-audit-journal-storage.test.js

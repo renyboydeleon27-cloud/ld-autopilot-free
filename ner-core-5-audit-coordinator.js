@@ -8,7 +8,20 @@ async function slot(project,payload){
  return PREFIX+Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('');
 }
 function read(key){const raw=localStorage.getItem(key);if(!raw)return null;try{const record=JSON.parse(raw);if(record.schema!==1)throw Error('version');return record;}catch{throw Error('Audit journal needs review before another request.');}}
-function save(key,record){try{localStorage.setItem(key,JSON.stringify(record));}catch{throw Error('Could not persist the audit journal. No automatic retry is allowed.');}}
+function storageReason(error){
+ const quota=error?.name==='QuotaExceededError'||error?.code===22||error?.code===1014;
+ return quota?'Browser storage is full or its quota was reached. Export a project backup; do not clear site data.':'Browser storage is unavailable or blocked. Check browser storage permissions; do not clear site data.';
+}
+function storagePreflight(key){
+ // Probe a separate temporary key. Never overwrite, delete, or reset an existing audit journal.
+ const probe=key+':storage-probe';
+ try{
+  localStorage.setItem(probe,'ok');
+  if(localStorage.getItem(probe)!=='ok')throw Error('Storage verification failed');
+ }catch(error){throw Error('Audit not started — '+storageReason(error)+' No audit credits used by this attempt.');}
+ finally{try{localStorage.removeItem(probe);}catch{}}
+}
+function save(key,record){try{localStorage.setItem(key,JSON.stringify(record));}catch(error){throw Error('Could not persist the audit journal. '+storageReason(error)+' No automatic retry is allowed.');}}
 async function run(project,payload,audit){
  const check=C.validatePayload(payload);if(!check.ok)throw Error(check.issues.join(' '));
  const key=await slot(project,payload),identity=C.stable(payload);
@@ -18,6 +31,7 @@ async function run(project,payload,audit){
    if(old.status==='DONE')return old.result;
    throw Error('An earlier audit is incomplete or uncertain. Review it and explicitly allow a retry before spending more credits.');
   }
+  storagePreflight(key);
   save(key,{schema:1,identity,status:'STARTED'});
   let result;
   try{result=await audit(payload);}catch(error){save(key,{schema:1,identity,status:'UNCERTAIN'});throw error;}
