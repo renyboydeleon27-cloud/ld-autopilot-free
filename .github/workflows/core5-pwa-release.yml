@@ -25,5 +25,6 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Verify real cached-worker upgrades (no paid endpoints)
         run: |
+          node tests/core5-journal-inspection-browser.cjs
           node tests/core5-pwa-diagnostic-browser.cjs
           node tests/core5-pwa-browser.cjs

@@ -36,6 +36,39 @@ function diagnostic(c){
  const status=ready(c)?'AUDIT_READY':record?.status==='REVIEW_REQUIRED'?'AUDIT_REVIEW_REQUIRED':!check.ok?'LOCAL_PREFLIGHT_BLOCKED':raw&&!record?'INVALID_SAVED_AUDIT':'NOT_AUDITED';
  return {status,journalStatus,issues,safeToRetry:false,requiresPaidAudit:status!=='AUDIT_READY',panel:c.dataset.stage};
 }
+async function journalDiagnostic(c){
+ const d=diagnostic(c);if(!manages(c)||protectedPanel(c))return d;
+ const project=scope(),inputKey=key(c);
+ try{
+  const p=C.payload(spec(c));
+  const journal=await window.NERCore5AuditCoordinator.inspect(project,p);
+  if(scope()!==project||key(c)!==inputKey||!c.isConnected)throw Error('Panel changed during inspection. Check again.');
+  d.journal=journal;
+  if(journal.busy)d.issues.push('Audit journal is locked by another tab. No request was sent.');
+  else if(journal.conflict)d.issues.push('Legacy and IndexedDB journals conflict. Both records are retained; manual review required.');
+  else if(journal.found&&!journal.identityMatch)d.issues.push('Existing stage journal belongs to a different payload. Explicit review is required before any reset.');
+  else if(journal.found&&!journal.recoverable)d.issues.push('Existing journal is incomplete, uncertain, or invalid. No automatic reset or paid retry is allowed.');
+  if(journal.found||journal.busy)d.status=journal.recoverable?'SAVED_RESULT_RECOVERABLE':'JOURNAL_REVIEW_REQUIRED';
+ }catch(e){d.status='JOURNAL_INSPECTION_FAILED';d.issues.push(e.message);}
+ return d;
+}
+function saveRecovered(c,record){
+ persist(c,record);
+ if(window.LDCore?.saveCurrent?.()===false)throw Error('Recovered audit remains in its journal, but project storage could not save. Keep this page open and export a backup. No paid request was sent.');
+}
+async function recoverJournal(c){
+ if(protectedPanel(c))throw Error('Approved panels are immutable.');
+ const v=preflight(c);if(!v.ok)throw Error(v.issues.join(' '));
+ const p=C.payload(v.spec),project=scope(),inputKey=key(c);
+ const result=await window.NERCore5AuditCoordinator.recover(project,p);
+ if(scope()!==project||key(c)!==inputKey||!c.isConnected||protectedPanel(c))throw Error('Panel changed during recovery. Journal retained.');
+ if(result.ok===true&&result.result==='NEEDS FIX'){
+  saveRecovered(c,{version:C.VERSION,status:'REVIEW_REQUIRED',payload:p,prompt:p.currentPrompt,result,inputKey,scope:project});
+  return 'Saved audit recovered: needs scene review. No paid request was sent.';
+ }
+ const tx=C.transaction(p,result);write(c,tx.prompt);saveRecovered(c,{...tx,inputKey,scope:project});
+ return 'Saved audit recovered. Exact audited prompt restored; no paid request was sent.';
+}
 function signature(c){return C.stable(payload(c));}
 function persist(c,r){const frozen=C.deepFreeze(r);records.set(c,frozen);c.dataset.core5Record=JSON.stringify(frozen);window.LDVideoModes?.refreshStatus?.(c);window.LDCore?.saveCurrent?.();return frozen;}
 async function prepare(c,audit){
@@ -52,7 +85,7 @@ async function prepare(c,audit){
  persist(c,{...tx,inputKey,scope:project});
  return tx.prompt;
 }
-async function allowRetry(c){if(protectedPanel(c))throw Error('Approved panels are immutable.');const r=stored(c);if(r?.status!=='REVIEW_REQUIRED'||r.result?.ok!==false)throw Error('Only an incomplete audit request can be explicitly retried; review scene issues first.');await window.NERCore5AuditCoordinator?.reset(r.scope,r.payload);records.delete(c);delete c.dataset.core5Record;window.LDCore?.saveCurrent?.();}
+async function allowRetry(c){if(protectedPanel(c))throw Error('Approved panels are immutable.');const r=stored(c);if(r?.status!=='REVIEW_REQUIRED'||r.result?.ok!==false)throw Error('Only an incomplete audit request can be explicitly retried; review scene issues first.');const coordinator=window.NERCore5AuditCoordinator;if(coordinator?.inspect){const j=await coordinator.inspect(r.scope,r.payload);if(j.busy||j.conflict||(j.found&&(!j.identityMatch||j.source.includes('legacy')||j.status==='DONE')))throw Error('Journal requires free inspection or recovery first. No reset or audit was sent.');}await coordinator?.reset(r.scope,r.payload);records.delete(c);delete c.dataset.core5Record;window.LDCore?.saveCurrent?.();}
 function approve(c){if(!ready(c))throw Error('Core 5 approval blocked: exact audited prompt is no longer current.');const r=stored(c);persist(c,{...r,status:'APPROVED'});return r.prompt;}
 function reviewSpec(c){const i=inputs(c);return C.plan({...i,spec:null});}
 function reviewIdentity(c,s){const i=inputs(c);return s.stage===i.stage&&s.topic===i.topic&&s.narration===i.narration&&s.eventYear===Number(i.eventYear)&&s.location?.region===i.location;}
@@ -99,5 +132,5 @@ function attachVideoModes(api){
  return api;
 }
 function owns(c){return protectedPanel(c)||manages(c);}
-window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,diagnostic,planEpisode,prepareEpisode,refineScene,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
+window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,diagnostic,journalDiagnostic,recoverJournal,planEpisode,prepareEpisode,refineScene,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
 })();

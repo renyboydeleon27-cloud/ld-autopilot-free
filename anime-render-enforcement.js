@@ -7,7 +7,7 @@
 if(window.__ldAnimeRenderEnforcementV110)return;
 window.__ldAnimeRenderEnforcementV110=true;
 
-const VERSION='1.1.0';
+const VERSION='1.1.1';
 const TOP_MARK='ABSOLUTE ANIME ENFORCEMENT LOCK — GLOBAL V1.1';
 const TEXT_MARK='ZERO ON-SCREEN TEXT LOCK — GLOBAL V1.1';
 const CHECK_MARK='2D ANIME STYLE CHECKSUM — GLOBAL V1.1';
@@ -26,6 +26,7 @@ function colorMode(){
  return visualStyle()==='anime'?(localStorage.getItem('ld-auto-color-mode-v1')==='color'?'color':'bw'):'bw';
 }
 function eligible(card){
+ if(window.NERCore5Runtime?.manages(card)||window.NERCore5Runtime?.protectedPanel(card))return false;
  if(!card||visualStyle()!=='anime')return false;
  const stage=String(card.dataset.stage||'').toUpperCase();
  if(stage==='THUMBNAIL'||stage==='ENDING')return false;

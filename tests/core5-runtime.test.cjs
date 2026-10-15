@@ -135,3 +135,19 @@ test('explicit refinement archives old audited bytes and requires only one new a
  assert.equal(b.r.refineScene(c),false);await b.r.prepare(c,b.audit);assert.equal(b.calls(),2);
  c.fields['.done-toggle'].checked=true;const before=JSON.stringify(c);assert.throws(()=>b.r.refineScene(c),/immutable/);assert.equal(JSON.stringify(c),before);
 });
+test('free journal diagnostic and recovery use current canonical payload without audit',async()=>{
+ const b=boot(),c=b.card();let recoveredPayload;
+ b.window.NERCore5AuditCoordinator={inspect:async(project,p)=>({found:true,identityMatch:true,recoverable:true,status:'DONE',source:'IndexedDB'}),recover:async(project,p)=>{recoveredPayload=p;return {ok:true,result:'PASS',issues:[]};}};
+ const before=JSON.stringify(c.dataset);assert.equal((await b.r.journalDiagnostic(c)).status,'SAVED_RESULT_RECOVERABLE');assert.equal(JSON.stringify(c.dataset),before);
+ await b.r.recoverJournal(c);assert(b.r.ready(c));assert.equal(b.r.build(c),recoveredPayload.currentPrompt);assert.equal(b.calls(),0);
+ c.fields['.done-toggle'].checked=true;await assert.rejects(b.r.recoverJournal(c),/immutable/);
+});
+test('journal recovery rejects a changed project and preserves a recovered NEEDS FIX verdict',async()=>{
+ const b=boot(),c=b.card();b.window.NERCore5AuditCoordinator={recover:async()=>{b.setProject('other');return {ok:true,result:'PASS',issues:[]};}};
+ await assert.rejects(b.r.recoverJournal(c),/changed/);assert(!c.dataset.core5Record);
+ b.window.NERCore5AuditCoordinator.recover=async()=>({ok:true,result:'NEEDS FIX',issues:['Review camera']});await b.r.recoverJournal(c);assert(!b.r.ready(c));assert.equal(JSON.parse(c.dataset.core5Record).result.result,'NEEDS FIX');assert.equal(b.calls(),0);
+});
+test('free recovery reports project save failure instead of claiming durable success',async()=>{
+ const b=boot(),c=b.card();b.window.LDCore.saveCurrent=()=>false;b.window.NERCore5AuditCoordinator={recover:async()=>({ok:true,result:'PASS',issues:[]})};
+ await assert.rejects(b.r.recoverJournal(c),/project storage could not save/);assert.equal(b.calls(),0);
+});

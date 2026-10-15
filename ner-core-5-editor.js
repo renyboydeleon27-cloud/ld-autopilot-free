@@ -16,7 +16,20 @@ function attach(card){
  const refineNote=document.createElement('p');refineNote.textContent='For supported scenes, add explicit starting state, prop movement and final pose. Saves the old draft. A changed prompt needs a new audit on Smart Continue; approved panels stay locked.';details.append(refineNote);
  const diagnose=document.createElement('button');diagnose.type='button';diagnose.className='core5-check-audit';diagnose.textContent='Check audit status · FREE';details.append(diagnose);
  const diagnosis=document.createElement('pre');diagnosis.className='core5-audit-diagnosis';diagnosis.style.whiteSpace='pre-wrap';diagnosis.setAttribute('role','status');details.append(diagnosis);
- diagnose.addEventListener('click',()=>{try{const d=R.diagnostic(card);diagnosis.textContent='Local audit status: '+d.status+'\nSaved panel record: '+d.journalStatus+'\n'+(d.issues.length?'Reasons:\n'+d.issues.map(x=>'• '+x).join('\n'):'No local blockers found.')+'\nNo audit request or retry was sent.';}catch(e){diagnosis.textContent='Diagnostic failed locally: '+e.message;}});
+ const recover=document.createElement('button');recover.type='button';recover.className='core5-recover-journal';recover.textContent='Recover saved audit · FREE';recover.hidden=true;details.append(recover);
+ diagnose.addEventListener('click',async()=>{
+  diagnose.disabled=true;recover.hidden=true;diagnosis.textContent='Inspecting local audit journal…';
+  try{
+   const d=await R.journalDiagnostic(card),j=d.journal,yn=x=>x===null?'UNKNOWN':x?'YES':'NO';
+   diagnosis.textContent=['Local audit status: '+d.status,'Saved panel record: '+d.journalStatus,
+    ...(j?['Journal found: '+yn(j.found),'Storage source: '+j.source,'Stage: '+j.stage,'Status: '+j.status,'Payload identity match: '+yn(j.identityMatch),'Recoverable result: '+yn(j.recoverable),'Storage conflict: '+yn(j.conflict)]:[]),
+    d.issues.length?'Reasons:\n'+d.issues.map(x=>'• '+x).join('\n'):'No local blockers found.',
+    'No audit request or retry was sent.'].join('\n');
+   recover.hidden=!j?.recoverable;retry.hidden=!!j?.found||!!j?.busy||d.status==='JOURNAL_INSPECTION_FAILED';
+  }catch(e){diagnosis.textContent='Diagnostic failed locally: '+e.message;}finally{diagnose.disabled=false;}
+ });
+ recover.addEventListener('click',async()=>{recover.disabled=true;try{diagnosis.textContent=await R.recoverJournal(card);recover.hidden=true;}catch(e){diagnosis.textContent=e.message;}finally{recover.disabled=false;}});
+
  const retry=document.createElement('button');retry.type='button';retry.textContent='Allow one retry of incomplete audit';retry.hidden=true;details.append(retry);
  const status=document.createElement('p');status.setAttribute('role','status');details.append(status);
  let base;
