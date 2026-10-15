@@ -26,16 +26,16 @@ async function run(project,payload,audit){
  const check=C.validatePayload(payload);if(!check.ok)throw Error(check.issues.join(' '));
  const key=await slot(project,payload),identity=C.stable(payload);
  return navigator.locks.request(key,async()=>{
-  const old=read(key);
+  const old=await window.NERCore5JournalStore.read(key);
   if(old?.identity===identity){
    if(old.status==='DONE')return old.result;
    throw Error('An earlier audit is incomplete or uncertain. Review it and explicitly allow a retry before spending more credits.');
   }
-  storagePreflight(key);
-  save(key,{schema:1,identity,status:'STARTED'});
+  await window.NERCore5JournalStore.preflight();
+  await window.NERCore5JournalStore.save(key,{schema:1,identity,status:'STARTED'});
   let result;
-  try{result=await audit(payload);}catch(error){save(key,{schema:1,identity,status:'UNCERTAIN'});throw error;}
-  save(key,{schema:1,identity,status:'DONE',result});
+  try{result=await audit(payload);}catch(error){await window.NERCore5JournalStore.save(key,{schema:1,identity,status:'UNCERTAIN'});throw error;}
+  await window.NERCore5JournalStore.save(key,{schema:1,identity,status:'DONE',result});
   return result;
  });
 }
@@ -47,7 +47,7 @@ async function reset(project,payload){
    if(old.result.result==='NEEDS FIX'&&Array.isArray(old.result.issues))return;
    try{C.transaction(payload,old.result);return;}catch{}
   }
-  localStorage.removeItem(key);});
+  await window.NERCore5JournalStore.remove(key);});
 }
 window.NERCore5AuditCoordinator=Object.freeze({run,reset});
 })();
