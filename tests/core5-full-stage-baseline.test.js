@@ -29,7 +29,7 @@ for(const [topic,eventYear,location,narration] of examples){
    assert.equal(added.length,1,topic+' '+stage+' exactly one face-reaction lock');
    assert.match(added[0],/natural blinking, breathing/);
    assert.match(added[0],/No exaggerated anime reaction faces/);
-   assert.equal(compiledNow.replace(added[0]+'\n','').replace('\n'+added[0],''),compiledBefore,topic+' '+stage+' unchanged prompt apart from explicit face-reaction lock');
+   assert.equal(compiledNow.replace('\n\n'+added[0],''),compiledBefore,topic+' '+stage+' unchanged prompt apart from explicit face-reaction lock');
    assert.equal(core.validatePayload(core.payload(now)).ok,true,topic+' '+stage+' payload');
    compiled++;
   }
