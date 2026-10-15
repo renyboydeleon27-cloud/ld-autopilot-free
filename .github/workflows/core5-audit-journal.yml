@@ -1,0 +1,31 @@
+name: Core 5 audit journal safety
+on:
+  push:
+    branches:
+      - fix/core5-audit-indexeddb-recovery-20261015
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  journal-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and migration tests
+        run: |
+          node --check ner-core5-journal-store.js
+          node --check ner-core-5-audit-coordinator.js
+          node --test tests/core5-journal-migration.test.cjs
+      - name: Install Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium
+      - name: Install browser test driver
+        run: npm install --no-save --ignore-scripts puppeteer-core
+      - name: Real browser IndexedDB checks
+        run: node tests/core5-journal-browser.cjs
