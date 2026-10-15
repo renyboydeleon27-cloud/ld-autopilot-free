@@ -20,6 +20,22 @@ function preflight(c){if(protectedPanel(c))return {ok:true,issues:[],preserved:t
 function build(c){if(protectedPanel(c))return preserve(c);const r=stored(c);if(r&&r.inputKey===key(c))return write(c,r.prompt);const v=preflight(c);if(!v.ok)throw Error('Local preflight — no audit credits used: '+v.issues.join(' '));if(!c.dataset.core5Spec)setSpec(c,v.spec);return write(c,C.compile(v.spec));}
 function payload(c){if(protectedPanel(c)){const r=stored(c);if(r)return r.payload;throw Error('Legacy approved panel has no Core 5 audit payload.');}const v=preflight(c);if(!v.ok)throw Error('Local preflight — no audit credits used: '+v.issues.join(' '));if(!c.dataset.core5Spec)setSpec(c,v.spec);return C.payload(v.spec);}
 function ready(c){const r=stored(c);return !!r&&['AUDITED','APPROVED'].includes(r.status)&&r.inputKey===key(c)&&current(c)===r.prompt&&C.validatePayload(r.payload).ok;}
+function diagnostic(c){
+ // Read-only, local-only. Never call payload/build/prepare, which can write drafts.
+ if(!c||!manages(c))return {status:'NOT_CORE5',issues:['Not a Core 5 panel.']};
+ if(protectedPanel(c))return {status:'PROTECTED',issues:[],safeToRetry:false};
+ const issues=[],record=stored(c),raw=c.dataset.core5Record||'';
+ let journalStatus='NONE';
+ if(raw){try{const parsed=JSON.parse(raw);journalStatus=parsed.status||'UNKNOWN';}catch{journalStatus='INVALID_JSON';issues.push('Saved panel audit record is not readable.');}}
+ const check=preflight(c);
+ if(!check.ok)issues.push(...check.issues);
+ if(record?.status==='REVIEW_REQUIRED')issues.push(...(record.result?.issues||['Previous audit requires review.']));
+ if(raw&&!record)issues.push('Saved audit record cannot be validated against the current compiler or prompt.');
+ if(record&&record.inputKey!==key(c))issues.push('Saved audit record does not match current panel inputs.');
+ if(record&&current(c)!==record.prompt)issues.push('Current video prompt differs from the saved audit prompt.');
+ const status=ready(c)?'AUDIT_READY':record?.status==='REVIEW_REQUIRED'?'AUDIT_REVIEW_REQUIRED':!check.ok?'LOCAL_PREFLIGHT_BLOCKED':raw&&!record?'INVALID_SAVED_AUDIT':'NOT_AUDITED';
+ return {status,journalStatus,issues,safeToRetry:false,requiresPaidAudit:status!=='AUDIT_READY',panel:c.dataset.stage};
+}
 function signature(c){return C.stable(payload(c));}
 function persist(c,r){const frozen=C.deepFreeze(r);records.set(c,frozen);c.dataset.core5Record=JSON.stringify(frozen);window.LDVideoModes?.refreshStatus?.(c);window.LDCore?.saveCurrent?.();return frozen;}
 async function prepare(c,audit){
@@ -83,5 +99,5 @@ function attachVideoModes(api){
  return api;
 }
 function owns(c){return protectedPanel(c)||manages(c);}
-window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,planEpisode,prepareEpisode,refineScene,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
+window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,diagnostic,planEpisode,prepareEpisode,refineScene,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
 })();
