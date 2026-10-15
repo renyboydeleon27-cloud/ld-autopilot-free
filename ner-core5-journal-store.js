@@ -34,11 +34,23 @@ function legacy(key){
 }
 async function read(key){
  const old=legacy(key);
- if(old)return old;
+ if(old){
+  // Copy first, verify durable commit, and retain the original for rollback.
+  const existing=await operation('readonly',store=>store.get(key));
+  if(existing!==null && JSON.stringify(existing)!==JSON.stringify(old))
+   throw Error('Legacy and IndexedDB audit journals conflict; manual review required. No audit sent.');
+  if(existing===null){
+   await operation('readwrite',store=>store.put(old,key));
+   const verified=await operation('readonly',store=>store.get(key));
+   if(JSON.stringify(verified)!==JSON.stringify(old))
+    throw Error('Legacy audit journal migration verification failed. No audit sent.');
+  }
+  return old;
+ }
  return operation('readonly',store=>store.get(key));
 }
 async function save(key,record){
- // Never overwrite an existing legacy record.
+ // Legacy journal remains authoritative until separately reviewed.
  if(legacy(key))throw Error('Legacy audit journal exists; manual review required.');
  await operation('readwrite',store=>store.put(record,key));
  const confirmed=await operation('readonly',store=>store.get(key));
