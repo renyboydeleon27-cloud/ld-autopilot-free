@@ -12,9 +12,11 @@ async function run(project,payload,audit){
  const key=await slot(project,payload),identity=C.stable(payload);
  return navigator.locks.request(key,async()=>{
   const old=await window.NERCore5JournalStore.read(key);
-  if(old?.identity===identity){
-   if(old.status==='DONE')return old.result;
-   throw Error('An earlier audit is incomplete or uncertain. Review it and explicitly allow a retry before spending more credits.');
+  if(old){
+   if(old.identity===identity && old.status==='DONE')return old.result;
+   // A changed scene must not silently overwrite a previous paid or uncertain audit.
+   // Keep the existing journal for explicit review, regardless of payload identity.
+   throw Error('An earlier audit journal exists for this stage. Review or explicitly reset it before another paid request. No audit was sent.');
   }
   await window.NERCore5JournalStore.preflight();
   await window.NERCore5JournalStore.save(key,{schema:1,identity,status:'STARTED'});
