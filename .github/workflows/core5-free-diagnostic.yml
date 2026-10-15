@@ -1,0 +1,19 @@
+name: Core 5 Free Diagnostic
+on:
+  push:
+    branches: [fix/core5-p3-free-diagnostic]
+  pull_request:
+    paths: [ner-core-5-runtime.js, ner-core-5-editor.js, .github/workflows/core5-free-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check ner-core-5-runtime.js
+      - run: node --check ner-core-5-editor.js
+      - run: node tests/core5-audit-journal-storage.test.js
