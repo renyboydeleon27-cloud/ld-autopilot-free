@@ -20,7 +20,7 @@ jobs:
         run: |
           node --check ner-core5-journal-store.js
           node --check ner-core-5-audit-coordinator.js
-          node --test tests/core5-journal-migration.test.cjs
+          node --test tests/core5-journal-migration.test.cjs tests/core5-audit-duplicate.test.cjs
       - name: Install Chromium
         run: |
           sudo apt-get update
