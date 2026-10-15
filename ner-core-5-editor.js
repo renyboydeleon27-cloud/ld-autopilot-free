@@ -14,9 +14,9 @@ function attach(card){
  const apply=document.createElement('button');apply.type='button';apply.className='core5-apply-scene';apply.textContent='Apply reviewed scene';details.append(apply);
  const refine=document.createElement('button');refine.type='button';refine.className='core5-refine-action';refine.textContent='Refine action details · FREE';details.append(refine);
  const refineNote=document.createElement('p');refineNote.textContent='For supported scenes, add explicit starting state, prop movement and final pose. Saves the old draft. A changed prompt needs a new audit on Smart Continue; approved panels stay locked.';details.append(refineNote);
- const diagnose=document.createElement('button');diagnose.type='button';diagnose.textContent='Check audit status · FREE';details.append(diagnose);
- const diagnosis=document.createElement('pre');diagnosis.style.whiteSpace='pre-wrap';diagnosis.setAttribute('role','status');details.append(diagnosis);
- diagnose.addEventListener('click',()=>{try{const d=R.diagnostic(card);diagnosis.textContent='Local audit status: '+d.status+'\\nSaved panel record: '+d.journalStatus+'\\n'+(d.issues.length?'Reasons:\\n'+d.issues.map(x=>'• '+x).join('\\n'):'No local blockers found.')+'\\nNo audit request or retry was sent.';}catch(e){diagnosis.textContent='Diagnostic failed locally: '+e.message;}});
+ const diagnose=document.createElement('button');diagnose.type='button';diagnose.className='core5-check-audit';diagnose.textContent='Check audit status · FREE';details.append(diagnose);
+ const diagnosis=document.createElement('pre');diagnosis.className='core5-audit-diagnosis';diagnosis.style.whiteSpace='pre-wrap';diagnosis.setAttribute('role','status');details.append(diagnosis);
+ diagnose.addEventListener('click',()=>{try{const d=R.diagnostic(card);diagnosis.textContent='Local audit status: '+d.status+'\nSaved panel record: '+d.journalStatus+'\n'+(d.issues.length?'Reasons:\n'+d.issues.map(x=>'• '+x).join('\n'):'No local blockers found.')+'\nNo audit request or retry was sent.';}catch(e){diagnosis.textContent='Diagnostic failed locally: '+e.message;}});
  const retry=document.createElement('button');retry.type='button';retry.textContent='Allow one retry of incomplete audit';retry.hidden=true;details.append(retry);
  const status=document.createElement('p');status.setAttribute('role','status');details.append(status);
  let base;
@@ -39,7 +39,7 @@ function attachAll(){
  host.prepend(button,note,status);
 }
 window.addEventListener('ld:production-built',()=>queueMicrotask(attachAll));
-document.addEventListener('DOMContentLoaded',attachAll);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attachAll);else attachAll();
 window.addEventListener('ld:video-mode-changed',attachAll);
 window.addEventListener('ld:visual-mode-hard-reset',attachAll);
 })();

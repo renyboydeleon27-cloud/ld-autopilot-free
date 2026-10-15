@@ -30,7 +30,7 @@ const deadline=setTimeout(()=>{console.error('Browser regression timed out');pro
  const oldRecord=await card.evaluate(c=>c.dataset.core5Record);
  assert.match(await card.locator('.video-mode-status').textContent(),/audit passed/);
  await card.locator('.core5-refine-action').click();assert.equal(calls.length,1);
- assert.match(await card.locator('.core5-review [role="status"]').textContent(),/refined locally/);
+ assert.match(await card.locator('.core5-review > p[role="status"]').textContent(),/refined locally/);
  assert.equal(await card.evaluate(c=>window.NERCore5Runtime.ready(c)),false);
  assert.equal(await card.evaluate(c=>JSON.parse(c.dataset.core5SceneHistory).at(-1).record),oldRecord);
  assert.doesNotMatch(await card.locator('.video-mode-status').textContent(),/audit passed/);
