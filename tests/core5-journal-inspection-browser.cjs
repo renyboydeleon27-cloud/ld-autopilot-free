@@ -15,6 +15,10 @@ const deadline=setTimeout(()=>{console.error('Browser regression timed out');pro
 
 
  const seed={topic:'The Great Smog of London — 1952',format:'shorts',category:'disaster',narrativeFormat:'original',videoContinuity:{year:'1952',location:'London, England'},projectLocks:{locked:true,videoMode:'text',visualStyle:'anime',colorMode:'bw'},stages:{P3:{narration:'Above the rooftops, warmer air trapped colder air below. With little wind, the smoke could no longer disperse into the sky.',videoMode:'text',done:false}}};
+ // Model the actual production: completed HOOK/P1/P2 make P3 the persisted target.
+ // Otherwise the delayed Smart Continue restore correctly reopens the empty HOOK
+ // and closes P3 while the test is attempting its diagnostic click.
+ for(const stage of ['HOOK','P1','P2'])seed.stages[stage]={done:true,approvalCommitted:true,videoMode:'text',narration:'Approved narration '+stage,imagePrompt:'Approved image '+stage,flowPrompt:'Approved flow '+stage,textVideoPrompt:'Approved exact prompt '+stage,videoScene:'Approved scene '+stage};
  await page.evaluate(s=>{localStorage.setItem("ld-autopilot-free-active-project","journal-inspection-test");window.LDCore.loadProductionState(s);const c=document.querySelector('[data-stage="P3"]');NERCore5Runtime.applyReview(c,NERCore5Runtime.reviewSpec(c));NERCore5Runtime.build(c);},seed);
  const card=page.locator('.stage-card[data-stage="P3"]');await card.locator('.stage-body').evaluate(e=>e.classList.remove('hidden'));await card.locator('.core5-review').evaluate(e=>e.open=true);
  const initial=await page.evaluate(async()=>{const c=document.querySelector('[data-stage="P3"]'),r=NERCore5Runtime,p=NERCore5.payload(r.spec(c));const d=await NERCore5AuditCoordinator.inspect(r.scope(),p);window.fixture={key:d.key,p};return {d,databases:await indexedDB.databases()};});
