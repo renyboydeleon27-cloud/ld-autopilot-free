@@ -52,9 +52,10 @@ async function journalDiagnostic(c){
  }catch(e){d.status='JOURNAL_INSPECTION_FAILED';d.issues.push(e.message);}
  return d;
 }
-function saveRecovered(c,record){
+async function saveRecovered(c,record){
  persist(c,record);
  if(window.LDCore?.saveCurrent?.()===false)throw Error('Recovered audit remains in its journal, but project storage could not save. Keep this page open and export a backup. No paid request was sent.');
+ await window.NERProjectStorage?.flush();
 }
 async function recoverJournal(c){
  if(protectedPanel(c))throw Error('Approved panels are immutable.');
@@ -63,10 +64,10 @@ async function recoverJournal(c){
  const result=await window.NERCore5AuditCoordinator.recover(project,p);
  if(scope()!==project||key(c)!==inputKey||!c.isConnected||protectedPanel(c))throw Error('Panel changed during recovery. Journal retained.');
  if(result.ok===true&&result.result==='NEEDS FIX'){
-  saveRecovered(c,{version:C.VERSION,status:'REVIEW_REQUIRED',payload:p,prompt:p.currentPrompt,result,inputKey,scope:project});
+  await saveRecovered(c,{version:C.VERSION,status:'REVIEW_REQUIRED',payload:p,prompt:p.currentPrompt,result,inputKey,scope:project});
   return 'Saved audit recovered: needs scene review. No paid request was sent.';
  }
- const tx=C.transaction(p,result);write(c,tx.prompt);saveRecovered(c,{...tx,inputKey,scope:project});
+ const tx=C.transaction(p,result);write(c,tx.prompt);await saveRecovered(c,{...tx,inputKey,scope:project});
  return 'Saved audit recovered. Exact audited prompt restored; no paid request was sent.';
 }
 async function archiveIncompleteJournal(c,review){
@@ -79,12 +80,14 @@ async function archiveIncompleteJournal(c,review){
  if(!valid())throw Error('Journal archived, but panel changed. Inspect the original project again. No audit sent.');
  records.delete(c);delete c.dataset.core5Record;
  if(window.LDCore?.saveCurrent?.()===false)throw Error('Journal archived, but project save failed. Export a backup before continuing. No audit sent.');
+ await window.NERProjectStorage?.flush();
  return 'Incomplete journal archived safely. One new audit may run on your next Smart Continue and may use API credits. No audit was sent now. Archive: '+archived;
 }
 function signature(c){return C.stable(payload(c));}
 function persist(c,r){const frozen=C.deepFreeze(r);records.set(c,frozen);c.dataset.core5Record=JSON.stringify(frozen);window.LDVideoModes?.refreshStatus?.(c);window.LDCore?.saveCurrent?.();return frozen;}
 async function prepare(c,audit){
  if(protectedPanel(c))return preserve(c);
+ if(window.NERProjectStorage)await window.NERProjectStorage.ensureSaved();
  const p=payload(c),inputKey=key(c),project=scope(),cacheKey=project+'|'+C.stable(p);
  const r=stored(c);if(r&&r.inputKey===inputKey){if(r.status==='REVIEW_REQUIRED')throw Error('Audit needs review: '+(r.result.issues||[]).join(' ')+' Edit the StageSpec before another audit.');write(c,r.prompt);return r.prompt;}
  write(c,p.currentPrompt);
@@ -95,6 +98,7 @@ async function prepare(c,audit){
  if(result?.ok===true&&result.result==='NEEDS FIX'){persist(c,{version:C.VERSION,status:'REVIEW_REQUIRED',payload:p,prompt:p.currentPrompt,result,inputKey,scope:project});throw Error('Audit needs review: '+(result.issues||[]).join(' ')+' No automatic paid fix or retry.');}
  let tx;try{tx=C.transaction(p,result);}catch(e){persist(c,{version:C.VERSION,status:'REVIEW_REQUIRED',payload:p,prompt:p.currentPrompt,result:{ok:false,issues:['Invalid audit verdict: '+e.message]},inputKey,scope:project});throw e;}
  persist(c,{...tx,inputKey,scope:project});
+ if(window.NERProjectStorage)await window.NERProjectStorage.ensureSaved();
  return tx.prompt;
 }
 async function allowRetry(c){if(protectedPanel(c))throw Error('Approved panels are immutable.');const r=stored(c);if(r?.status!=='REVIEW_REQUIRED'||r.result?.ok!==false)throw Error('Only an incomplete audit request can be explicitly retried; review scene issues first.');const coordinator=window.NERCore5AuditCoordinator;if(coordinator?.inspect){const j=await coordinator.inspect(r.scope,r.payload);if(j.busy||j.conflict||(j.found&&(!j.identityMatch||j.source.includes('legacy')||j.status==='DONE')))throw Error('Journal requires free inspection or recovery first. No reset or audit was sent.');}await coordinator?.reset(r.scope,r.payload);records.delete(c);delete c.dataset.core5Record;window.LDCore?.saveCurrent?.();}

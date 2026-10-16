@@ -1,6 +1,6 @@
 /* User-controlled PWA updates. No project reset, worker unregister, or silent reload. */
 (function(){'use strict';
-const BUILD='5.1.7';
+const BUILD='5.1.8';
 function mount(){
  if(document.getElementById('appUpdateStatus'))return;
  const host=document.querySelector('.topbar');if(!host)return;
@@ -41,6 +41,7 @@ function mount(){
   if(checking)return;
   if(reloadReady){try{
    if(document.querySelector('.stage-card')&&(!window.LDCore?.saveCurrent||window.LDCore.saveCurrent()!==true))throw Error('Project could not be saved. Keep this app open and export a backup.');
+   await window.NERProjectStorage?.flush();
    location.reload();
   }catch(e){status.textContent='Save failed: '+e.message;}return;}
   await check();

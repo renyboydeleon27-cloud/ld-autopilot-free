@@ -48,9 +48,10 @@ const deadline=setTimeout(()=>{console.error('PWA diagnostic regression timed ou
   await page.waitForFunction(()=>document.getElementById('appUpdateButton').textContent==='Load available update');
   // Activation must not reload or mutate the open production.
   assert(await page.evaluate(()=>Array.from(document.scripts).some(s=>s.src.endsWith('ner-core-5-editor.js?v=5.1.1'))));
-  await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>document.getElementById('appUpdateStatus')?.textContent.includes('5.1.7'));
+  await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>document.getElementById('appUpdateStatus')?.textContent.includes('5.1.8'));
   await page.waitForFunction(()=>document.querySelector('.stage-card[data-stage="P3"] .core5-check-audit'));
   async function verify(){
+   await page.waitForFunction(()=>window.LDCore&&document.querySelector('[data-stage="P3"] .core5-check-audit')&&!document.querySelector('main').inert);
    const after=await page.evaluate(()=>window.LDCore.collectState());
    for(const [stage,saved] of Object.entries(seed.stages))if(stage!=='P3')for(const key of Object.keys(saved))assert.deepEqual(after.stages[stage][key],saved[key],stage+' '+key);
    for(const key of ['narration','videoScene','done'])assert.deepEqual(after.stages.P3[key],before.stages.P3[key],'P3 '+key);

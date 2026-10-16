@@ -41,6 +41,7 @@
     if(window.LD_HOOK_CHOICES_ENABLED)return false;
     const card=stages.querySelector('.stage-card[data-stage="HOOK"]');
     if(!card)return false;
+    if(card.dataset.approvalCommitted==='1'||card.querySelector('.done-toggle')?.checked||window.NERCore5Runtime?.protectedPanel?.(card))return false;
     const prompt=card.querySelector('.image-prompt');
     const flow=card.querySelector('.flow-prompt');
     const role=card.querySelector('.scene-role');
