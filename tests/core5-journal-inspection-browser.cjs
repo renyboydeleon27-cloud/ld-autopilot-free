@@ -10,7 +10,7 @@ const deadline=setTimeout(()=>{console.error('Browser regression timed out');pro
  await ctx.addInitScript(()=>{window.__copied=[];Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.__copied.push(text);},readText:async()=>window.__copied.at(-1)}});});
  const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
  try{
- await page.goto(origin);await page.waitForFunction(()=>window.LDSmartContinue&&window.NERCore5Runtime);
+ await page.goto(origin);await page.waitForFunction(()=>window.LDSmartContinue&&window.NERCore5Runtime&&!document.querySelector('main').inert);
 
 
 
@@ -20,6 +20,10 @@ const deadline=setTimeout(()=>{console.error('Browser regression timed out');pro
  // and closes P3 while the test is attempting its diagnostic click.
  for(const stage of ['HOOK','P1','P2'])seed.stages[stage]={done:true,approvalCommitted:true,videoMode:'text',narration:'Approved narration '+stage,imagePrompt:'Approved image '+stage,flowPrompt:'Approved flow '+stage,textVideoPrompt:'Approved exact prompt '+stage,videoScene:'Approved scene '+stage};
  await page.evaluate(s=>{localStorage.setItem("ld-autopilot-free-active-project","journal-inspection-test");window.LDCore.loadProductionState(s);const c=document.querySelector('[data-stage="P3"]');NERCore5Runtime.applyReview(c,NERCore5Runtime.reviewSpec(c));NERCore5Runtime.build(c);},seed);
+ // Settle legacy production decorators before measuring a read-only journal action.
+ await page.waitForTimeout(1600);
+ const settled=await page.evaluate(()=>LDCore.collectState());
+ for(const stage of ['HOOK','P1','P2'])for(const [field,value] of Object.entries(seed.stages[stage]))assert.deepEqual(settled.stages[stage][field],value,'approved '+stage+'.'+field);
  const card=page.locator('.stage-card[data-stage="P3"]');await card.locator('.stage-body').evaluate(e=>e.classList.remove('hidden'));await card.locator('.core5-review').evaluate(e=>e.open=true);
  const initial=await page.evaluate(async()=>{const c=document.querySelector('[data-stage="P3"]'),r=NERCore5Runtime,p=NERCore5.payload(r.spec(c));const d=await NERCore5AuditCoordinator.inspect(r.scope(),p);window.fixture={key:d.key,p};return {d,databases:await indexedDB.databases()};});
  assert.equal(initial.d.found,false);assert(!initial.databases.some(x=>x.name==='ner-core5-audit-journals'),'inspection must not create a DB');
