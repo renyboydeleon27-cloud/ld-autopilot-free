@@ -104,18 +104,18 @@
  });
 })();
 
-/* NER Studio — load global 2D anime T2V enforcement v1.1.0 */
+/* NER Studio — load global 2D anime T2V enforcement v1.1.1 */
 (()=>{'use strict';
  if(window.__ldAnimeRenderEnforcementLoaderV110)return;
  window.__ldAnimeRenderEnforcementLoaderV110=true;
  const existing=document.querySelector('script[data-ld-anime-render-enforcement]');
- if(existing&&String(existing.src||'').includes('v=1.1.0'))return;
+ if(existing&&String(existing.src||'').includes('v=1.1.1'))return;
  if(existing)existing.remove();
  const script=document.createElement('script');
- script.src='./anime-render-enforcement.js?v=1.1.0';
+ script.src='./anime-render-enforcement.js?v=1.1.1';
  script.async=true;
  script.dataset.ldAnimeRenderEnforcement='1';
- script.dataset.ldAnimeRenderVersion='1.1.0';
+ script.dataset.ldAnimeRenderVersion='1.1.1';
  document.head.appendChild(script);
 })();
 

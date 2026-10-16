@@ -32,6 +32,17 @@ function legacy(key){
  try{const record=JSON.parse(raw);if(record.schema!==1)throw Error('Invalid schema');return record;}
  catch{throw Error('Legacy audit journal requires review; no request sent.');}
 }
+// Inspect both sources without migration, writes, deletion, or quota probes.
+async function inspect(key){
+ const old=legacy(key);
+ let existing=null;
+ // Avoid creating an empty database just to inspect it where enumeration is available.
+ if(!indexedDB.databases)throw Error('Read-only journal enumeration is unavailable in this browser. No request was sent.');
+ const databases=await indexedDB.databases();
+ if(databases.some(db=>db.name===DB))existing=await operation('readonly',store=>store.get(key));
+ const conflict=old!==null&&existing!==null&&JSON.stringify(old)!==JSON.stringify(existing);
+ return {source:old?(existing?'legacy + IndexedDB':'legacy'):(existing?'IndexedDB':'NONE'),record:old||existing,conflict};
+}
 async function read(key){
  const old=legacy(key);
  if(old){
@@ -65,5 +76,5 @@ async function preflight(){
  await operation('readwrite',store=>store.put({probe:true},key));
  await operation('readwrite',store=>store.delete(key));
 }
-window.NERCore5JournalStore=Object.freeze({read,save,remove,preflight,legacy});
+window.NERCore5JournalStore=Object.freeze({read,inspect,save,remove,preflight,legacy});
 })();

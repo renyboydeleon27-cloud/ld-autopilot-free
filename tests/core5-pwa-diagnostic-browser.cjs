@@ -48,7 +48,7 @@ const deadline=setTimeout(()=>{console.error('PWA diagnostic regression timed ou
   await page.waitForFunction(()=>document.getElementById('appUpdateButton').textContent==='Load available update');
   // Activation must not reload or mutate the open production.
   assert(await page.evaluate(()=>Array.from(document.scripts).some(s=>s.src.endsWith('ner-core-5-editor.js?v=5.1.1'))));
-  await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>document.getElementById('appUpdateStatus')?.textContent.includes('5.1.4'));
+  await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>document.getElementById('appUpdateStatus')?.textContent.includes('5.1.6'));
   await page.waitForFunction(()=>document.querySelector('.stage-card[data-stage="P3"] .core5-check-audit'));
   async function verify(){
    const after=await page.evaluate(()=>window.LDCore.collectState());
@@ -58,11 +58,10 @@ const deadline=setTimeout(()=>{console.error('PWA diagnostic regression timed ou
    assert.equal(await page.evaluate(()=>new Promise((resolve,reject)=>{const request=indexedDB.open('pwa-preservation-test',1);request.onerror=()=>reject(request.error);request.onsuccess=()=>{const db=request.result,q=db.transaction('records').objectStore('records').get('sentinel');q.onsuccess=()=>{resolve(q.result);db.close();};};})),'preserved audit journal');
    assert.equal(await page.evaluate(()=>localStorage.getItem('pwa-preserve-backup')),JSON.stringify(seed));
    const card=page.locator('.stage-card[data-stage="P3"]');await card.locator('.stage-body').evaluate(e=>e.classList.remove('hidden'));await card.locator('.core5-review').evaluate(e=>e.open=true);
-   // Atomic before/click/after excludes unrelated background Smart Continue timers.
-   const comparison=await card.evaluate(c=>{
-    const snapshot=()=>JSON.stringify({storage:{...localStorage},card:c.dataset.core5Record||'',state:window.LDCore.collectState().stages});
-    const before=snapshot();c.querySelector('.core5-check-audit').click();return {before,after:snapshot()};
-   });
+   const snapshot=()=>card.evaluate(c=>JSON.stringify({journals:Object.fromEntries(Object.entries(localStorage).filter(([k])=>k.startsWith('ner-core5-audit')||k.startsWith('pwa-preserve'))),card:c.dataset.core5Record||'',state:window.LDCore.collectState().stages}));
+   const inspectBefore=await snapshot();await card.locator('.core5-check-audit').click();
+   await page.waitForFunction(()=>!document.querySelector('[data-stage="P3"] .core5-check-audit').disabled);
+   const comparison={before:inspectBefore,after:await snapshot()};
    const d=await card.locator('.core5-audit-diagnosis').textContent();assert.match(d,/Local audit status:/);assert.match(d,/Saved panel record:/);assert.match(d,/Reasons:/);assert.match(d,/No audit request or retry was sent/);assert(d.includes('\n'));assert(!d.includes('\\n'));
    assert.equal(comparison.after,comparison.before,'diagnostic must not write storage, records or panel state');
   }

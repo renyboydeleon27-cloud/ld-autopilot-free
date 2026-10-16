@@ -7,6 +7,31 @@ async function slot(project,payload){
  const digest=await crypto.subtle.digest('SHA-256',bytes);
  return PREFIX+Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('');
 }
+function describe(payload,entry,key){
+ const record=entry.record,match=!!record&&record.identity===C.stable(payload);
+ let recoverable=false;
+ if(record?.status==='DONE'&&match&&!entry.conflict){
+  try{if(record.result?.ok===true&&record.result.result==='NEEDS FIX'&&Array.isArray(record.result.issues))recoverable=true;else{C.transaction(payload,record.result);recoverable=true;}}catch{}
+ }
+ return {key,stage:payload.stage,found:!!record,source:entry.source,status:record?.status||'NONE',identityMatch:match,recoverable,conflict:entry.conflict,busy:false};
+}
+async function inspect(project,payload){
+ const key=await slot(project,payload);
+ return navigator.locks.request(key,{ifAvailable:true},async lock=>{
+  if(!lock)return {key,stage:payload.stage,found:null,source:'UNKNOWN',status:'BUSY',identityMatch:null,recoverable:false,conflict:false,busy:true};
+  return describe(payload,await window.NERCore5JournalStore.inspect(key),key);
+ });
+}
+async function recover(project,payload){
+ const check=C.validatePayload(payload);if(!check.ok)throw Error(check.issues.join(' '));
+ const key=await slot(project,payload);
+ return navigator.locks.request(key,{ifAvailable:true},async lock=>{
+  if(!lock)throw Error('Audit journal is busy in another tab. No request was sent.');
+  const entry=await window.NERCore5JournalStore.inspect(key),d=describe(payload,entry,key);
+  if(!d.recoverable)throw Error('No matching conclusive audit result can be recovered. Journal retained; no request was sent.');
+  return entry.record.result;
+ });
+}
 async function run(project,payload,audit){
  const check=C.validatePayload(payload);if(!check.ok)throw Error(check.issues.join(' '));
  const key=await slot(project,payload),identity=C.stable(payload);
@@ -36,5 +61,5 @@ async function reset(project,payload){
   }
   await window.NERCore5JournalStore.remove(key);});
 }
-window.NERCore5AuditCoordinator=Object.freeze({run,reset});
+window.NERCore5AuditCoordinator=Object.freeze({run,reset,inspect,recover});
 })();
