@@ -1,7 +1,7 @@
 /* Durable project storage with explicit migration. Original localStorage is retained. */
 (function(){'use strict';
 const native=window.localStorage,DB='ner-project-storage-v1',STORE='snapshots',KEY='workspace';
-const managed=k=>/^(ld-|ner-)/.test(k)&&!k.startsWith('ner-core5-audit-v1:');
+const managed=k=>/^(ld-|ner-)/.test(k)&&!k.startsWith('ner-core5-audit-v1:')&&!k.startsWith('ld-youtube-');
 let db,record,values={},enabled=false,pending=false,owned=false,revision=0,failure=null,tail=Promise.resolve();
 const copy=x=>JSON.parse(JSON.stringify(x));
 function legacy(){const out={};for(let i=0;i<native.length;i++){const k=native.key(i);if(managed(k))out[k]=native.getItem(k);}return out;}
