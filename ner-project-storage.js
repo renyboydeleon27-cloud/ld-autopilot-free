@@ -11,7 +11,7 @@ function transact(mode,value){return new Promise((resolve,reject)=>{const tx=db.
 function status(text){for(const id of ['saveStatus','projectStorageStatus']){const e=document.getElementById(id);if(e)e.textContent=text;}}
 function schedule(){
  revision++;if(pending)return;pending=true;status('Saving to device database…');
- tail=Promise.resolve().then(async()=>{let saved;do{if(failure)throw failure;saved=revision;const snapshot={...record,values:copy(values)};await transact('readwrite',snapshot);record=snapshot;}while(saved!==revision);}).catch(e=>{failure=e;status('Save failed · export a backup before closing');}).finally(()=>{pending=false;if(!failure)status('Saved to device database');});
+ let saved;tail=Promise.resolve().then(async()=>{do{if(failure)throw failure;saved=revision;const snapshot={...record,values:copy(values)};await transact('readwrite',snapshot);record=snapshot;}while(saved!==revision);}).catch(e=>{failure=e;status('Save failed · export a backup before closing');}).finally(()=>{pending=false;if(!failure){if(saved!==revision)schedule();else status('Saved to device database');}});
 }
 async function flush(){let observed;do{observed=tail;await observed;}while(observed!==tail);if(failure)throw failure;}
 function facade(){

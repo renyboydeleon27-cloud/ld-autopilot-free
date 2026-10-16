@@ -32,6 +32,9 @@ const root=path.resolve(__dirname,'..');
  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('ld-autopilot-free-project-library-v1')).projects.length),2);
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('ld-autopilot-free-project-library-v1')).projects.find(p=>p.id==='other')),otherBefore);
  assert.equal(await page.evaluate(()=>localStorage.getItem('ner-core5-audit-v1:preservation-test')),'unchanged audit journal');
+ // Writes queued at a transaction completion boundary must not be dropped.
+ await page.evaluate(async()=>{const put=IDBObjectStore.prototype.put;let once=true;IDBObjectStore.prototype.put=function(...args){if(once){once=false;this.transaction.addEventListener('complete',()=>queueMicrotask(()=>queueMicrotask(()=>localStorage.setItem('ner-last-write-test','last write retained'))));}return put.apply(this,args);};localStorage.setItem('ner-write-trigger','first');await NERProjectStorage.flush();IDBObjectStore.prototype.put=put;});
+ assert.equal(await page.evaluate(()=>new Promise(resolve=>{const q=indexedDB.open('ner-project-storage-v1',1);q.onsuccess=()=>{const db=q.result,r=db.transaction('snapshots').objectStore('snapshots').get('workspace');r.onsuccess=()=>{resolve(r.result.values['ner-last-write-test']);db.close();};};})),'last write retained');
  // Native legacy values remain byte-identical; the facade uses IndexedDB now.
  assert.deepEqual(await page.evaluate(()=>new Promise((resolve,reject)=>{const q=indexedDB.open('ner-project-storage-v1',1);q.onsuccess=()=>{const db=q.result,r=db.transaction('snapshots').objectStore('snapshots').get('workspace');r.onsuccess=()=>{resolve(r.result.legacy);db.close();};r.onerror=reject;};})),original);
  await page.reload();await page.waitForFunction(()=>NERProjectStorage.enabled&&window.LDCore);await page.waitForTimeout(500);assert.equal(await page.evaluate(()=>LDCore.collectState().stages.P3.narration),unsaved.stages.P3.narration);
