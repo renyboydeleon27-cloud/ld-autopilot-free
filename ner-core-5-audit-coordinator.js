@@ -13,7 +13,7 @@ function describe(payload,entry,key){
  if(record?.status==='DONE'&&match&&!entry.conflict){
   try{if(record.result?.ok===true&&record.result.result==='NEEDS FIX'&&Array.isArray(record.result.issues))recoverable=true;else{C.transaction(payload,record.result);recoverable=true;}}catch{}
  }
- return {key,stage:payload.stage,found:!!record,source:entry.source,status:record?.status||'NONE',identityMatch:match,recoverable,conflict:entry.conflict,busy:false};
+ return {key,stage:payload.stage,found:!!record,source:entry.source,status:record?.status||'NONE',identityMatch:match,recoverable,conflict:entry.conflict,busy:false,reviewToken:record?C.stable(record):null};
 }
 async function inspect(project,payload){
  const key=await slot(project,payload);
@@ -32,6 +32,16 @@ async function recover(project,payload){
   return entry.record.result;
  });
 }
+async function archiveIncomplete(project,payload,expected,stillCurrent){
+ const check=C.validatePayload(payload);if(!check.ok)throw Error(check.issues.join(' '));
+ const key=await slot(project,payload);
+ return navigator.locks.request(key,{ifAvailable:true},async lock=>{
+  if(!lock)throw Error('Audit is active in another tab. No reset allowed.');
+  const entry=await window.NERCore5JournalStore.inspect(key),d=describe(payload,entry,key);
+  if(!stillCurrent()||!d.identityMatch||d.conflict||!['STARTED','UNCERTAIN'].includes(d.status)||C.stable(entry.record)!==expected)throw Error('Journal or panel changed. Inspect again; no reset allowed.');
+  return window.NERCore5JournalStore.archiveIncomplete(key,entry.record);
+ });
+}
 async function run(project,payload,audit){
  const check=C.validatePayload(payload);if(!check.ok)throw Error(check.issues.join(' '));
  const key=await slot(project,payload),identity=C.stable(payload);
@@ -43,11 +53,12 @@ async function run(project,payload,audit){
    // Keep the existing journal for explicit review, regardless of payload identity.
    throw Error('An earlier audit journal exists for this stage. Review or explicitly reset it before another paid request. No audit was sent.');
   }
+  const attemptId=crypto.randomUUID();
   await window.NERCore5JournalStore.preflight();
-  await window.NERCore5JournalStore.save(key,{schema:1,identity,status:'STARTED'});
+  await window.NERCore5JournalStore.save(key,{schema:1,identity,attemptId,status:'STARTED'});
   let result;
-  try{result=await audit(payload);}catch(error){await window.NERCore5JournalStore.save(key,{schema:1,identity,status:'UNCERTAIN'});throw error;}
-  await window.NERCore5JournalStore.save(key,{schema:1,identity,status:'DONE',result});
+  try{result=await audit(payload);}catch(error){await window.NERCore5JournalStore.save(key,{schema:1,identity,attemptId,status:'UNCERTAIN'});throw error;}
+  await window.NERCore5JournalStore.save(key,{schema:1,identity,attemptId,status:'DONE',result});
   return result;
  });
 }
@@ -61,5 +72,5 @@ async function reset(project,payload){
   }
   await window.NERCore5JournalStore.remove(key);});
 }
-window.NERCore5AuditCoordinator=Object.freeze({run,reset,inspect,recover});
+window.NERCore5AuditCoordinator=Object.freeze({run,reset,inspect,recover,archiveIncomplete});
 })();

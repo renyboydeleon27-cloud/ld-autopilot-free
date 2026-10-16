@@ -1,6 +1,6 @@
 /* User-controlled PWA updates. No project reset, worker unregister, or silent reload. */
 (function(){'use strict';
-const BUILD='5.1.6';
+const BUILD='5.1.7';
 function mount(){
  if(document.getElementById('appUpdateStatus'))return;
  const host=document.querySelector('.topbar');if(!host)return;
