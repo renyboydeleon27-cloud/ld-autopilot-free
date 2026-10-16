@@ -17,7 +17,7 @@ function harness(initial=null){
  };
  const C={validatePayload:()=>({ok:true}),stable:p=>JSON.stringify(p),transaction:()=>{}};
  const window={NERCore5:C,NERCore5JournalStore:journal};
- const ctx={window,navigator:{locks},crypto:{subtle:crypto.webcrypto.subtle},TextEncoder,Uint8Array};
+ const ctx={window,navigator:{locks},crypto:crypto.webcrypto,TextEncoder,Uint8Array};
  vm.runInNewContext(source,ctx);
  const project='Great Smog',payload={stage:'P3',scene:'one'};
  const audit=async()=>{calls++;await new Promise(r=>setTimeout(r,10));return {ok:true,result:'PASS'};};

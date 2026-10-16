@@ -28,7 +28,38 @@ const deadline=setTimeout(()=>{console.error('Browser regression timed out');pro
  await page.evaluate(()=>localStorage.setItem(fixture.key,JSON.stringify({schema:1,identity:NERCore5.stable(fixture.p),status:'UNCERTAIN'})));
  const legacyText=await inspect();assert.match(legacyText,/Storage source: legacy/);assert.match(legacyText,/Status: UNCERTAIN/);assert.match(legacyText,/Recoverable result: NO/);
  assert.equal(await page.evaluate(async()=> (await indexedDB.databases()).some(x=>x.name==='ner-core5-audit-journals')),false,'no diagnostic migration');
- await page.evaluate(()=>localStorage.removeItem(fixture.key)); // fixture cleanup only
+ // Matched legacy + IndexedDB interruption: cancel preserves both sources;
+ // confirmed archive preserves the record and panel bytes without sending an API request.
+ await page.evaluate(()=>NERCore5JournalStore.read(fixture.key));
+ assert.match(await inspect(),/Storage source: legacy \+ IndexedDB/);
+ const snapshot=await page.evaluate(()=>JSON.stringify(LDCore.collectState().stages));
+ page.once('dialog',d=>d.dismiss());await card.locator('.core5-archive-journal').click();
+ assert.match(await inspect(),/Status: UNCERTAIN/);
+ // A failed archive transaction must retain both original copies.
+ await page.evaluate(()=>{window.originalAdd=IDBObjectStore.prototype.add;IDBObjectStore.prototype.add=function(...args){const r=originalAdd.apply(this,args);this.transaction.abort();return r;};});
+ page.once('dialog',d=>d.accept());await card.locator('.core5-archive-journal').click();
+ await page.waitForFunction(()=>!document.querySelector('.core5-archive-journal').disabled);
+ assert.doesNotMatch(await card.locator('.core5-audit-diagnosis').textContent(),/archived safely/);
+ await page.evaluate(()=>IDBObjectStore.prototype.add=originalAdd);
+ assert.match(await inspect(),/Storage source: legacy \+ IndexedDB/);
+ // Simulate legacy removal failure after archive commit: the legacy guard must remain.
+ await page.evaluate(()=>{window.originalRemove=Storage.prototype.removeItem;Storage.prototype.removeItem=function(k){if(k===fixture.key)throw Error('Simulated storage denial');return originalRemove.call(this,k);};});
+ page.once('dialog',d=>d.accept());await card.locator('.core5-archive-journal').click();
+ await page.waitForFunction(()=>document.querySelector('.core5-audit-diagnosis').textContent.includes('Simulated storage denial'));
+ assert.equal(await page.evaluate(()=>JSON.stringify(LDCore.collectState().stages)),snapshot);
+ assert.equal(await page.evaluate(()=>!!localStorage.getItem(fixture.key)),true);
+ await page.evaluate(()=>Storage.prototype.removeItem=originalRemove);
+ await inspect();page.once('dialog',d=>d.accept());await card.locator('.core5-archive-journal').click();
+ await page.waitForFunction(()=>document.querySelector('.core5-audit-diagnosis').textContent.includes('archived safely'));
+ assert.equal(await page.evaluate(()=>JSON.stringify(LDCore.collectState().stages)),snapshot);
+ assert.equal(await page.evaluate(async()=>!!(await NERCore5JournalStore.inspect(fixture.key)).record),false);
+ const archives=await page.evaluate(()=>new Promise((resolve,reject)=>{const q=indexedDB.open('ner-core5-audit-journals',1);q.onsuccess=()=>{const db=q.result,r=db.transaction('journals').objectStore('journals').getAll();r.onsuccess=()=>{resolve(r.result.filter(x=>x.kind==='explicit-incomplete-archive'));db.close();};r.onerror=reject;};}));
+ assert(archives.length>=1);assert.equal(archives[0].record.status,'UNCERTAIN');assert(archives[0].legacyRaw);
+ // A repeated recovery click cannot erase the next attempt or grant a second attempt.
+ await page.evaluate(async()=>{window.mockCalls=0;const run=()=>NERCore5AuditCoordinator.run(NERCore5Runtime.scope(),fixture.p,async()=>{mockCalls++;return {ok:true,result:'PASS',issues:[]};});await Promise.all([run(),run()]);});
+ assert.equal(await page.evaluate(()=>mockCalls),1);
+ assert.equal(calls.length,0);
+
  await page.evaluate(()=>NERCore5JournalStore.save(fixture.key,{schema:1,identity:'different payload',status:'DONE',result:{ok:true,result:'PASS',issues:[]}}));
  assert.match(await inspect(),/Payload identity match: NO/);assert.equal(await card.locator('.core5-recover-journal').isVisible(),false);
  await page.evaluate(()=>localStorage.setItem(fixture.key,JSON.stringify({schema:1,identity:NERCore5.stable(fixture.p),status:'STARTED'})));

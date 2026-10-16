@@ -69,6 +69,18 @@ async function recoverJournal(c){
  const tx=C.transaction(p,result);write(c,tx.prompt);saveRecovered(c,{...tx,inputKey,scope:project});
  return 'Saved audit recovered. Exact audited prompt restored; no paid request was sent.';
 }
+async function archiveIncompleteJournal(c,review){
+ if(protectedPanel(c))throw Error('Approved panels are immutable.');
+ const v=preflight(c);if(!v.ok)throw Error(v.issues.join(' '));
+ const project=scope(),inputKey=key(c),p=C.payload(v.spec);
+ const valid=()=>scope()===project&&key(c)===inputKey&&c.isConnected&&!protectedPanel(c);
+ if(!review?.identityMatch||review.conflict||!['STARTED','UNCERTAIN'].includes(review.status))throw Error('Inspect the incomplete journal first.');
+ const archived=await window.NERCore5AuditCoordinator.archiveIncomplete(project,p,review.reviewToken,valid);
+ if(!valid())throw Error('Journal archived, but panel changed. Inspect the original project again. No audit sent.');
+ records.delete(c);delete c.dataset.core5Record;
+ if(window.LDCore?.saveCurrent?.()===false)throw Error('Journal archived, but project save failed. Export a backup before continuing. No audit sent.');
+ return 'Incomplete journal archived safely. One new audit may run on your next Smart Continue and may use API credits. No audit was sent now. Archive: '+archived;
+}
 function signature(c){return C.stable(payload(c));}
 function persist(c,r){const frozen=C.deepFreeze(r);records.set(c,frozen);c.dataset.core5Record=JSON.stringify(frozen);window.LDVideoModes?.refreshStatus?.(c);window.LDCore?.saveCurrent?.();return frozen;}
 async function prepare(c,audit){
@@ -132,5 +144,5 @@ function attachVideoModes(api){
  return api;
 }
 function owns(c){return protectedPanel(c)||manages(c);}
-window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,diagnostic,journalDiagnostic,recoverJournal,planEpisode,prepareEpisode,refineScene,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
+window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,diagnostic,journalDiagnostic,recoverJournal,archiveIncompleteJournal,planEpisode,prepareEpisode,refineScene,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
 })();

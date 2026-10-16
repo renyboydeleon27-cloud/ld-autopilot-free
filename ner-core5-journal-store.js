@@ -71,10 +71,34 @@ async function remove(key){
  if(legacy(key))throw Error('Legacy audit journal must be reviewed before reset.');
  await operation('readwrite',store=>store.delete(key));
 }
+// Called only under the coordinator's exclusive stage lock after explicit consent.
+// Archive and removal of the active IndexedDB copy commit atomically. If legacy
+// removal fails, its original remains authoritative and the next audit stays blocked.
+async function archiveIncomplete(key,expected){
+ const entry=await inspect(key),record=entry.record;
+ if(entry.conflict||!record||JSON.stringify(record)!==JSON.stringify(expected)||!['STARTED','UNCERTAIN'].includes(record.status))throw Error('Journal changed or is not incomplete. Nothing was reset.');
+ const oldRaw=localStorage.getItem(key),archiveKey=key+':archive:'+crypto.randomUUID();
+ const archive={schema:1,kind:'explicit-incomplete-archive',originalKey:key,archivedAt:new Date().toISOString(),record,legacyRaw:oldRaw,source:entry.source};
+ const db=await database();
+ await new Promise((resolve,reject)=>{
+  const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE),get=store.get(key);
+  get.onsuccess=()=>{
+   if(get.result!=null&&JSON.stringify(get.result)!==JSON.stringify(expected)){tx.abort();return;}
+   try{store.add(archive,archiveKey);store.delete(key);}catch{try{tx.abort();}catch{}}
+  };
+  tx.oncomplete=resolve;tx.onabort=()=>reject(Error('Archive transaction aborted; original journal retained.'));tx.onerror=()=>reject(tx.error||Error('Archive failed; no retry allowed.'));
+ });
+ const saved=await operation('readonly',store=>store.get(archiveKey));
+ if(JSON.stringify(saved)!==JSON.stringify(archive))throw Error('Archive verification failed. No retry allowed.');
+ if(localStorage.getItem(key)!==oldRaw)throw Error('Legacy journal changed during archiving. No retry allowed.');
+ if(oldRaw!==null)localStorage.removeItem(key);
+ if((await inspect(key)).record)throw Error('Active journal remains. No retry allowed.');
+ return archiveKey;
+}
 async function preflight(){
  const key=PREFIX+'preflight-'+crypto.randomUUID();
  await operation('readwrite',store=>store.put({probe:true},key));
  await operation('readwrite',store=>store.delete(key));
 }
-window.NERCore5JournalStore=Object.freeze({read,inspect,save,remove,preflight,legacy});
+window.NERCore5JournalStore=Object.freeze({read,inspect,save,remove,preflight,legacy,archiveIncomplete});
 })();
