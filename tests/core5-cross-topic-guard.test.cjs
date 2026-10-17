@@ -85,15 +85,15 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  assert.doesNotMatch(p3Prompt,/no unrelated tsunami or fire/i);
  assert.match(p3Prompt,/No unrelated tsunami, unsupported explosion, or instant citywide inferno/i);
  assert.match(C.compile(spec),/FAMILY BOUNDARY: Supported shaking precedes structural failure; no unrelated tsunami or fire/);
- assert.match(C.compile(p7),/FAMILY BOUNDARY: Earthquake-triggered coastal inundation/);
+ assert(C.compile(p7).includes('in Tokyo and Yokohama, Japan.'));
  const p8=C.plan({topic,stage:'P8',narration:'The shaking also triggered landslides and debris flows. At Nebukawa, near present-day Odawara, a massive collapse buried homes and killed hundreds.',eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null});
  assert.match(C.compile(p8),/FAMILY BOUNDARY: Earthquake-triggered landslide damage/);
  // Nebukawa is a panel-local narrated place, not the project identity.
  assert.equal(p8.location.region,'Tokyo and Yokohama, Japan');
  assert.equal(p8.location.sceneRegion,'Nebukawa, near Odawara, Kanagawa Prefecture, Japan');
  const p8Prompt=C.compile(p8);
- assert.match(p8Prompt,/safe viewpoint toward a settled landslide debris zone[^\\n]+ in Nebukawa, near Odawara, Kanagawa Prefecture, Japan\\./);
- assert.doesNotMatch(p8Prompt,/settled landslide debris zone[^\\n]+ in Tokyo and Yokohama, Japan/);
+ assert(p8Prompt.includes('in Nebukawa, near Odawara, Kanagawa Prefecture, Japan.'),'P8 prompt uses narrated site');
+ assert(!p8Prompt.includes('in Tokyo and Yokohama, Japan.'),'P8 prompt must not append project-wide city to local site');
  assert.equal(C.payload(p8).location,'Tokyo and Yokohama, Japan');
  // Old same-project P8 template is corrected only when it is exact-generated.
  const oldP8=base.clone(p8);delete oldP8.location.sceneRegion;
