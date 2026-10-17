@@ -22,7 +22,7 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  const context={window:windowObj,document:documentObj,console,queueMicrotask,setTimeout,clearTimeout,Event:class{constructor(type){this.type=type;}}};
  vm.runInNewContext(fs.readFileSync(path.join(root,'ner-app-bootstrap.js'),'utf8'),context,{filename:'ner-app-bootstrap.js'});
  await new Promise(r=>setTimeout(r,10));
- const C=windowObj.NERCore5;assert.equal(C.crossTopicGuardVersion,'1.0.2');
+ const C=windowObj.NERCore5;assert.equal(C.crossTopicGuardVersion,'1.0.3');
  const topic='Great Kantō Earthquake — Tokyo and Yokohama, Japan — 1923';
  const narration='On September 1, 1923, a magnitude 7.9 earthquake struck southern Kantō, violently shaking Japan’s capital and the nearby port city of Yokohama.';
  const stale=base.plan({topic:'Xylazine Crisis — Philadelphia — 2020',stage:'P1',narration:'An outbreak changed daily life.',eventYear:2020,location:'Philadelphia, USA',facts:[]});
@@ -88,6 +88,30 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  assert.match(C.compile(p7),/FAMILY BOUNDARY: Earthquake-triggered coastal inundation/);
  const p8=C.plan({topic,stage:'P8',narration:'The shaking also triggered landslides and debris flows. At Nebukawa, near present-day Odawara, a massive collapse buried homes and killed hundreds.',eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null});
  assert.match(C.compile(p8),/FAMILY BOUNDARY: Earthquake-triggered landslide damage/);
+ // Nebukawa is a panel-local narrated place, not the project identity.
+ assert.equal(p8.location.region,'Tokyo and Yokohama, Japan');
+ assert.equal(p8.location.sceneRegion,'Nebukawa, near Odawara, Kanagawa Prefecture, Japan');
+ const p8Prompt=C.compile(p8);
+ assert.match(p8Prompt,/safe viewpoint toward a settled landslide debris zone[^\\n]+ in Nebukawa, near Odawara, Kanagawa Prefecture, Japan\\./);
+ assert.doesNotMatch(p8Prompt,/settled landslide debris zone[^\\n]+ in Tokyo and Yokohama, Japan/);
+ assert.equal(C.payload(p8).location,'Tokyo and Yokohama, Japan');
+ // Old same-project P8 template is corrected only when it is exact-generated.
+ const oldP8=base.clone(p8);delete oldP8.location.sceneRegion;
+ assert.equal(C.missingP8Site(oldP8),true);
+ const fixedP8=C.plan({topic,stage:'P8',narration:p8.narration,eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:oldP8});
+ assert.equal(fixedP8.location.sceneRegion,p8.location.sceneRegion);
+ const personalizedP8=base.clone(oldP8);
+ personalizedP8.location.setting='safe footpath overlooking the Nebukawa hillside with settled damaged homes';
+ assert.equal(C.missingP8Site(personalizedP8),false);
+ const keptP8=C.plan({topic,stage:'P8',narration:p8.narration,eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:personalizedP8});
+ assert.equal(keptP8.location.setting,personalizedP8.location.setting);
+ assert.equal(keptP8.location.sceneRegion,undefined);
+ // Non-P8 coastal panels retain their old project-wide presentation.
+ assert.equal(p7.location.sceneRegion,undefined);
+ assert.match(C.compile(p7),/in Tokyo and Yokohama, Japan\\./);
+ const wrongPlace=base.clone(p8);wrongPlace.location.sceneRegion='';
+ assert.equal(base.validate(wrongPlace).ok,false);
+ console.log('PASS: P8 local Nebukawa geography is independent of Tokyo–Yokohama project identity and saved custom scenes.');
  const smog=base.clone(base.plan({topic:'The Great Smog of London — 1952',stage:'P3',narration:'Smoke hung over London streets.',eventYear:1952,location:'London, England',facts:[]}));
  // The pure planner leaves unreviewed pollution scenes as placeholders;
  // construct a valid reviewed fixture before compiling its family guard.
