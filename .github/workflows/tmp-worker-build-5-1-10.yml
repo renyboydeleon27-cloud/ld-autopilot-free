@@ -13,9 +13,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: fix/mismatched-done-journal-reset-2026-10-17
-      - name: Align worker-reported release
+      - name: Align worker-reported release and regenerate shell
         run: |
           perl -0pi -e 's/Service Worker 5\.1\.9/Service Worker 5.1.10/g; s/build:\x275\.1\.9\x27/build:\x275.1.10\x27/g' service-worker.js
+          node scripts/build-pwa-shell.cjs
           node scripts/build-pwa-shell.cjs --check
       - name: Commit worker build alignment
         run: |
