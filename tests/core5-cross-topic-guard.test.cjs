@@ -108,7 +108,7 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  assert.equal(keptP8.location.sceneRegion,undefined);
  // Non-P8 coastal panels retain their old project-wide presentation.
  assert.equal(p7.location.sceneRegion,undefined);
- assert.match(C.compile(p7),/in Tokyo and Yokohama, Japan\\./);
+ assert(C.compile(p7).includes('in Tokyo and Yokohama, Japan.'));
  const wrongPlace=base.clone(p8);wrongPlace.location.sceneRegion='';
  assert.equal(base.validate(wrongPlace).ok,false);
  console.log('PASS: P8 local Nebukawa geography is independent of Tokyo–Yokohama project identity and saved custom scenes.');
