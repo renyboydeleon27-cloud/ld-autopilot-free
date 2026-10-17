@@ -48,7 +48,7 @@ const deadline=setTimeout(()=>{console.error('PWA diagnostic regression timed ou
   await page.waitForFunction(()=>document.getElementById('appUpdateButton').textContent==='Load available update');
   // Activation must not reload or mutate the open production.
   assert(await page.evaluate(()=>Array.from(document.scripts).some(s=>s.src.endsWith('ner-core-5-editor.js?v=5.1.1'))));
-  await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>document.getElementById('appUpdateStatus')?.textContent.includes('5.1.14'));
+  await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>document.getElementById('appUpdateStatus')?.textContent.includes('5.1.15'));
   await page.waitForFunction(()=>document.querySelector('.stage-card[data-stage="P3"] .core5-check-audit'));
   async function verify(){
    await page.waitForFunction(()=>window.LDCore&&document.querySelector('[data-stage="P3"] .core5-check-audit')&&!document.querySelector('main').inert);
