@@ -22,7 +22,7 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  const context={window:windowObj,document:documentObj,console,queueMicrotask,setTimeout,clearTimeout,Event:class{constructor(type){this.type=type;}}};
  vm.runInNewContext(fs.readFileSync(path.join(root,'ner-app-bootstrap.js'),'utf8'),context,{filename:'ner-app-bootstrap.js'});
  await new Promise(r=>setTimeout(r,10));
- const C=windowObj.NERCore5;assert.equal(C.crossTopicGuardVersion,'1.0.1');
+ const C=windowObj.NERCore5;assert.equal(C.crossTopicGuardVersion,'1.0.2');
  const topic='Great Kantō Earthquake — Tokyo and Yokohama, Japan — 1923';
  const narration='On September 1, 1923, a magnitude 7.9 earthquake struck southern Kantō, violently shaking Japan’s capital and the nearby port city of Yokohama.';
  const stale=base.plan({topic:'Xylazine Crisis — Philadelphia — 2020',stage:'P1',narration:'An outbreak changed daily life.',eventYear:2020,location:'Philadelphia, USA',facts:[]});
@@ -48,6 +48,34 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
   assert.match(scene.audio,audio,stage+' expected audio');
   assert.equal(base.validate(scene).ok,true,stage+' validates');
  }
+ // A saved P5 draft from the previous matcher can be internally valid yet
+ // depict reconstruction. Repair only the exact generated legacy staging.
+ const p5Narration='As flames advanced, residents fled with whatever they could carry. Huge numbers crowded into parks, open grounds, and other temporary refuges.';
+ const p5Input={topic,stage:'P5',narration:p5Narration,eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[]};
+ const oldP5=base.clone(C.plan({...p5Input,spec:null}));
+ oldP5.location.setting='representative reconstruction work area with one partly rebuilt street edge and period-appropriate materials';
+ oldP5.action.description='adult-1 places one small paving stone into an unfinished street edge';
+ oldP5.audio='restrained work-site ambience';
+ assert.equal(base.validate(oldP5).ok,true,'stale scene is syntactically valid');
+ assert.equal(C.misroutedEvacuation(oldP5),true);
+ const repairedP5=C.plan({...p5Input,spec:oldP5});
+ assert.match(repairedP5.location.setting,/route from a damaged neighborhood toward an open refuge ground/i);
+ assert.match(repairedP5.action.description,/carrying one small plain bundle/i);
+ assert.match(repairedP5.audio,/footsteps and distant fire/i);
+ assert.match(C.compile(repairedP5),/FAMILY BOUNDARY: Earthquake damage and local fire spread/i);
+ assert.equal(base.validate(repairedP5).ok,true);
+ // A genuinely personalized P5 scene and the true P13 reconstruction remain
+ // unchanged rather than being rewritten by the migration heuristic.
+ const customized=base.clone(oldP5);
+ customized.location.setting='period-appropriate evacuation route toward a visible open refuge ground';
+ customized.action.description='adult-1 walks steadily toward the open refuge with a small satchel';
+ customized.audio='soft footsteps and distant street ambience';
+ assert.equal(C.misroutedEvacuation(customized),false);
+ const retained=C.plan({...p5Input,spec:customized});
+ assert.equal(retained.location.setting,customized.location.setting);
+ assert.equal(retained.action.description,customized.action.description);
+ assert.equal(retained.audio,customized.audio);
+ console.log('PASS: stale valid-looking P5 paving-stone scene becomes evacuation; custom P5 remains unchanged.');
  // Regression: P3 explicitly depicts a narrated fire, so the FAMILY BOUNDARY
  // must support local fuel-driven fire spread instead of ambiguously banning fire.
  const p3=C.plan({topic,stage:'P3',narration:'The earthquake struck near lunchtime, when many cooking fires were burning. Flames erupted across damaged neighborhoods and spread rapidly in strong winds.',eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null});
