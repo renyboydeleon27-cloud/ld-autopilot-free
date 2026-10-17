@@ -19,9 +19,33 @@ function attach(card){
  let reviewedJournal=null;
  const archive=document.createElement('button');archive.type='button';archive.className='core5-archive-journal';archive.textContent='Archive incomplete journal · allow one new audit';archive.hidden=true;details.append(archive);
  archive.addEventListener('click',async()=>{if(!window.confirm('Archive this incomplete audit journal? Its saved copy will be preserved. The earlier request may already have cost credits. This action sends no audit; your next Smart Continue may send one new paid audit.'))return;archive.disabled=true;try{diagnosis.textContent=await R.archiveIncompleteJournal(card,reviewedJournal);archive.hidden=true;retry.hidden=true;}catch(e){diagnosis.textContent=e.message;}finally{archive.disabled=false;}});
+ const archiveStale=document.createElement('button');archiveStale.type='button';archiveStale.className='core5-archive-stale-journal';archiveStale.textContent='Archive old mismatched journal · FREE';archiveStale.hidden=true;details.append(archiveStale);
+ archiveStale.addEventListener('click',async()=>{
+  const j=reviewedJournal,stage=j?.stage||card.dataset.stage||'current stage';
+  if(!j?.found||j.identityMatch!==false||j.conflict||j.busy||j.status!=='DONE'){diagnosis.textContent='Run Check audit status · FREE again. The stale journal is no longer eligible for this reset.';archiveStale.hidden=true;return;}
+  if(!window.confirm('Archive only the old mismatched '+stage+' DONE audit journal? The saved archive will be preserved. This FREE action sends no audit and does not clear site storage or other stage approvals. Your next Smart Continue may send one new paid audit.'))return;
+  archiveStale.disabled=true;
+  try{
+   const p=R.payload(card),project=R.scope(),signature=R.signature(card);
+   const valid=()=>R.scope()===project&&R.signature(card)===signature&&card.isConnected&&!R.protectedPanel(card);
+   const archived=await window.NERCore5AuditCoordinator.archiveMismatchedDone(project,p,j.reviewToken,valid);
+   if(!valid())throw Error('Old journal was archived, but the panel changed. Reopen this project and inspect the stage before auditing. No audit was sent.');
+   // A failed Smart Continue may have left only a local REVIEW_REQUIRED marker for
+   // this current payload. Clear it through the existing guarded retry path now
+   // that the mismatched stage journal is gone; never touch approved stage data.
+   let local=null;try{local=card.dataset.core5Record?JSON.parse(card.dataset.core5Record):null;}catch{}
+   if(local?.status==='REVIEW_REQUIRED'&&local.result?.ok===false)await R.allowRetry(card);
+   delete card.dataset.smartReady;delete card.dataset.smartReadySignature;
+   if(window.LDCore?.saveCurrent?.()===false)throw Error('Old journal archived, but project save failed. Export a backup before continuing. No audit was sent.');
+   await window.NERProjectStorage?.flush();
+   reviewedJournal=null;archiveStale.hidden=true;archive.hidden=true;recover.hidden=true;retry.hidden=true;
+   diagnosis.textContent='Old mismatched '+stage+' journal archived safely.\nArchive retained: '+archived+'\nNo audit request was sent.\nOther stages and approvals were not reset.\n'+stage+' is ready for one user-triggered fresh audit on your next Smart Continue.';
+  }catch(e){diagnosis.textContent=e.message;}
+  finally{archiveStale.disabled=false;}
+ });
  const recover=document.createElement('button');recover.type='button';recover.className='core5-recover-journal';recover.textContent='Recover saved audit · FREE';recover.hidden=true;details.append(recover);
  diagnose.addEventListener('click',async()=>{
-  diagnose.disabled=true;recover.hidden=true;archive.hidden=true;diagnosis.textContent='Inspecting local audit journal…';
+  diagnose.disabled=true;recover.hidden=true;archive.hidden=true;archiveStale.hidden=true;diagnosis.textContent='Inspecting local audit journal…';
   try{
    const d=await R.journalDiagnostic(card),j=d.journal,yn=x=>x===null?'UNKNOWN':x?'YES':'NO';
    diagnosis.textContent=['Local audit status: '+d.status,'Saved panel record: '+d.journalStatus,
@@ -29,6 +53,8 @@ function attach(card){
     d.issues.length?'Reasons:\n'+d.issues.map(x=>'• '+x).join('\n'):'No local blockers found.',
     'No audit request or retry was sent.'].join('\n');
    reviewedJournal=j;archive.hidden=!(j?.identityMatch&&!j.conflict&&!j.busy&&['STARTED','UNCERTAIN'].includes(j.status));
+   archiveStale.hidden=!(j?.found&&j.identityMatch===false&&!j.conflict&&!j.busy&&j.status==='DONE');
+   if(!archiveStale.hidden)archiveStale.textContent='Archive old '+j.stage+' journal · FREE';
    recover.hidden=!j?.recoverable;retry.hidden=!!j?.found||!!j?.busy||d.status==='JOURNAL_INSPECTION_FAILED';
   }catch(e){diagnosis.textContent='Diagnostic failed locally: '+e.message;}finally{diagnose.disabled=false;}
  });
