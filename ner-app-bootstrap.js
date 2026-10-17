@@ -12,7 +12,7 @@
  const shell=document.querySelector('main');if(shell)shell.inert=true;
  function installCore5CrossTopicGuard(){
   const base=window.NERCore5;if(!base||base.crossTopicGuardVersion)return;
-  const VERSION='1.0.1';
+  const VERSION='1.0.2';
   const placeholder=/supported (?:warning|hazard|contextual feature)|narrated (?:cause|onset|warning|non-graphic impact)/i;
   const staleFamilyText=/\b(?:public-health crisis|xylazine|zombie drug|atmospheric-pollution|great smog|coal smoke)\b/i;
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
@@ -24,6 +24,16 @@
   }
   function identityMatches(spec,input,fam){
    return !!spec&&spec.schema===5&&spec.stage===input.stage&&spec.topic===input.topic&&spec.family===fam&&spec.narration===String(input.narration||'')&&Number(spec.eventYear)===Number(input.eventYear)&&String(spec.location?.region||'')===String(input.location||'');
+  }
+  // Recognize only the exact legacy generated paving-stone template when the
+  // current P5 narration is evacuation. Never reinterpret a customized scene.
+  function misroutedEvacuation(spec,input=spec||{}){
+   const n=String(input.narration||'');
+   return !!spec&&base.family(input.topic||'')==='earthquake'&&input.stage==='P5'&&
+    /fled|flee|whatever they could carry|open grounds|temporary refuges|flames advanced/i.test(n)&&
+    spec.location?.setting==='representative reconstruction work area with one partly rebuilt street edge and period-appropriate materials'&&
+    spec.action?.description==='adult-1 places one small paving stone into an unfinished street edge'&&
+    spec.audio==='restrained work-site ambience';
   }
   function earthquakeScene(narration,role,stage){
    const n=String(narration||'').toLowerCase();
@@ -48,7 +58,7 @@
    return null;
   }
   function plan(input){
-   const fam=base.family(input.topic),incoming=input.spec,keep=identityMatches(incoming,input,fam);
+   const fam=base.family(input.topic),incoming=input.spec,keep=identityMatches(incoming,input,fam)&&!misroutedEvacuation(incoming,input);
    const s=base.clone(base.plan({...input,spec:null}));
    if(keep){
     if(incoming.chronology)s.chronology=base.clone(incoming.chronology);
@@ -70,7 +80,7 @@
    s.schema=5;s.compilerVersion=base.VERSION;s.stage=input.stage;s.topic=input.topic;s.family=fam;s.narration=String(input.narration||'');s.eventYear=Number(input.eventYear);s.location={...(s.location||{}),region:String(input.location||'')};s.source={kind:'narration-derived-representative-staging',narration:String(input.narration||'')};
    return base.deepFreeze(s);
   }
-  const patched=base.deepFreeze({...base,metadata,plan,crossTopicGuardVersion:VERSION});
+  const patched=base.deepFreeze({...base,metadata,plan,misroutedEvacuation,crossTopicGuardVersion:VERSION});
   window.NERCore5=patched;
   function repairStaleScene(card){
    const R=window.NERCore5Runtime;if(!R?.manages?.(card)||R.protectedPanel(card))return false;
@@ -83,8 +93,18 @@
    // reconstruction for active collapse, displacement and utility-failure beats.
    // Repair only a recognizable *unreviewed* generated reconstruction scene.
    const mistakenReconstruction=!oldSpec&&/representative reconstruction work area|restrained work-site ambience/i.test(legacy)&&/collapsed|failed|disrupt|fled|refuge|open grounds/i.test(narration);
-   if(!staleSpec&&!staleFamilyText.test(legacy)&&!mistakenReconstruction)return false;
+   const staleP5=misroutedEvacuation(oldSpec,{topic,stage:card.dataset.stage,narration});
+   if(!staleSpec&&!staleFamilyText.test(legacy)&&!mistakenReconstruction&&!staleP5)return false;
+   // An audited panel may already have a DONE IndexedDB journal. Do not
+   // invalidate its paid record or silently create a second audit obligation.
+   // Leave it for explicit review and the existing free journal-archive flow.
+   if(card.dataset.core5Record)return false;
    const fresh=R.reviewSpec(card),v=patched.validate(fresh);if(!v.ok)return false;
+   if(oldSpec||legacy){
+    let history=[];try{history=JSON.parse(card.dataset.core5SceneHistory||'[]');if(!Array.isArray(history))history=[];}catch{}
+    history.push({scene:legacy,spec:card.dataset.core5Spec||'',record:''});
+    card.dataset.core5SceneHistory=JSON.stringify(history);
+   }
    R.applyReview(card,fresh);R.build(card);return true;
   }
   window.addEventListener('ld:production-built',()=>queueMicrotask(()=>{
