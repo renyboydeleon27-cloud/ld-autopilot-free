@@ -12,7 +12,7 @@
  const shell=document.querySelector('main');if(shell)shell.inert=true;
  function installCore5CrossTopicGuard(){
   const base=window.NERCore5;if(!base||base.crossTopicGuardVersion)return;
-  const VERSION='1.0.0';
+  const VERSION='1.0.1';
   const placeholder=/supported (?:warning|hazard|contextual feature)|narrated (?:cause|onset|warning|non-graphic impact)/i;
   const staleFamilyText=/\b(?:public-health crisis|xylazine|zombie drug|atmospheric-pollution|great smog|coal smoke)\b/i;
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
@@ -32,10 +32,9 @@
    if(stage==='ENDING')return make('quiet reflective local setting after the historical event','adult-1 stands at rest','quiet reflective ambience','locked');
    if(/false rumors|rumou?rs|killings of koreans|chinese.*japanese|discrimination|misinformation/.test(n))return make('quiet non-graphic street aftermath representing fear and social violence, with no attack, bodies, ethnic caricature or invented ceremony','adult-1 comes to a stop beside a closed doorway and lowers their gaze','quiet street ambience');
    if(/disaster prevention day|1960|lessons? for generations|preserving.*lessons?/.test(n))return make('representative later-period community preparedness setting with no readable signs or text','adult-1 pauses beside a plain emergency-supply cabinet and looks toward it','quiet indoor ambience','locked','eye-level medium view');
-   if(/reconstruct|reconstruction|new roads|bridges|parks|schools|rebuild safer/.test(n))return make('representative reconstruction work area with one partly rebuilt street edge and period-appropriate materials','adult-1 places one small paving stone into an unfinished street edge','restrained work-site ambience','lateral-track');
+   if(/reconstruct|rebuild safer|(?:new|rebuilt|repaired) (?:roads|bridges|parks|schools)/.test(n))return make('representative reconstruction work area with one partly rebuilt street edge and period-appropriate materials','adult-1 places one small paving stone into an unfinished street edge','restrained work-site ambience','lateral-track');
    if(/relief|volunteers|outside aid|rail links.*return|electricity.*return/.test(n))return make('organized non-graphic relief area among settled earthquake damage','adult-1 carries one closed plain supply box to a nearby stable table','subdued relief-area ambience','lateral-track');
    if(/105[, ]?000|killed or left missing|deadliest|most of the deaths|fire caused most/.test(n))return make('settled burned urban aftermath with damaged period buildings and no visible bodies','adult-1 slowly lowers their head while standing at a safe street edge','quiet aftermath ambience');
-   if(/water, electricity|railways|roads|bridges|communications|basic systems.*failed/.test(n))return make('damaged local street beside a blocked period transport route with broken infrastructure visible but settled','adult-1 stops at the blocked route and looks across the obstruction','quiet damaged-street ambience');
    if(/landslide|debris flow|nebukawa|odawara|massive collapse buried homes/.test(n))return make('safe viewpoint toward a settled landslide debris zone with damaged homes in the distance and no active renewed collapse','adult-1 stops at the safe edge of the debris zone and looks toward the blocked route','quiet settled debris ambience');
    if(/tsunami|sagami bay|shoreline/.test(n))return make('coastal road above the shoreline with abnormal tsunami inundation moving inland below, only at the level stated by the narration','adult-1 takes one controlled step away from the waterfront edge','water movement and restrained coastal ambience','slow-pull-back');
    if(/yokohama.*destruction|fires swept|streets were reduced to ruins|catastrophic destruction/.test(n))return make('damaged urban street with settled rubble and active fire confined to already-damaged structures','adult-1 takes one careful step along a clear edge of the ruined street','distant fire crackle and subdued street ambience','lateral-track');
@@ -43,6 +42,7 @@
    if(/broken water systems|blocked streets|firefighting|urban blazes|emergency crews/.test(n))return make('blocked street beside a damaged water connection with a supported urban fire visible farther down the same street','adult-1 stops beside the blocked route and turns toward the inaccessible fire area','distant fire crackle and subdued street ambience');
    if(/cooking fires|flames erupted|strong winds|spread rapidly/.test(n))return make('damaged residential lane where one small fire has begun spreading through nearby period-appropriate combustible material as narrated','adult-1 takes one controlled step away from the growing fire','fire crackle and restrained wind ambience','slow-pull-back');
    if(/buildings collapsed|wooden homes|brick structures|roads.*bridges failed|structur.*failed/.test(n))return make('urban street during strong shaking with one limited period-building facade failure and nearby roadway damage','adult-1 takes one controlled backward step away from the failing facade','rattling structures and falling masonry limited to the visible failure','slow-pull-back');
+   if(/water, electricity|railways|roads|bridges|communications|basic systems.*failed/.test(n))return make('damaged local street beside a blocked period transport route with broken infrastructure visible but settled','adult-1 stops at the blocked route and looks across the obstruction','quiet damaged-street ambience');
    if(/ground began moving|violently shaking|earthquake struck|powerful shaking|shattered/.test(n)||role==='onset'||stage==='HOOK')return make('representative 1923 urban interior with a low table and period-appropriate household objects visibly shaking while the main structure remains intact','adult-1 braces one hand against the low table as the room shakes','rattling household objects and low structural creaking','slow-push-in');
    if(role==='normal-world')return make('intact representative 1923 urban street before visible earthquake effects','adult-1 walks steadily past one intact doorway','soft footsteps and ordinary street ambience','lateral-track');
    return null;
@@ -77,8 +77,13 @@
    const topic=document.getElementById('topic')?.value||'',fam=patched.family(topic);if(fam!=='earthquake')return false;
    let oldSpec=null;try{oldSpec=card.dataset.core5Spec?JSON.parse(card.dataset.core5Spec):null;}catch{}
    const legacy=String(card.querySelector('.video-scene')?.value||card.dataset.videoScene||'');
-   const staleSpec=!!oldSpec&&!identityMatches(oldSpec,{stage:card.dataset.stage,topic,narration:String(card.querySelector('.narration')?.value||''),eventYear:metadata(topic,{}).year,location:metadata(topic,{}).location},fam);
-   if(!staleSpec&&!staleFamilyText.test(legacy))return false;
+   const narration=String(card.querySelector('.narration')?.value||'');
+   const staleSpec=!!oldSpec&&!identityMatches(oldSpec,{stage:card.dataset.stage,topic,narration,eventYear:metadata(topic,{}).year,location:metadata(topic,{}).location},fam);
+   // The earlier broad 'bridges/parks/schools' matcher incorrectly selected
+   // reconstruction for active collapse, displacement and utility-failure beats.
+   // Repair only a recognizable *unreviewed* generated reconstruction scene.
+   const mistakenReconstruction=!oldSpec&&/representative reconstruction work area|restrained work-site ambience/i.test(legacy)&&/collapsed|failed|disrupt|fled|refuge|open grounds/i.test(narration);
+   if(!staleSpec&&!staleFamilyText.test(legacy)&&!mistakenReconstruction)return false;
    const fresh=R.reviewSpec(card),v=patched.validate(fresh);if(!v.ok)return false;
    R.applyReview(card,fresh);R.build(card);return true;
   }
