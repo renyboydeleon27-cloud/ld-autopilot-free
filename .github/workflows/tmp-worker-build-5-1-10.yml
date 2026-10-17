@@ -1,0 +1,27 @@
+name: Temporary align worker build 5.1.10
+on:
+  push:
+    branches:
+      - fix/mismatched-done-journal-reset-2026-10-17
+permissions:
+  contents: write
+jobs:
+  align:
+    if: github.event.head_commit.message == 'Temporarily align worker build 5.1.10'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/mismatched-done-journal-reset-2026-10-17
+      - name: Align worker-reported release
+        run: |
+          perl -0pi -e 's/Service Worker 5\.1\.9/Service Worker 5.1.10/g; s/build:\x275\.1\.9\x27/build:\x275.1.10\x27/g' service-worker.js
+          node scripts/build-pwa-shell.cjs --check
+      - name: Commit worker build alignment
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add service-worker.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Align service worker build with 5.1.10 release"
+          git push origin HEAD:fix/mismatched-done-journal-reset-2026-10-17
