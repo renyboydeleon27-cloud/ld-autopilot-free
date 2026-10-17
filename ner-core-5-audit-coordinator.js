@@ -42,6 +42,16 @@ async function archiveIncomplete(project,payload,expected,stillCurrent){
   return window.NERCore5JournalStore.archiveIncomplete(key,entry.record);
  });
 }
+async function archiveMismatchedDone(project,payload,expected,stillCurrent){
+ const check=C.validatePayload(payload);if(!check.ok)throw Error(check.issues.join(' '));
+ const key=await slot(project,payload);
+ return navigator.locks.request(key,{ifAvailable:true},async lock=>{
+  if(!lock)throw Error('Audit is active in another tab. No reset allowed.');
+  const entry=await window.NERCore5JournalStore.inspect(key),d=describe(payload,entry,key);
+  if(!stillCurrent()||!d.found||d.identityMatch!==false||d.conflict||d.status!=='DONE'||C.stable(entry.record)!==expected)throw Error('Journal or panel changed, or the saved result now matches this payload. Inspect again; no reset allowed.');
+  return window.NERCore5JournalStore.archiveMismatchedDone(key,entry.record);
+ });
+}
 async function run(project,payload,audit){
  const check=C.validatePayload(payload);if(!check.ok)throw Error(check.issues.join(' '));
  const key=await slot(project,payload),identity=C.stable(payload);
@@ -72,5 +82,5 @@ async function reset(project,payload){
   }
   await window.NERCore5JournalStore.remove(key);});
 }
-window.NERCore5AuditCoordinator=Object.freeze({run,reset,inspect,recover,archiveIncomplete});
+window.NERCore5AuditCoordinator=Object.freeze({run,reset,inspect,recover,archiveIncomplete,archiveMismatchedDone});
 })();
