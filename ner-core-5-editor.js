@@ -87,7 +87,8 @@ function attach(card){
    reviewedJournal=j;archive.hidden=!(j?.identityMatch&&!j.conflict&&!j.busy&&['STARTED','UNCERTAIN'].includes(j.status));
    archiveStale.hidden=!(j?.found&&j.identityMatch===false&&!j.conflict&&!j.busy&&j.status==='DONE');
    if(!archiveStale.hidden)archiveStale.textContent='Archive old '+j.stage+' journal · FREE';
-   recover.hidden=!j?.recoverable;retry.hidden=!!j?.found||!!j?.busy||d.status==='JOURNAL_INSPECTION_FAILED';
+   recover.hidden=!j?.recoverable;const record=(()=>{try{return JSON.parse(card.dataset.core5Record||'null');}catch{return null;}})();
+   retry.hidden=!!j?.found||!!j?.busy||d.status==='JOURNAL_INSPECTION_FAILED'||!(record?.status==='REVIEW_REQUIRED'&&record?.result?.ok===false);
    showNextAction(nextActionFor(d,j),j?.stage||d.panel);
   }catch(e){diagnosis.textContent='Diagnostic failed locally: '+e.message;showNextAction('failed');}finally{diagnose.disabled=false;}
  });
