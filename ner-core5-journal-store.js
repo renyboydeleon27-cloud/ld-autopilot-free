@@ -74,11 +74,11 @@ async function remove(key){
 // Called only under the coordinator's exclusive stage lock after explicit consent.
 // Archive and removal of the active IndexedDB copy commit atomically. If legacy
 // removal fails, its original remains authoritative and the next audit stays blocked.
-async function archiveIncomplete(key,expected){
+async function archiveExact(key,expected,allowedStatuses,kind,errorMessage){
  const entry=await inspect(key),record=entry.record;
- if(entry.conflict||!record||JSON.stringify(record)!==JSON.stringify(expected)||!['STARTED','UNCERTAIN'].includes(record.status))throw Error('Journal changed or is not incomplete. Nothing was reset.');
+ if(entry.conflict||!record||JSON.stringify(record)!==JSON.stringify(expected)||!allowedStatuses.includes(record.status))throw Error(errorMessage);
  const oldRaw=localStorage.getItem(key),archiveKey=key+':archive:'+crypto.randomUUID();
- const archive={schema:1,kind:'explicit-incomplete-archive',originalKey:key,archivedAt:new Date().toISOString(),record,legacyRaw:oldRaw,source:entry.source};
+ const archive={schema:1,kind,originalKey:key,archivedAt:new Date().toISOString(),record,legacyRaw:oldRaw,source:entry.source};
  const db=await database();
  await new Promise((resolve,reject)=>{
   const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE),get=store.get(key);
@@ -95,10 +95,16 @@ async function archiveIncomplete(key,expected){
  if((await inspect(key)).record)throw Error('Active journal remains. No retry allowed.');
  return archiveKey;
 }
+async function archiveIncomplete(key,expected){
+ return archiveExact(key,expected,['STARTED','UNCERTAIN'],'explicit-incomplete-archive','Journal changed or is not incomplete. Nothing was reset.');
+}
+async function archiveMismatchedDone(key,expected){
+ return archiveExact(key,expected,['DONE'],'explicit-mismatched-done-archive','Journal changed or is not a conclusive stale result. Nothing was reset.');
+}
 async function preflight(){
  const key=PREFIX+'preflight-'+crypto.randomUUID();
  await operation('readwrite',store=>store.put({probe:true},key));
  await operation('readwrite',store=>store.delete(key));
 }
-window.NERCore5JournalStore=Object.freeze({read,inspect,save,remove,preflight,legacy,archiveIncomplete});
+window.NERCore5JournalStore=Object.freeze({read,inspect,save,remove,preflight,legacy,archiveIncomplete,archiveMismatchedDone});
 })();
