@@ -60,7 +60,12 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  assert.match(C.compile(p7),/FAMILY BOUNDARY: Earthquake-triggered coastal inundation/);
  const p8=C.plan({topic,stage:'P8',narration:'The shaking also triggered landslides and debris flows. At Nebukawa, near present-day Odawara, a massive collapse buried homes and killed hundreds.',eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null});
  assert.match(C.compile(p8),/FAMILY BOUNDARY: Earthquake-triggered landslide damage/);
- const smog=base.plan({topic:'The Great Smog of London — 1952',stage:'P3',narration:'Smoke hung over London streets.',eventYear:1952,location:'London, England',facts:[]});
+ const smog=base.clone(base.plan({topic:'The Great Smog of London — 1952',stage:'P3',narration:'Smoke hung over London streets.',eventYear:1952,location:'London, England',facts:[]}));
+ // The pure planner leaves unreviewed pollution scenes as placeholders;
+ // construct a valid reviewed fixture before compiling its family guard.
+ smog.location.setting='London residential pavement beside visible railings in a dense pollution haze';
+ smog.action.description='adult-1 takes one cautious step beside the visible railing';
+ assert.equal(base.validate(smog).ok,true);
  assert.match(base.compile(smog),/FAMILY BOUNDARY: Pollution and visibility follow the narrated phase/);
  console.log('PASS: P3 fire, P7 tsunami, P8 landslide are allowed only in their narrated phase; P1 shaking and Great Smog boundaries remain unchanged.');
  console.log('PASS: P2 collapse, P5 evacuation, P9 infrastructure, P13 reconstruction stay distinct without false keyword matches.');
