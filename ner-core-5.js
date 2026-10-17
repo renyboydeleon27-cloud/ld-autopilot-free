@@ -60,6 +60,8 @@ function pollutionRecipe(r,n){
  const base={cast:[{id:'adult-1',description:'unnamed adult resident in clothing appropriate to the scene period'}],camera:{framing:'eye-level medium-wide',movement:'slow-push-in'},audio:'quiet scene-supported ambience'};
  const make=(location,action,audio=base.audio)=>({...base,location,action,audio});
  if(r==='ending')return make('quiet reflective local setting','adult-1 stands at rest');
+ // The narrated phase wins over background words such as "trapped pollution".
+ if(r==='onset'&&/fog|haze|smog/i.test(n))return {...make('street-level view along a local street with period-appropriate buildings and pavement; thin grayscale fog already softens distant facades and gradually obscures them further, while the nearby doorway and resident remain visible; little air movement, no sudden wall of smoke or rapid day-to-night change','adult-1 comes to a gentle stop beside a doorway, keeping their gaze directed down the increasingly obscured street','soft footsteps cease as the resident stops; subdued distant urban ambience'),camera:{framing:'eye-level medium-wide rear three-quarter view, with the resident in the foreground and the street visible ahead',movement:'slow-push-in'}};
  if(/coal fires|coal-burning fireplace|fed.*fires/i.test(n))return {...make('interior of a modest local home with a contained coal-burning fireplace','adult-1 adds one small shovelful of coal to the fireplace','quiet indoor room tone, soft fire crackling and coal settling on the grate during the action'),choreography:{
   actor:'adult-1',prop:'one short rigid metal coal shovel',
   start:'adult-1 kneels securely beside the hearth, holding an already-loaded shovel level in the right hand, close to the grate; the left hand rests on the bent knee',
@@ -151,6 +153,7 @@ function validate(s){
  if(implied!=='event'&&implied!==c.relation&&!(implied==='after'&&c.relation==='later'))issues.push('Scene chronology contradicts narration.');
  if(/supported (?:warning|hazard|contextual feature)|narrated (?:cause|onset|warning|non-graphic impact)/i.test([s.location?.setting,s.action?.description].join(' ')))issues.push('Scene needs concrete setting and action: replace placeholder hazard/context wording in Review Core 5 scene before audit.');
  if(!s.location?.region||!s.location?.setting)issues.push('Scene location is missing.');
+ if(s.family==='atmospheric-pollution'&&s.role==='onset'&&/fog|haze|smog/i.test(s.narration)&&s.location?.setting==='local viewpoint overlooking period-appropriate rooftops and chimneys, with a low lingering layer of coal smoke'&&s.action?.description==='adult-1 slowly raises their gaze toward the smoke above the rooftops')issues.push('Onset scene repeats the old rooftop cause-context recipe. Use Prepare episode scenes · FREE or review this scene to show the narrated loss of street visibility before audit.');
  if(!Array.isArray(s.cast)||!s.cast.length||new Set(s.cast.map(x=>x?.id)).size!==s.cast.length||s.cast.some(x=>!x?.id||!x?.description))issues.push('Cast identities must be explicit and unique.');
  if(!s.action?.description||!(Array.isArray(s.cast)&&s.cast.some(x=>x?.id===s.action?.actor)))issues.push('Primary action must name a cast actor.');
  if(!['locked','slow-push-in','slow-pull-back','lateral-track'].includes(s.camera?.movement)||!s.camera?.framing)issues.push('Choose exactly one supported camera movement and framing.');
@@ -178,6 +181,7 @@ function validateSequence(specs){
   if(seen.has(s.stage))issues.push('More than one canonical definition for '+s.stage+'.');seen.add(s.stage);
   if(previous){
    if(s.topic!==previous.topic||s.eventYear!==previous.eventYear||s.family!==previous.family)issues.push(s.stage+': project historical identity differs from the preceding scene.');
+   if(previous.role==='cause-context'&&s.role==='onset'&&s.location.setting===previous.location.setting&&s.action.description===previous.action.description)issues.push(s.stage+': onset repeats the preceding cause-context setting and action; review the scene progression before audit.');
    const a=previous.chronology,b=s.chronology;
    if(a.sceneYear!==null&&b.sceneYear!==null&&b.sceneYear<a.sceneYear&&b.relation!=='before')issues.push(s.stage+': chronology moves backward without an explicit flashback.');
   }previous=s;
