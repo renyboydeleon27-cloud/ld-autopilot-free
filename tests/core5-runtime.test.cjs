@@ -151,3 +151,18 @@ test('free recovery reports project save failure instead of claiming durable suc
  const b=boot(),c=b.card();b.window.LDCore.saveCurrent=()=>false;b.window.NERCore5AuditCoordinator={recover:async()=>({ok:true,result:'PASS',issues:[]})};
  await assert.rejects(b.r.recoverJournal(c),/project storage could not save/);assert.equal(b.calls(),0);
 });
+
+test('old P4 is blocked before audit and explicit free preparation preserves approved P3 and draft history',async()=>{
+ const b=boot(),p3=b.card('P3'),p4=b.card('P4'),f=require('./fixtures/great-smog.json');
+ b.nodes.topic.value='The Great Smog of London — 1952';b.window.ldVideoContinuity={year:'1952',location:'London, England'};
+ p3.fields['.narration'].value=f.narrations[3];p4.fields['.narration'].value=f.narrations[4];b.document.querySelectorAll=()=>[p3,p4];
+ b.r.setSpec(p3,b.r.reviewSpec(p3));p3.fields['.done-toggle'].checked=true;p3.fields['.text-video-prompt'].value='EXACT APPROVED P3';
+ const old=C.clone(b.r.reviewSpec(p4)),prior=JSON.parse(p3.dataset.core5Spec);old.location.setting=prior.location.setting;old.action=prior.action;
+ p4.dataset.core5Spec=JSON.stringify(old);p4.fields['.video-scene'].value=b.r.sceneText(old);p4.dataset.core5Record='old audited record';
+ const before=JSON.stringify(p3),oldSpec=p4.dataset.core5Spec;
+ assert.throws(()=>b.r.build(p4),/Onset scene repeats/);await assert.rejects(b.r.prepare(p4,b.audit),/Onset scene repeats/);assert.equal(b.calls(),0);assert.equal(p4.dataset.core5Spec,oldSpec);
+ assert.equal(b.r.prepareEpisode(),1);assert.equal(JSON.stringify(p3),before);assert.equal(b.calls(),0);
+ assert.equal(JSON.parse(p4.dataset.core5SceneHistory)[0].spec,oldSpec);assert.equal(JSON.parse(p4.dataset.core5SceneHistory)[0].record,'old audited record');
+ assert(!p4.dataset.core5Record);assert(b.r.preflight(p4).ok);assert.match(p4.fields['.text-video-prompt'].value,/street-level/);
+ assert.equal(b.r.prepareEpisode(),0);assert.equal(JSON.stringify(p3),before);
+});

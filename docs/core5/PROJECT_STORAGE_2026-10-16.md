@@ -27,3 +27,16 @@ IndexedDB is still device storage, not a cloud backup or guarantee against OS/br
 Restore baseline: **6feba36d9031ad2caac74554e02a1d95433df805**, branch **restore/pre-core5-project-storage**. Before migration, a tested application revert can use that baseline. After migration, retain this storage adapter/bootstrap when rolling back other features; older builds cannot read newer IndexedDB edits. Export current projects before any full rollback and reconcile deliberately. Never clear site data or remove the database. Original legacy copies remain available but are not current after migration.
 
 Recommendation: merge only after remote CI passes. Then verify production asset hashes and ask REN to enable larger storage once and confirm the saved status. Do not trigger a paid P3 audit as part of deployment verification.
+
+## Verified release outcome
+PR #16 merged after all final checks passed: https://github.com/renyboydeleon27-cloud/ld-autopilot-free/pull/16
+
+Published commits: 6bce36690d4f805cbe1d7bae1d68d463fc179a27 (implementation); b0ebe39b218c79e7258d425573ccfe04371c5d30 (bootstrap-aware diagnostic measurement); d55dde40dfcb6df9a446e754494fb749aef39fde (transaction-boundary writes); 28de3ca885d1f2018f30fd2ec4e543ee9bb6dcbb (independent YouTube settings remain native).
+
+Main merge: **d90866e6e151c735b7bc9d32b54b79232b3fcc31**. Tested source tree: ff483acd26811231fe88aef020395245d3bc4683.
+
+Final CI: Free Diagnostic 38953454639 SUCCESS; PWA release integrity 38953454642 SUCCESS; audit journal safety 38953454699 SUCCESS. Vercel production deployment SUCCESS: https://vercel.com/renyboydeleon-5731/ld-autopilot-free/DjhgkKn4s4Q5mpGvMf5yNVipJcBw
+
+Live production worker exactly matches the tested worker. All **72/72** shell asset SHA-256 hashes match; zero mismatches. Candidate is now released as workflow build **5.1.8**. Both separate studios also passed local bootstrap smoke checks. The larger-storage browser test additionally covers writes arriving at transaction completion and independent YouTube settings updates.
+
+Phone next step: Check app update → Load available update if offered → verify workflow build 5.1.8. In Saved productions, with the existing Great Smog project current, tap Enable larger project storage · FREE once. Wait for Saved to device database, then check P3 audit status with the free button. No new project or scene edits are needed. If the old build cannot save before loading the update, retain the verified downloaded backup and close/reopen the app; do not reset or clear storage. A physical Android migration and subsequent paid audit have not been performed by this development session.
