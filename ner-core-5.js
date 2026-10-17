@@ -194,6 +194,7 @@ function validateSequence(specs){
 function familyBoundary(s){
  if(s.family!=='earthquake')return GUARDS[s.family];
  const setting=String(s.location?.setting||'');
+ if(/blocked period transport route/i.test(setting)&&/disrupted|basic systems.*failed|communications|railways/i.test(s.narration))return 'Earthquake-damaged infrastructure and blocked transport follow the narrated disruption phase. Show only supported visible damage; no unmotivated reconstruction, unrelated fire, tsunami, or invented utility repair.';
  if(/\b(?:tsunami|inundation)\b/i.test(setting))return 'Earthquake-triggered coastal inundation follows the narrated phase, shoreline terrain and gravity. No unsupported wave height, unrelated fire, or instant citywide flooding.';
  if(/\b(?:fire|flames?|blazes?)\b/i.test(setting))return 'Earthquake damage and local fire spread follow the narrated phase, available fuel and wind. No unrelated tsunami, unsupported explosion, or instant citywide inferno beyond the visible local spread.';
  if(/\b(?:landslide|debris flow)\b/i.test(setting))return 'Earthquake-triggered landslide damage follows the narrated location, terrain and gravity. Settled debris must not collapse again without a stated cause; no unrelated fire or tsunami.';
