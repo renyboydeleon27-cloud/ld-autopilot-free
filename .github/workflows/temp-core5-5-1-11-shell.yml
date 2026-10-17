@@ -22,6 +22,7 @@ jobs:
           p=Path('service-worker.js')
           s=p.read_text()
           s=s.replace('NER Studio PWA Service Worker 5.1.10','NER Studio PWA Service Worker 5.1.11',1)
+          s=s.replace("build:'5.1.10'","build:'5.1.11'",1)
           p.write_text(s)
           PY
           node scripts/build-pwa-shell.cjs
