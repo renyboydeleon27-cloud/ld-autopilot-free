@@ -187,6 +187,17 @@ function validateSequence(specs){
   }previous=s;
  }return {ok:!issues.length,issues};
 }
+// The disaster family stays earthquake, even when a later panel documents a
+// sourced secondary hazard. Change only the scene boundary, never the family
+// or approved StageSpec identity. Non-earthquake families retain their guards.
+function familyBoundary(s){
+ if(s.family!=='earthquake')return GUARDS[s.family];
+ const setting=String(s.location?.setting||'');
+ if(/\b(?:tsunami|inundation)\b/i.test(setting))return 'Earthquake-triggered coastal inundation follows the narrated phase, shoreline terrain and gravity. No unsupported wave height, unrelated fire, or instant citywide flooding.';
+ if(/\b(?:fire|flames?|blazes?)\b/i.test(setting))return 'Earthquake damage and local fire spread follow the narrated phase, available fuel and wind. No unrelated tsunami, unsupported explosion, or instant citywide inferno beyond the visible local spread.';
+ if(/\b(?:landslide|debris flow)\b/i.test(setting))return 'Earthquake-triggered landslide damage follows the narrated location, terrain and gravity. Settled debris must not collapse again without a stated cause; no unrelated fire or tsunami.';
+ return GUARDS[s.family];
+}
 function compile(s){
  const v=validate(s);if(!v.ok)throw new Error('Local preflight — no audit credits used: '+v.issues.join(' '));
  const c=s.chronology,still=s.stage==='ENDING';
@@ -205,7 +216,7 @@ function compile(s){
  'CAMERA: '+s.camera.framing+'; '+s.camera.movement+(still?'. Static composition.':'. One continuous shot; maintain this single camera behavior for the entire shot.'),
  still?'':'TIMING:\n'+s.timing.map(t=>t.start+'–'+t.end+'s: '+({establish:'Establish the stated cast and setting; primary action has not yet completed.',action:'Perform the single PRIMARY ACTION, completing by '+t.end+'s.',hold:'Hold its completed state; only natural breathing, blinking and residual motion.'}[t.phase])).join('\n'),
  'PHYSICS AND TIME: Preserve identities, cast count, object geometry, mass, gravity and irreversible changes. No teleportation, duplication, morphing, object respawn or spontaneous repair.',
- 'FAMILY BOUNDARY: '+GUARDS[s.family],
+ 'FAMILY BOUNDARY: '+familyBoundary(s),
  'WEATHER: Preserve scene-supported weather, lighting and wind direction; no unexplained reset.',
  'CHARACTER DIVERSITY: Keep each person distinct in face, build, hair and clothing, and consistent throughout the shot.',
  still?'':'AUDIO: '+(s.choreography?.sound||s.audio)+'. Only sounds caused by the stated scene. No generated narration, dialogue, music, unsupported alarm or cinematic boom.',
