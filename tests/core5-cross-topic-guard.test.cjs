@@ -143,6 +143,30 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  assert(!C.compile(p7).includes(p10Boundary),'coastal tsunami must keep its own boundary');
  assert(!C.compile(p3).includes(p10Boundary),'active fire spread must keep its own boundary');
  console.log('PASS: P10 death-toll burned aftermath receives a settled-fire boundary; P1, P3, P7, P9 retain phase-specific guards.');
+ // P11 is a narrated rumor-driven killing aftermath, not active shaking.
+ // Both a fresh scene and the saved/reviewed StageSpec must use the restrained
+ // non-graphic social-violence rule, leaving earthquake physics elsewhere.
+ const p11Narration='In the chaos, false rumors fueled killings of Koreans, Chinese, and even some Japanese—another tragedy driven by fear, discrimination, and misinformation.';
+ const p11Input={topic,stage:'P11',narration:p11Narration,eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null};
+ const p11=C.plan(p11Input);
+ assert.equal(p11.role,'cause-context','P11 carries narrated social context');
+ assert.match(p11.location.setting,/quiet non-graphic street aftermath representing fear and social violence/i);
+ assert.match(p11.action.description,/comes to a stop beside a closed doorway and lowers their gaze/i);
+ assert.equal(base.validate(p11).ok,true);
+ const p11Boundary='FAMILY BOUNDARY: Fear-driven social violence aftermath follows the narrated phase. Keep the scene non-graphic and representative only; no visible attack, no bodies, no ethnic caricature, no mob action, and no invented ceremony. No unrelated tsunami, fire surge, or renewed structural collapse.';
+ const p11Prompt=C.compile(p11);
+ assert(p11Prompt.includes(p11Boundary),'P11 must have non-graphic social violence phase guard');
+ assert(!p11Prompt.includes('FAMILY BOUNDARY: Supported shaking precedes structural failure'),'P11 must not fall through to shaking physics');
+ assert(C.compile(C.plan({...p11Input,spec:base.clone(p11)})).includes(p11Boundary),'matching saved/reviewed P11 compiles the corrected guard');
+ assert.equal(C.payload(p11).location,'Tokyo and Yokohama, Japan','historical project identity stays unchanged');
+ const customSocialScene=base.clone(p11);
+ customSocialScene.location.setting='quiet street scene near a closed wooden doorway without depicted violence';
+ assert.equal(base.validate(customSocialScene).ok,true);
+ assert(!C.compile(customSocialScene).includes(p11Boundary),'do not force social-violence scene guard onto customized unrelated staging');
+ assert(!C.compile(p10).includes(p11Boundary),'P10 burned deaths must retain its own guard');
+ assert(!C.compile(p3).includes(p11Boundary),'P3 active fire must retain its own guard');
+ assert(!C.compile(p7).includes(p11Boundary),'P7 tsunami must retain its own guard');
+ console.log('PASS: P11 rumor killings use non-graphic social-violence aftermath; custom scenes and other earthquake stages retain their own family boundaries.');
  // Nebukawa is a panel-local narrated place, not the project identity.
  assert.equal(p8.location.region,'Tokyo and Yokohama, Japan');
  assert.equal(p8.location.sceneRegion,'Nebukawa, near Odawara, Kanagawa Prefecture, Japan');
