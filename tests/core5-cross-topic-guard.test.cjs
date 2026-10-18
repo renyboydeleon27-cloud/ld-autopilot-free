@@ -167,6 +167,35 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  assert(!C.compile(p3).includes(p11Boundary),'P3 active fire must retain its own guard');
  assert(!C.compile(p7).includes(p11Boundary),'P7 tsunami must retain its own guard');
  console.log('PASS: P11 rumor killings use non-graphic social-violence aftermath; custom scenes and other earthquake stages retain their own family boundaries.');
+ // P12 is organized relief after shaking, not renewed structural failure.
+ // Fresh and saved/reviewed P12 must compile an action-limited humanitarian
+ // response boundary without changing the narration or saved StageSpec.
+ const p12Narration='Relief slowly became organized. Rail links and electricity began returning, while volunteers, officials, and outside aid supported survivors across the devastated region.';
+ const p12Input={topic,stage:'P12',narration:p12Narration,eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null};
+ const p12=C.plan(p12Input);
+ assert.equal(p12.role,'response','P12 is relief response');
+ assert.match(p12.location.setting,/organized non-graphic relief area among settled earthquake damage/i);
+ assert.match(p12.action.description,/carries one closed plain supply box to a nearby stable table/i);
+ assert.equal(base.validate(p12).ok,true,'P12 validates');
+ const p12Boundary='FAMILY BOUNDARY: Organized relief follows the narrated post-earthquake response phase. Show only the stated primary relief action among settled damage; rail and electricity restoration remain narration context, not extra scene actions. No renewed shaking, fresh collapse, unrelated fire surge or tsunami, invented crowd action, or instant infrastructure repair.';
+ const p12Prompt=C.compile(p12);
+ assert(p12Prompt.includes(p12Boundary),'P12 must compile an organized relief boundary');
+ assert(!p12Prompt.includes('FAMILY BOUNDARY: Supported shaking precedes structural failure'),'P12 must not imply renewed shaking');
+ const savedP12=C.plan({...p12Input,spec:base.clone(p12)});
+ assert(C.compile(savedP12).includes(p12Boundary),'matching reviewed P12 gets the corrected boundary without StageSpec reset');
+ assert.deepEqual(base.clone(savedP12),base.clone(p12),'approved scene remains identical');
+ assert.equal(C.payload(savedP12).location,'Tokyo and Yokohama, Japan','project geographic identity remains unchanged');
+ const customP12=base.clone(p12);
+ customP12.location.setting='quiet street beside a modest residential shelter after the earthquake';
+ assert.equal(base.validate(customP12).ok,true,'custom P12 scene stays valid');
+ assert(!C.compile(customP12).includes(p12Boundary),'do not force relief guard onto a custom unrelated staging');
+ assert(!C.compile(spec).includes(p12Boundary),'P1 shaking keeps its own guard');
+ assert(!C.compile(p3).includes(p12Boundary),'P3 active fire keeps its own guard');
+ assert(!C.compile(p7).includes(p12Boundary),'P7 coastal inundation keeps its own guard');
+ assert(!C.compile(p10).includes(p12Boundary),'P10 burned loss keeps its own guard');
+ assert(!C.compile(p11).includes(p12Boundary),'P11 social violence keeps its own guard');
+ assert(!C.compile(p13Rebuild).includes(p12Boundary),'P13 reconstruction keeps its own guard');
+ console.log('PASS: P12 organized relief replaces shaking boundary for fresh/reviewed P12; custom and approved other phases remain unchanged.');
  // Nebukawa is a panel-local narrated place, not the project identity.
  assert.equal(p8.location.region,'Tokyo and Yokohama, Japan');
  assert.equal(p8.location.sceneRegion,'Nebukawa, near Odawara, Kanagawa Prefecture, Japan');
