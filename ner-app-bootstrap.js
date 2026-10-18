@@ -12,7 +12,7 @@
  const shell=document.querySelector('main');if(shell)shell.inert=true;
  function installCore5CrossTopicGuard(){
   const base=window.NERCore5;if(!base||base.crossTopicGuardVersion)return;
-  const VERSION='1.0.4';
+  const VERSION='1.0.5';
   const placeholder=/supported (?:warning|hazard|contextual feature)|narrated (?:cause|onset|warning|non-graphic impact)/i;
   const staleFamilyText=/\b(?:public-health crisis|xylazine|zombie drug|atmospheric-pollution|great smog|coal smoke)\b/i;
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
@@ -60,10 +60,35 @@
     spec.action?.description==='adult-1 stops at the safe edge of the debris zone and looks toward the blocked route'&&
     spec.audio==='quiet settled debris ambience';
   }
-  function earthquakeScene(narration,role,stage){
+  // Repair only an untouched 1923 template that leaked into another
+  // earthquake event year. A customized action/camera/scene stays untouched.
+  function misdatedEarthquakeTemplate(spec,input={}){
+   const year=Number(input.eventYear);
+   if(!spec||base.family(input.topic||'')!=='earthquake'||year===1923||!Number.isInteger(year)||spec.location?.sceneRegion)return false;
+   const common=spec.cast?.length===1&&spec.cast[0]?.id==='adult-1'&&
+    spec.cast[0]?.description==='unnamed adult resident in clothing appropriate to the scene period'&&
+    spec.action?.actor==='adult-1'&&spec.camera?.framing==='eye-level medium-wide';
+   return !!common&&(
+    (spec.location.setting==='representative 1923 urban interior with a low table and period-appropriate household objects visibly shaking while the main structure remains intact'&&
+     spec.action.description==='adult-1 braces one hand against the low table as the room shakes'&&
+     spec.camera.movement==='slow-push-in'&&spec.audio==='rattling household objects and low structural creaking')||
+    (spec.location.setting==='intact representative 1923 urban street before visible earthquake effects'&&
+     spec.action.description==='adult-1 walks steadily past one intact doorway'&&
+     spec.camera.movement==='lateral-track'&&spec.audio==='soft footsteps and ordinary street ambience')
+   );
+  }
+  function earthquakeScene(narration,role,stage,eventYear){
    const n=String(narration||'').toLowerCase();
    const cast=[{id:'adult-1',description:'unnamed adult resident in clothing appropriate to the scene period'}];
    const make=(location,action,audio='subdued scene-supported ambience',movement='slow-push-in',framing='eye-level medium-wide')=>({location,cast,action,camera:{framing,movement},audio});
+   // Earlier shocks are already in the past at this panel's pictured
+   // moment; avoid turning them into the later mainshock or new destruction.
+   if(stage==='P1'&&/\b(?:a day earlier|the day before|previous day)\b/.test(n)&&
+      /\b(?:earthquakes?|shocks?)\b/.test(n)&&/\b(?:struck|damag(?:ed|ing))\b/.test(n))
+    return make('representative '+Number(eventYear)+' street near '+(/concepci[oó]n/.test(n)?'Concepción':'the narrated community')+
+      ' with already-damaged building fronts and settled debris from the previous day’s earthquakes; no renewed shaking or collapse',
+      'adult-1 comes to a cautious stop at the safe edge of an already-damaged street',
+      'quiet post-shock street ambience','slow-push-in');
    if(stage==='ENDING')return make('quiet reflective local setting after the historical event','adult-1 stands at rest','quiet reflective ambience','locked');
    if(/false rumors|rumou?rs|killings of koreans|chinese.*japanese|discrimination|misinformation/.test(n))return make('quiet non-graphic street aftermath representing fear and social violence, with no attack, bodies, ethnic caricature or invented ceremony','adult-1 comes to a stop beside a closed doorway and lowers their gaze','quiet street ambience');
    if(/disaster prevention day|1960|lessons? for generations|preserving.*lessons?/.test(n))return make('representative later-period community preparedness setting with no readable signs or text','adult-1 pauses beside a plain emergency-supply cabinet and looks toward it','quiet indoor ambience','locked','eye-level medium view');
@@ -83,12 +108,12 @@
    if(/cooking fires|flames erupted|strong winds|spread rapidly/.test(n))return make('damaged residential lane where one small fire has begun spreading through nearby period-appropriate combustible material as narrated','adult-1 takes one controlled step away from the growing fire','fire crackle and restrained wind ambience','slow-pull-back');
    if(/buildings collapsed|wooden homes|brick structures|roads.*bridges failed|structur.*failed/.test(n))return make('urban street during strong shaking with one limited period-building facade failure and nearby roadway damage','adult-1 takes one controlled backward step away from the failing facade','rattling structures and falling masonry limited to the visible failure','slow-pull-back');
    if(/water, electricity|railways|roads|bridges|communications|basic systems.*failed/.test(n))return make('damaged local street beside a blocked period transport route with broken infrastructure visible but settled','adult-1 stops at the blocked route and looks across the obstruction','quiet damaged-street ambience');
-   if(/ground began moving|violently shaking|earthquake struck|powerful shaking|shattered/.test(n)||role==='onset'||stage==='HOOK')return make('representative 1923 urban interior with a low table and period-appropriate household objects visibly shaking while the main structure remains intact','adult-1 braces one hand against the low table as the room shakes','rattling household objects and low structural creaking','slow-push-in');
-   if(role==='normal-world')return make('intact representative 1923 urban street before visible earthquake effects','adult-1 walks steadily past one intact doorway','soft footsteps and ordinary street ambience','lateral-track');
+   if(/ground began moving|violently shaking|earthquake struck|powerful shaking|shattered/.test(n)||role==='onset'||stage==='HOOK')return make('representative '+Number(eventYear)+' urban interior with a low table and period-appropriate household objects visibly shaking while the main structure remains intact','adult-1 braces one hand against the low table as the room shakes','rattling household objects and low structural creaking','slow-push-in');
+   if(role==='normal-world')return make('intact representative '+Number(eventYear)+' urban street before visible earthquake effects','adult-1 walks steadily past one intact doorway','soft footsteps and ordinary street ambience','lateral-track');
    return null;
   }
   function plan(input){
-   const fam=base.family(input.topic),incoming=input.spec,keep=identityMatches(incoming,input,fam)&&!misroutedEvacuation(incoming,input)&&!missingP8Site(incoming,input)&&!misroutedInfrastructure(incoming,input);
+   const fam=base.family(input.topic),incoming=input.spec,keep=identityMatches(incoming,input,fam)&&!misroutedEvacuation(incoming,input)&&!missingP8Site(incoming,input)&&!misroutedInfrastructure(incoming,input)&&!misdatedEarthquakeTemplate(incoming,input);
    const s=base.clone(base.plan({...input,spec:null}));
    if(keep){
     if(incoming.chronology)s.chronology=base.clone(incoming.chronology);
@@ -102,7 +127,7 @@
    }
    const needsConcrete=placeholder.test([s.location?.setting,s.action?.description].join(' '));
    if(fam==='earthquake'&&(!keep||needsConcrete)){
-    const scene=earthquakeScene(input.narration,s.role,input.stage);
+    const scene=earthquakeScene(input.narration,s.role,input.stage,input.eventYear);
     if(scene){s.location={region:String(input.location||''),setting:scene.location,...(scene.sceneRegion?{sceneRegion:scene.sceneRegion}:{})};s.cast=scene.cast;s.action={actor:'adult-1',description:scene.action};s.camera=scene.camera;s.audio=scene.audio;delete s.choreography;}
    }
    // Current project identity always wins over a saved StageSpec. Reviewed scene
@@ -110,7 +135,7 @@
    s.schema=5;s.compilerVersion=base.VERSION;s.stage=input.stage;s.topic=input.topic;s.family=fam;s.narration=String(input.narration||'');s.eventYear=Number(input.eventYear);s.location={...(s.location||{}),region:String(input.location||'')};s.source={kind:'narration-derived-representative-staging',narration:String(input.narration||'')};
    return base.deepFreeze(s);
   }
-  const patched=base.deepFreeze({...base,metadata,plan,misroutedEvacuation,missingP8Site,misroutedInfrastructure,crossTopicGuardVersion:VERSION});
+  const patched=base.deepFreeze({...base,metadata,plan,misroutedEvacuation,missingP8Site,misroutedInfrastructure,misdatedEarthquakeTemplate,crossTopicGuardVersion:VERSION});
   window.NERCore5=patched;
   function repairStaleScene(card){
    const R=window.NERCore5Runtime;if(!R?.manages?.(card)||R.protectedPanel(card))return false;
@@ -125,7 +150,8 @@
    const mistakenReconstruction=!oldSpec&&/representative reconstruction work area|restrained work-site ambience/i.test(legacy)&&/collapsed|failed|disrupt|fled|refuge|open grounds/i.test(narration);
    const staleP5=misroutedEvacuation(oldSpec,{topic,stage:card.dataset.stage,narration});
    const staleP9=misroutedInfrastructure(oldSpec,{topic,stage:card.dataset.stage,narration});
-   if(!staleSpec&&!staleFamilyText.test(legacy)&&!mistakenReconstruction&&!staleP5&&!staleP9)return false;
+   const staleYear=misdatedEarthquakeTemplate(oldSpec,{topic,stage:card.dataset.stage,narration,eventYear:metadata(topic,{}).year});
+   if(!staleSpec&&!staleFamilyText.test(legacy)&&!mistakenReconstruction&&!staleP5&&!staleP9&&!staleYear)return false;
    // An audited panel may already have a DONE IndexedDB journal. Do not
    // invalidate its paid record or silently create a second audit obligation.
    // Leave it for explicit review and the existing free journal-archive flow.
