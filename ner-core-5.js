@@ -194,6 +194,12 @@ function validateSequence(specs){
 function familyBoundary(s){
  if(s.family!=='earthquake')return GUARDS[s.family];
  const setting=String(s.location?.setting||'');
+ // Burned, settled fire aftermath is not active fire spread or renewed shaking.
+ // Select this only when both the death-toll narration and burned setting agree.
+ if(s.role==='human-toll'&&/\b(?:killed|deaths?|missing|fatalities)\b/i.test(s.narration)&&
+    /\b(?:fire|burned|burning|blazes?)\b/i.test(s.narration)&&
+    /\b(?:burned|charred|fire-damaged|burn damage)\b/i.test(setting))
+  return 'Earthquake and fire aftermath follow the narrated human-toll phase. Show only settled burn damage and supported structural loss; no visible bodies, unrelated tsunami, renewed collapse, or active citywide fire surge.';
  if(/blocked period transport route/i.test(setting)&&/disrupted|basic systems.*failed|communications|railways/i.test(s.narration))return 'Earthquake-damaged infrastructure and blocked transport follow the narrated disruption phase. Show only supported visible damage; no unmotivated reconstruction, unrelated fire, tsunami, or invented utility repair.';
  if(/\b(?:tsunami|inundation)\b/i.test(setting))return 'Earthquake-triggered coastal inundation follows the narrated phase, shoreline terrain and gravity. No unsupported wave height, unrelated fire, or instant citywide flooding.';
  if(/\b(?:fire|flames?|blazes?)\b/i.test(setting))return 'Earthquake damage and local fire spread follow the narrated phase, available fuel and wind. No unrelated tsunami, unsupported explosion, or instant citywide inferno beyond the visible local spread.';
