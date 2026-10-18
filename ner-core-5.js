@@ -202,6 +202,14 @@ function familyBoundary(s){
     /\b(?:killings?|social violence|fear)\b/i.test(s.narration)&&
     /\bnon-graphic\b/i.test(setting)&&/\bsocial violence\b/i.test(setting))
   return 'Fear-driven social violence aftermath follows the narrated phase. Keep the scene non-graphic and representative only; no visible attack, no bodies, no ethnic caricature, no mob action, and no invented ceremony. No unrelated tsunami, fire surge, or renewed structural collapse.';
+ // Rebuilding belongs to a recovery phase, never the default active-shaking
+ // physics rule. Require a matching narration, role and partly rebuilt scene,
+ // not stage number alone. Respect reviewed StageSpecs and customized settings.
+ if(s.role==='recovery'&&
+    /\b(?:reconstruct(?:ion|ed|ing)?|rebuild(?:ing|s|t)?|rebuilt)\b/i.test(s.narration)&&
+    /\breconstruction work area\b/i.test(setting)&&
+    /\bpartly rebuilt street edge\b/i.test(setting))
+  return 'Earthquake reconstruction follows the narrated recovery phase. Show only the stated bounded rebuilding action with period-appropriate materials; the partly rebuilt street remains unfinished. No renewed shaking, fresh structural collapse, unrelated tsunami or fire surge, instant fully rebuilt city, invented crowd action, or ceremony.';
  // Organized post-earthquake relief is not another shaking/structural-failure
  // beat. Match narrated relief, the response role, and a settled relief area
  // together, preserving saved StageSpecs and unrelated response scenes.
