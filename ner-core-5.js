@@ -156,6 +156,13 @@ function validate(s){
  if(implied!=='event'&&implied!==c.relation&&!(implied==='after'&&c.relation==='later'))issues.push('Scene chronology contradicts narration.');
  if(/supported (?:warning|hazard|contextual feature)|narrated (?:cause|onset|warning|non-graphic impact)/i.test([s.location?.setting,s.action?.description].join(' ')))issues.push('Scene needs concrete setting and action: replace placeholder hazard/context wording in Review Core 5 scene before audit.');
  if(!s.location?.region||!s.location?.setting)issues.push('Scene location is missing.');
+ // Reject stale year-labelled templates locally, before any paid audit. A
+ // historical topic's 1923 urban set cannot stand in for a 1960 scene.
+ const literalUrbanYear=String(s.location?.setting||'').match(/\brepresentative\s+((?:1[89]|20)\d{2})\s+urban\s+(?:interior|street)\b/i);
+ if(s.family==='earthquake'&&literalUrbanYear&&
+    Number(literalUrbanYear[1])!==Number(s.chronology?.sceneYear??s.eventYear))
+  issues.push('Scene contains a year-labelled earthquake setting from a different historical period; review this panel before audit.');
+
  if(s.location?.sceneRegion!==undefined&&(typeof s.location.sceneRegion!=='string'||!s.location.sceneRegion.trim()))issues.push('Optional scene-specific location must be a nonempty place name.');
  if(s.family==='atmospheric-pollution'&&s.role==='onset'&&/fog|haze|smog/i.test(s.narration)&&s.location?.setting==='local viewpoint overlooking period-appropriate rooftops and chimneys, with a low lingering layer of coal smoke'&&s.action?.description==='adult-1 slowly raises their gaze toward the smoke above the rooftops')issues.push('Onset scene repeats the old rooftop cause-context recipe. Use Prepare episode scenes · FREE or review this scene to show the narrated loss of street visibility before audit.');
  if(!Array.isArray(s.cast)||!s.cast.length||new Set(s.cast.map(x=>x?.id)).size!==s.cast.length||s.cast.some(x=>!x?.id||!x?.description))issues.push('Cast identities must be explicit and unique.');
@@ -197,6 +204,13 @@ function validateSequence(specs){
 function familyBoundary(s){
  if(s.family!=='earthquake')return GUARDS[s.family];
  const setting=String(s.location?.setting||'');
+ // The preceding day's Concepción-area earthquakes are already over in
+ // Valdivia P1. Depict settled damage, not the impending mainshock.
+ if(s.stage==='P1'&&s.role==='onset'&&
+    /\b(?:a day earlier|the day before|previous day)\b/i.test(s.narration)&&
+    /\b(?:earthquakes?|shocks?)\b/i.test(s.narration)&&
+    /already-damaged building fronts and settled debris from the previous day/i.test(setting))
+  return 'The narrated earlier-earthquake aftermath precedes the mainshock. Show only settled damage and the stated cautious movement; no renewed shaking, fresh collapse, mainshock destruction, invented rescue action, unrelated landslide, fire surge or tsunami.';
  // Rumor-driven killings are a social harm, not a new earthquake-physics
  // beat. Narration, human context role, and a deliberately non-graphic
  // staging must all agree before specializing the earthquake boundary.
