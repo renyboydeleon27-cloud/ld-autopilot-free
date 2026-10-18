@@ -121,6 +121,28 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  assert(C.compile(p7).includes('in Tokyo and Yokohama, Japan.'));
  const p8=C.plan({topic,stage:'P8',narration:'The shaking also triggered landslides and debris flows. At Nebukawa, near present-day Odawara, a massive collapse buried homes and killed hundreds.',eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null});
  assert.match(C.compile(p8),/FAMILY BOUNDARY: Earthquake-triggered landslide damage/);
+ // P10 describes the *settled burned aftermath* of fire deaths, not an
+ // unrelated fire or an active spreading blaze. Fresh and reviewed scenes
+ // must compile the same phase-specific human-toll family boundary.
+ const p10Narration='Around 105,000 people were killed or left missing. Fire caused most of the deaths, turning the earthquake into one of Japan’s deadliest disasters.';
+ const p10Input={topic,stage:'P10',narration:p10Narration,eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null};
+ const p10=C.plan(p10Input);
+ assert.equal(p10.role,'human-toll');
+ assert.match(p10.location.setting,/settled burned urban aftermath/i);
+ assert.match(p10.action.description,/slowly lowers their head/i);
+ assert.equal(base.validate(p10).ok,true);
+ const p10Prompt=C.compile(p10);
+ const p10Boundary='FAMILY BOUNDARY: Earthquake and fire aftermath follow the narrated human-toll phase. Show only settled burn damage and supported structural loss; no visible bodies, unrelated tsunami, renewed collapse, or active citywide fire surge.';
+ assert(p10Prompt.includes(p10Boundary),'P10 must permit narrated settled fire aftermath');
+ assert(!p10Prompt.includes('FAMILY BOUNDARY: Supported shaking precedes structural failure'),'P10 cannot fall back to the unrelated generic earthquake guard');
+ const p10Reviewed=C.plan({...p10Input,spec:base.clone(p10)});
+ assert(C.compile(p10Reviewed).includes(p10Boundary),'saved matching reviewed P10 also compiles the corrected guard');
+ const noFireToll=C.plan({...p10Input,narration:'Around 105,000 people were killed or left missing, making this one of Japan’s deadliest disasters.'});
+ assert(!C.compile(noFireToll).includes(p10Boundary),'do not invent a fire-related toll where narration does not mention fire');
+ assert.match(C.compile(noFireToll),/FAMILY BOUNDARY: Supported shaking precedes structural failure/);
+ assert(!C.compile(p7).includes(p10Boundary),'coastal tsunami must keep its own boundary');
+ assert(!C.compile(p3).includes(p10Boundary),'active fire spread must keep its own boundary');
+ console.log('PASS: P10 death-toll burned aftermath receives a settled-fire boundary; P1, P3, P7, P9 retain phase-specific guards.');
  // Nebukawa is a panel-local narrated place, not the project identity.
  assert.equal(p8.location.region,'Tokyo and Yokohama, Japan');
  assert.equal(p8.location.sceneRegion,'Nebukawa, near Odawara, Kanagawa Prefecture, Japan');
