@@ -196,6 +196,37 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  assert(!C.compile(p11).includes(p12Boundary),'P11 social violence keeps its own guard');
  assert(!C.compile(p13Rebuild).includes(p12Boundary),'P13 reconstruction keeps its own guard');
  console.log('PASS: P12 organized relief replaces shaking boundary for fresh/reviewed P12; custom and approved other phases remain unchanged.');
+ // P13 describes active reconstruction work in the recovery phase, NOT
+ // renewed earthquake shaking. Keep representative staging and project identity.
+ const p13Narration='Reconstruction reshaped Tokyo and Yokohama. New roads, bridges, parks, schools, and other infrastructure became part of a vast effort to rebuild safer cities.';
+ const p13Input={topic,stage:'P13',narration:p13Narration,eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null};
+ const p13=C.plan(p13Input);
+ assert.equal(p13.role,'recovery','P13 is recovery, not onset');
+ assert.match(p13.location.setting,/reconstruction work area with one partly rebuilt street edge/i);
+ assert.match(p13.action.description,/places one small paving stone into an unfinished street edge/i);
+ assert.equal(p13.camera.movement,'lateral-track','keep P13 camera movement');
+ assert.equal(base.validate(p13).ok,true,'P13 StageSpec validates');
+ const p13Boundary='FAMILY BOUNDARY: Earthquake reconstruction follows the narrated recovery phase. Show only the stated bounded rebuilding action with period-appropriate materials; the partly rebuilt street remains unfinished. No renewed shaking, fresh structural collapse, unrelated tsunami or fire surge, instant fully rebuilt city, invented crowd action, or ceremony.';
+ assert(C.compile(p13).includes(p13Boundary),'P13 fresh reconstruction compiles recovery-specific boundary');
+ assert(!C.compile(p13).includes('FAMILY BOUNDARY: Supported shaking precedes structural failure'),'P13 does not inherit active shaking');
+ const p13Saved=C.plan({...p13Input,spec:base.clone(p13)});
+ assert(C.compile(p13Saved).includes(p13Boundary),'P13 saved/reviewed scene retains new family boundary');
+ assert.deepEqual(base.clone(p13Saved),base.clone(p13),'no StageSpec changes for saved P13');
+ assert.equal(C.payload(p13Saved).location,'Tokyo and Yokohama, Japan','do not change geography');
+ const customP13=base.clone(p13);
+ customP13.location.setting='one settled earthquake-damaged street awaiting rebuilding';
+ assert.equal(base.validate(customP13).ok,true,'custom P13 is valid');
+ assert(!C.compile(customP13).includes(p13Boundary),'do not override customized reconstruction staging');
+ const noRebuildNarration=base.clone(p13);
+ noRebuildNarration.narration='Some people walked through damaged streets seeking shelter.';
+ noRebuildNarration.source.narration=noRebuildNarration.narration;
+ noRebuildNarration.role='cause-context';
+ assert.equal(base.validate(noRebuildNarration).ok,true);
+ assert(!C.compile(noRebuildNarration).includes(p13Boundary),'recovery guard needs role and narrative together');
+ for(const [id,s] of [['P1',spec],['P3',p3],['P7',p7],['P8',p8],['P9',correctedP9],['P10',p10],['P11',p11],['P12',p12]]){
+   assert(!C.compile(s).includes(p13Boundary),id+' retains its existing phase guard');
+ }
+ console.log('PASS: P13 reconstruction gets recovery-specific boundary for fresh and saved scenes; prior panels, custom scenes and other families remain unchanged.');
  // Nebukawa is a panel-local narrated place, not the project identity.
  assert.equal(p8.location.region,'Tokyo and Yokohama, Japan');
  assert.equal(p8.location.sceneRegion,'Nebukawa, near Odawara, Kanagawa Prefecture, Japan');
