@@ -194,6 +194,14 @@ function validateSequence(specs){
 function familyBoundary(s){
  if(s.family!=='earthquake')return GUARDS[s.family];
  const setting=String(s.location?.setting||'');
+ // Rumor-driven killings are a social harm, not a new earthquake-physics
+ // beat. Narration, human context role, and a deliberately non-graphic
+ // staging must all agree before specializing the earthquake boundary.
+ if(s.role==='cause-context'&&
+    /\b(?:false rumors?|rumou?rs|misinformation|discrimination)\b/i.test(s.narration)&&
+    /\b(?:killings?|social violence|fear)\b/i.test(s.narration)&&
+    /\bnon-graphic\b/i.test(setting)&&/\bsocial violence\b/i.test(setting))
+  return 'Fear-driven social violence aftermath follows the narrated phase. Keep the scene non-graphic and representative only; no visible attack, no bodies, no ethnic caricature, no mob action, and no invented ceremony. No unrelated tsunami, fire surge, or renewed structural collapse.';
  // Burned, settled fire aftermath is not active fire spread or renewed shaking.
  // Select this only when both the death-toll narration and burned setting agree.
  if(s.role==='human-toll'&&/\b(?:killed|deaths?|missing|fatalities)\b/i.test(s.narration)&&
