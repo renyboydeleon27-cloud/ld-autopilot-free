@@ -227,6 +227,58 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
    assert(!C.compile(s).includes(p13Boundary),id+' retains its existing phase guard');
  }
  console.log('PASS: P13 reconstruction gets recovery-specific boundary for fresh and saved scenes; prior panels, custom scenes and other families remain unchanged.');
+ // P14: the 1960 Disaster Prevention Day designation is long-term legacy.
+ // Saved P14 generated under the former cause-context role must retain scene
+ // fields while the compiler derives the corrected legacy role and boundary.
+ const p14Narration='In 1960, Japan designated September first as Disaster Prevention Day, preserving the earthquake’s lessons for generations facing disasters still to come.';
+ const p14Input={topic,stage:'P14',narration:p14Narration,eventYear:1923,location:'Tokyo and Yokohama, Japan',facts:[],spec:null};
+ const p14=C.plan(p14Input);
+ assert.equal(p14.role,'legacy','1960 Disaster Prevention Day must be classified as legacy');
+ assert.equal(p14.chronology.relation,'later');
+ assert.equal(p14.chronology.sceneYear,1960,'1960 period is preserved');
+ assert.match(p14.location.setting,/later-period community preparedness setting/i);
+ assert.match(p14.action.description,/pauses beside a plain emergency-supply cabinet and looks toward it/i);
+ assert.equal(p14.camera.movement,'locked');
+ assert.equal(p14.audio,'quiet indoor ambience');
+ assert.equal(base.validate(p14).ok,true,'new P14 legacy scene validates');
+ const p14Boundary='FAMILY BOUNDARY: Disaster-prevention legacy follows the narrated later-period preparedness phase. Show only the stated restrained primary action at a representative community preparedness setting; the official designation is narration context, not a visible ceremony. No renewed shaking, structural collapse, fire surge, tsunami, readable signage, invented officials, or crowd action.';
+ const p14Prompt=C.compile(p14);
+ assert(p14Prompt.includes('STAGE ROLE: legacy; family: earthquake.'),'P14 new role compiled');
+ assert(p14Prompt.includes('Scene period: 1960; relation: later; scene year 1960.'),'P14 scene year unmodified');
+ assert(p14Prompt.includes(p14Boundary),'P14 gets the later preparedness boundary');
+ assert(!p14Prompt.includes('FAMILY BOUNDARY: Supported shaking precedes structural failure'),'P14 has no active shaking guard');
+ const oldP14=base.clone(p14);
+ oldP14.role='cause-context'; // Exact legacy role problem in build 5.1.20
+ const p14Updated=C.plan({...p14Input,spec:oldP14});
+ assert.equal(p14Updated.role,'legacy','re-derive role from narration while retaining saved scene');
+ for(const field of ['location','action','cast','camera','audio','narration','chronology','timing','facts'])
+   assert.deepEqual(base.clone(p14Updated[field]),base.clone(p14[field]),field+' preserved');
+ assert.equal(base.validate(p14Updated).ok,true,'old reviewed scene revalidated as legacy');
+ assert(C.compile(p14Updated).includes(p14Boundary),'old reviewed P14 gets phase-specific boundary');
+ assert.equal(C.payload(p14Updated).location,p14Input.location,'keep parent project identity');
+ const customP14=base.clone(p14);
+ customP14.location.setting='quiet unmarked outdoor place during a later community remembrance';
+ assert.equal(base.validate(customP14).ok,true,'custom later legacy staging is valid');
+ assert(!C.compile(customP14).includes(p14Boundary),'do not force preparedness guard onto changed setting');
+ const wrongPeriodP14=base.clone(p14);
+ wrongPeriodP14.chronology.relation='event';
+ wrongPeriodP14.chronology.sceneYear=1923;
+ wrongPeriodP14.chronology.period='1923';
+ assert(!C.compile(p13).includes(p14Boundary),'P13 reconstruction is not P14 legacy');
+ assert(!C.compile(p12).includes(p14Boundary),'P12 response is not P14 legacy');
+ assert(!C.compile(p11).includes(p14Boundary),'P11 human tragedy is not P14 legacy');
+ assert(!C.compile(p10).includes(p14Boundary),'P10 toll is not P14 legacy');
+ assert(!C.compile(p7).includes(p14Boundary),'P7 tsunami is not P14 legacy');
+ assert(!C.compile(p3).includes(p14Boundary),'P3 fire is not P14 legacy');
+ assert(!C.compile(spec).includes(p14Boundary),'P1 shaking is not P14 legacy');
+ const otherLegacy=base.clone(p14);
+ otherLegacy.narration='Decades later the community remembered the earthquake with quiet reflection.';
+ otherLegacy.source.narration=otherLegacy.narration;
+ otherLegacy.role='legacy';
+ otherLegacy.chronology={relation:'later',sceneYear:null,period:'unspecified later period',basis:otherLegacy.narration};
+ assert.equal(base.validate(otherLegacy).ok,true,'unrelated legacy scene stays valid');
+ assert(!C.compile(otherLegacy).includes(p14Boundary),'non-Disaster Prevention Day legacy does not acquire P14 guard');
+ console.log('PASS: P14 later-period legacy role and guard; old saved P14 restored without scene rewrite; other approved phases unchanged.');
  // Nebukawa is a panel-local narrated place, not the project identity.
  assert.equal(p8.location.region,'Tokyo and Yokohama, Japan');
  assert.equal(p8.location.sceneRegion,'Nebukawa, near Odawara, Kanagawa Prefecture, Japan');
