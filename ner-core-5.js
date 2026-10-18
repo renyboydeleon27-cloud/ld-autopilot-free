@@ -202,6 +202,14 @@ function familyBoundary(s){
     /\b(?:killings?|social violence|fear)\b/i.test(s.narration)&&
     /\bnon-graphic\b/i.test(setting)&&/\bsocial violence\b/i.test(setting))
   return 'Fear-driven social violence aftermath follows the narrated phase. Keep the scene non-graphic and representative only; no visible attack, no bodies, no ethnic caricature, no mob action, and no invented ceremony. No unrelated tsunami, fire surge, or renewed structural collapse.';
+ // Organized post-earthquake relief is not another shaking/structural-failure
+ // beat. Match narrated relief, the response role, and a settled relief area
+ // together, preserving saved StageSpecs and unrelated response scenes.
+ if(s.role==='response'&&
+    /\borganized\b.{0,60}\brelief area\b/i.test(setting)&&
+    /\bsettled earthquake damage\b/i.test(setting)&&
+    /\b(?:relief|volunteers|outside aid|officials)\b/i.test(s.narration))
+  return 'Organized relief follows the narrated post-earthquake response phase. Show only the stated primary relief action among settled damage; rail and electricity restoration remain narration context, not extra scene actions. No renewed shaking, fresh collapse, unrelated fire surge or tsunami, invented crowd action, or instant infrastructure repair.';
  // Burned, settled fire aftermath is not active fire spread or renewed shaking.
  // Select this only when both the death-toll narration and burned setting agree.
  if(s.role==='human-toll'&&/\b(?:killed|deaths?|missing|fatalities)\b/i.test(s.narration)&&
