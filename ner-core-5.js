@@ -43,6 +43,9 @@ function metadata(topic,saved={}){
 function family(topic){return Object.keys(FAMILIES).find(k=>FAMILIES[k].test(topic))||'generic-evidence';}
 function role(n,stage){
  if(stage==='HOOK')return 'hook';if(stage==='ENDING')return 'ending';
+ // Named long-term disaster-prevention observance is a legacy beat, not
+ // a cause of the historical earthquake. Require the observance plus meaning.
+ if(/\bdisaster prevention day\b/i.test(n)&&/\b(?:designat(?:ed|ion)?|lessons?|generations?|preparedness|commemorat(?:ed|ion)?)\b/i.test(n))return 'legacy';
  if(/parliament.*passed|passed.*(?:act|law)|clean air act/i.test(n))return 'accountability';
  const rules=[['legacy',/decades later|years later|years to achieve|lasting warning|remembrance|memorial|legacy|remember/i],['accountability',/clean air act|passed.*(?:act|law)|responsibility|accountability|preventab|tribunal.*found|negligence/i],['evidence',/tribunal|investigat|evidence|inquiry|report|identified/i],['human-toll',/killed|death toll|fatalities|died/i],['response',/\b(?:aid|relief|outreach|workers|volunteers)\b[^.!?;]{0,45}\b(?:supported|assisted|helped|provided|delivered)\b|\b(?:provided|delivered|received)\b[^.!?;]{0,30}\b(?:aid|relief|support)\b/i],['displacement',/evacuat|fled|displaced|refuge/i],['response',/rescue|aid|medical|outreach|support|care/i],['recovery',/rebuild|recovery|reconstruct/i],['human-impact',/breathing became|difficult to breathe|visibility.*collapsed|buses stopped|polluted air slipped|struck.*school|buried|injur|survivor|symptom|wound/i],['onset',/fog settled|fog thickened|collapsed|erupted|struck|landfall|released|began/i],['aftermath',/cleared the smog|aftermath|mourning|grief/i]];
  return rules.find(([,r])=>r.test(n))?.[0]||(stage==='P1'?'normal-world':'cause-context');
@@ -202,6 +205,14 @@ function familyBoundary(s){
     /\b(?:killings?|social violence|fear)\b/i.test(s.narration)&&
     /\bnon-graphic\b/i.test(setting)&&/\bsocial violence\b/i.test(setting))
   return 'Fear-driven social violence aftermath follows the narrated phase. Keep the scene non-graphic and representative only; no visible attack, no bodies, no ethnic caricature, no mob action, and no invented ceremony. No unrelated tsunami, fire surge, or renewed structural collapse.';
+ // The 1960 Disaster Prevention Day observance is later preparedness/legacy,
+ // not renewed earthquake mechanics. A matching later chronology, narration,
+ // semantic role and visual setting are all required.
+ if(s.role==='legacy'&&s.chronology?.relation==='later'&&
+    Number(s.chronology?.sceneYear)>Number(s.eventYear)&&
+    /\bdisaster prevention day\b/i.test(s.narration)&&
+    /\blater-period community preparedness setting\b/i.test(setting))
+  return 'Disaster-prevention legacy follows the narrated later-period preparedness phase. Show only the stated restrained primary action at a representative community preparedness setting; the official designation is narration context, not a visible ceremony. No renewed shaking, structural collapse, fire surge, tsunami, readable signage, invented officials, or crowd action.';
  // Rebuilding belongs to a recovery phase, never the default active-shaking
  // physics rule. Require a matching narration, role and partly rebuilt scene,
  // not stage number alone. Respect reviewed StageSpecs and customized settings.
