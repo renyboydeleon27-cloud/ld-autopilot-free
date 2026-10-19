@@ -134,7 +134,13 @@
     ['organized non-graphic relief area among settled earthquake damage','adult-1 carries one closed plain supply box to a nearby stable table'],
     ['representative later-period community preparedness setting with no readable signs or text','adult-1 pauses beside a plain emergency-supply cabinet and looks toward it']
    ];
-   return !spec.location?.sceneRegion&&auto.some(([p,a])=>place===p&&action===a);
+   const legacyDefault=base.plan({...input,spec:null});
+   const untouchedDefault=place===legacyDefault.location.setting&&
+    action===legacyDefault.action.description&&
+    spec.audio===legacyDefault.audio&&
+    spec.camera?.movement===legacyDefault.camera.movement&&
+    spec.camera?.framing===legacyDefault.camera.framing;
+   return !spec.location?.sceneRegion&&(untouchedDefault||auto.some(([p,a])=>place===p&&action===a));
   }
   function earthquakeScene(narration,role,stage,eventYear){
    const n=String(narration||'').toLowerCase();
