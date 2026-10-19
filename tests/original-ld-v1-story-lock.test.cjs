@@ -65,3 +65,53 @@ test('approved legacy panels still short circuit before any new story checks',()
  const runtime=fs.readFileSync('ner-core-5-runtime.js','utf8');
  assert.match(runtime,/function preflight\(c\)\{if\(protectedPanel\(c\)\)return \{ok:true,issues:\[\],preserved:true\}/);
 });
+
+
+const vm=require('node:vm');
+function pasteHarness(approvedStage=''){
+ const script=fs.readFileSync('narration-smart-continue.js','utf8');
+ const excerpt=script.slice(script.indexOf('  const importBox='),script.indexOf('  function fullNarrationText(){'));
+ const values={},events={},done={},cards={};if(approvedStage)done[approvedStage]=true;
+ const make=()=>({style:{},append(){},setAttribute(){},addEventListener(k,f){this[k]=f;}});
+ const stageCard=stage=>cards[stage]||(cards[stage]={dataset:{stage},querySelector(sel){
+  if(sel==='.narration')return {value:values[stage]||''};
+  if(sel==='.done-toggle')return {checked:!!done[stage]};
+  return {};
+ }});
+ let approvals=0,backups=0;
+ const ctx={document:{createElement:make},controls:{insertBefore(){}},window:{
+  ldNarrativeFormat:'original',ldProductionCategory:'disaster',
+  LDNarrationImport:require('../narration-import.js'),
+  addEventListener(name,fn){events[name]=fn;},dispatchEvent(){}
+ },btn:{disabled:false,dataset:{}},topic:()=> 'Valdivia Earthquake',format:()=> 'shorts',
+  hookIsSilent:()=>false,stageCard,saveBackup(){backups++;},clearApproval(){},setNarration:(card,text)=>{values[card.dataset.stage]=text;},
+  approveNarration:()=>{approvals++;return true;},restoreBackup(){},undo:{classList:{remove(){}}},refreshApprovalUi(){},CustomEvent:function(){},fetch(){throw Error('No provider calls allowed');}};
+ vm.createContext(ctx);vm.runInContext(excerpt+';globalThis.ui={importInput,previewImport,approveImport,importMessage,importPreview};',ctx);
+ return {ui:ctx.ui,values,done,stageCard,approvals:()=>approvals,backups:()=>backups};
+}
+function samplePaste(){
+ const p={...base};
+ return guard.STAGES.filter(s=>s!=='ENDING').map(s=>s+': '+p[s]).join('\n');
+}
+test('real paste UI checks and activates the lock without AI credits or prior approval',()=>{
+ const prev=globalThis.localStorage,mem=new Map([['ld-autopilot-free-active-project','brand-new-ui-project']]);
+ globalThis.localStorage={getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,String(v)),removeItem:k=>mem.delete(k)};
+ try{
+  const h=pasteHarness();h.ui.importInput.value=samplePaste();h.ui.previewImport.click();
+  assert.match(h.ui.importPreview.textContent,/PASS/);assert.equal(h.backups(),0);
+  h.ui.approveImport.click();
+  assert.equal(h.approvals(),1);assert.equal(h.backups(),1);
+  assert.equal(h.values.P1,base.P1);assert.equal(guard.active('Valdivia Earthquake','shorts'),true);
+ }finally{if(prev===undefined)delete globalThis.localStorage;else globalThis.localStorage=prev;}
+});
+test('real paste UI refuses both bad P1 flow and protected panel overwrite before backup',()=>{
+ const p1bad=samplePaste().replace('P1: '+base.P1,'P1: A day earlier, powerful earthquakes had struck near Concepción, damaging communities.');
+ const h=pasteHarness();h.ui.importInput.value=p1bad;h.ui.approveImport.click();
+ assert.match(h.ui.importMessage.textContent,/STORY LOCK HOLD/);
+ assert.equal(h.backups(),0);assert.deepEqual(h.values,{});
+ const h2=pasteHarness('P1');
+ h2.values.P1='Previously approved calm narration with custom wording.';
+ h2.ui.importInput.value=samplePaste();h2.ui.approveImport.click();
+ assert.match(h2.ui.importMessage.textContent,/approved panel cannot be overwritten/);
+ assert.equal(h2.backups(),0);assert.equal(h2.values.P1,'Previously approved calm narration with custom wording.');
+});
