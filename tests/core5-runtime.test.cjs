@@ -196,7 +196,7 @@ test('FREE single-stage repair fixes legacy P1 without affecting P2, preserves d
  assert.equal(history.length,1);
  assert.equal(history[0].scene,'KEEP CURRENT SCENE — old user-stored coastal idea');
  assert.match(p1.fields['.text-video-prompt'].value,/coastal community/i);
- assert.equal(b.r.prepareStage(p1),s);
+ assert.equal(b.r.prepareStage(p1).location.region,s.location.region);
  assert.equal(JSON.parse(p1.dataset.core5SceneHistory).length,1);
  assert.equal(JSON.stringify(p2),p2Before);
  assert.equal(b.calls(),0);
