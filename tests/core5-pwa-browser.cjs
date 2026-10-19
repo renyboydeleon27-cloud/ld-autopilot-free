@@ -39,7 +39,7 @@ const deadline=setTimeout(()=>{console.error('PWA regression timed out');process
   function compare(after){for(const [stage,saved] of Object.entries(before.stages)){assert.equal(after.stages[stage].done,true,stage+' approval');for(const key of Object.keys(saved))assert.equal(after.stages[stage][key],saved[key],stage+' '+key);}}
   compare(await page.evaluate(()=>window.LDCore.collectState()));
   await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>!document.getElementById('appUpdateButton').disabled);
-  assert.match(await page.locator('#appUpdateStatus').textContent(),/5.1.23/);
+  assert.match(await page.locator('#appUpdateStatus').textContent(),/5.1.24/);
   await page.locator('#enableProjectStorage').click();await page.waitForFunction(()=>NERProjectStorage.enabled);await page.evaluate(()=>NERProjectStorage.ensureSaved());
   await context.setOffline(true);await page.reload();await page.waitForFunction(()=>window.NERCore5Runtime&&window.NERFamilyPlanner4&&window.NERFinalAudit4);compare(await page.evaluate(()=>window.LDCore.collectState()));
   await page.locator('#appUpdateButton').click();await page.waitForFunction(()=>!document.getElementById('appUpdateButton').disabled);compare(await page.evaluate(()=>window.LDCore.collectState()));
