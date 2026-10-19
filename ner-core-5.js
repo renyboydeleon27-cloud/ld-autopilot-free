@@ -55,6 +55,7 @@ function role(n,stage){
  if(/\bLake Riñihue\b/i.test(n))return 'human-impact';
  if(/\bdrainage channels\b/i.test(n)&&/\b(?:engineers|workers|volunteers)\b/i.test(n))return 'response';
  if(/\bkilling sixty.one people\b/i.test(n))return 'human-toll';
+ if(/\btwo million people were left homeless\b/i.test(n)&&/\bdeath tolls varied\b/i.test(n))return 'human-toll';
  if(/\bcoastal communities suffered deadly destruction\b/i.test(n))return 'human-impact';
  // Named long-term disaster-prevention observance is a legacy beat, not
  // a cause of the historical earthquake. Require the observance plus meaning.
