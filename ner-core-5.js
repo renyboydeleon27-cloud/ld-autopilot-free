@@ -43,6 +43,19 @@ function metadata(topic,saved={}){
 function family(topic){return Object.keys(FAMILIES).find(k=>FAMILIES[k].test(topic))||'generic-evidence';}
 function role(n,stage){
  if(stage==='HOOK')return 'hook';if(stage==='ENDING')return 'ending';
+ // Narration-specific roles for the full Chile 1960 earthquake lifecycle.
+ // Keep the triggers semantic (not panel-number based) and non-destructive.
+ if(/\bcoordinated warning system\b/i.test(n)&&/\btsunami preparedness\b/i.test(n))return 'legacy';
+ if(/\bNazca Plate\b/i.test(n)&&/\bSouth America\b/i.test(n))return 'cause-context';
+ if(/\bmagnitude nine.point.five\b/i.test(n)&&/\bru(?:ptured|pture)\b/i.test(n))return 'onset';
+ if(/\bviolent shaking toppled\b/i.test(n))return 'human-impact';
+ if(/\belectricity and communications were disrupted\b/i.test(n))return 'human-impact';
+ if(/\bland rose while other areas sank\b/i.test(n))return 'human-impact';
+ if(/\bsea pulled away\b/i.test(n))return 'cause-context';
+ if(/\bLake Riñihue\b/i.test(n))return 'human-impact';
+ if(/\bdrainage channels\b/i.test(n)&&/\b(?:engineers|workers|volunteers)\b/i.test(n))return 'response';
+ if(/\bkilling sixty.one people\b/i.test(n))return 'human-toll';
+ if(/\bcoastal communities suffered deadly destruction\b/i.test(n))return 'human-impact';
  // Named long-term disaster-prevention observance is a legacy beat, not
  // a cause of the historical earthquake. Require the observance plus meaning.
  if(/\bdisaster prevention day\b/i.test(n)&&/\b(?:designat(?:ed|ion)?|lessons?|generations?|preparedness|commemorat(?:ed|ion)?)\b/i.test(n))return 'legacy';
@@ -53,7 +66,10 @@ function role(n,stage){
 function chronology(n,eventYear){
  const later=/decades (?:later|after)|years later|generations later|long after|years to achieve|lasting warning/i.test(n),before=/years (?:earlier|before)|before the disaster|flashback/i.test(n),after=/tribunal|inquiry|aftermath|after the disaster|following the disaster|years that followed|deaths afterward/i.test(n);
  const years=[...String(n).matchAll(/\b(?:1\d{3}|20\d{2})\b/g)].map(x=>Number(x[0]));
- const explicit=years.length===1?years[0]:null;
+ // Written-out date in the documentary narration still denotes a later
+ // 1965 scene; do not turn the warning system into a 1960 tsunami.
+ const spoken1965=/\bnineteen sixty.five\b/i.test(n);
+ const explicit=years.length===1?years[0]:years.length===0&&spoken1965?1965:null;
  const relation=explicit!==null?(explicit<eventYear?'before':explicit>eventYear?'later':later?'later':before?'before':after?'after':'event'):later?'later':before?'before':after?'after':'event';
  const sceneYear=explicit!==null&&!(explicit===eventYear&&relation!=='event')?explicit:relation==='event'?eventYear:null;
  return {relation,sceneYear,period:sceneYear!==null?String(sceneYear):relation==='later'?'unspecified later period':relation==='before'?'unspecified earlier period':'unspecified post-event period',basis:n||'Project event year'};
@@ -211,6 +227,29 @@ function familyBoundary(s){
     /\b(?:earthquakes?|shocks?)\b/i.test(s.narration)&&
     /already-damaged building fronts and settled debris from the previous day/i.test(setting))
   return 'The narrated earlier-earthquake aftermath precedes the mainshock. Show only settled damage and the stated cautious movement; no renewed shaking, fresh collapse, mainshock destruction, invented rescue action, unrelated landslide, fire surge or tsunami.';
+ // Exact-topic documented Valdivia panels: preserve each disaster phase,
+ // scene-local geography and later warning-system date. This does not
+ // affect Great Kanto, other earthquakes, or edited unrelated scenes.
+ if(/\bvaldivia earthquake\b/i.test(s.topic)&&Number(s.eventYear)===1960){
+  const n=String(s.narration||'');
+  const phases={
+   P2:['magnitude nine.point.five','Mainshock onset is confined to the stated 1960 strong shaking and one plausible local structural reaction. No tsunami, instant regional destruction, renewed aftershock or invented crowd action.'],
+   P3:['Nazca Plate','Subduction and accumulated fault stress remain narration context; depict only the stated quiet 1960 coastal rock setting and restrained observation, with no invented underground cross-section or second disaster.'],
+   P4:['violent shaking','Show one bounded facade failure under strong 1960 shaking, with consistent falling material and a clear retreat path; no simultaneous multi-building collapse, fire surge or tsunami.'],
+   P5:['electricity and communications','Damage to local infrastructure follows the earthquake. Keep debris settled, show one obstructed route only; no new shaking, spontaneous repairs or unrelated hazard.'],
+   P6:['land rose while other areas sank','Post-quake coastline deformation is represented by existing inundation at one low-lying shore. No visible instant uplift, magical land movement, new tsunami or unsupported water-rise rate.'],
+   P7:['sea pulled away','Depict exposed shore after sea retreat before incoming tsunami waves, with one cautious movement toward higher ground; no advancing wall of water or unsupported explosion.'],
+   P8:['including Queule','Coastal tsunami inundation follows shoreline terrain and gravity around Queule, with one clear uphill escape movement; no arbitrary wave height, repeated wave respawns or unrelated landslide.'],
+   P9:['waves struck Hawaii','The trans-Pacific tsunami reaches Hilo after the narrated travel delay. Show a single supported surge at Hilo, non-graphic human framing, and no local earthquake or invented toll imagery.'],
+   P10:['Japan was struck','The tsunami reaches the narrated Japanese shoreline later, with one controlled resident reaction. No fresh Chilean earthquake, unsupported wave height or unrelated regional scene.'],
+   P11:['Lake Riñihue','Lake Riñihue outlet is already blocked by landed slide debris while lake water accumulates upstream; no spontaneous dam burst, new slide or immediate citywide flooding.'],
+   P12:['drainage channels','Organized channel-clearing remains one restrained physical clearing action, with a blocked lake outlet and grounded tools; no instant draining, imaginary engineering ceremony or new landslide.'],
+   P13:['left homeless','Show a settled, non-graphic displaced-community setting and one supported human response; homelessness and uncertain death totals remain narration context, not generated numerical imagery.'],
+   P14:['coordinated warning system','The 1965 international tsunami-warning legacy is an ordinary period communication setting; no depicted signing ceremony, readable notices, current-day technology, active earthquake or tsunami.']
+  };
+  const rule=phases[s.stage];
+  if(rule&&new RegExp(rule[0],'i').test(n))return rule[1];
+ }
  // Rumor-driven killings are a social harm, not a new earthquake-physics
  // beat. Narration, human context role, and a deliberately non-graphic
  // staging must all agree before specializing the earthquake boundary.
