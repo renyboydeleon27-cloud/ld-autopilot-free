@@ -227,3 +227,43 @@ test('FREE journal check reports missing location as LOCAL_PREFLIGHT_BLOCKED, wi
  assert(d.issues.some(x=>/Fix this stage/.test(x)));
  assert.equal(inspections,0);assert.equal(b.calls(),0);
 });
+
+
+test('Tōhoku March 2011 P2 and P3 have distinct concrete first shaking/mainshock scenes',()=>{
+ const topic='2011 Tōhoku Earthquake and Tsunami',location='Tōhoku, Japan';
+ const p2=C.plan({topic,stage:'P2',eventYear:2011,location,narration:'On March 11, the first violent shaking sent people scrambling for safety as buildings began to sway.'});
+ const p3=C.plan({topic,stage:'P3',eventYear:2011,location,narration:'At 2:46 p.m., a magnitude nine earthquake struck offshore, unleashing one of Japan’s most powerful recorded disasters.'});
+ for(const spec of [p2,p3]){
+  assert.deepEqual(C.validate(spec).issues,[]);
+  assert.match(C.compile(spec),/Strict true black-and-white grayscale/);
+  assert(!/supported hazard|narrated (?:warning|onset)/i.test(spec.location.setting+' '+spec.action.description));
+  assert(!/tsunami (?:arrives|wave arrived)|wave sweeping/i.test(spec.location.setting));
+ }
+ assert.match(p2.location.setting,/shop entrance/i);
+ assert.match(p3.location.setting,/overlook/i);
+ assert.notEqual(p2.location.setting,p3.location.setting);
+ assert.notEqual(p2.action.description,p3.action.description);
+ assert.deepEqual(C.validateSequence([p2,p3]).issues,[]);
+});
+test('FREE P2 repair archives old KEEP CURRENT draft and does not change approved P1 or spend credits',()=>{
+ const b=boot(),p1=b.card('P1'),p2=b.card('P2');
+ b.nodes.topic.value='2011 Tōhoku Earthquake and Tsunami';
+ b.window.ldVideoContinuity={year:'2011',location:'Tōhoku, Japan'};
+ p1.fields['.narration'].value='In March 2011, life was peaceful along Japan’s northeastern coast.';
+ p1.fields['.done-toggle'].checked=true;p1.fields['.text-video-prompt'].value='EXACT OLD APPROVED P1 PROMPT';
+ p2.fields['.narration'].value='On March 11, the first violent shaking sent people scrambling for safety as buildings began to sway.';
+ p2.fields['.video-scene'].value='KEEP CURRENT SCENE — generic old P2 draft';
+ b.document.querySelectorAll=()=>[p1,p2];
+ assert.equal(b.r.preflight(p2).ok,false);
+ const first=JSON.stringify(p1),done=b.r.prepareStage(p2);
+ assert.equal(JSON.stringify(p1),first);
+ assert.equal(b.r.preflight(p2).ok,true);
+ assert.deepEqual(C.validate(done).issues,[]);
+ assert.match(b.r.build(p2),/shop entrance/);
+ assert.equal(JSON.parse(p2.dataset.core5SceneHistory)[0].scene,'KEEP CURRENT SCENE — generic old P2 draft');
+ assert.equal(b.calls(),0);
+});
+test('2011 Tōhoku-specific scene recipe does not leak into other historic tsunami topics',()=>{
+ const s=C.plan({topic:'1908 Messina Earthquake and Tsunami',stage:'P2',eventYear:1908,location:'Messina, Italy',narration:'On March 11, the first violent shaking sent people scrambling for safety as buildings began to sway.'});
+ assert.doesNotMatch(s.location.setting,/northeastern Japanese/i);
+});

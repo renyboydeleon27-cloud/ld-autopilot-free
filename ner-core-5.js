@@ -95,7 +95,7 @@ function pollutionRecipe(r,n){
  return null;
 }
 // Recipes are reusable semantic staging, not new historical claims or panel overrides.
-function recipe(r,f,narration=''){
+function recipe(r,f,narration='',topic=''){
  // A narration-grounded calm coastal opening: no premature quake/tsunami imagery.
  if(r==='normal-world'&&f==='tsunami'&&/\bJapan(?:'s|’s)?\b|\bJapanese\b/i.test(narration)&&/\bcoast(?:al)?\b|\bshore\b/i.test(narration))return {
   location:'intact street in a northeastern Japanese coastal community before the earthquake; small shops, low-rise homes, level pavement and a distant shoreline, with no shaking, floodwater, rubble or panic',
@@ -103,6 +103,26 @@ function recipe(r,f,narration=''){
   action:'adult-1 walks two measured steps to a small shop entrance and opens the door once, with feet remaining planted after the door opens',
   camera:{framing:'human-height medium-wide rear three-quarter street view with the distant coast visible',movement:'lateral-track'},
   audio:'quiet local coastal street ambience and synchronized soft footsteps; no alarms'
+ };
+ 
+ // The March 2011 northeast-Japan undersea earthquake has two narrated beats:
+ // first street-level tremor, then the larger documented offshore mainshock.
+ // Give each a distinct, physically concrete staging rather than the generic
+ // "supported hazard" placeholder. No wave reaches land in either scene.
+ const tohoku2011=f==='tsunami'&&/\b2011\b/.test(topic)&&/(?:t[oō]hoku|japan)/i.test(topic);
+ if(tohoku2011&&/\b(?:first violent shaking|first (?:strong )?tremor|ground began to shake|buildings began to sway)\b/i.test(narration))return {
+  location:'street-level view beside a small shop entrance in a northeastern Japanese coastal neighborhood during the first earthquake shaking; intact 2011 shopfronts and a hanging shop awning begin trembling, while pavement stays level and the shoreline remains distant; no tsunami water, collapsing buildings or invented alarm displays',
+  cast:[{id:'adult-1',description:'unnamed adult resident wearing ordinary early-2010s Japanese street clothing'}],
+  action:'adult-1, already beside the doorway, shifts their weight and presses one hand against the stable doorframe for balance as the trembling begins',
+  camera:{framing:'eye-level medium street view with the shop doorway and moving awning visible',movement:'locked'},
+  audio:'brief natural street rattling and a low earthquake rumble; no voices, alarms or music'
+ };
+ if(tohoku2011&&/\b(?:magnitude (?:nine|9(?:\.0|\.1)?)|2:46|earthquake struck offshore)\b/i.test(narration))return {
+  location:'elevated coastal overlook above a northeastern Japanese neighborhood during sustained strong earthquake shaking on March 11, 2011; the near railing visibly vibrates and roofs below tremble while the distant ocean remains at normal level; no approaching tsunami, instant citywide collapse or exposed underground fault',
+  cast:[{id:'adult-1',description:'unnamed adult observer in ordinary early-2010s Japanese outdoor clothing'}],
+  action:'adult-1 plants their feet wide and grips the existing waist-high railing with both hands to stay balanced through the continuous shaking',
+  camera:{framing:'eye-level rear three-quarter medium-wide overlook view showing the observer, railing, roofs and distant sea',movement:'slow-push-in'},
+  audio:'continuous low earthquake rumble with a restrained railing rattle; no voices, music or invented sirens'
  };
  if(f==='atmospheric-pollution'){const p=pollutionRecipe(r,narration);if(p)return p;}
  const quiet={location:'quiet representative local setting',cast:[{id:'adult-1',description:'unnamed adult observer'}],action:'adult-1 slowly lowers their head',camera:{framing:'human-height medium-wide',movement:'slow-push-in'},audio:'quiet local ambience'};
@@ -128,7 +148,7 @@ function recipe(r,f,narration=''){
  return p;
 }
 function plan(input){
- const f=family(input.topic),r=role(input.narration,input.stage),p=recipe(r,f,input.narration),eventYear=Number(input.eventYear);
+ const f=family(input.topic),r=role(input.narration,input.stage),p=recipe(r,f,input.narration,input.topic),eventYear=Number(input.eventYear);
  const time=chronology(input.narration,eventYear);
  if(input.stage==='ENDING'&&time.relation==='event'){time.relation='after';time.sceneYear=null;time.period='unspecified reflective post-event period';time.basis='Representative ending illustration; exact date not asserted';}
  return deepFreeze({schema:5,compilerVersion:VERSION,stage:input.stage,topic:input.topic,family:f,role:r,
@@ -144,7 +164,7 @@ function plan(input){
 // Explicit enrichment only: never replace a custom scene or silently mutate an audited spec.
 function refine(s){
  const v=validate(s);if(!v.ok)throw Error(v.issues.join(' '));if(s.choreography)return s;
- const p=recipe(s.role,s.family,s.narration);
+ const p=recipe(s.role,s.family,s.narration,s.topic);
  if(!p.choreography||s.stage==='ENDING'||s.action.actor!==p.choreography.actor||s.action.description!==p.action||s.location.setting!==p.location||stable(s.cast)!==stable(p.cast))return s;
  return deepFreeze({...clone(s),choreography:{...clone(p.choreography),forAction:p.action,forSetting:p.location,forCast:stable(p.cast)},timing:[{start:0,end:2,phase:'establish'},{start:2,end:7,phase:'action'},{start:7,end:10,phase:'hold'}]});
 }
