@@ -160,6 +160,7 @@
     [/^representative later-period community preparedness setting/,/^adult-1 pauses beside a plain emergency-supply cabinet and looks toward it$/, /^quiet indoor ambience$/,'locked'],
     [/^settled non-graphic local aftermath$/, /^adult-1 slowly lowers their head$/, /^quiet local ambience$/,'slow-push-in'],
     [/^local viewpoint of the narrated cause$/, /^adult-1 turns once toward the supported contextual feature$/, /^quiet local ambience$/,'slow-push-in'],
+    [/^local setting at the narrated onset$/, /^adult-1 turns once toward the supported hazard$/, /^quiet local ambience$/,'slow-push-in'],
     [/^local setting showing only narrated non-graphic impact$/, /^adult-1 takes one supported step toward stable footing$/, /^quiet local ambience$/,'slow-push-in']
    ];
    return defaults.some(([loc,act,snd,mov])=>loc.test(setting)&&act.test(action)&&snd.test(audio)&&spec.camera?.movement===mov);
