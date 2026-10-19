@@ -550,6 +550,23 @@ function panelPayload(card){
     progressionRule:String(eventSpec?('Event-specific StageSpec: '+[eventSpec.eventBeat,eventSpec.actionType,eventSpec.locationType,eventSpec.cameraType].filter(Boolean).join('; ')+'. Follow the approved narration and event-specific scene; do not impose generic wider-consequence imagery or camera cutaways.'):progression?([progression.rule,progression.evidenceRule].filter(Boolean).join(' ')):'')
   };
 }
+function assertOriginalV1StoryLock(card,includeScene=false){
+  const guard=window.LDNarrationImport?.storyLock;
+  if(!guard||window.ldNarrativeFormat!=='original'||!guard.active(topic(),format()))return;
+  const narrations={};
+  for(const stage of guard.STAGES){
+    const el=document.querySelector('.stage-card[data-stage="'+stage+'"]');
+    narrations[stage]=String(el?.querySelector('.narration')?.value||'');
+  }
+  const check=guard.review(narrations);
+  if(!check.ok)throw Error('FREE STORY LOCK HOLD · '+check.issues.join(' · ')+'. No paid audit sent.');
+  if(includeScene){
+    const st=card?.dataset?.stage||'',spec=window.NERCore5Runtime?.manages?.(card)?window.NERCore5Runtime.spec(card):null;
+    const currentScene=spec?[spec.location?.setting,spec.action?.description].filter(Boolean).join(' '):String(card?.querySelector('.video-scene')?.value||card?.dataset?.videoScene||'');
+    const issues=guard.sceneIssues(st,narrations[st],currentScene);
+    if(issues.length)throw Error('FREE STORY LOCK SCENE HOLD · '+issues.join(' · ')+'. No paid audit sent.');
+  }
+}
 function isWellington1910(){
   const t=topic().toLowerCase();
   return t.includes('wellington avalanche')&&t.includes('1910');
@@ -964,6 +981,7 @@ async function prepareImageToVideo(card){
 }
 async function prepareTextToVideo(card){
   assertStageOwnsSmartRun(card);
+  assertOriginalV1StoryLock(card,true);
   // Project-level Text-to-Video lock must win over stale per-panel UI/state.
   if(window.LDVideoModes?.ensureTextMode&&!window.LDVideoModes.ensureTextMode(card)){
     throw new Error('Text-to-Video mode could not be synchronized for '+(card.dataset.stage||'this panel')+'.');
@@ -1022,6 +1040,7 @@ async function prepareTextToVideo(card){
     localIssues=window.LDPublicHealthPolicy?.issues(payload.topic,payload.currentPrompt)||[];
     if(localIssues.length)throw new Error('Local prompt check — no audit credits used: '+localIssues.join(' '));
   }
+  assertOriginalV1StoryLock(card,true);
   status('SMART CONTINUE · AI is auditing '+payload.stage+'…','working');
   let result=await audit(payload);
   assertStageOwnsSmartRun(card);
