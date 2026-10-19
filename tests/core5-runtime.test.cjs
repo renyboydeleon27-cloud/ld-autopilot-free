@@ -166,3 +166,64 @@ test('old P4 is blocked before audit and explicit free preparation preserves app
  assert(!p4.dataset.core5Record);assert(b.r.preflight(p4).ok);assert.match(p4.fields['.text-video-prompt'].value,/street-level/);
  assert.equal(b.r.prepareEpisode(),0);assert.equal(JSON.stringify(p3),before);
 });
+
+
+test('title-only Tōhoku P1 infers region and stages calm coastal life, without inventing damage',()=>{
+ const b=boot(),c=b.card('P1');
+ b.nodes.topic.value='Tōhoku Earthquake and Tsunami — 2011';b.window.ldVideoContinuity={};
+ c.fields['.narration'].value='In March 2011, life was peaceful along Japan’s northeastern coast. Families worked, and children attended school as usual.';
+ const s=b.r.spec(c);
+ assert.equal(s.eventYear,2011);assert.equal(s.location.region,'Tōhoku, Japan');
+ assert.equal(s.role,'normal-world');
+ assert.match(s.location.setting,/coastal community/i);
+ assert.match(s.location.setting,/no shaking, floodwater, rubble or panic/i);
+ assert.equal(b.r.preflight(c).ok,true);
+ assert.equal(b.calls(),0);
+});
+test('FREE single-stage repair fixes legacy P1 without affecting P2, preserves draft and costs nothing',()=>{
+ const b=boot(),p1=b.card('P1'),p2=b.card('P2');
+ b.nodes.topic.value='Tohoku Earthquake and Tsunami (2011)';b.window.ldVideoContinuity={};
+ p1.fields['.narration'].value='In March 2011, life was peaceful along Japan’s northeastern coast. Families worked and children attended school as usual.';
+ p1.fields['.video-scene'].value='KEEP CURRENT SCENE — old user-stored coastal idea';
+ p2.fields['.video-scene'].value='P2 personal scene left untouched';
+ b.document.querySelectorAll=()=>[p1,p2];
+ assert.equal(b.r.preflight(p1).ok,false);
+ const p2Before=JSON.stringify(p2);
+ const s=b.r.prepareStage(p1);
+ assert.equal(s.location.region,'Tōhoku, Japan');
+ assert.equal(b.r.preflight(p1).ok,true);
+ const history=JSON.parse(p1.dataset.core5SceneHistory);
+ assert.equal(history.length,1);
+ assert.equal(history[0].scene,'KEEP CURRENT SCENE — old user-stored coastal idea');
+ assert.match(p1.fields['.text-video-prompt'].value,/coastal community/i);
+ assert.equal(b.r.prepareStage(p1),s);
+ assert.equal(JSON.parse(p1.dataset.core5SceneHistory).length,1);
+ assert.equal(JSON.stringify(p2),p2Before);
+ assert.equal(b.calls(),0);
+});
+test('FREE repair fails closed on unknown location, saved audits, and approved panels',async()=>{
+ const b=boot(),c=b.card('P1');b.nodes.topic.value='An unknown disaster';b.window.ldVideoContinuity={};
+ const before=JSON.stringify(c);assert.throws(()=>b.r.prepareStage(c),/valid event year and location/);
+ assert.equal(JSON.stringify(c),before);
+ b.nodes.topic.value='Tōhoku Earthquake and Tsunami — 2011';
+ c.fields['.narration'].value='In March 2011, life was peaceful along Japan’s northeastern coast.';
+ await b.r.prepare(c,b.audit);
+ const audited=JSON.stringify(c);
+ assert.throws(()=>b.r.prepareStage(c),/saved audit record/);
+ assert.equal(JSON.stringify(c),audited);
+ c.fields['.done-toggle'].checked=true;
+ const approved=JSON.stringify(c);
+ assert.throws(()=>b.r.prepareStage(c),/immutable/);
+ assert.equal(JSON.stringify(c),approved);
+ assert.equal(b.calls(),1);
+});
+test('FREE journal check reports missing location as LOCAL_PREFLIGHT_BLOCKED, without inspecting or paying',async()=>{
+ const b=boot(),c=b.card('P1');b.nodes.topic.value='Unknown incident';b.window.ldVideoContinuity={};
+ c.fields['.video-scene'].value='KEEP CURRENT SCENE — keep user draft';
+ let inspections=0;b.window.NERCore5AuditCoordinator={inspect:async()=>{inspections++;throw Error('must not inspect invalid stage payload');}};
+ const d=await b.r.journalDiagnostic(c);
+ assert.equal(d.status,'LOCAL_PREFLIGHT_BLOCKED');
+ assert(d.issues.some(x=>/Scene location is missing/.test(x)));
+ assert(d.issues.some(x=>/Fix this stage/.test(x)));
+ assert.equal(inspections,0);assert.equal(b.calls(),0);
+});
