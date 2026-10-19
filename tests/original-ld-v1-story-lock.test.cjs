@@ -119,3 +119,23 @@ test('real paste UI refuses both bad P1 flow and protected panel overwrite befor
  assert.match(h2.ui.importMessage.textContent,/approved panel cannot be overwritten/);
  assert.equal(h2.backups(),0);assert.equal(h2.values.P1,'Previously approved calm narration with custom wording.');
 });
+
+
+test('P1 storyboard exclusions do not count as rendered rubble or active shaking',()=>{
+ const narration='In March 2011, life was peaceful along Japan’s northeastern coast. Families worked and children attended school.';
+ const good=[
+  'intact street in a northeastern Japanese coastal town; no shaking, floodwater, rubble or panic',
+  'quiet intact coastal lane without rubble or shattered buildings; people walk to work',
+  'intact neighborhood; do not show active shaking or falling masonry',
+  'intact houses; avoid already-damaged facades or wreckage'
+ ];
+ for(const scene of good)assert.deepEqual(guard.sceneIssues('P1',narration,scene),[],scene);
+ const bad=[
+  'intact street; no rubble but collapsed houses block the road',
+  'quiet street with no panic; shattered buildings in the background',
+  'no rubble. Already-damaged facades line the main road',
+  'peaceful residents beside destroyed buildings',
+  'a person walking while active shaking breaks the pavement'
+ ];
+ for(const scene of bad)assert(guard.sceneIssues('P1',narration,scene).length>0,scene);
+});
