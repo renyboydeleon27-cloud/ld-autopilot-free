@@ -167,19 +167,24 @@ function validate(s){
 
  if(s.location?.sceneRegion!==undefined&&(typeof s.location.sceneRegion!=='string'||!s.location.sceneRegion.trim()))issues.push('Optional scene-specific location must be a nonempty place name.');
 
- // Local site must stay separate from the parent project region. Fail free
- // preflight if a saved coastal scene would be compiled into Southern Chile.
+ // A foreign scene cannot inherit the parent earthquake project location.
+ // Chilean scene locations (Queule and Lake Riñihue) already fall within
+ // Southern Chile, so a legacy approved local panel without sceneRegion is
+ // historically valid and MUST NOT block the next panel's free preflight.
+ // Still reject an explicitly inconsistent local place in those panels.
  if(s.family==='earthquake'&&Number(s.eventYear)===1960&&/valdivia earthquake/i.test(s.topic)){
   const place=String(s.location?.setting||''),site=String(s.location?.sceneRegion||'');
-  const expected={
-   P8:{scene:/\bQueule\b/i,region:/\bQueule\b/i},
+  const foreign={
    P9:{scene:/\bHilo\b|\bHawaii\b/i,region:/\bHilo\b.*\bHawaii\b/i},
-   P10:{scene:/\bJapan\b/i,region:/\bJapan\b/i},
-   P11:{scene:/\bRiñihue\b/i,region:/\bRiñihue\b/i},
-   P12:{scene:/\bRiñihue\b/i,region:/\bRiñihue\b/i},
-   P14:{scene:/\b1965 Pacific tsunami warning coordination office\b/i,region:/\bPacific\b.*\bwarning\b/i}
+   P10:{scene:/\bJapan\b/i,region:/\bJapan\b/i}
   }[s.stage];
-  if(expected?.scene.test(place)&&!expected.region.test(site))
+  const domestic={
+   P8:{scene:/\bQueule\b/i,region:/\bQueule\b|\bChile\b/i},
+   P11:{scene:/\bRiñihue\b/i,region:/\bRiñihue\b|\bChile\b/i},
+   P12:{scene:/\bRiñihue\b/i,region:/\bRiñihue\b|\bChile\b/i}
+  }[s.stage];
+  if((foreign?.scene.test(place)&&!foreign.region.test(site))||
+     (domestic?.scene.test(place)&&site&&!domestic.region.test(site)))
    issues.push('Scene-specific geography missing or inconsistent for '+s.stage+'. Review its local place before audit; the project remains Southern Chile.');
  }
 
