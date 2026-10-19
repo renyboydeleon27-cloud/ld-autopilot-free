@@ -38,6 +38,9 @@ function metadata(topic,saved={}){
  let inferred=parts.length>=3?(/^\d{4}$/.test(parts.at(-1).trim())?parts.at(-2):parts[1]):named?.[1]||'';
  inferred=inferred.replace(/\b(?:1\d{3}|20\d{2}|2100)\b/g,'').replace(/^[\s,;:\-]+|[\s,;:\-]+$/g,'').trim();
  if(/\bSan Francisco Earthquake\b/i.test(raw)&&/^California,\s*USA$/i.test(inferred))inferred='San Francisco, California, USA';
+ // A title-only 2011 Tōhoku project still has a known historical region.
+ // Never override an explicit project location or a title-provided region.
+ if(!inferred&&/\bt[oō]hoku\b/i.test(raw)&&/earthquake|tsunami|quake/i.test(raw))inferred='Tōhoku, Japan';
  return {year:String(saved.year||'').trim()||(raw.match(/\b(?:1\d{3}|20\d{2}|2100)\b/)||[])[0]||'',location:String(saved.location||'').trim()||inferred};
 }
 function family(topic){return Object.keys(FAMILIES).find(k=>FAMILIES[k].test(topic))||'generic-evidence';}
@@ -93,6 +96,14 @@ function pollutionRecipe(r,n){
 }
 // Recipes are reusable semantic staging, not new historical claims or panel overrides.
 function recipe(r,f,narration=''){
+ // A narration-grounded calm coastal opening: no premature quake/tsunami imagery.
+ if(r==='normal-world'&&f==='tsunami'&&/\bJapan(?:'s|’s)?\b|\bJapanese\b/i.test(narration)&&/\bcoast(?:al)?\b|\bshore\b/i.test(narration))return {
+  location:'intact street in a northeastern Japanese coastal community before the earthquake; small shops, low-rise homes, level pavement and a distant shoreline, with no shaking, floodwater, rubble or panic',
+  cast:[{id:'adult-1',description:'unnamed adult local shopkeeper in ordinary early-2010s Japanese clothing'}],
+  action:'adult-1 walks two measured steps to a small shop entrance and opens the door once, with feet remaining planted after the door opens',
+  camera:{framing:'human-height medium-wide rear three-quarter street view with the distant coast visible',movement:'lateral-track'},
+  audio:'quiet local coastal street ambience and synchronized soft footsteps; no alarms'
+ };
  if(f==='atmospheric-pollution'){const p=pollutionRecipe(r,narration);if(p)return p;}
  const quiet={location:'quiet representative local setting',cast:[{id:'adult-1',description:'unnamed adult observer'}],action:'adult-1 slowly lowers their head',camera:{framing:'human-height medium-wide',movement:'slow-push-in'},audio:'quiet local ambience'};
  const recipes={

@@ -21,11 +21,9 @@ jobs:
           node --check ner-core5-journal-store.js
           node --check ner-core-5-audit-coordinator.js
           node --test tests/core5-journal-migration.test.cjs tests/core5-audit-duplicate.test.cjs
-      - name: Install Chromium
+      - name: Install browser drivers and reliable Chromium
         run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium
-      - name: Install browser test driver
-        run: npm install --no-save --ignore-scripts puppeteer-core
+          npm install --no-save --package-lock=false playwright@1.62.1 puppeteer-core
+          npx playwright install --with-deps chromium
       - name: Real browser IndexedDB checks
-        run: node tests/core5-journal-browser.cjs
+        run: CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")" node tests/core5-journal-browser.cjs
