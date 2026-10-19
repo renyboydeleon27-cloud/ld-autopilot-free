@@ -47,13 +47,15 @@ function role(n,stage){
  // a cause of the historical earthquake. Require the observance plus meaning.
  if(/\bdisaster prevention day\b/i.test(n)&&/\b(?:designat(?:ed|ion)?|lessons?|generations?|preparedness|commemorat(?:ed|ion)?)\b/i.test(n))return 'legacy';
  if(/parliament.*passed|passed.*(?:act|law)|clean air act/i.test(n))return 'accountability';
+ if(/\b(?:coordinated|international|pacific)\b[^.!?]{0,70}\bwarning system\b/i.test(n))return 'legacy';
  const rules=[['legacy',/decades later|years later|years to achieve|lasting warning|remembrance|memorial|legacy|remember/i],['accountability',/clean air act|passed.*(?:act|law)|responsibility|accountability|preventab|tribunal.*found|negligence/i],['evidence',/tribunal|investigat|evidence|inquiry|report|identified/i],['human-toll',/killed|death toll|fatalities|died/i],['response',/\b(?:aid|relief|outreach|workers|volunteers)\b[^.!?;]{0,45}\b(?:supported|assisted|helped|provided|delivered)\b|\b(?:provided|delivered|received)\b[^.!?;]{0,30}\b(?:aid|relief|support)\b/i],['displacement',/evacuat|fled|displaced|refuge/i],['response',/rescue|aid|medical|outreach|support|care/i],['recovery',/rebuild|recovery|reconstruct/i],['human-impact',/breathing became|difficult to breathe|visibility.*collapsed|buses stopped|polluted air slipped|struck.*school|buried|injur|survivor|symptom|wound/i],['onset',/fog settled|fog thickened|collapsed|erupted|struck|landfall|released|began/i],['aftermath',/cleared the smog|aftermath|mourning|grief/i]];
  return rules.find(([,r])=>r.test(n))?.[0]||(stage==='P1'?'normal-world':'cause-context');
 }
 function chronology(n,eventYear){
  const later=/decades (?:later|after)|years later|generations later|long after|years to achieve|lasting warning/i.test(n),before=/years (?:earlier|before)|before the disaster|flashback/i.test(n),after=/tribunal|inquiry|aftermath|after the disaster|following the disaster|years that followed|deaths afterward/i.test(n);
  const years=[...String(n).matchAll(/\b(?:1\d{3}|20\d{2})\b/g)].map(x=>Number(x[0]));
- const explicit=years.length===1?years[0]:null;
+ const spoken=String(n).match(/\bnineteen sixty[- ]five\b/i);
+ const explicit=years.length===1?years[0]:years.length===0&&spoken?1965:null;
  const relation=explicit!==null?(explicit<eventYear?'before':explicit>eventYear?'later':later?'later':before?'before':after?'after':'event'):later?'later':before?'before':after?'after':'event';
  const sceneYear=explicit!==null&&!(explicit===eventYear&&relation!=='event')?explicit:relation==='event'?eventYear:null;
  return {relation,sceneYear,period:sceneYear!==null?String(sceneYear):relation==='later'?'unspecified later period':relation==='before'?'unspecified earlier period':'unspecified post-event period',basis:n||'Project event year'};
@@ -204,6 +206,26 @@ function validateSequence(specs){
 function familyBoundary(s){
  if(s.family!=='earthquake')return GUARDS[s.family];
  const setting=String(s.location?.setting||'');
+ // Valdivia sequence uses a precise disaster-phase and location boundary,
+ // without making the background narration additional scene actions.
+ if(/\bvaldivia earthquake\b/i.test(s.topic)&&Number(s.eventYear)===1960){
+  const phases={
+   P2:'Mainshock onset: maintain one continuous bounded tremor and stated bracing; no instantly destroyed city, fire, tsunami or unrelated rescue.',
+   P3:'Subduction context is represented by an unlabelled educational illustration. Do not animate literal exposed underground plates, invent a named historical scientist, add symbols, or show active mainshock damage.',
+   P4:'Earthquake impact: only the stated local facade failure and retreat. No instant citywide collapse, fire, tsunami or repeated destruction.',
+   P5:'Infrastructure disruption: keep overhead lines inert, and show only settled blocked access; no live electrocution, spontaneous repair or renewed collapse.',
+   P6:'Post-mainshock coastline alteration: the quay is already subsided. No repeated vertical ground movement, tidal wave or instant return to dry land.',
+   P7:'Tsunami warning phase: show the withdrawn sea and exposed seabed only. No incoming wave, flooding or fresh mainshock.',
+   P8:'Local Queule tsunami arrival: water remains in the lower village; the elevated route stays safe and dry. No unsupported wall-height or instant whole-region flooding.',
+   P9:'Hilo tsunami arrival after Pacific travel: depict only the narrated coastal inundation below the elevated viewpoint. No Chile setting, unsupported timing card, or new earthquake shaking.',
+   P10:'Japan tsunami arrival after Pacific travel: depict coastal flooding only. No Chile setting, renewed mainshock, or giant unsupported wave.',
+   P11:'Lake Riñihue landslide dam aftermath: show an already-blocked outlet and contained rising lake level, not a new moving landslide or dam breach.',
+   P12:'Controlled drainage response: one modest manual digging motion at the channel, no instant channel completion, uncontrolled lake outburst or invented ceremony.',
+   P13:'Human displacement aftermath: show a settled non-graphic refuge and the stated small action; casualty totals remain narration context, not on-screen numbers or visible bodies.',
+   P14:'1965 international warning-system legacy: show a restrained period-appropriate coordination desk action, no text labels, invented officials or ceremony, new tsunami or earthquake.'
+  };
+  if(phases[s.stage])return phases[s.stage];
+ }
  // The preceding day's Concepción-area earthquakes are already over in
  // Valdivia P1. Depict settled damage, not the impending mainshock.
  if(s.stage==='P1'&&s.role==='onset'&&
