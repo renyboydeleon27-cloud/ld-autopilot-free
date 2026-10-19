@@ -15,6 +15,10 @@ test('Original LD V1 accepts calm -> disturbance -> onset and all sixteen stages
  assert.equal(guard.STAGES.length,16);
  assert.equal(r.beats.P1,'Peaceful life before disaster');
 });
+test('a calm morning is a valid peaceful-life P1',()=>{
+ const p={...base,P1:'In May 1960, the town was calm, and neighbors began their ordinary morning routines.'};
+ assert.equal(guard.review(p).ok,true,guard.review(p).issues.join(' | '));
+});
 test('P1 Valdivia premature disaster aftermath is blocked locally',()=>{
  const p={...base,P1:'A day earlier, powerful earthquakes had struck near Concepción, damaging communities. But the worst shock was still to come.'};
  const r=guard.review(p);assert.equal(r.ok,false);assert(r.issues.some(x=>x.startsWith('P1:')),r.issues.join(' | '));
