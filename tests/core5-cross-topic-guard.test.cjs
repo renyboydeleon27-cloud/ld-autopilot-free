@@ -22,7 +22,7 @@ const root=path.resolve(__dirname,'..'),base=require('../ner-core-5.js');
  const context={window:windowObj,document:documentObj,console,queueMicrotask,setTimeout,clearTimeout,Event:class{constructor(type){this.type=type;}}};
  vm.runInNewContext(fs.readFileSync(path.join(root,'ner-app-bootstrap.js'),'utf8'),context,{filename:'ner-app-bootstrap.js'});
  await new Promise(r=>setTimeout(r,10));
- const C=windowObj.NERCore5;assert.equal(C.crossTopicGuardVersion,'1.0.5');
+ const C=windowObj.NERCore5;assert.equal(C.crossTopicGuardVersion,'1.0.6');
  const topic='Great Kantō Earthquake — Tokyo and Yokohama, Japan — 1923';
  const narration='On September 1, 1923, a magnitude 7.9 earthquake struck southern Kantō, violently shaking Japan’s capital and the nearby port city of Yokohama.';
  const stale=base.plan({topic:'Xylazine Crisis — Philadelphia — 2020',stage:'P1',narration:'An outbreak changed daily life.',eventYear:2020,location:'Philadelphia, USA',facts:[]});
