@@ -51,6 +51,12 @@ function diagnostic(c){
 }
 async function journalDiagnostic(c){
  const d=diagnostic(c);if(!manages(c)||protectedPanel(c))return d;
+ // A missing location/scene is a local preflight blocker, not a journal failure.
+ // Never attempt a journal payload inspection until its canonical StageSpec is valid.
+ if(d.status==='LOCAL_PREFLIGHT_BLOCKED'){
+  d.issues.push('Fix the scene using Review Core 5 scene → Fix this stage · FREE, then check again. No audit was sent.');
+  return d;
+ }
  const project=scope(),inputKey=key(c);
  try{
   const p=C.payload(spec(c));
@@ -117,6 +123,24 @@ async function prepare(c,audit){
 async function allowRetry(c){if(protectedPanel(c))throw Error('Approved panels are immutable.');const r=stored(c);if(r?.status!=='REVIEW_REQUIRED'||r.result?.ok!==false)throw Error('Only an incomplete audit request can be explicitly retried; review scene issues first.');const coordinator=window.NERCore5AuditCoordinator;if(coordinator?.inspect){const j=await coordinator.inspect(r.scope,r.payload);if(j.busy||j.conflict||(j.found&&(!j.identityMatch||j.source.includes('legacy')||j.status==='DONE')))throw Error('Journal requires free inspection or recovery first. No reset or audit was sent.');}await coordinator?.reset(r.scope,r.payload);records.delete(c);delete c.dataset.core5Record;window.LDCore?.saveCurrent?.();}
 function approve(c){if(!ready(c))throw Error('Core 5 approval blocked: exact audited prompt is no longer current.');const r=stored(c);persist(c,{...r,status:'APPROVED'});return r.prompt;}
 function reviewSpec(c){const i=inputs(c);return C.plan({...i,spec:null});}
+// Explicit, free, single-stage repair for unaudited drafts. Never overwrite an
+// approved stage, an audited record or another panel. Preserve the old draft.
+function prepareStage(c){
+ if(!manages(c))throw Error('This stage is not in Core 5 Text-to-Video mode.');
+ if(protectedPanel(c))throw Error('Approved panels are immutable.');
+ if(c.dataset.core5Record)throw Error('This stage has a saved audit record. Inspect its journal before changing the scene. No change was made.');
+ const next=reviewSpec(c),valid=C.validate(next);
+ if(!valid.ok)throw Error('Free scene repair requires a valid event year and location: '+valid.issues.join(' '));
+ const i=inputs(c),before={scene:i.legacyScene,spec:c.dataset.core5Spec||'',record:c.dataset.core5Record||''};
+ if(before.scene||before.spec){
+  let history=[];try{history=JSON.parse(c.dataset.core5SceneHistory||'[]');if(!Array.isArray(history))history=[];}catch{}
+  history.push(before);c.dataset.core5SceneHistory=JSON.stringify(history);
+  if(before.scene&&!c.dataset.core5LegacyScene)c.dataset.core5LegacyScene=before.scene;
+ }
+ setSpec(c,next);write(c,C.compile(next));
+ window.LDCore?.saveCurrent?.();
+ return next;
+}
 function reviewIdentity(c,s){const i=inputs(c);return s.stage===i.stage&&s.topic===i.topic&&s.narration===i.narration&&s.eventYear===Number(i.eventYear)&&s.location?.region===i.location;}
 function applyReview(c,s){
  if(protectedPanel(c))throw Error('Approved panels are immutable.');
@@ -161,5 +185,5 @@ function attachVideoModes(api){
  return api;
 }
 function owns(c){return protectedPanel(c)||manages(c);}
-window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,diagnostic,journalDiagnostic,recoverJournal,archiveIncompleteJournal,planEpisode,prepareEpisode,refineScene,reviewSpec,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
+window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,diagnostic,journalDiagnostic,recoverJournal,archiveIncompleteJournal,planEpisode,prepareEpisode,refineScene,reviewSpec,prepareStage,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
 })();
