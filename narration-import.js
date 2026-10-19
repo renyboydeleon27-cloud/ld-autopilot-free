@@ -54,9 +54,9 @@
   P12:'Aftermath / response',P13:'Recovery / aftermath',
   P14:'Historical legacy',ENDING:'Approved CTA'
  });
- const CALM=/\b(?:peaceful|quiet|ordinary|everyday|daily|normal|famil(?:y|ies)|children|school|market|routine|worked|working|residents|villagers|fishermen|commuters|life continued|life moved)\b/i;
+ const CALM=/\b(?:peaceful(?:ly)?|quiet|ordinary|everyday|daily|normal|famil(?:y|ies)|children|school|market|routine|worked|working|residents|villagers|fishermen|commuters|life continued|life moved)\b/i;
  const EARLY_DAMAGE=/\b(?:earthquakes? (?:had )?struck|shaking (?:began|hit)|already[- ]damaged|(?:homes?|buildings?|communities|streets?|towns?) (?:were|had been) (?:damaged|destroyed|flattened)|aftershocks?|aftermath|rubble|ruins|collapsed (?:houses|homes|buildings)|disaster (?:struck|hit|began))\b/i;
- const WARNING=/\b(?:first|warning|unusual|disturb|tremor|foreshock|quake|earthquake|shak(?:e|ing)|rumbl|fault|seismic|crack|storm|darken|smoke|wind|rain|water|danger|threat|pressure|ash|fire|waves?|surge|approach|collapse|outbreak|began)\b/i;
+ const WARNING=/\b(?:first|warning|unusual|disturb|tremor|foreshock|quake|earthquakes?|shak(?:e|ing)|rumbl|fault|seismic|crack|storm|darken|smoke|wind|rain|water|danger|threat|pressure|ash|fire|waves?|surge|approach|collapse|outbreak|began)\b/i;
  const ONSET=/\b(?:struck|hit|began|begins|ruptur\w*|unleash\w*|collaps\w*|erupt\w*|explod\w*|surg\w*|swept|reached|broke|landfall|released|flooded|touched down|made landfall|tore through|slammed)\b/i;
  function reviewOriginalV1(parts){
   const p=parts||{},issues=[],warnings=[];
