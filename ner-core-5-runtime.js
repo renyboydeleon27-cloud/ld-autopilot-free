@@ -129,6 +129,8 @@ function prepareStage(c){
  if(!manages(c))throw Error('This stage is not in Core 5 Text-to-Video mode.');
  if(protectedPanel(c))throw Error('Approved panels are immutable.');
  if(c.dataset.core5Record)throw Error('This stage has a saved audit record. Inspect its journal before changing the scene. No change was made.');
+ // Repeat taps must not replace a valid reviewed scene or duplicate backups.
+ if(c.dataset.core5Spec){const existing=preflight(c);if(existing.ok)return existing.spec;}
  const next=reviewSpec(c),valid=C.validate(next);
  if(!valid.ok)throw Error('Free scene repair requires a valid event year and location: '+valid.issues.join(' '));
  const i=inputs(c),before={scene:i.legacyScene,spec:c.dataset.core5Spec||'',record:c.dataset.core5Record||''};
