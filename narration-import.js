@@ -72,9 +72,16 @@
   if(String(p.P14||'').trim().length<25)warnings.push('P14: review whether the final narration gives a meaningful historical conclusion.');
   return {version:STORY_VERSION,ok:issues.length===0,issues,warnings,beats:BEATS};
  }
+ // Negative render constraints such as "no shaking, floodwater, rubble or panic"
+ // describe what the model MUST NOT show. A prohibition is not scene evidence.
+ // Stop at a sentence or contrast ("but", "however") so real positive damage
+ // later in the scene remains blocked by the exact same safety rule.
+ function positiveSceneClaims(scene){
+  return String(scene||'').replace(/\b(?:no|without|free of|absence of|avoid(?:ing)?|never show|do not (?:show|include|depict|generate|add))\s+(?:(?!(?:but|yet|however|although)\b)[^.;:\n]){0,130}/gi,' ');
+ }
  function sceneIssues(stage,narration,scene){
-  const issues=[],s=String(scene||'');
-  if(stage==='P1'&&/\b(?:already[- ]damaged|ruins?|rubble|wreckage|settled debris|collapsed (?:buildings|houses|homes|walls)|shattered buildings|destroyed buildings|falling masonry|active shaking)\b/i.test(s)){
+  const issues=[],s=String(scene||''),positive=positiveSceneClaims(s);
+  if(stage==='P1'&&/\b(?:already[- ]damaged|ruins?|rubble|wreckage|settled debris|collapsed (?:buildings|houses|homes|walls)|shattered buildings|destroyed buildings|falling masonry|active shaking)\b/i.test(positive)){
    issues.push('P1: the scene shows disaster damage or shaking, but Original LD V1 requires a peaceful intact setting.');
   }
   if(stage==='P3'&&/\b(?:peaceful (?:life|street|village)|quiet everyday|intact ordinary street with no shaking)\b/i.test(s)&&!/\b(?:ruptur|struck|surge|eruption|collapse)\b/i.test(s)){
