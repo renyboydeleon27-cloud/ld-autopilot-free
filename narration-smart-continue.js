@@ -94,6 +94,12 @@
   }
   function approveNarration(){
     if(!narrationReady())return false;
+    const guard=window.LDNarrationImport?.storyLock;
+    if(window.ldNarrativeFormat==='original'&&guard?.active(topic(),format())){
+      const imported=Object.fromEntries(['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'].map(stage=>[stage,value(stageCard(stage),'.narration')]));
+      const check=guard.review(imported);
+      if(!check.ok){status('Story Lock HOLD · '+check.issues.join(' · '),'error');return false;}
+    }
     const a={version:'3.0',topic:topic(),format:format(),signature:narrationSignature(),approvedAt:new Date().toISOString(),narrations:Object.fromEntries(['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'].map(stage=>[stage,value(stageCard(stage),'.narration')]))};
     // Approval and script are one durable write, independent of the larger project save.
     try{localStorage.setItem(approvalKey(),JSON.stringify(a));
@@ -337,8 +343,26 @@
   const importHelp=document.createElement('p');importHelp.textContent='Paste labeled HOOK, P1: through P14:, and ENDING sections, then press OK to distribute and approve. HOOK narration is required, even when the Flow prompt says NO VO. ENDING always uses the standard channel CTA automatically. Your previous narration is backed up.';
   const importInput=document.createElement('textarea');importInput.rows=10;importInput.style.width='100%';importInput.placeholder='HOOK: ...\nP1: ...\nP2: ...\n...\nP14: ...';importInput.setAttribute('aria-label','Paste full narration');
   const approveImport=document.createElement('button');approveImport.type='button';approveImport.className='primary';approveImport.textContent='OK';
+  const previewImport=document.createElement('button');previewImport.type='button';previewImport.className='ghost small';previewImport.textContent='FREE CHECK STORY LOCK';
+  const importPreview=document.createElement('p');importPreview.setAttribute('role','status');
   const importMessage=document.createElement('p');importMessage.setAttribute('role','status');
-  importBox.append(importTitle,importHelp,importInput,approveImport,importMessage);controls.insertBefore(importBox,controls.firstChild);
+  importBox.append(importTitle,importHelp,importInput,previewImport,importPreview,approveImport,importMessage);controls.insertBefore(importBox,controls.firstChild);
+  function shouldCheckOriginalV1(){return window.ldNarrativeFormat==='original'&&(window.ldProductionCategory||'disaster')==='disaster'&&format()==='shorts';}
+  function checkImport(parsed){
+    if(!shouldCheckOriginalV1())return null;
+    const check=window.LDNarrationImport.storyLock.review(parsed);
+    if(!check.ok)throw Error('STORY LOCK HOLD (FREE) · '+check.issues.join(' · '));
+    return check;
+  }
+  previewImport.addEventListener('click',()=>{
+    try{
+      const parsed=window.LDNarrationImport.parse(importInput.value,{silentHook:hookIsSilent(stageCard('HOOK'))});
+      const result=checkImport(parsed);
+      importPreview.textContent=result
+        ?'PASS · '+result.version+' · '+['HOOK','P1','P2','P3','P14'].map(stage=>stage+' '+result.beats[stage]).join(' | ')+' · P4–P13 follow approved historical narration. No API credits used.'
+        :'Narration labels valid. Original LD V1 story lock applies to disaster Shorts only. No API credits used.';
+    }catch(e){importPreview.textContent=e.message;}
+  });
   window.addEventListener('ld:production-built',()=>{importInput.value='';importMessage.textContent='';});
   approveImport.addEventListener('click',()=>{
     let changed=false;
@@ -350,12 +374,19 @@
       const silentHook=hookIsSilent(stageCard('HOOK'));
       const parsed=window.LDNarrationImport.parse(importInput.value,{silentHook});
       for(const stage of Object.keys(parsed))if(!stageCard(stage)?.querySelector('.narration'))throw Error('Missing production panel: '+stage);
+      const checked=checkImport(parsed);
+      for(const [stage,line] of Object.entries(parsed)){
+        const c=stageCard(stage),locked=!!(c?.querySelector('.done-toggle')?.checked||window.NERCore5Runtime?.protectedPanel?.(c)||window.LDCore?.isApprovalCommitted?.(stage));
+        const previous=String(c?.querySelector('.narration')?.value||'').trim();
+        if(locked&&previous!==line)throw Error(stage+': approved panel cannot be overwritten by narration import. Existing project preserved.');
+      }
       saveBackup();changed=true;clearApproval();
       for(const [stage,line] of Object.entries(parsed))setNarration(stageCard(stage),line);
       btn.dataset.generated='1';
       if(!approveNarration())throw Error('Import could not be approved.');
+      if(checked)window.LDNarrationImport.storyLock.activate(topic(),format());
       undo?.classList.remove('hidden');refreshApprovalUi();
-      importMessage.textContent='Done — narration distributed to HOOK, P1–P14 and ENDING, and approved. '+(silentHook?'HOOK kept silent. ':'')+'Standard channel ending applied. No AI call was made.';
+      importMessage.textContent='Done — narration distributed to HOOK, P1–P14 and ENDING, and approved. '+(checked?'Original LD V1 Story Lock active. ':'')+(silentHook?'HOOK kept silent. ':'')+'Standard channel ending applied. No AI call was made.';
       window.dispatchEvent(new CustomEvent('ld:narration-smart-complete',{detail:{topic:topic(),source:'manual-import',silentHook}}));
     }catch(e){
       if(changed){restoreBackup();clearApproval();refreshApprovalUi();}
@@ -469,6 +500,7 @@
     // Save the currently reviewed script before any approved rebuild, then invalidate approval.
     if(isApproved())saveBackup();
     clearApproval();
+    window.LDNarrationImport?.storyLock?.clear(topic(),format());
     btn.dataset.generated='0';
 
     const currentTopic=topic();
