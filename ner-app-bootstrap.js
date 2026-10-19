@@ -12,7 +12,7 @@
  const shell=document.querySelector('main');if(shell)shell.inert=true;
  function installCore5CrossTopicGuard(){
   const base=window.NERCore5;if(!base||base.crossTopicGuardVersion)return;
-  const VERSION='1.0.6';
+  const VERSION='1.0.7';
   const placeholder=/supported (?:warning|hazard|contextual feature)|narrated (?:cause|onset|warning|non-graphic impact)/i;
   const staleFamilyText=/\b(?:public-health crisis|xylazine|zombie drug|atmospheric-pollution|great smog|coal smoke)\b/i;
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
@@ -122,6 +122,21 @@
   }
   // Recognize only previously auto-selected placeholder or known generic
   // templates. Never silently overwrite a customized reviewed scene.
+
+  // The previous release dropped sceneRegion while hydrating a reviewed
+  // StageSpec. Repair only exact generated Valdivia sites; edited drafts
+  // and completed approvals remain immutable.
+  function missingValdiviaSite(spec,input){
+   const expected=valdiviaBeat(input);
+   if(!expected?.sceneRegion||!spec||spec.location?.sceneRegion)return false;
+   return spec.location?.setting===expected.location&&
+    spec.cast?.length===1&&spec.cast[0]?.id==='adult-1'&&
+    spec.cast[0]?.description===expected.cast[0].description&&
+    spec.action?.actor==='adult-1'&&spec.action?.description===expected.action&&
+    spec.camera?.movement===expected.camera.movement&&
+    spec.camera?.framing===expected.camera.framing&&
+    spec.audio===expected.audio;
+  }
   function staleValdiviaGenerated(spec,input){
    if(!spec||!valdiviaBeat(input))return false;
    const place=String(spec.location?.setting||''),action=String(spec.action?.description||'');
@@ -182,7 +197,8 @@
    const s=base.clone(base.plan({...input,spec:null}));
    if(keep){
     if(incoming.chronology)s.chronology=base.clone(incoming.chronology);
-    if(incoming.location)s.location={region:String(input.location||''),setting:String(incoming.location.setting||s.location.setting)};
+    if(incoming.location)s.location={region:String(input.location||''),setting:String(incoming.location.setting||s.location.setting),...(incoming.location.sceneRegion?{sceneRegion:String(incoming.location.sceneRegion)}:{})};
+    if(missingValdiviaSite(incoming,input))s.location.sceneRegion=valdiviaBeat(input).sceneRegion;
     if(Array.isArray(incoming.cast))s.cast=base.clone(incoming.cast);
     if(incoming.action)s.action=base.clone(incoming.action);
     if(incoming.camera)s.camera=base.clone(incoming.camera);
@@ -200,7 +216,7 @@
    s.schema=5;s.compilerVersion=base.VERSION;s.stage=input.stage;s.topic=input.topic;s.family=fam;s.narration=String(input.narration||'');s.eventYear=Number(input.eventYear);s.location={...(s.location||{}),region:String(input.location||'')};s.source={kind:'narration-derived-representative-staging',narration:String(input.narration||'')};
    return base.deepFreeze(s);
   }
-  const patched=base.deepFreeze({...base,metadata,plan,misroutedEvacuation,missingP8Site,misroutedInfrastructure,misdatedEarthquakeTemplate,valdiviaBeat,staleValdiviaGenerated,crossTopicGuardVersion:VERSION});
+  const patched=base.deepFreeze({...base,metadata,plan,misroutedEvacuation,missingP8Site,misroutedInfrastructure,misdatedEarthquakeTemplate,valdiviaBeat,staleValdiviaGenerated,missingValdiviaSite,crossTopicGuardVersion:VERSION});
   window.NERCore5=patched;
   function repairStaleScene(card){
    const R=window.NERCore5Runtime;if(!R?.manages?.(card)||R.protectedPanel(card))return false;
@@ -217,8 +233,9 @@
    const staleP9=misroutedInfrastructure(oldSpec,{topic,stage:card.dataset.stage,narration});
    const staleYear=misdatedEarthquakeTemplate(oldSpec,{topic,stage:card.dataset.stage,narration,eventYear:metadata(topic,{}).year});
    const staleValdivia=staleValdiviaGenerated(oldSpec,{topic,stage:card.dataset.stage,narration,eventYear:metadata(topic,{}).year});
+   const missingPlace=missingValdiviaSite(oldSpec,{topic,stage:card.dataset.stage,narration,eventYear:metadata(topic,{}).year});
    const valdiviaLegacy=!oldSpec&&!!valdiviaBeat({topic,stage:card.dataset.stage,narration,eventYear:metadata(topic,{}).year})&&placeholder.test(legacy);
-   if(!staleSpec&&!staleFamilyText.test(legacy)&&!mistakenReconstruction&&!staleP5&&!staleP9&&!staleYear&&!staleValdivia&&!valdiviaLegacy)return false;
+   if(!staleSpec&&!staleFamilyText.test(legacy)&&!mistakenReconstruction&&!staleP5&&!staleP9&&!staleYear&&!staleValdivia&&!valdiviaLegacy&&!missingPlace)return false;
    // An audited panel may already have a DONE IndexedDB journal. Do not
    // invalidate its paid record or silently create a second audit obligation.
    // Leave it for explicit review and the existing free journal-archive flow.
