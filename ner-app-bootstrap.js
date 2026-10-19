@@ -12,7 +12,7 @@
  const shell=document.querySelector('main');if(shell)shell.inert=true;
  function installCore5CrossTopicGuard(){
   const base=window.NERCore5;if(!base||base.crossTopicGuardVersion)return;
-  const VERSION='1.0.5';
+  const VERSION='1.0.6';
   const placeholder=/supported (?:warning|hazard|contextual feature)|narrated (?:cause|onset|warning|non-graphic impact)/i;
   const staleFamilyText=/\b(?:public-health crisis|xylazine|zombie drug|atmospheric-pollution|great smog|coal smoke)\b/i;
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
@@ -77,6 +77,71 @@
      spec.camera.movement==='lateral-track'&&spec.audio==='soft footsteps and ordinary street ambience')
    );
   }
+
+  // Valdivia (1960): narration-driven sequence contract for the 13 unapproved
+  // panels. Keep the already approved P1 entirely outside this path.
+  function valdiviaBeat(input){
+   if(!/valdivia earthquake/i.test(String(input.topic||''))||Number(input.eventYear)!==1960)return null;
+   const n=String(input.narration||'').toLowerCase(),stage=input.stage;
+   const cue={
+    P2:/magnitude nine.point.five|three.eleven.*afternoon|ruptured southern chile/,
+    P3:/nazca plate|beneath the coast|massive fault/,
+    P4:/violent shaking|split roads|toppled buildings/,
+    P5:/electricity and communications|damaged roads|shattered neighborhoods/,
+    P6:/changed the coastline|land rose|areas sank/,
+    P7:/sea pulled away|sudden retreat/,
+    P8:/queule|coastal villages.*tsunami/,
+    P9:/hilo|hawaii.*waves|crossed the pacific/,
+    P10:/japan was struck|waves kept traveling/,
+    P11:/riñihue|landslides blocked.*lake/,
+    P12:/drainage channels|engineers.*volunteers/,
+    P13:/two million.*homeless|death tolls varied/,
+    P14:/nineteen sixty.five|coordinated warning system/
+   };
+   if(!cue[stage]?.test(n))return null;
+   const make=(location,action,audio,move='slow-push-in',frame='eye-level medium-wide',sceneRegion)=>({
+    location,cast:[{id:'adult-1',description:'unnamed adult resident or worker in clothing appropriate to the scene period'}],
+    action,camera:{framing:frame,movement:move},audio,...(sceneRegion?{sceneRegion}:{})
+   });
+   const scenes={
+    P2:()=>make('1960 Valdivia urban street during the narrated mainshock, one facade visibly trembling while loose rooftop tiles shift but the structure remains standing','adult-1 braces one hand against a solid doorframe as the street shakes','restrained structural rattling and loose tile movement'),
+    P3:()=>make('representative 1960 Chile indoor educational setting with one plain unlabelled paper cross-section depicting two overlapping geological layers; an illustrative model, not literal visible underground footage','adult-1 traces one finger along the lower overlapping layer of the unlabelled cross-section','quiet indoor paper rustle','locked','eye-level medium'),
+    P4:()=>make('1960 Valdivia street during the mainshock with one already-weakened period facade shedding a small section of masonry beside a visibly cracked road','adult-1 steps once backward to clear the falling debris from a safe visible path','localized masonry fall and deep earthquake rumble','slow-pull-back'),
+    P5:()=>make('1960 Chile damaged urban street with one fallen telephone pole blocking an intact walking edge; snapped unenergized overhead lines hang still','adult-1 stops at the safe side of the blocked road and looks across it','subdued damaged-street ambience','locked'),
+    P6:()=>make('settled 1960 southern Chile coastal neighborhood with a visibly subsided quay partially flooded by still water and nearby higher ground, after the mainshock','adult-1 stops at the edge of stable higher ground and looks toward the waterlogged quay','light still-water lapping and restrained coast ambience','slow-pull-back'),
+    P7:()=>make('1960 Chile coast before tsunami arrival, exposed seabed and stranded small boats visible far below a dry elevated path as the sea has retreated','adult-1 stops on the elevated path and turns their gaze toward the exposed seabed','distant receding-water hush and coastal wind','locked'),
+    P8:()=>make('1960 Queule coastal village seen from a rising uphill lane, with supported tsunami floodwater pushing into low houses below while the upper lane remains dry','adult-1 takes one deliberate step uphill away from the inundated lower village','distant forceful water and running runoff','slow-pull-back','eye-level medium-wide','Queule, Chile'),
+    P9:()=>make('1960 Hilo, Hawaii coastal district with a tsunami surge pushing inland across a low waterfront road beneath a safely elevated hillside viewpoint','adult-1 steps back from the safe viewpoint railing while watching the water below','rushing water and distant coastal debris movement','slow-pull-back','eye-level medium-wide','Hilo, Hawaii, USA'),
+    P10:()=>make('1960 coastal Japan, one low waterfront street partly inundated by tsunami water with a safely raised walking path overlooking the damage','adult-1 turns slowly toward the flooded waterfront from the higher path','distant breaking surf and water movement','locked','eye-level medium-wide','Coastal Japan'),
+    P11:()=>make('1960 Lake Riñihue outlet in southern Chile, a landslide debris barrier visibly holding elevated lake water, seen from stable dry ground above the blockage','adult-1 comes to a stop on firm high ground and looks toward the blocked outlet','quiet lake-water ambience and settled hillside gravel','slow-push-in','eye-level medium-wide','Lake Riñihue, Southern Chile'),
+    P12:()=>make('1960 Lake Riñihue drainage works on a stable bank beside a narrow unfinished hand-dug drainage channel; no sudden outburst or machinery invention','adult-1 moves one small shovelful of loose earth to the nearby spoil pile','restrained shovel scrape and running channel water','locked','eye-level medium-wide','Lake Riñihue, Southern Chile'),
+    P13:()=>make('settled 1960 southern Chile neighborhood of damaged homes, with one intact plain emergency blanket near a temporary roofed refuge; no bodies or visible numerical tally','adult-1 gently folds the plain blanket beside the safe shelter','quiet recovery-area ambience','locked'),
+    P14:()=>make('representative 1965 Pacific tsunami warning coordination office with a plain unlabelled coast map, period radio equipment and no readable labels or screens','adult-1 places one unmarked paper report on the communications desk','quiet radio static and paper rustle','locked','eye-level medium-wide','Representative Pacific warning-system office')
+   };
+   return scenes[stage]?.()||null;
+  }
+  // Recognize only previously auto-selected placeholder or known generic
+  // templates. Never silently overwrite a customized reviewed scene.
+  function staleValdiviaGenerated(spec,input){
+   if(!spec||!valdiviaBeat(input))return false;
+   const place=String(spec.location?.setting||''),action=String(spec.action?.description||'');
+   if(placeholder.test(place+' '+action))return true;
+   const auto=[
+    ['representative 1960 urban interior with a low table and period-appropriate household objects visibly shaking while the main structure remains intact','adult-1 braces one hand against the low table as the room shakes'],
+    ['damaged local street beside a blocked period transport route with broken infrastructure visible but settled','adult-1 stops at the blocked route and looks across the obstruction'],
+    ['coastal road above the shoreline with abnormal tsunami inundation moving inland below, only at the level stated by the narration','adult-1 takes one controlled step away from the waterfront edge'],
+    ['safe viewpoint toward a settled landslide debris zone with damaged homes in the distance and no active renewed collapse','adult-1 stops at the safe edge of the debris zone and looks toward the blocked route'],
+    ['organized non-graphic relief area among settled earthquake damage','adult-1 carries one closed plain supply box to a nearby stable table'],
+    ['representative later-period community preparedness setting with no readable signs or text','adult-1 pauses beside a plain emergency-supply cabinet and looks toward it']
+   ];
+   const legacyDefault=base.plan({...input,spec:null});
+   const untouchedDefault=place===legacyDefault.location.setting&&
+    action===legacyDefault.action.description&&
+    spec.audio===legacyDefault.audio&&
+    spec.camera?.movement===legacyDefault.camera.movement&&
+    spec.camera?.framing===legacyDefault.camera.framing;
+   return !spec.location?.sceneRegion&&(untouchedDefault||auto.some(([p,a])=>place===p&&action===a));
+  }
   function earthquakeScene(narration,role,stage,eventYear){
    const n=String(narration||'').toLowerCase();
    const cast=[{id:'adult-1',description:'unnamed adult resident in clothing appropriate to the scene period'}];
@@ -91,7 +156,7 @@
       'quiet post-shock street ambience','slow-push-in');
    if(stage==='ENDING')return make('quiet reflective local setting after the historical event','adult-1 stands at rest','quiet reflective ambience','locked');
    if(/false rumors|rumou?rs|killings of koreans|chinese.*japanese|discrimination|misinformation/.test(n))return make('quiet non-graphic street aftermath representing fear and social violence, with no attack, bodies, ethnic caricature or invented ceremony','adult-1 comes to a stop beside a closed doorway and lowers their gaze','quiet street ambience');
-   if(/disaster prevention day|1960|lessons? for generations|preserving.*lessons?/.test(n))return make('representative later-period community preparedness setting with no readable signs or text','adult-1 pauses beside a plain emergency-supply cabinet and looks toward it','quiet indoor ambience','locked','eye-level medium view');
+   if(/disaster prevention day|lessons? for generations|preserving.*lessons?/.test(n))return make('representative later-period community preparedness setting with no readable signs or text','adult-1 pauses beside a plain emergency-supply cabinet and looks toward it','quiet indoor ambience','locked','eye-level medium view');
    if(/reconstruct|rebuild safer|(?:new|rebuilt|repaired) (?:roads|bridges|parks|schools)/.test(n))return make('representative reconstruction work area with one partly rebuilt street edge and period-appropriate materials','adult-1 places one small paving stone into an unfinished street edge','restrained work-site ambience','lateral-track');
    if(/relief|volunteers|outside aid|rail links.*return|electricity.*return/.test(n))return make('organized non-graphic relief area among settled earthquake damage','adult-1 carries one closed plain supply box to a nearby stable table','subdued relief-area ambience','lateral-track');
    if(/105[, ]?000|killed or left missing|deadliest|most of the deaths|fire caused most/.test(n))return make('settled burned urban aftermath with damaged period buildings and no visible bodies','adult-1 slowly lowers their head while standing at a safe street edge','quiet aftermath ambience');
@@ -113,7 +178,7 @@
    return null;
   }
   function plan(input){
-   const fam=base.family(input.topic),incoming=input.spec,keep=identityMatches(incoming,input,fam)&&!misroutedEvacuation(incoming,input)&&!missingP8Site(incoming,input)&&!misroutedInfrastructure(incoming,input)&&!misdatedEarthquakeTemplate(incoming,input);
+   const fam=base.family(input.topic),incoming=input.spec,keep=identityMatches(incoming,input,fam)&&!misroutedEvacuation(incoming,input)&&!missingP8Site(incoming,input)&&!misroutedInfrastructure(incoming,input)&&!misdatedEarthquakeTemplate(incoming,input)&&!staleValdiviaGenerated(incoming,input);
    const s=base.clone(base.plan({...input,spec:null}));
    if(keep){
     if(incoming.chronology)s.chronology=base.clone(incoming.chronology);
@@ -127,7 +192,7 @@
    }
    const needsConcrete=placeholder.test([s.location?.setting,s.action?.description].join(' '));
    if(fam==='earthquake'&&(!keep||needsConcrete)){
-    const scene=earthquakeScene(input.narration,s.role,input.stage,input.eventYear);
+    const scene=valdiviaBeat(input)||earthquakeScene(input.narration,s.role,input.stage,input.eventYear);
     if(scene){s.location={region:String(input.location||''),setting:scene.location,...(scene.sceneRegion?{sceneRegion:scene.sceneRegion}:{})};s.cast=scene.cast;s.action={actor:'adult-1',description:scene.action};s.camera=scene.camera;s.audio=scene.audio;delete s.choreography;}
    }
    // Current project identity always wins over a saved StageSpec. Reviewed scene
@@ -135,7 +200,7 @@
    s.schema=5;s.compilerVersion=base.VERSION;s.stage=input.stage;s.topic=input.topic;s.family=fam;s.narration=String(input.narration||'');s.eventYear=Number(input.eventYear);s.location={...(s.location||{}),region:String(input.location||'')};s.source={kind:'narration-derived-representative-staging',narration:String(input.narration||'')};
    return base.deepFreeze(s);
   }
-  const patched=base.deepFreeze({...base,metadata,plan,misroutedEvacuation,missingP8Site,misroutedInfrastructure,misdatedEarthquakeTemplate,crossTopicGuardVersion:VERSION});
+  const patched=base.deepFreeze({...base,metadata,plan,misroutedEvacuation,missingP8Site,misroutedInfrastructure,misdatedEarthquakeTemplate,valdiviaBeat,staleValdiviaGenerated,crossTopicGuardVersion:VERSION});
   window.NERCore5=patched;
   function repairStaleScene(card){
    const R=window.NERCore5Runtime;if(!R?.manages?.(card)||R.protectedPanel(card))return false;
@@ -151,7 +216,9 @@
    const staleP5=misroutedEvacuation(oldSpec,{topic,stage:card.dataset.stage,narration});
    const staleP9=misroutedInfrastructure(oldSpec,{topic,stage:card.dataset.stage,narration});
    const staleYear=misdatedEarthquakeTemplate(oldSpec,{topic,stage:card.dataset.stage,narration,eventYear:metadata(topic,{}).year});
-   if(!staleSpec&&!staleFamilyText.test(legacy)&&!mistakenReconstruction&&!staleP5&&!staleP9&&!staleYear)return false;
+   const staleValdivia=staleValdiviaGenerated(oldSpec,{topic,stage:card.dataset.stage,narration,eventYear:metadata(topic,{}).year});
+   const valdiviaLegacy=!oldSpec&&!!valdiviaBeat({topic,stage:card.dataset.stage,narration,eventYear:metadata(topic,{}).year})&&placeholder.test(legacy);
+   if(!staleSpec&&!staleFamilyText.test(legacy)&&!mistakenReconstruction&&!staleP5&&!staleP9&&!staleYear&&!staleValdivia&&!valdiviaLegacy)return false;
    // An audited panel may already have a DONE IndexedDB journal. Do not
    // invalidate its paid record or silently create a second audit obligation.
    // Leave it for explicit review and the existing free journal-archive flow.
