@@ -406,3 +406,63 @@ test('Tōhoku P5 customized, audited and approved scenes must not be rewritten b
  assert.equal(JSON.stringify(p5),approved);
  assert.equal(b.calls(),1);
 });
+
+
+test('Tōhoku P5 matching old AUDITED DONE can be archived and rebuilt FREE without touching P4 or Master DNA',async()=>{
+ const b=boot(),p4=b.card('P4'),p5=b.card('P5');
+ const topic='2011 Tōhoku Earthquake and Tsunami — Japan';
+ b.nodes.topic.value=topic;b.window.ldVideoContinuity={year:'2011',location:'Tōhoku, Japan'};
+ const narration='Authorities issued tsunami warnings. Along the coastline, people fled toward higher ground as dangerous waves approached.';
+ p5.fields['.narration'].value=narration;
+ p4.fields['.done-toggle'].checked=true;p4.fields['.text-video-prompt'].value='P4 APPROVED EXACT PROMPT';const p4Before=JSON.stringify(p4);
+ const old=C.clone(b.r.reviewSpec(p5));
+ old.location.setting='visible local route toward shelter';
+ old.cast=[{id:'adult-1',description:'unnamed adult observer'}];
+ old.action={actor:'adult-1',description:'adult-1 walks steadily to a visible sheltered threshold'};
+ old.camera={framing:'human-height medium-wide',movement:'slow-push-in'};
+ old.audio='quiet local ambience';delete old.choreography;
+ old.timing=[{start:0,end:2,phase:'establish'},{start:2,end:6,phase:'action'},{start:6,end:10,phase:'hold'}];
+ assert.equal(C.validate(old).ok,true);
+ b.r.setSpec(p5,old);
+ const prompt=C.compile(old);
+ p5.fields['.text-video-prompt'].value=prompt;p5.dataset.textVideoPrompt=prompt;
+ const meta=C.metadata(topic,b.window.ldVideoContinuity);
+ const inputKey=C.stable({scope:b.r.scope(),topic,stage:'P5',narration,eventYear:meta.year,location:meta.location,
+  legacyScene:p5.fields['.video-scene'].value,spec:JSON.parse(p5.dataset.core5Spec)});
+ const audit={ok:true,result:'PASS',issues:[]},tx=C.transaction(C.payload(old),audit);
+ p5.dataset.core5Record=JSON.stringify({...tx,inputKey,scope:b.r.scope()});
+ assert.equal(b.r.canReviseAuditedP5(p5),true);
+ let calls=0;
+ b.window.NERCore5AuditCoordinator={archiveMatchingDone:async(project,payload,token,stillCurrent)=>{
+  calls++;assert.equal(project,b.r.scope());assert.equal(payload.currentPrompt,prompt);assert.equal(token,'confirmed-done-token');
+  assert.equal(stillCurrent(),true);
+  return 'archived-original-p5';
+ }};
+ const review={found:true,identityMatch:true,recoverable:true,conflict:false,busy:false,status:'DONE',reviewToken:'confirmed-done-token'};
+ assert.equal(b.r.preflight(p5).ok,false);
+ const result=await b.r.reviseAuditedP5(p5,review);
+ assert.match(result,/archived.*FREE/);assert.match(result,/no API call sent/i);
+ assert.equal(calls,1);assert.equal(b.calls(),0);assert.equal(b.r.canReviseAuditedP5(p5),false);
+ const history=JSON.parse(p5.dataset.core5SceneHistory);
+ assert.equal(history.length,1);assert.equal(history[0].record,JSON.stringify({...tx,inputKey,scope:b.r.scope()}));
+ assert.equal(history[0].prompt,prompt);assert.equal(history[0].spec,JSON.stringify(old));
+ assert.equal(p5.dataset.core5Record,undefined);
+ assert.match(b.r.spec(p5).location.setting,/dry, clearly uphill coastal evacuation lane/);
+ assert.equal(b.r.preflight(p5).ok,true);assert.match(p5.fields['.text-video-prompt'].value,/hurries forward up/);
+ assert.equal(JSON.stringify(p4),p4Before);
+ await assert.rejects(b.r.reviseAuditedP5(p5,review),/unchanged, unapproved/);
+ assert.equal(calls,1);
+});
+test('P5 audit revision cannot archive customized, approved, mismatched or uncertain records',async()=>{
+ const b=boot(),p5=b.card('P5');
+ const topic='2011 Tōhoku Earthquake and Tsunami — Japan';
+ b.nodes.topic.value=topic;b.window.ldVideoContinuity={year:'2011',location:'Tōhoku, Japan'};
+ p5.fields['.narration'].value='Authorities issued tsunami warnings. Along the coastline, people fled toward higher ground as dangerous waves approached.';
+ const s=C.clone(b.r.reviewSpec(p5));b.r.setSpec(p5,s);
+ assert.equal(b.r.canReviseAuditedP5(p5),false);
+ const review={found:true,identityMatch:true,recoverable:true,conflict:false,busy:false,status:'DONE',reviewToken:'token'};
+ await assert.rejects(b.r.reviseAuditedP5(p5,review),/Only the unchanged/);
+ assert.equal(b.calls(),0);
+ p5.fields['.done-toggle'].checked=true;await assert.rejects(b.r.reviseAuditedP5(p5,review),/Only the unchanged/);
+ assert.equal(b.calls(),0);
+});

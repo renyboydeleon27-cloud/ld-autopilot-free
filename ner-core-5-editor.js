@@ -27,19 +27,21 @@ function attach(card){
    archiveStale:'⚠️ ARCHIVE OLD '+s+' JOURNAL · FREE FIRST',
    archiveIncomplete:'⚠️ ARCHIVE INCOMPLETE '+s+' JOURNAL FIRST',
    recover:'♻️ RECOVER SAVED AUDIT · FREE FIRST',
+   revise:'♻️ ARCHIVE OLD P5 AUDIT → REBUILD FREE',
    busy:'⏳ AUDIT IN PROGRESS — DO NOT TAP SMART CONTINUE',
    conflict:'⛔ STORAGE CONFLICT — DO NOT SMART CONTINUE',
    failed:'⛔ STATUS CHECK FAILED — DO NOT SMART CONTINUE',
    blocked:'⛔ FIX / REVIEW FIRST — DO NOT SMART CONTINUE',
    recovered:'✅ AUDIT RECOVERED — REVIEW RESULT BEFORE CONTINUING'
   };
-  const palette={ready:['#15351f','#b9f6ca'],recovered:['#15351f','#b9f6ca'],archiveStale:['#3a2f0c','#ffe082'],archiveIncomplete:['#3a2f0c','#ffe082'],recover:['#113346','#b3e5fc'],busy:['#3a2f0c','#ffe082'],conflict:['#421b1b','#ffcdd2'],failed:['#421b1b','#ffcdd2'],blocked:['#421b1b','#ffcdd2'],idle:['#1b2330','#dce8ff'],checking:['#1b2330','#dce8ff']};
+  const palette={ready:['#15351f','#b9f6ca'],recovered:['#15351f','#b9f6ca'],archiveStale:['#3a2f0c','#ffe082'],archiveIncomplete:['#3a2f0c','#ffe082'],revise:['#3a2f0c','#ffe082'],recover:['#113346','#b3e5fc'],busy:['#3a2f0c','#ffe082'],conflict:['#421b1b','#ffcdd2'],failed:['#421b1b','#ffcdd2'],blocked:['#421b1b','#ffcdd2'],idle:['#1b2330','#dce8ff'],checking:['#1b2330','#dce8ff']};
   const [bg,fg]=palette[kind]||palette.blocked;nextAction.textContent=messages[kind]||messages.blocked;nextAction.dataset.state=kind;nextAction.style.background=bg;nextAction.style.color=fg;nextAction.style.border='2px solid '+fg;
  }
  function nextActionFor(d,j){
   if(d?.status==='JOURNAL_INSPECTION_FAILED')return 'failed';
   if(j?.busy)return 'busy';
   if(j?.conflict)return 'conflict';
+  if(j?.found&&j?.recoverable&&j?.identityMatch&&j?.status==='DONE'&&R.canReviseAuditedP5?.(card))return 'revise';
   if(j?.recoverable)return 'recover';
   if(j?.found&&j.identityMatch===false&&!j.conflict&&!j.busy&&j.status==='DONE')return 'archiveStale';
   if(j?.found&&j.identityMatch&&!j.conflict&&!j.busy&&['STARTED','UNCERTAIN'].includes(j.status))return 'archiveIncomplete';
@@ -78,8 +80,23 @@ function attach(card){
   finally{archiveStale.disabled=false;}
  });
  const recover=document.createElement('button');recover.type='button';recover.className='core5-recover-journal';recover.textContent='Recover saved audit · FREE';recover.hidden=true;details.append(recover);
+ const revise=document.createElement('button');revise.type='button';revise.className='core5-revise-audited-p5';revise.textContent='Archive old audited P5 + rebuild · FREE';revise.hidden=true;details.append(revise);
+ revise.addEventListener('click',async()=>{
+  if(!reviewedJournal?.found||!reviewedJournal?.identityMatch||!reviewedJournal?.recoverable||reviewedJournal?.status!=='DONE'||!R.canReviseAuditedP5?.(card)){
+   diagnosis.textContent='Run Check audit status · FREE again; P5 is no longer eligible for audited-legacy revision.';showNextAction('blocked');revise.hidden=true;return;
+  }
+  if(!window.confirm('Revise only the old generic Tōhoku P5 AUDITED scene? Its matching DONE journal and exact prompt will be archived (FREE), then P5 will rebuild as uphill evacuation. P1–P4 and all Master DNA stay unchanged. The NEXT Smart Continue may require one NEW paid audit; no audit is sent by this action.'))return;
+  revise.disabled=true;showNextAction('checking');
+  try{
+   const message=await R.reviseAuditedP5(card,reviewedJournal);
+   refresh();diagnosis.textContent=message;reviewedJournal=null;
+   revise.hidden=true;recover.hidden=true;archive.hidden=true;archiveStale.hidden=true;retry.hidden=true;
+   showNextAction('idle',card.dataset.stage);
+  }catch(e){diagnosis.textContent='FREE P5 revision was not completed: '+e.message;showNextAction('blocked');}
+  finally{revise.disabled=false;}
+ });
  diagnose.addEventListener('click',async()=>{
-  diagnose.disabled=true;recover.hidden=true;archive.hidden=true;archiveStale.hidden=true;diagnosis.textContent='Inspecting local audit journal…';showNextAction('checking');
+  diagnose.disabled=true;recover.hidden=true;revise.hidden=true;archive.hidden=true;archiveStale.hidden=true;diagnosis.textContent='Inspecting local audit journal…';showNextAction('checking');
   try{
    const d=await R.journalDiagnostic(card),j=d.journal,yn=x=>x===null?'UNKNOWN':x?'YES':'NO';
    diagnosis.textContent=['Local audit status: '+d.status,'Saved panel record: '+d.journalStatus,
@@ -89,7 +106,8 @@ function attach(card){
    reviewedJournal=j;archive.hidden=!(j?.identityMatch&&!j.conflict&&!j.busy&&['STARTED','UNCERTAIN'].includes(j.status));
    archiveStale.hidden=!(j?.found&&j.identityMatch===false&&!j.conflict&&!j.busy&&j.status==='DONE');
    if(!archiveStale.hidden)archiveStale.textContent='Archive old '+j.stage+' journal · FREE';
-   recover.hidden=!j?.recoverable;const record=(()=>{try{return JSON.parse(card.dataset.core5Record||'null');}catch{return null;}})();
+   revise.hidden=!(j?.found&&j.identityMatch&&j.recoverable&&!j.conflict&&!j.busy&&j.status==='DONE'&&R.canReviseAuditedP5?.(card));
+   recover.hidden=!j?.recoverable||!revise.hidden;const record=(()=>{try{return JSON.parse(card.dataset.core5Record||'null');}catch{return null;}})();
    retry.hidden=!!j?.found||!!j?.busy||d.status==='JOURNAL_INSPECTION_FAILED'||!(record?.status==='REVIEW_REQUIRED'&&record?.result?.ok===false);
    showNextAction(nextActionFor(d,j),j?.stage||d.panel);
   }catch(e){diagnosis.textContent='Diagnostic failed locally: '+e.message;showNextAction('failed');}finally{diagnose.disabled=false;}
@@ -107,7 +125,7 @@ function attach(card){
    const s=R.prepareStage(card);refresh();
    status.textContent='FREE '+s.stage+' scene repair complete. Previous scene saved in history. Review the historical region, setting and action before Smart Continue. No API call was made.';
    diagnosis.textContent='Run Check audit status · FREE again to verify the new scene. No audit or retry was sent.';
-   reviewedJournal=null;archive.hidden=true;archiveStale.hidden=true;recover.hidden=true;retry.hidden=true;showNextAction('idle');
+   reviewedJournal=null;archive.hidden=true;archiveStale.hidden=true;recover.hidden=true;revise.hidden=true;retry.hidden=true;showNextAction('idle');
   }catch(e){status.textContent=e.message;showNextAction('blocked');}
  });
  refine.addEventListener('click',()=>{try{const changed=R.refineScene(card);refresh();status.textContent=changed?'Action details refined locally. Review this revised scene, then Smart Continue for a new audit. No AI call was made.':'No supported refinement needed. Existing scene and audit are unchanged.';if(changed)showNextAction('idle');}catch(e){status.textContent=e.message;showNextAction('blocked');}});

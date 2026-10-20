@@ -157,6 +157,48 @@ function prepareStage(c){
  window.LDCore?.saveCurrent?.();
  return next;
 }
+// Explicit revision is allowed ONLY for the untouched, old, locally AUDITED
+// Tōhoku P5 default. Never broaden this to custom, DONE, committed or approved.
+function revisableAuditedP5(c){
+ if(!manages(c)||protectedPanel(c))return null;
+ const r=stored(c);
+ if(!r||r.status!=='AUDITED'||r.scope!==scope()||r.inputKey!==key(c)||current(c)!==r.prompt)return null;
+ const old=r.payload?.stageSpec;
+ if(!staleTohokuP5(old)||!c.dataset.core5Spec||C.stable(inputs(c).spec)!==C.stable(old))return null;
+ if(!C.validatePayload(r.payload).ok||r.payload.currentPrompt!==r.prompt)return null;
+ return r;
+}
+function canReviseAuditedP5(c){return !!revisableAuditedP5(c);}
+async function reviseAuditedP5(c,review){
+ const old=revisableAuditedP5(c);
+ if(!old)throw Error('Only the unchanged, unapproved, audited Tōhoku P5 legacy scene can be revised. Nothing changed.');
+ if(!review?.found||!review.identityMatch||!review.recoverable||review.conflict||review.busy||review.status!=='DONE'||!review.reviewToken)
+  throw Error('Run Check audit status · FREE and confirm the matched DONE P5 journal before revision.');
+ const project=scope(),inputKey=key(c),originalRecord=c.dataset.core5Record,oldScene=inputs(c).legacyScene;
+ const next=reviewSpec(c),validation=C.validate(next);
+ if(!validation.ok)throw Error('Revised P5 fails FREE local validation: '+validation.issues.join(' '));
+ const prompt=C.compile(next);
+ if(!/uphill coastal evacuation lane/i.test(next.location.setting)||!/hurries forward up/i.test(next.action.description))
+  throw Error('New P5 does not contain the intended uphill evacuation. Nothing changed.');
+ let history=[];try{history=JSON.parse(c.dataset.core5SceneHistory||'[]');if(!Array.isArray(history))throw Error('Not an array');}
+ catch{throw Error('P5 scene history cannot be safely read. Export a project backup; nothing changed.');}
+ history.push({scene:oldScene,spec:c.dataset.core5Spec||'',record:originalRecord,prompt:old.prompt,reason:'explicit-obsolete-p5-audit-revision'});
+ const nextHistory=JSON.stringify(history);
+ if(window.NERProjectStorage)await window.NERProjectStorage.ensureSaved();
+ const stillCurrent=()=>scope()===project&&key(c)===inputKey&&
+   c.dataset.core5Record===originalRecord&&c.isConnected&&!protectedPanel(c)&&!!revisableAuditedP5(c);
+ const archived=await window.NERCore5AuditCoordinator.archiveMatchingDone(project,old.payload,review.reviewToken,stillCurrent);
+ if(!stillCurrent())throw Error('Original P5 audit archived, but panel changed before revision. Inspect P5 before further edits; no paid audit sent.');
+ // The audited bytes are retained twice: the durable journal archive and the
+ // explicit stage history. No existing Master DNA or other panel is touched.
+ c.dataset.core5SceneHistory=nextHistory;
+ records.delete(c);delete c.dataset.core5Record;
+ delete c.dataset.smartReady;delete c.dataset.smartReadySignature;
+ setSpec(c,next);write(c,prompt);
+ if(window.LDCore?.saveCurrent?.()===false)throw Error('Old audit archived but P5 project save failed. Keep this window open and export a backup; no audit was sent.');
+ await window.NERProjectStorage?.flush();
+ return 'Old P5 DONE audit archived (FREE): '+archived+'\nNew concrete uphill-evacuation scene prepared. Old prompt preserved in P5 history; no API call sent. Run Check audit status · FREE before Smart Continue.';
+}
 function reviewIdentity(c,s){const i=inputs(c);return s.stage===i.stage&&s.topic===i.topic&&s.narration===i.narration&&s.eventYear===Number(i.eventYear)&&s.location?.region===i.location;}
 function applyReview(c,s){
  if(protectedPanel(c))throw Error('Approved panels are immutable.');
@@ -201,5 +243,5 @@ function attachVideoModes(api){
  return api;
 }
 function owns(c){return protectedPanel(c)||manages(c);}
-window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,diagnostic,journalDiagnostic,recoverJournal,archiveIncompleteJournal,planEpisode,prepareEpisode,refineScene,reviewSpec,prepareStage,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
+window.NERCore5Runtime=Object.freeze({attachVideoModes,owns,manages,protectedPanel,scope,spec,diagnostic,journalDiagnostic,recoverJournal,archiveIncompleteJournal,canReviseAuditedP5,reviseAuditedP5,planEpisode,prepareEpisode,refineScene,reviewSpec,prepareStage,reviewIdentity,applyReview,sceneText,preflight,build,payload,ready,signature,prepare,allowRetry,approve,setSpec,preserve});
 })();
