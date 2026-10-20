@@ -203,7 +203,7 @@ test('FREE single-stage repair fixes legacy P1 without affecting P2, preserves d
 });
 test('FREE repair fails closed on unknown location, saved audits, and approved panels',async()=>{
  const b=boot(),c=b.card('P1');b.nodes.topic.value='An unknown disaster';b.window.ldVideoContinuity={};
- const before=JSON.stringify(c);assert.throws(()=>b.r.prepareStage(c),/valid event year and location/);
+ const before=JSON.stringify(c);assert.throws(()=>b.r.prepareStage(c),/Event year must be explicit.*Scene location is missing/);
  assert.equal(JSON.stringify(c),before);
  b.nodes.topic.value='Tōhoku Earthquake and Tsunami — 2011';
  c.fields['.narration'].value='In March 2011, life was peaceful along Japan’s northeastern coast.';
