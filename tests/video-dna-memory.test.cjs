@@ -141,3 +141,50 @@ test('malformed ungraded regular failures are still rejected by storage validati
  db.set(D.KEY,JSON.stringify({version:D.VERSION,records:[r]}));
  assert.throws(()=>D.list(),/Unrecognized/);
 });
+
+
+test('P4 V1 observed failures are recorded once, without inventing rejected prompt bytes',()=>{
+ const db=mem();
+ const master={...good,stage:'P4',grade:9.0,prompt:'A Japanese resident grips a railing. The ground shakes the neighborhood. Roof fragments fall and stay on the road; wires oscillate.'};
+ const approved=D.save({...master,kind:'master'}).record;
+ const saved=D.seedHistoricalP4('2011 Tōhoku Earthquake and Tsunami — Japan');
+ assert.equal(saved.status,'saved');
+ assert.equal(saved.record.origin,'observed-render');
+ assert.equal(saved.record.stage,'P4');
+ assert.equal(saved.record.grade,7.8);
+ assert.equal(saved.record.prompt,'');
+ assert.equal(saved.record.reason,'other');
+ assert.match(saved.record.notes,/1000273717\.mp4/);
+ assert.match(saved.record.notes,/disappear|dissolv/i);
+ assert.match(saved.record.notes,/utility pole|background/i);
+ assert.equal(D.seedHistoricalP4('2011 Tōhoku Earthquake and Tsunami').status,'existing');
+ assert.equal(D.seedHistoricalP4('Aberfan disaster — Wales — 1966').status,'not-applicable');
+ assert.equal(D.list().length,2);
+ assert.equal(D.list().find(r=>r.kind==='master').hash,approved.hash);
+ assert.equal(db.size,1,'project and audit storage must remain unchanged');
+});
+test('P4 V1 historical observation never blocks approved P4 V2 exact prompt',()=>{
+ mem();
+ D.seedHistoricalP4('2011 Tōhoku Earthquake and Tsunami');
+ const approved={...good,stage:'P4',grade:9.0,prompt:'An adult braces at a residential fence as the ground shakes and buildings rattle. Wires sway as tiles fall naturally and persist on the road.'};
+ const result=D.assertReady(approved);
+ assert.equal(result.status,'pass');
+ assert.equal(result.historical.length,1);
+ assert.equal(result.historical[0].grade,7.8);
+ assert.equal(result.historical[0].reason,'other');
+ assert.equal(D.check({...approved,stage:'P3'}).historical.length,0);
+ assert.equal(D.check({...approved,topic:'Great Smog of London 1952'}).historical.length,0);
+});
+test('P4 observed failure survives export/import alongside all approved Master DNA',()=>{
+ const db=mem();
+ const masters=['P1','P2','P3','P4'].map((stage,i)=>D.save({...good,stage,kind:'master',grade:[9.5,9.2,9.2,9.0][i],prompt:good.prompt+' '+stage}).record);
+ D.seedHistoricalP4('2011 Tōhoku Earthquake and Tsunami');
+ const exported=D.exportText();
+ db.delete(D.KEY);
+ assert.equal(D.importRecords(exported),5);
+ assert.equal(D.importRecords(exported),0);
+ assert.equal(D.list().filter(r=>r.kind==='master').length,4);
+ for(const entry of masters)assert(D.list().some(r=>r.kind==='master'&&r.hash===entry.hash));
+ assert.equal(D.list().find(r=>r.id===D.HISTORICAL_P4.id).prompt,'');
+ assert.equal(D.check({...good,stage:'P4'}).historical.length,1);
+});
