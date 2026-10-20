@@ -99,7 +99,7 @@
   const p=String(prompt||''), problems=[],warnings=[],matches=[];
   const context=clean([topic,stage,p.slice(0,500)].join(' '));
   let records=[];
-  try{records=list();}catch(e){return {status:'warning',problems:[],warnings:['DNA storage unavailable or invalid: '+e.message],matches:[],lessons:LESSONS};}
+  try{records=list();}catch(e){return {status:'warning',problems:[],warnings:['DNA storage unavailable or invalid: '+e.message],matches:[],historical:[],lessons:LESSONS};}
   const hash=signature(p);
   const same=records.filter(r=>r.kind==='failure'&&r.prompt.length>12&&r.hash===hash);
   for(const r of same)problems.push('This exact prompt was previously rejected ('+(FAILURES[r.reason]||'observed render failure')+'). Review the failure DNA before any paid audit.');
@@ -146,7 +146,7 @@
    const selected=stageSelect.value, t=doc.getElementById('topic')?.value||'';
    historicalInfo.hidden=!(selected==='P1'&&isTohoku(t));
    if(!historicalInfo.hidden){
-    const saved=list().some(r=>r.id===HISTORICAL_P1.id);
+    let saved=false;try{saved=list().some(r=>r.id===HISTORICAL_P1.id);}catch(e){historicalInfo.textContent='Historical P1 DNA unavailable: library backup or repair required. '+e.message;return;}
     historicalInfo.textContent=(saved?'✅ P1 V1 HISTORICAL FAILURE DNA SAVED — ':'P1 V1 HISTORICAL FAILURE DNA — ')+
       '8.5/10 · Kids → Coast → Kids. Recorded from reviewed video, not the missing original prompt. Approved P1 V2 is never blocked by this historical record.';
    }
@@ -177,8 +177,9 @@
    mount();
    const info=root.document.getElementById('nerHistoricalP1Info');
    if(info&&isTohoku(root.document.getElementById('topic')?.value||'')){
-    const has=list().some(r=>r.id===HISTORICAL_P1.id);
-    if(has)info.textContent='✅ P1 V1 HISTORICAL FAILURE DNA SAVED — 8.5/10 · Kids → Coast → Kids. Observed video, not exact prompt; P1 V2 stays protected.';
+    try{const has=list().some(r=>r.id===HISTORICAL_P1.id);
+    if(has)info.textContent='✅ P1 V1 HISTORICAL FAILURE DNA SAVED — 8.5/10 · Kids → Coast → Kids. Observed video, not exact prompt; P1 V2 stays protected.';}
+    catch(e){info.textContent='Historical P1 DNA unavailable: '+e.message;}
    }
   };
   root.addEventListener('ld:production-built',()=>root.queueMicrotask?root.queueMicrotask(hydrate):hydrate());
