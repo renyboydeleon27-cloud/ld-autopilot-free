@@ -64,7 +64,7 @@
    if(!opening)return false;
    const rest=line.slice(opening.index);
    const thick=/\b(?:thick|dense|heavy|opaque)\s+(?:dust|smoke)\b/i.exec(rest);
-   return !!thick&&!isNegated(rest.slice(0,thick.index))&&!/\b(?:absent|none|minimal|only after|must not|should not|no)\b/i.test(rest.slice(Math.max(0,thick.index-35),thick.index));
+   return !!thick&&!isNegated(rest.slice(0,thick.index))&&!/\b(?:absent|none|minimal|only after|must not|should not|no)\b/i.test(rest.slice(Math.max(0,thick.index-35),thick.index))&&!/\b(?:is|are|remains?|stays?)\s+(?:absent|not visible|missing|minimal)\b/i.test(rest.slice(thick.index+thick[0].length,thick.index+thick[0].length+55));
   });
  }
  function check({topic='',stage='',family='',prompt=''}={}){
