@@ -178,7 +178,7 @@ async function reviseAuditedP5(c,review){
  const next=reviewSpec(c),validation=C.validate(next);
  if(!validation.ok)throw Error('Revised P5 fails FREE local validation: '+validation.issues.join(' '));
  const prompt=C.compile(next);
- if(!/uphill evacuation lane/i.test(next.location.setting)||!/hurries forward up/i.test(next.action.description))
+ if(!/uphill coastal evacuation lane/i.test(next.location.setting)||!/hurries forward up/i.test(next.action.description))
   throw Error('New P5 does not contain the intended uphill evacuation. Nothing changed.');
  let history=[];try{history=JSON.parse(c.dataset.core5SceneHistory||'[]');if(!Array.isArray(history))throw Error('Not an array');}
  catch{throw Error('P5 scene history cannot be safely read. Export a project backup; nothing changed.');}
