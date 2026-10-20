@@ -96,6 +96,19 @@ function pollutionRecipe(r,n){
 }
 // Recipes are reusable semantic staging, not new historical claims or panel overrides.
 function recipe(r,f,narration='',topic=''){
+ // March 2011 Tōhoku: only new, narration-planned scenes use this coast-first
+ // continuity pair. Saved reviewed / approved StageSpecs are not rewritten.
+ const tohoku2011=f==='tsunami'&&/\\b2011\\b/.test(topic)&&/(?:t[oō]hoku|japan)/i.test(topic);
+ if(tohoku2011&&r==='normal-world'&&/peaceful|calm|ordinary|everyday/i.test(narration))return {
+  location:'intact northeastern Japanese coastal community in Tōhoku, with a sloping residential street above a peaceful working harbor; calm sea, fishing boats and distant shoreline dominate the opening view, while intact rooftops lead down the same street to two children; no shaking, floodwater, rubble or panic',
+  cast:[
+   {id:'child-1',description:'unnamed Japanese school-age child with short dark hair and ordinary early-2010s daytime clothing'},
+   {id:'child-2',description:'distinct Japanese school-age child with tied dark hair and ordinary early-2010s daytime clothing'}
+  ],
+  action:'child-1 calmly lowers into a crouch to play with one small object on the intact lane beside child-2, who remains close by',
+  camera:{framing:'elevated wide continuous coastal-overlook street view; coastline and harbor dominate first, then the same descending neighborhood lane leads naturally to the two initially small children near the end',movement:'slow-push-in'},
+  audio:'calm sea and harbor ambience with gentle neighborhood sounds; no sirens, voices, music or narration'
+ };
  // A narration-grounded calm coastal opening: no premature quake/tsunami imagery.
  if(r==='normal-world'&&f==='tsunami'&&/\bJapan(?:'s|’s)?\b|\bJapanese\b/i.test(narration)&&/\bcoast(?:al)?\b|\bshore\b/i.test(narration))return {
   location:'intact street in a northeastern Japanese coastal community before the earthquake; small shops, low-rise homes, level pavement and a distant shoreline, with no shaking, floodwater, rubble or panic',
@@ -109,13 +122,15 @@ function recipe(r,f,narration='',topic=''){
  // first street-level tremor, then the larger documented offshore mainshock.
  // Give each a distinct, physically concrete staging rather than the generic
  // "supported hazard" placeholder. No wave reaches land in either scene.
- const tohoku2011=f==='tsunami'&&/\b2011\b/.test(topic)&&/(?:t[oō]hoku|japan)/i.test(topic);
  if(tohoku2011&&/\b(?:first violent shaking|first (?:strong )?tremor|ground began to shake|buildings began to sway)\b/i.test(narration))return {
-  location:'street-level view beside a small shop entrance in a northeastern Japanese coastal neighborhood during the first earthquake shaking; intact 2011 shopfronts and a hanging shop awning begin trembling, while pavement stays level and the shoreline remains distant; no tsunami water, collapsing buildings or invented alarm displays',
-  cast:[{id:'adult-1',description:'unnamed adult resident wearing ordinary early-2010s Japanese street clothing'}],
-  action:'adult-1, already beside the doorway, shifts their weight and presses one hand against the stable doorframe for balance as the trembling begins',
-  camera:{framing:'eye-level medium street view with the shop doorway and moving awning visible',movement:'locked'},
-  audio:'brief natural street rattling and a low earthquake rumble; no voices, alarms or music'
+  location:'the same intact sloping residential lane above a northeastern Japanese harbor, with early-2010s homes, a small shop awning and hanging fixture close to the two children; the first ground tremor begins, pavement stays intact and calm sea remains distant; no tsunami water, collapsed buildings or invented alarm displays',
+  cast:[
+   {id:'child-1',description:'unnamed Japanese school-age child with short dark hair and ordinary early-2010s daytime clothing'},
+   {id:'child-2',description:'distinct Japanese school-age child with tied dark hair and ordinary early-2010s daytime clothing'}
+  ],
+  action:'child-1 stops playing and lowers into a balanced crouch while child-2 halts beside them and spreads their feet as the existing shop awning and hanging fixture begin trembling',
+  camera:{framing:'locked eye-level medium-wide view of both children on the same sloping lane, intact homes, shop awning and distant harbor',movement:'locked'},
+  audio:'low earthquake rumble and synchronized natural rattling from the existing awning and fixture; no voices, sirens, music or narration'
  };
  if(tohoku2011&&/\b(?:magnitude (?:nine|9(?:\.0|\.1)?)|2:46|earthquake struck offshore)\b/i.test(narration))return {
   location:'elevated coastal overlook above a northeastern Japanese neighborhood during sustained strong earthquake shaking on March 11, 2011; the near railing visibly vibrates and roofs below tremble while the distant ocean remains at normal level; no approaching tsunami, instant citywide collapse or exposed underground fault',
@@ -154,7 +169,7 @@ function plan(input){
  return deepFreeze({schema:5,compilerVersion:VERSION,stage:input.stage,topic:input.topic,family:f,role:r,
  narration:String(input.narration||''),facts:clone(input.facts||[]),eventYear,chronology:time,
  location:{region:String(input.location||''),setting:p.location},cast:p.cast,
- action:{actor:'adult-1',description:p.action},camera:input.stage==='ENDING'?{...p.camera,movement:'locked'}:p.camera,
+ action:{actor:p.cast[0].id,description:p.action},camera:input.stage==='ENDING'?{...p.camera,movement:'locked'}:p.camera,
  timing:input.stage==='ENDING'?[]:[{start:0,end:2,phase:'establish'},{start:2,end:6,phase:'action'},{start:6,end:10,phase:'hold'}],
  locks:{style:'2d-historical-anime',color:'bw',aspect:'9:16',duration:input.stage==='ENDING'?null:10,shots:1,text:'none'},
  audio:p.audio,source:{kind:'narration-derived-representative-staging',narration:String(input.narration||'')},
