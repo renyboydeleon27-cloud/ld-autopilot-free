@@ -239,7 +239,7 @@ test('Tōhoku March 2011 P2 and P3 have distinct concrete first shaking/mainshoc
   assert(!/supported hazard|narrated (?:warning|onset)/i.test(spec.location.setting+' '+spec.action.description));
   assert(!/tsunami (?:arrives|wave arrived)|wave sweeping/i.test(spec.location.setting));
  }
- assert.match(p2.location.setting,/shop entrance/i);
+ assert.match(p2.location.setting,/shop awning/i);
  assert.match(p3.location.setting,/overlook/i);
  assert.notEqual(p2.location.setting,p3.location.setting);
  assert.notEqual(p2.action.description,p3.action.description);
@@ -259,11 +259,38 @@ test('FREE P2 repair archives old KEEP CURRENT draft and does not change approve
  assert.equal(JSON.stringify(p1),first);
  assert.equal(b.r.preflight(p2).ok,true);
  assert.deepEqual(C.validate(done).issues,[]);
- assert.match(b.r.build(p2),/shop entrance/);
+ assert.match(b.r.build(p2),/shop awning/);
  assert.equal(JSON.parse(p2.dataset.core5SceneHistory)[0].scene,'KEEP CURRENT SCENE — generic old P2 draft');
  assert.equal(b.calls(),0);
 });
 test('2011 Tōhoku-specific scene recipe does not leak into other historic tsunami topics',()=>{
  const s=C.plan({topic:'1908 Messina Earthquake and Tsunami',stage:'P2',eventYear:1908,location:'Messina, Italy',narration:'On March 11, the first violent shaking sent people scrambling for safety as buildings began to sway.'});
  assert.doesNotMatch(s.location.setting,/northeastern Japanese/i);
+});
+
+
+test('Tōhoku P1/P2 V2: coast-first children continuity without camera reset or disaster in P1',()=>{
+ const topic='2011 Tōhoku Earthquake and Tsunami',location='Tōhoku, Japan';
+ const p1=C.plan({topic,stage:'P1',eventYear:2011,location,narration:'In March 2011, life was peaceful along Japan’s northeastern coast. Families worked, and children attended school as usual.'});
+ const p2=C.plan({topic,stage:'P2',eventYear:2011,location,narration:'On March 11, the first violent shaking sent people scrambling for safety as buildings began to sway.'});
+ assert.deepEqual(C.validateSequence([p1,p2]).issues,[]);
+ assert.deepEqual(p1.cast,p2.cast,'same two characters from P1 to P2');
+ assert.deepEqual(p1.cast.map(x=>x.id),['child-1','child-2']);
+ assert.equal(p1.action.actor,'child-1');
+ assert.equal(p2.action.actor,'child-1');
+ assert.equal(p1.camera.movement,'slow-push-in');
+ assert.equal(p2.camera.movement,'locked');
+ assert.match(p1.camera.framing,/harbor dominate first/i);
+ assert.match(p1.camera.framing,/near the end/i);
+ assert.match(p1.location.setting,/no shaking, floodwater, rubble or panic/i);
+ assert.match(p2.action.description,/stops playing/i);
+ assert.match(p2.location.setting,/awning/i);
+ assert.doesNotMatch(p2.location.setting,/collapsed buildings(?!\s+or)/i);
+ for(const [stage,spec] of [['P1',p1],['P2',p2]]){
+  const prompt=C.compile(spec);
+  assert.match(prompt,/EXACTLY 10 SECONDS/);
+  assert.match(prompt,/Strict true black-and-white grayscale/);
+  assert.match(prompt,/Exactly 2 distinct people/);
+  assert.doesNotMatch(prompt,/No cuts\.\s*Cut to|crossfade to/i,stage);
+ }
 });
