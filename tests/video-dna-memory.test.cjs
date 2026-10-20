@@ -54,3 +54,38 @@ test('no external network or AI dependency; pure preflight does not mutate input
  assert.equal(JSON.stringify(q),before);
  assert(D.LESSONS.length>=6);
 });
+
+test('P1 V1 reviewed failure is added once without inventing its missing rejected prompt',()=>{
+ const db=mem();
+ const approved=D.save({...good,kind:'master'}).record;
+ const seeded=D.seedHistoricalP1('2011 Tōhoku Earthquake and Tsunami');
+ assert.equal(seeded.status,'saved');
+ assert.equal(seeded.record.origin,'observed-render');
+ assert.equal(seeded.record.grade,8.5);
+ assert.equal(seeded.record.reason,'camera-reset');
+ assert.equal(seeded.record.prompt,'');
+ assert.match(seeded.record.notes,/Kids|children|coastline/i);
+ assert.equal(D.seedHistoricalP1('2011 Tōhoku Earthquake and Tsunami').status,'existing');
+ assert.equal(D.list().length,2);
+ assert.equal(D.list().find(r=>r.kind==='master').hash,approved.hash);
+ assert.equal(D.seedHistoricalP1('The Great Smog of London — 1952').status,'not-applicable');
+ assert.equal(db.size,1,'no project or audit records were mutated');
+});
+test('historical P1 failure is a lesson, never an exact-prompt blocker for approved P1 V2',()=>{
+ mem();D.seedHistoricalP1('2011 Tōhoku Earthquake and Tsunami');
+ const p1={topic:'2011 Tōhoku Earthquake and Tsunami',stage:'P1',family:'earthquake',
+ prompt:'VIDEO PROMPT: Calm Japanese coast first. The camera tracks from the coastline into a peaceful town and ends with two schoolchildren at play, one continuous cinematic shot, no cuts or resets.'};
+ const result=D.assertReady(p1);
+ assert.equal(result.status,'pass');
+ assert.equal(result.historical.length,1);
+ assert.equal(result.historical[0].grade,8.5);
+ assert.equal(D.assertReady({...p1,topic:'Manikganj Tornado — Bangladesh — 1989'}).historical.length,0);
+});
+test('historical failure survives JSON backup and reimport without replacing existing masters',()=>{
+ const db=mem(); D.save({...good,kind:'master'}); D.seedHistoricalP1('2011 Tōhoku Earthquake and Tsunami');
+ const backup=D.exportText(); db.delete(D.KEY);
+ assert.equal(D.importRecords(backup),2);
+ assert.equal(D.list().length,2);
+ assert.equal(D.importRecords(backup),0);
+ assert.equal(D.check({topic:'2011 Tōhoku Earthquake and Tsunami',stage:'P1',prompt:good.prompt}).historical.length,1);
+});
