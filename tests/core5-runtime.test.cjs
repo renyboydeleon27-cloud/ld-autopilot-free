@@ -441,7 +441,7 @@ test('Tōhoku P5 matching old AUDITED DONE can be archived and rebuilt FREE with
  const review={found:true,identityMatch:true,recoverable:true,conflict:false,busy:false,status:'DONE',reviewToken:'confirmed-done-token'};
  assert.equal(b.r.preflight(p5).ok,false);
  const result=await b.r.reviseAuditedP5(p5,review);
- assert.match(result,/archived.*FREE/);assert.match(result,/No API call sent/);
+ assert.match(result,/archived.*FREE/);assert.match(result,/no API call sent/i);
  assert.equal(calls,1);assert.equal(b.calls(),0);assert.equal(b.r.canReviseAuditedP5(p5),false);
  const history=JSON.parse(p5.dataset.core5SceneHistory);
  assert.equal(history.length,1);assert.equal(history[0].record,JSON.stringify({...tx,inputKey,scope:b.r.scope()}));
