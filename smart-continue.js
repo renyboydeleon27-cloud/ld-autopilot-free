@@ -974,10 +974,15 @@ async function prepareImageToVideo(card){
   }
   const prompt=card.querySelector('.flow-prompt')?.value?.trim();
   if(!prompt)throw new Error('Image-to-Video prompt is not ready.');
+  window.NERVideoDNA?.assertReady({topic:topic(),stage:card.dataset.stage||'',family:window.NERCore5?.family?.(topic())||'',prompt});
   const copied=await copyText(prompt);
   markSmartReady(card);
   buttonLabel(approveLabel(card));
   status(card.dataset.stage+' IMAGE-TO-VIDEO READY'+(copied?' · Flow prompt copied automatically':'')+'. Review the Flow result, then press this same button again.','pass');
+}
+function checkVideoDnaBeforePaid(card,payload){
+ const D=window.NERVideoDNA;if(!D)return;
+ D.assertReady({topic:payload?.topic||topic(),stage:payload?.stage||card?.dataset?.stage||'',family:window.NERCore5?.family?.(payload?.topic||topic())||'',prompt:String(payload?.currentPrompt||'')});
 }
 async function prepareTextToVideo(card){
   assertStageOwnsSmartRun(card);
@@ -1042,6 +1047,7 @@ async function prepareTextToVideo(card){
   }
   assertOriginalV1StoryLock(card,true);
   status('SMART CONTINUE · AI is auditing '+payload.stage+'…','working');
+  checkVideoDnaBeforePaid(card,payload);
   let result=await audit(payload);
   assertStageOwnsSmartRun(card);
 
@@ -1057,6 +1063,7 @@ async function prepareTextToVideo(card){
     payload=panelPayload(card);
     status('SMART CONTINUE · Re-auditing after the automatic fix…','working');
     startPhase('RE-AUDITING',payload.stage);
+    checkVideoDnaBeforePaid(card,payload);
     result=await audit(payload);
     assertStageOwnsSmartRun(card);
   }
@@ -1081,6 +1088,7 @@ async function prepareTextToVideo(card){
   let finalPayload=panelPayload(card);
   if(auditCacheKey(finalPayload)!==auditedKey){
     status('SMART CONTINUE · Final prompt changed after rebuild. Verifying the exact final version…','working');
+    checkVideoDnaBeforePaid(card,finalPayload);
     const finalResult=await audit(finalPayload);
     assertStageOwnsSmartRun(card);
     if(finalResult.result!=='PASS'){
@@ -1114,6 +1122,15 @@ async function prepareTextToVideo(card){
 async function prepare(card){
   if(window.NERCore5Runtime?.manages(card)){
     if(window.NERCore5Runtime.protectedPanel(card))return;
+    // Core 5 owns its paid audit. Check the exact compiled StageSpec BEFORE
+    // calling prepare(), with no edits to saved stages or journal records.
+    if(window.NERVideoDNA){
+      const review=window.NERCore5Runtime.preflight(card);
+      if(review.ok){
+        const compiled=window.NERCore5.compile(review.spec);
+        window.NERVideoDNA.assertReady({topic:review.spec.topic,stage:review.spec.stage,family:review.spec.family,prompt:compiled});
+      }
+    }
     status('SMART CONTINUE · Core 5 local preflight, then one exact-prompt audit…','working');
     const exactPrompt=await window.NERCore5Runtime.prepare(card,audit);
     assertStageOwnsSmartRun(card);
