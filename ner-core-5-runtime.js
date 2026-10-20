@@ -197,7 +197,7 @@ async function reviseAuditedP5(c,review){
  setSpec(c,next);write(c,prompt);
  if(window.LDCore?.saveCurrent?.()===false)throw Error('Old audit archived but P5 project save failed. Keep this window open and export a backup; no audit was sent.');
  await window.NERProjectStorage?.flush();
- return 'Old P5 DONE audit archived (FREE): '+archived+'\\nNew concrete uphill-evacuation scene prepared. Old prompt preserved in P5 history; no API call sent. Run Check audit status · FREE before Smart Continue.';
+ return 'Old P5 DONE audit archived (FREE): '+archived+'\nNew concrete uphill-evacuation scene prepared. Old prompt preserved in P5 history; no API call sent. Run Check audit status · FREE before Smart Continue.';
 }
 function reviewIdentity(c,s){const i=inputs(c);return s.stage===i.stage&&s.topic===i.topic&&s.narration===i.narration&&s.eventYear===Number(i.eventYear)&&s.location?.region===i.location;}
 function applyReview(c,s){
