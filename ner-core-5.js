@@ -98,7 +98,7 @@ function pollutionRecipe(r,n){
 function recipe(r,f,narration='',topic=''){
  // March 2011 Tōhoku: only new, narration-planned scenes use this coast-first
  // continuity pair. Saved reviewed / approved StageSpecs are not rewritten.
- const tohoku2011=f==='tsunami'&&/\\b2011\\b/.test(topic)&&/(?:t[oō]hoku|japan)/i.test(topic);
+ const tohoku2011=f==='tsunami'&&/\b2011\b/.test(topic)&&/(?:t[oō]hoku|japan)/i.test(topic);
  if(tohoku2011&&r==='normal-world'&&/peaceful|calm|ordinary|everyday/i.test(narration))return {
   location:'intact northeastern Japanese coastal community in Tōhoku, with a sloping residential street above a peaceful working harbor; calm sea, fishing boats and distant shoreline dominate the opening view, while intact rooftops lead down the same street to two children; no shaking, floodwater, rubble or panic',
   cast:[
