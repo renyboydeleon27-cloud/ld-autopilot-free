@@ -35,6 +35,12 @@
   prompt:'',grade:null,reason:'quake-not-visible',
   notes:'Earlier Tōhoku P2 review: the onset of earthquake motion was too subtle; on-screen characters and nearby objects did not clearly communicate ground-driven trembling. Improvement retained in approved P2 V2 (9.2/10): two children play then visibly react and brace as hanging objects or an awning tremble, without premature destruction. Original rejected prompt and exact earlier video grade are not confirmed. Historical review observation only; NEVER an exact-prompt block.'
  });
+ const HISTORICAL_P4=Object.freeze({
+  id:'historical-tohoku-p4-v1-vanishing-debris-static-neighborhood',origin:'observed-render',
+  kind:'failure',topic:'2011 Tōhoku Earthquake and Tsunami',stage:'P4',family:'tsunami',
+  prompt:'',grade:7.8,reason:'other',
+  notes:'P4 V1 visual review (7.8/10; 1000273717.mp4): roof fragments dissolved/disappeared upon striking the road, the utility pole and much of the background neighborhood stayed almost motionless, and earthquake movement appeared isolated to the foreground house. A road crack was already visible at frame zero and showed weak progression. Improvement: debris obeys gravity and persists after impact; pole, cables, foreground, midground and background respond coherently to the same ground shaking; road cracking develops only after shaking intensifies; character maintains believable balance and contact. User-approved P4 V2 scored 9.0/10 (1000273728.mp4), but some subtle pole/background motion and crack timing still remain improvement goals. Exact rejected V1 generation prompt is not verified; observation only, NEVER an exact-prompt blocker.'
+ });
  function isTohoku(t){return /t[oō]hoku/i.test(String(t||''))&&/(?:earthquake|tsunami)/i.test(String(t||''));}
  const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
  function signature(s){let x=2166136261;for(const c of clean(s)){x^=c.charCodeAt(0);x=Math.imul(x,16777619);}return(x>>>0).toString(36);}
@@ -91,6 +97,19 @@
   data.records.push(entry);
   storage().setItem(KEY,JSON.stringify(data));
   if(!parse(storage().getItem(KEY)).records.some(r=>r.id===entry.id))throw Error('Historical P2 DNA save verification failed.');
+  return {status:'saved',record:entry};
+ }
+ function seedHistoricalP4(topic){
+  if(!isTohoku(topic))return {status:'not-applicable'};
+  const data=parse(storage().getItem(KEY));
+  const existing=data.records.find(r=>r.id===HISTORICAL_P4.id);
+  if(existing)return {status:'existing',record:existing};
+  if(data.records.length>=MAX)return {status:'full'};
+  const entry={...HISTORICAL_P4,hash:signature('observed-render|'+HISTORICAL_P4.id),createdAt:new Date().toISOString()};
+  if(!valid(entry))throw Error('Historical P4 evidence failed validation.');
+  data.records.push(entry);
+  storage().setItem(KEY,JSON.stringify(data));
+  if(!parse(storage().getItem(KEY)).records.some(r=>r.id===entry.id))throw Error('Historical P4 DNA save verification failed.');
   return {status:'saved',record:entry};
  }
  function importRecords(raw){
@@ -164,19 +183,22 @@
   };
   function refreshHistoricalInfo(){
    const selected=stageSelect.value, t=doc.getElementById('topic')?.value||'';
-   const applicable=isTohoku(t)&&(selected==='P1'||selected==='P2');
+   const applicable=isTohoku(t)&&(selected==='P1'||selected==='P2'||selected==='P4');
    historicalInfo.hidden=!applicable;
    if(!applicable)return;
-   const record=selected==='P1'?HISTORICAL_P1:HISTORICAL_P2;
+   const record=selected==='P1'?HISTORICAL_P1:selected==='P2'?HISTORICAL_P2:HISTORICAL_P4;
    let saved=false;
    try{saved=list().some(r=>r.id===record.id);}
    catch(e){historicalInfo.textContent='Historical '+selected+' DNA unavailable: library backup or repair required. '+e.message;return;}
    if(selected==='P1'){
     historicalInfo.textContent=(saved?'✅ P1 V1 HISTORICAL FAILURE DNA SAVED — ':'P1 V1 HISTORICAL FAILURE DNA — ')+
       '8.5/10 · Kids → Coast → Kids. Recorded from reviewed video, not the missing original prompt. Approved P1 V2 is never blocked by this historical record.';
-   }else{
+   }else if(selected==='P2'){
     historicalInfo.textContent=(saved?'✅ P2 HISTORICAL FAILURE DNA SAVED — ':'P2 HISTORICAL FAILURE DNA — ')+
       'Weak visible shaking in earlier P2 review · previous grade unverified. Approved P2 V2: 9.2/10. This historical lesson never blocks the exact approved prompt.';
+   }else{
+    historicalInfo.textContent=(saved?'✅ P4 V1 HISTORICAL FAILURE DNA SAVED — ':'P4 V1 HISTORICAL FAILURE DNA — ')+
+      '7.8/10 · disappearing debris, mostly stationary poles and background, weak road-crack progression. Observation only; approved P4 V2 (9.0/10) remains unaffected.';
    }
   }
   stageSelect.addEventListener('change',refreshHistoricalInfo);
@@ -205,6 +227,7 @@
    try{
     seedHistoricalP1(topic);
     seedHistoricalP2(topic);
+    seedHistoricalP4(topic);
    }catch(e){root.console?.warn?.('Video DNA historical seed skipped:',e?.message||e);}
    mount();
    // Existing selected panel and project UI are untouched; the status is read-only.
@@ -212,12 +235,13 @@
    if(info&&isTohoku(topic)){
     try{
      const selected=root.document.querySelector('#nerVideoDnaPanel select')?.value||'';
-     const record=selected==='P1'?HISTORICAL_P1:selected==='P2'?HISTORICAL_P2:null;
+     const record=selected==='P1'?HISTORICAL_P1:selected==='P2'?HISTORICAL_P2:selected==='P4'?HISTORICAL_P4:null;
      if(record&&list().some(r=>r.id===record.id)){
       info.hidden=false;
       info.textContent=selected==='P1'?
        '✅ P1 V1 HISTORICAL FAILURE DNA SAVED — 8.5/10 · Kids → Coast → Kids. Observed video, not exact prompt; P1 V2 stays protected.':
-       '✅ P2 HISTORICAL FAILURE DNA SAVED — Weak visible shaking · original grade unverified. Approved P2 V2 (9.2/10) stays protected.';
+       selected==='P2'?'✅ P2 HISTORICAL FAILURE DNA SAVED — Weak visible shaking · original grade unverified. Approved P2 V2 (9.2/10) stays protected.':
+       '✅ P4 V1 HISTORICAL FAILURE DNA SAVED — 7.8/10 · disappearing debris, static utility poles and background, weak crack progression. Approved P4 V2 (9.0/10) stays protected.';
      }
     }catch(e){info.textContent='Historical DNA unavailable: '+e.message;}
    }
@@ -226,5 +250,5 @@
   root.addEventListener('load',hydrate);
   if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',hydrate);else hydrate();
  }
- return Object.freeze({VERSION,KEY,FAILURES,LESSONS,HISTORICAL_P1,HISTORICAL_P2,seedHistoricalP1,seedHistoricalP2,signature,list,save,check,assertReady,exportText,importRecords,fromCard,mount});
+ return Object.freeze({VERSION,KEY,FAILURES,LESSONS,HISTORICAL_P1,HISTORICAL_P2,HISTORICAL_P4,seedHistoricalP1,seedHistoricalP2,seedHistoricalP4,signature,list,save,check,assertReady,exportText,importRecords,fromCard,mount});
 });
