@@ -101,10 +101,15 @@ async function archiveIncomplete(key,expected){
 async function archiveMismatchedDone(key,expected){
  return archiveExact(key,expected,['DONE'],'explicit-mismatched-done-archive','Journal changed or is not a conclusive stale result. Nothing was reset.');
 }
+// Explicitly approved revision of a matched, completed, obsolete P5 audit.
+// The original DONE record is archived atomically; it is never overwritten.
+async function archiveMatchingDone(key,expected){
+ return archiveExact(key,expected,['DONE'],'explicit-obsolete-done-revision','Matching DONE journal changed or is not available for an explicit revision. Nothing was reset.');
+}
 async function preflight(){
  const key=PREFIX+'preflight-'+crypto.randomUUID();
  await operation('readwrite',store=>store.put({probe:true},key));
  await operation('readwrite',store=>store.delete(key));
 }
-window.NERCore5JournalStore=Object.freeze({read,inspect,save,remove,preflight,legacy,archiveIncomplete,archiveMismatchedDone});
+window.NERCore5JournalStore=Object.freeze({read,inspect,save,remove,preflight,legacy,archiveIncomplete,archiveMismatchedDone,archiveMatchingDone});
 })();
