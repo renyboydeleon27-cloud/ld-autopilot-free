@@ -152,7 +152,7 @@ function setOpen(card,options={}){
     btn.textContent=active?'Close':'Open';
   });
   writeSmartSession({targetStage:card.dataset.stage||''});
-  if(options.scroll!==false)card.scrollIntoView({behavior:'smooth',block:'start'});
+  if(options.scroll!==false)window.NERAutoFocus?.scrollTo(card,{behavior:'smooth',block:'start'});
 }
 function nextCard(card){
   const cards=[...stages.querySelectorAll('.stage-card')].filter(eligible);
@@ -454,6 +454,8 @@ function currentSessionCard(){
 }
 function restoreCurrentPanelViewport(options={}){
   clearTimeout(viewportRestoreTimer);
+  // Background return and browser focus must never move the page while OFF.
+  if(!window.NERAutoFocus?.enabled())return;
   const delay=Number.isFinite(options.delay)?options.delay:140;
   viewportRestoreTimer=setTimeout(()=>{
     restoreSmartSession();
@@ -461,7 +463,7 @@ function restoreCurrentPanelViewport(options={}){
     if(!card)return;
     setOpen(card,{scroll:false});
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      card.scrollIntoView({behavior:options.smooth?'smooth':'auto',block:'start'});
+      window.NERAutoFocus?.scrollTo(card,{behavior:options.smooth?'smooth':'auto',block:'start'});
       updateTargetLabel();
     }));
   },delay);
@@ -1003,7 +1005,7 @@ async function prepareTextToVideo(card){
   const continuity=window.ldVideoContinuity||{};
   if(!/^\d{4}$/.test(String(continuity.year||''))||!String(continuity.location||'').trim()){
     const ctx=document.getElementById('chapterVideoContext');
-    ctx?.scrollIntoView({behavior:'smooth',block:'center'});
+    window.NERAutoFocus?.scrollTo(ctx,{behavior:'smooth',block:'center'});
     throw new Error('Fill in Event year and Main location once. SMART CONTINUE will handle the rest.');
   }
 
@@ -1170,7 +1172,7 @@ function openFinalAudit(){
   const auditCard=document.getElementById('auditCard');
   if(auditCard){
     auditCard.classList.remove('hidden');
-    auditCard.scrollIntoView({behavior:'smooth',block:'start'});
+    window.NERAutoFocus?.scrollTo(auditCard,{behavior:'smooth',block:'start'});
   }
 }
 
@@ -1181,7 +1183,7 @@ async function run(){
   smartButtons().forEach(b=>b.disabled=true);
   try{
     if(!window.LDProjectLocks?.isLocked?.()&&!window.ldProjectLocks?.locked){
-      document.getElementById('ldProjectLocks')?.scrollIntoView({behavior:'smooth',block:'center'});
+      window.NERAutoFocus?.scrollTo(document.getElementById('ldProjectLocks'),{behavior:'smooth',block:'center'});
       throw new Error('Lock Video Mode, Visual Style and Color Treatment first.');
     }
     if(!stages.querySelector('.stage-card')){
@@ -1207,7 +1209,7 @@ async function run(){
     if(!hasCompletedStage&&narrationApproval&&typeof narrationApproval.isApproved==='function'&&!narrationApproval.isApproved()){
       const narrationBtn=document.getElementById('ldNarrationSmartBtn');
       const narrationCard=document.getElementById('masterNarrationCard');
-      narrationCard?.scrollIntoView({behavior:'smooth',block:'start'});
+      window.NERAutoFocus?.scrollTo(narrationCard,{behavior:'smooth',block:'start'});
       if(narrationBtn&&!narrationBtn.disabled){
         const mode=narrationBtn.dataset.mode||'generate';
         if(mode==='approve'){
@@ -1334,6 +1336,7 @@ function mountAdvanced(){
 
 function mount(){
   if(document.getElementById('ldSmartContinuePanel')){
+    window.NERAutoFocus?.mount();
     mountAdvanced();
     scheduleLocalReviewRevalidation();
     updateTargetLabel();
@@ -1357,6 +1360,7 @@ function mount(){
 
   }
 
+  window.NERAutoFocus?.mount();
   mountAdvanced();
   // Saved error text can outlive a local-policy update. Revalidate it locally
   // after all scripts restore the project; never spend an API call here.
