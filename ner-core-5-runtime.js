@@ -29,7 +29,21 @@ function originalV1Issues(c,s){
  const scene=[s?.location?.setting||'',s?.action?.description||''].join(' ');
  return [...review.issues,...guard.sceneIssues(c.dataset.stage,field(c,'.narration'),scene)];
 }
-function preflight(c){if(protectedPanel(c))return {ok:true,issues:[],preserved:true};try{const s=spec(c),v=C.validate(s),i=inputs(c);v.issues.push(...originalV1Issues(c,s));if(s.stage!==i.stage||s.topic!==i.topic||s.narration!==i.narration||s.eventYear!==Number(i.eventYear)||s.location?.region!==i.location)v.issues.push('StageSpec source identity does not match this panel and project.');if(!c.dataset.core5Spec&&i.legacyScene.trim())v.issues.push('KEEP CURRENT SCENE: review the saved scene in Review Core 5 scene before using Smart Continue.');if(c.dataset.core5Spec&&i.legacyScene!==sceneText(s))v.issues.push('Scene editor differs from the reviewed scene. Open Review Core 5 scene and apply your changes before audit.');const prior=[];for(const card of (document.querySelectorAll?.('.stage-card')||[])){if(card===c)break;if(card.dataset.core5Spec){try{const previous=JSON.parse(card.dataset.core5Spec);if(!protectedPanel(card)||previous.compilerVersion===C.VERSION)prior.push(previous);}catch{}}}if(prior.length)v.issues.push(...C.validateSequence([...prior,s]).issues);return {...v,ok:v.issues.length===0,spec:s};}catch(e){return {ok:false,issues:[e.message]};}}
+// A past automatically generated Tōhoku P5 scene says to walk calmly to a
+// generic shelter. Flag ONLY the exact untouched legacy recipe; customized,
+// audited and approved prompts must never be silently replaced.
+function staleTohokuP5(s){
+ return !!s&&s.stage==='P5'&&s.family==='tsunami'&&Number(s.eventYear)===2011&&
+  /(?:t[oō]hoku|japan)/i.test(String(s.topic||''))&&
+  /\b(?:tsunami warnings?|warnings? issued|authorities issued)\b/i.test(String(s.narration||''))&&
+  /\b(?:fled|flee|evacuat(?:e|ion|ed|ing)|higher ground|uphill)\b/i.test(String(s.narration||''))&&
+  s.location?.setting==='visible local route toward shelter'&&
+  s.action?.actor==='adult-1'&&s.action?.description==='adult-1 walks steadily to a visible sheltered threshold'&&
+  s.cast?.length===1&&s.cast[0]?.id==='adult-1'&&s.cast[0]?.description==='unnamed adult observer'&&
+  s.camera?.framing==='human-height medium-wide'&&s.camera?.movement==='slow-push-in'&&
+  s.audio==='quiet local ambience'&&!s.choreography;
+}
+function preflight(c){if(protectedPanel(c))return {ok:true,issues:[],preserved:true};try{const s=spec(c),v=C.validate(s),i=inputs(c);if(staleTohokuP5(s))v.issues.push('Saved P5 is the old generic shelter-walking recipe. Use Review Core 5 scene → Fix this stage · FREE to rebuild uphill evacuation; approved and audited panels are untouched.');v.issues.push(...originalV1Issues(c,s));if(s.stage!==i.stage||s.topic!==i.topic||s.narration!==i.narration||s.eventYear!==Number(i.eventYear)||s.location?.region!==i.location)v.issues.push('StageSpec source identity does not match this panel and project.');if(!c.dataset.core5Spec&&i.legacyScene.trim())v.issues.push('KEEP CURRENT SCENE: review the saved scene in Review Core 5 scene before using Smart Continue.');if(c.dataset.core5Spec&&i.legacyScene!==sceneText(s))v.issues.push('Scene editor differs from the reviewed scene. Open Review Core 5 scene and apply your changes before audit.');const prior=[];for(const card of (document.querySelectorAll?.('.stage-card')||[])){if(card===c)break;if(card.dataset.core5Spec){try{const previous=JSON.parse(card.dataset.core5Spec);if(!protectedPanel(card)||previous.compilerVersion===C.VERSION)prior.push(previous);}catch{}}}if(prior.length)v.issues.push(...C.validateSequence([...prior,s]).issues);return {...v,ok:v.issues.length===0,spec:s};}catch(e){return {ok:false,issues:[e.message]};}}
 function build(c){if(protectedPanel(c))return preserve(c);const v=preflight(c);if(!v.ok)throw Error('Local preflight — no audit credits used: '+v.issues.join(' '));const r=stored(c);if(r&&r.inputKey===key(c))return write(c,r.prompt);if(!c.dataset.core5Spec)setSpec(c,v.spec);return write(c,C.compile(v.spec));}
 function payload(c){if(protectedPanel(c)){const r=stored(c);if(r)return r.payload;throw Error('Legacy approved panel has no Core 5 audit payload.');}const v=preflight(c);if(!v.ok)throw Error('Local preflight — no audit credits used: '+v.issues.join(' '));if(!c.dataset.core5Spec)setSpec(c,v.spec);return C.payload(v.spec);}
 function ready(c){const r=stored(c);return !!r&&['AUDITED','APPROVED'].includes(r.status)&&r.inputKey===key(c)&&current(c)===r.prompt&&C.validatePayload(r.payload).ok;}

@@ -64,3 +64,51 @@ test('unresolved scene placeholders block compilation and paid payload creation'
 test('undated ending does not silently return to the historical event year',()=>{
  const s=make('ENDING','Thank you for watching.');assert.equal(s.chronology.sceneYear,null);assert.equal(s.chronology.relation,'after');
 });
+
+
+test('2011 Tōhoku P5 warning leads to urgent physical uphill evacuation, never generic shelter walking',()=>{
+ const topic='2011 Tōhoku Earthquake and Tsunami — Japan';
+ const narration='Authorities issued tsunami warnings. Along the coastline, people fled toward higher ground as dangerous waves approached.';
+ const spec=C.plan({topic,stage:'P5',narration,eventYear:2011,location:'Tōhoku, Japan',facts:[]});
+ assert.equal(spec.family,'tsunami');assert.equal(spec.role,'displacement');
+ assert.equal(spec.cast.length,1);assert.equal(spec.chronology.sceneYear,2011);
+ assert.match(spec.location.setting,/dry, clearly uphill coastal evacuation lane/i);
+ assert.match(spec.location.setting,/higher paved bend/);
+ assert.match(spec.action.description,/hurries forward up/);
+ assert.match(spec.action.description,/seventh second/);
+ assert.equal(spec.camera.movement,'slow-push-in');
+ assert.equal(spec.choreography.prop,'one continuous paved uphill evacuation lane and fixed roadside retaining wall');
+ assert.match(spec.choreography.motion,/from seconds 2–7/);
+ assert.match(spec.choreography.end,/by second seven/);
+ assert.match(spec.choreography.sound,/no human voice|never produce a human voice/i);
+ assert.equal(spec.timing[1].end,7);assert.equal(spec.timing[2].end,10);
+ assert.equal(spec.locks.duration,10);assert.equal(spec.locks.shots,1);assert.equal(spec.locks.color,'bw');
+ assert.equal(C.validate(spec).ok,true);
+ const compiled=C.compile(spec);
+ assert.match(compiled,/P5|displacement/);
+ assert.match(compiled,/uphill/);
+ assert.match(compiled,/ACTION DETAIL CONTRACT/);
+ assert.match(compiled,/7–10s:/);
+ assert.doesNotMatch(compiled,/walks steadily to a visible sheltered threshold/);
+ assert.doesNotMatch(spec.location.setting,/tsunami|inundation/i,'no misleading active-inundation boundary during warning-only phase');
+ assert.match(compiled,/FAMILY BOUNDARY: Water obeys gravity/);
+});
+test('Tōhoku P5 recipe stays specific: other topics and saved custom P5 scenes remain unchanged',()=>{
+ const narration='Authorities issued tsunami warnings. Along the coastline, people fled toward higher ground as dangerous waves approached.';
+ const topic='2011 Tōhoku Earthquake and Tsunami — Japan';
+ const input={topic,stage:'P5',narration,eventYear:2011,location:'Tōhoku, Japan'};
+ const newSpec=C.plan(input);
+ const oldSpec=C.clone(newSpec);
+ oldSpec.location.setting='a real user-customized inclined seawall refuge trail';
+ oldSpec.action.description='adult-1 jogs toward the safe hillside route';
+ delete oldSpec.choreography;
+ oldSpec.timing=[{start:0,end:2,phase:'establish'},{start:2,end:6,phase:'action'},{start:6,end:10,phase:'hold'}];
+ assert.equal(C.plan({...input,spec:oldSpec}).location.setting,oldSpec.location.setting);
+ assert.equal(C.plan({...input,spec:oldSpec}).action.description,oldSpec.action.description);
+ const other=C.plan({topic:'2011 Banda Aceh Tsunami — Indonesia',stage:'P5',narration,eventYear:2011,location:'Banda Aceh'});
+ assert.equal(other.location.setting,'visible local route toward shelter');
+ assert.equal(other.action.description,'adult-1 walks steadily to a visible sheltered threshold');
+ const p4=C.plan({topic,stage:'P4',narration:'The ground shook for minutes. Buildings swayed, roads cracked, and terrified residents struggled to remain standing.',eventYear:2011,location:'Tōhoku, Japan'});
+ assert.match(p4.location.setting,/roadside fence post/);
+ assert.doesNotMatch(p4.location.setting,/uphill coastal evacuation lane/);
+});

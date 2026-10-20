@@ -139,6 +139,27 @@ function recipe(r,f,narration='',topic=''){
   camera:{framing:'eye-level rear three-quarter medium-wide overlook view showing the observer, railing, roofs and distant sea',movement:'slow-push-in'},
   audio:'continuous low earthquake rumble with a restrained railing rattle; no voices, music or invented sirens'
  };
+ // The warning/evacuation beat follows the ground-shaking scene. A single
+ // unapproved resident moves visibly UPHILL in one consistent dry setting.
+ // Never substitute the generic walking-to-shelter template for this narration.
+ if(tohoku2011&&r==='displacement'&&/\b(?:tsunami warnings?|warnings? issued|authorities issued)\b/i.test(narration)&&
+    /\b(?:fled|flee|evacuat(?:e|ion|ed|ing)|higher ground|uphill)\b/i.test(narration))return {
+  location:'a dry, clearly uphill coastal evacuation lane in northeastern Japan on March 11, 2011, rising away from low waterfront houses toward a visibly higher paved bend and a sturdy roadside retaining wall; ordinary early-2010s Japanese homes, utility poles and suspended cables remain aligned with the slope; the entire road stays dry, and there is no visible incoming wave, street flooding, new building collapse, giant crack or unreadable evacuation sign',
+  cast:[{id:'adult-1',description:'one unnamed Japanese adult evacuee in ordinary early-2010s practical clothing, visibly frightened and urgently escaping uphill'}],
+  action:'adult-1 hurries forward up the same sloping evacuation lane with grounded, rapid footsteps and reaches its visibly raised bend by the seventh second, remaining oriented uphill',
+  camera:{framing:'human-height rear three-quarter medium-wide view including the resident, entire visible rising lane, low houses behind and higher bend ahead in one continuous perspective',movement:'slow-push-in'},
+  audio:'quick footfalls on dry pavement, light residual fixture rattling and distant nonverbal warning ambience; no voices, spoken announcements, subtitles, music or cinematic booms',
+  choreography:{
+   actor:'adult-1',prop:'one continuous paved uphill evacuation lane and fixed roadside retaining wall',
+   start:'at second zero the evacuee already faces uphill on the lower dry part of the lane, leaning slightly forward, with the same higher paved bend clearly visible ahead; no water, debris shower or complete arrival at the upper bend yet',
+   motion:'from seconds 2–7 the same adult takes several quick, physically grounded uphill steps toward the same elevated bend; feet alternately plant against the sloped pavement, knees flex and arms balance naturally; the background houses recede consistently as the camera slowly advances without reversing, cutting or teleporting',
+   end:'by second seven the resident reaches the visibly higher bend and slows while still facing uphill, breathing hard and remaining visibly alarmed through second ten; the fixed road, poles, slope and house locations stay consistent; no wave enters the frame',
+   setting:'March 2011 northeastern Japanese coastal neighborhood; period-accurate low-rise houses, cable-carrying utility poles, dry rising asphalt lane, simple low retaining wall and clear visible upward escape direction; no readable street signs, crowd, water impact or invented landmark',
+   continuity:'one and the same adult throughout, identical face, outfit and limb anatomy; no backward running, sliding feet, changing the road slope, magically reaching another street, duplicate runners or unexplained scene resets; P4 ground shaking gives way to evacuation urgency rather than renewed destruction',
+   visibility:'keep the urgent body lean and purposeful uphill footwork legible throughout; show the low coastal neighborhood in the rear depth and the same raised bend ahead, with a consistent horizon, camera axis and direction of travel',
+   sound:'synchronized rapid shoes against the sloped road, restrained ambient structural rattling and distant wordless warning ambience only; never produce a human voice or intelligible announcement'
+  }
+ };
  // Ground-level shaking and roadway damage after the offshore mainshock.
  // Match narrated physical effects, not a panel number, so P3's approved
  // elevated overlook and all unrelated earthquake topics stay untouched.
