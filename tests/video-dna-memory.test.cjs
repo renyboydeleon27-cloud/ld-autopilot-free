@@ -89,3 +89,55 @@ test('historical failure survives JSON backup and reimport without replacing exi
  assert.equal(D.importRecords(backup),0);
  assert.equal(D.check({topic:'2011 Tōhoku Earthquake and Tsunami',stage:'P1',prompt:good.prompt}).historical.length,1);
 });
+
+test('P2 historical failure is saved once with unknown grade and no fabricated prompt',()=>{
+ const db=mem();
+ D.seedHistoricalP1('2011 Tōhoku Earthquake and Tsunami');
+ const p2=D.seedHistoricalP2('2011 Tōhoku Earthquake and Tsunami');
+ assert.equal(p2.status,'saved');
+ assert.equal(p2.record.stage,'P2');
+ assert.equal(p2.record.grade,null);
+ assert.equal(p2.record.origin,'historical-review');
+ assert.equal(p2.record.reason,'quake-not-visible');
+ assert.equal(p2.record.prompt,'');
+ assert.match(p2.record.notes,/approved P2 V2 \(9\.2\/10\)/);
+ assert.equal(D.seedHistoricalP2('2011 Tōhoku Earthquake and Tsunami').status,'existing');
+ assert.equal(D.seedHistoricalP2('Mount Tambora 1815').status,'not-applicable');
+ assert.equal(D.list().length,2);
+ assert.equal(db.size,1,'stage state and journals never touched');
+});
+test('P2 approved motion remains allowed; historical observation never hard-blocks it',()=>{
+ mem();D.seedHistoricalP2('2011 Tōhoku Earthquake and Tsunami');
+ const approved={
+  topic:'2011 Tōhoku Earthquake and Tsunami',stage:'P2',family:'earthquake',
+  prompt:'The ground vibrates subtly in a 2011 coastal street. Two children playing stop, crouch and brace. Hanging objects rattle as the quake begins. No cuts.'
+ };
+ const check=D.assertReady(approved);
+ assert.equal(check.status,'pass');
+ assert.equal(check.historical.length,1);
+ assert.equal(check.historical[0].grade,null);
+ const differentTopic=D.check({...approved,topic:'Great Smog of London 1952'});
+ assert.equal(differentTopic.historical.length,0);
+ const otherStage=D.check({...approved,stage:'P3'});
+ assert.equal(otherStage.historical.length,0);
+});
+test('P2 historical memory round-trips with P1, existing Master DNA and JSON import',()=>{
+ const db=mem();
+ D.seedHistoricalP1('2011 Tōhoku Earthquake and Tsunami');
+ D.seedHistoricalP2('2011 Tōhoku Earthquake and Tsunami');
+ const master={topic:'2011 Tōhoku Earthquake and Tsunami',stage:'P2',family:'earthquake',prompt:'Children play outside. At first trembling, a hanging sign shakes and children crouch while the ground visibly vibrates.',grade:9.2};
+ D.save({...master,kind:'master'});
+ const backup=D.exportText(),count=D.list().length;
+ assert.equal(count,3);
+ db.delete(D.KEY);
+ assert.equal(D.importRecords(backup),count);
+ assert.equal(D.importRecords(backup),0);
+ assert.equal(D.list().find(r=>r.stage==='P2'&&r.origin==='historical-review').grade,null);
+ assert.equal(D.list().find(r=>r.stage==='P2'&&r.kind==='master').grade,9.2);
+});
+test('malformed ungraded regular failures are still rejected by storage validation',()=>{
+ const db=mem();
+ const r={...D.HISTORICAL_P2,origin:undefined,hash:'123456',id:'fake'};
+ db.set(D.KEY,JSON.stringify({version:D.VERSION,records:[r]}));
+ assert.throws(()=>D.list(),/Unrecognized/);
+});
