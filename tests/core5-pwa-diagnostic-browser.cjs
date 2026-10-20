@@ -48,7 +48,20 @@ const deadline=setTimeout(()=>{console.error('PWA diagnostic regression timed ou
   await page.waitForFunction(()=>document.getElementById('appUpdateButton').textContent==='Load available update');
   // Activation must not reload or mutate the open production.
   assert(await page.evaluate(()=>Array.from(document.scripts).some(s=>s.src.endsWith('ner-core-5-editor.js?v=5.1.1'))));
-  await page.locator('#appUpdateButton').click();await page.waitForFunction(build=>document.getElementById('appUpdateStatus')?.textContent.includes(build),fs.readFileSync(path.join(root,'app-update.js'),'utf8').match(/const BUILD='([^']+)'/)[1]);
+  await page.locator('#appUpdateButton').click();
+  try{await page.waitForFunction(build=>document.getElementById('appUpdateStatus')?.textContent.includes(build),fs.readFileSync(path.join(root,'app-update.js'),'utf8').match(/const BUILD='([^']+)'/)[1],{timeout:15000});}
+  catch(error){
+    const diagnostic=await page.evaluate(()=>({
+      url:location.href,button:document.getElementById('appUpdateButton')?.textContent,
+      status:document.getElementById('appUpdateStatus')?.textContent,
+      heading:document.querySelector('.topbar h1')?.textContent,
+      activeBuild:Array.from(document.scripts).filter(s=>s.src.includes('app-update.js')).map(s=>s.src),
+      core5Scripts:Array.from(document.scripts).filter(s=>s.src.includes('ner-core-5.js')).map(s=>s.src),
+      hasCore:!!window.NERCore5Runtime,hasSaved:!!window.LDCore,unloaded:document.querySelector('main')?.inert
+    }));
+    console.error('PWA reload diagnostic:',JSON.stringify(diagnostic),'pageErrors:',JSON.stringify(errors));
+    throw error;
+  }
   await page.waitForFunction(()=>document.querySelector('.stage-card[data-stage="P3"] .core5-check-audit'));
   async function verify(){
    await page.waitForFunction(()=>window.LDCore&&document.querySelector('[data-stage="P3"] .core5-check-audit')&&!document.querySelector('main').inert);
