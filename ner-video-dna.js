@@ -29,16 +29,23 @@
   prompt:'',grade:8.5,reason:'camera-reset',
   notes:'P1 V1 rejected Flow render (8.5/10): children appeared first (~0–1 s), camera moved to coastline/town (~1–5 s), then children appeared again (~5–10 s). Likely trigger: opening reference showed children instead of the coastline. Corrected P1 V2 opens on coastline at second zero, moves through the town and ends on two children without repeats or cuts. Exact rejected P1 V1 prompt is unavailable; observation only, NEVER an exact-prompt block.'
  });
+ const HISTORICAL_P2=Object.freeze({
+  id:'historical-tohoku-p2-earlier-weak-shaking',origin:'historical-review',
+  kind:'failure',topic:'2011 Tōhoku Earthquake and Tsunami',stage:'P2',family:'earthquake',
+  prompt:'',grade:null,reason:'quake-not-visible',
+  notes:'Earlier Tōhoku P2 review: the onset of earthquake motion was too subtle; on-screen characters and nearby objects did not clearly communicate ground-driven trembling. Improvement retained in approved P2 V2 (9.2/10): two children play then visibly react and brace as hanging objects or an awning tremble, without premature destruction. Original rejected prompt and exact earlier video grade are not confirmed. Historical review observation only; NEVER an exact-prompt block.'
+ });
  function isTohoku(t){return /t[oō]hoku/i.test(String(t||''))&&/(?:earthquake|tsunami)/i.test(String(t||''));}
  const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
  function signature(s){let x=2166136261;for(const c of clean(s)){x^=c.charCodeAt(0);x=Math.imul(x,16777619);}return(x>>>0).toString(36);}
  function empty(){return {version:VERSION,records:[]};}
  function valid(r){
-  const historic=r?.origin==='observed-render'&&r.kind==='failure'&&r.prompt===''&&typeof r.notes==='string'&&r.notes.length>=40;
+  const historic=['observed-render','historical-review'].includes(r?.origin)&&r.kind==='failure'&&r.prompt===''&&typeof r.notes==='string'&&r.notes.length>=40;
+  const numericGrade=Number.isFinite(r?.grade)&&r.grade>=0&&r.grade<=10&&(r.kind==='master'?r.grade>=9:r.grade<9);
+  const gradeValid=numericGrade||(historic&&r.grade===null);
   return r&&typeof r==='object'&&['master','failure'].includes(r.kind)&&typeof r.prompt==='string'&&
     (historic||r.prompt.trim().length>12)&&r.prompt.length<40000&&typeof r.topic==='string'&&typeof r.stage==='string'&&
-    typeof r.family==='string'&&typeof r.hash==='string'&&Number.isFinite(r.grade)&&r.grade>=0&&r.grade<=10&&
-    (r.kind==='master'?r.grade>=9:r.grade<9)&&(!r.reason||Object.hasOwn(FAILURES,r.reason));
+    typeof r.family==='string'&&typeof r.hash==='string'&&gradeValid&&(!r.reason||Object.hasOwn(FAILURES,r.reason));
  }
  function parse(raw){if(!raw)return empty();const obj=JSON.parse(raw);if(obj?.version!==VERSION||!Array.isArray(obj.records)||obj.records.length>MAX||obj.records.some(r=>!valid(r)))throw Error('Unrecognized Video DNA library. Existing records were not changed.');return obj;}
  function storage(){return root.localStorage;}
@@ -71,6 +78,19 @@
   data.records.push(entry);
   storage().setItem(KEY,JSON.stringify(data));
   if(!parse(storage().getItem(KEY)).records.some(r=>r.id===entry.id))throw Error('Historical P1 DNA save verification failed.');
+  return {status:'saved',record:entry};
+ }
+ function seedHistoricalP2(topic){
+  if(!isTohoku(topic))return {status:'not-applicable'};
+  const data=parse(storage().getItem(KEY));
+  const existing=data.records.find(r=>r.id===HISTORICAL_P2.id);
+  if(existing)return {status:'existing',record:existing};
+  if(data.records.length>=MAX)return {status:'full'};
+  const entry={...HISTORICAL_P2,hash:signature('historical-review|'+HISTORICAL_P2.id),createdAt:new Date().toISOString()};
+  if(!valid(entry))throw Error('Historical P2 evidence failed validation.');
+  data.records.push(entry);
+  storage().setItem(KEY,JSON.stringify(data));
+  if(!parse(storage().getItem(KEY)).records.some(r=>r.id===entry.id))throw Error('Historical P2 DNA save verification failed.');
   return {status:'saved',record:entry};
  }
  function importRecords(raw){
@@ -109,7 +129,7 @@
   if(earthquake&&!hasVisibleCue(p))warnings.push('No clear foreground ground-driven motion cue. Add body imbalance and synchronized visible environmental response.');
   if(earthquake&&/leaves?|foliage/i.test(p)&&!/ground|pavement|railing|pole|cable|wire/i.test(p))warnings.push('Foliage is the main visible motion cue; the scene may read as wind rather than shaking.');
   if(earthquake&&/\bdust\b/i.test(p)&&!/gradual|dispers|dissipat|thin|fade|after|crumbl|fall|damage|later/i.test(p))warnings.push('Dust timing is unspecified: rise from actual debris and disperse, not continuous smoke.');
-  const historical=records.filter(r=>r.origin==='observed-render'&&r.stage===stage&&isTohoku(topic)).map(r=>({id:r.id,grade:r.grade,reason:r.reason,notes:r.notes}));
+  const historical=records.filter(r=>['observed-render','historical-review'].includes(r.origin)&&r.stage===stage&&isTohoku(topic)).map(r=>({id:r.id,grade:r.grade,reason:r.reason,notes:r.notes}));
   for(const r of records){if(r.kind!=='master')continue;if(r.family&&family&&r.family!==family)continue;if(r.stage===stage||r.family===family)matches.push({id:r.id,topic:r.topic,stage:r.stage,grade:r.grade});}
   return {status:problems.length?'block':warnings.length?'warning':'pass',problems,warnings,matches:matches.slice(-5),historical,lessons:LESSONS};
  }
@@ -130,7 +150,7 @@
   const section=doc.createElement('details');section.id='nerVideoDnaPanel';section.className='card';section.style.marginTop='12px';
   const title=doc.createElement('summary');title.textContent='🧬 VIDEO DNA · Approved + Failure Memory';section.append(title);
   const hint=doc.createElement('p');hint.textContent='LOCAL / FREE. Use after watching the rendered video. Saves exact text prompts and review notes, not MP4 files. No automatic project edits or approvals.';section.append(hint);
-  const historicalInfo=doc.createElement('p');historicalInfo.id='nerHistoricalP1Info';historicalInfo.style.fontSize='12px';historicalInfo.style.opacity='.88';historicalInfo.hidden=true;section.append(historicalInfo);
+  const historicalInfo=doc.createElement('p');historicalInfo.id='nerHistoricalInfo';historicalInfo.style.fontSize='12px';historicalInfo.style.opacity='.88';historicalInfo.hidden=true;section.append(historicalInfo);
   const line=doc.createElement('div');line.style.display='flex';line.style.flexWrap='wrap';line.style.gap='8px';line.style.margin='8px 0';section.append(line);
   const elt=(tag,label,appendTo=line)=>{const e=doc.createElement(tag);e.textContent=label;appendTo.append(e);return e;};
   const stageSelect=elt('select','');stageSelect.setAttribute('aria-label','Choose panel for Video DNA review');
@@ -144,11 +164,19 @@
   };
   function refreshHistoricalInfo(){
    const selected=stageSelect.value, t=doc.getElementById('topic')?.value||'';
-   historicalInfo.hidden=!(selected==='P1'&&isTohoku(t));
-   if(!historicalInfo.hidden){
-    let saved=false;try{saved=list().some(r=>r.id===HISTORICAL_P1.id);}catch(e){historicalInfo.textContent='Historical P1 DNA unavailable: library backup or repair required. '+e.message;return;}
+   const applicable=isTohoku(t)&&(selected==='P1'||selected==='P2');
+   historicalInfo.hidden=!applicable;
+   if(!applicable)return;
+   const record=selected==='P1'?HISTORICAL_P1:HISTORICAL_P2;
+   let saved=false;
+   try{saved=list().some(r=>r.id===record.id);}
+   catch(e){historicalInfo.textContent='Historical '+selected+' DNA unavailable: library backup or repair required. '+e.message;return;}
+   if(selected==='P1'){
     historicalInfo.textContent=(saved?'✅ P1 V1 HISTORICAL FAILURE DNA SAVED — ':'P1 V1 HISTORICAL FAILURE DNA — ')+
       '8.5/10 · Kids → Coast → Kids. Recorded from reviewed video, not the missing original prompt. Approved P1 V2 is never blocked by this historical record.';
+   }else{
+    historicalInfo.textContent=(saved?'✅ P2 HISTORICAL FAILURE DNA SAVED — ':'P2 HISTORICAL FAILURE DNA — ')+
+      'Weak visible shaking in earlier P2 review · previous grade unverified. Approved P2 V2: 9.2/10. This historical lesson never blocks the exact approved prompt.';
    }
   }
   stageSelect.addEventListener('change',refreshHistoricalInfo);
@@ -173,18 +201,30 @@
  }
  if(root.document){
   const hydrate=()=>{
-   try{seedHistoricalP1(root.document.getElementById('topic')?.value||'');}catch(e){root.console?.warn?.('Video DNA historical P1 seed skipped:',e?.message||e);}
+   const topic=root.document.getElementById('topic')?.value||'';
+   try{
+    seedHistoricalP1(topic);
+    seedHistoricalP2(topic);
+   }catch(e){root.console?.warn?.('Video DNA historical seed skipped:',e?.message||e);}
    mount();
-   const info=root.document.getElementById('nerHistoricalP1Info');
-   if(info&&isTohoku(root.document.getElementById('topic')?.value||'')){
-    try{const has=list().some(r=>r.id===HISTORICAL_P1.id);
-    if(has)info.textContent='✅ P1 V1 HISTORICAL FAILURE DNA SAVED — 8.5/10 · Kids → Coast → Kids. Observed video, not exact prompt; P1 V2 stays protected.';}
-    catch(e){info.textContent='Historical P1 DNA unavailable: '+e.message;}
+   // Existing selected panel and project UI are untouched; the status is read-only.
+   const info=root.document.getElementById('nerHistoricalInfo');
+   if(info&&isTohoku(topic)){
+    try{
+     const selected=root.document.querySelector('#nerVideoDnaPanel select')?.value||'';
+     const record=selected==='P1'?HISTORICAL_P1:selected==='P2'?HISTORICAL_P2:null;
+     if(record&&list().some(r=>r.id===record.id)){
+      info.hidden=false;
+      info.textContent=selected==='P1'?
+       '✅ P1 V1 HISTORICAL FAILURE DNA SAVED — 8.5/10 · Kids → Coast → Kids. Observed video, not exact prompt; P1 V2 stays protected.':
+       '✅ P2 HISTORICAL FAILURE DNA SAVED — Weak visible shaking · original grade unverified. Approved P2 V2 (9.2/10) stays protected.';
+     }
+    }catch(e){info.textContent='Historical DNA unavailable: '+e.message;}
    }
   };
   root.addEventListener('ld:production-built',()=>root.queueMicrotask?root.queueMicrotask(hydrate):hydrate());
   root.addEventListener('load',hydrate);
   if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',hydrate);else hydrate();
  }
- return Object.freeze({VERSION,KEY,FAILURES,LESSONS,HISTORICAL_P1,seedHistoricalP1,signature,list,save,check,assertReady,exportText,importRecords,fromCard,mount});
+ return Object.freeze({VERSION,KEY,FAILURES,LESSONS,HISTORICAL_P1,HISTORICAL_P2,seedHistoricalP1,seedHistoricalP2,signature,list,save,check,assertReady,exportText,importRecords,fromCard,mount});
 });
