@@ -23,10 +23,23 @@
   'Earthquake: do not substitute drifting leaves or wind effects for ground vibration.',
   'One-shot progression: starting reference image must be the first beat, not the ending beat; no scene resets.'
  ]);
+ const HISTORICAL_P1=Object.freeze({
+  id:'historical-tohoku-p1-v1-kids-coast-kids',origin:'observed-render',
+  kind:'failure',topic:'2011 Tōhoku Earthquake and Tsunami',stage:'P1',family:'earthquake',
+  prompt:'',grade:8.5,reason:'camera-reset',
+  notes:'P1 V1 rejected Flow render (8.5/10): children appeared first (~0–1 s), camera moved to coastline/town (~1–5 s), then children appeared again (~5–10 s). Likely trigger: opening reference showed children instead of the coastline. Corrected P1 V2 opens on coastline at second zero, moves through the town and ends on two children without repeats or cuts. Exact rejected P1 V1 prompt is unavailable; observation only, NEVER an exact-prompt block.'
+ });
+ function isTohoku(t){return /t[oō]hoku/i.test(String(t||''))&&/(?:earthquake|tsunami)/i.test(String(t||''));}
  const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
  function signature(s){let x=2166136261;for(const c of clean(s)){x^=c.charCodeAt(0);x=Math.imul(x,16777619);}return(x>>>0).toString(36);}
  function empty(){return {version:VERSION,records:[]};}
- function valid(r){return r&&typeof r==='object'&&['master','failure'].includes(r.kind)&&typeof r.prompt==='string'&&r.prompt.trim().length>12&&r.prompt.length<40000&&typeof r.topic==='string'&&typeof r.stage==='string'&&typeof r.family==='string'&&typeof r.hash==='string'&&Number.isFinite(r.grade)&&r.grade>=0&&r.grade<=10&&(r.kind==='master'?r.grade>=9:r.grade<9)&&(!r.reason||Object.hasOwn(FAILURES,r.reason));}
+ function valid(r){
+  const historic=r?.origin==='observed-render'&&r.kind==='failure'&&r.prompt===''&&typeof r.notes==='string'&&r.notes.length>=40;
+  return r&&typeof r==='object'&&['master','failure'].includes(r.kind)&&typeof r.prompt==='string'&&
+    (historic||r.prompt.trim().length>12)&&r.prompt.length<40000&&typeof r.topic==='string'&&typeof r.stage==='string'&&
+    typeof r.family==='string'&&typeof r.hash==='string'&&Number.isFinite(r.grade)&&r.grade>=0&&r.grade<=10&&
+    (r.kind==='master'?r.grade>=9:r.grade<9)&&(!r.reason||Object.hasOwn(FAILURES,r.reason));
+ }
  function parse(raw){if(!raw)return empty();const obj=JSON.parse(raw);if(obj?.version!==VERSION||!Array.isArray(obj.records)||obj.records.length>MAX||obj.records.some(r=>!valid(r)))throw Error('Unrecognized Video DNA library. Existing records were not changed.');return obj;}
  function storage(){return root.localStorage;}
  function list(){return parse(storage().getItem(KEY)).records.slice();}
@@ -44,6 +57,21 @@
   // Verify the durable write. Never say "saved" on quota errors.
   if(!parse(storage().getItem(KEY)).records.some(r=>r.id===entry.id))throw Error('DNA save could not be verified. No approval status was changed.');
   return {record:entry,existing:false};
+ }
+ // A reviewed video can establish a failure pattern without an archived exact prompt.
+ // Save the *observation* separately: it must NEVER be mistaken for the approved P1 prompt.
+ function seedHistoricalP1(topic){
+  if(!isTohoku(topic))return {status:'not-applicable'};
+  const data=parse(storage().getItem(KEY));
+  const existing=data.records.find(r=>r.id===HISTORICAL_P1.id);
+  if(existing)return {status:'existing',record:existing};
+  if(data.records.length>=MAX)return {status:'full'};
+  const entry={...HISTORICAL_P1,hash:signature('observed-render|'+HISTORICAL_P1.id),createdAt:new Date().toISOString()};
+  if(!valid(entry))throw Error('Historical P1 evidence failed validation.');
+  data.records.push(entry);
+  storage().setItem(KEY,JSON.stringify(data));
+  if(!parse(storage().getItem(KEY)).records.some(r=>r.id===entry.id))throw Error('Historical P1 DNA save verification failed.');
+  return {status:'saved',record:entry};
  }
  function importRecords(raw){
   const incoming=parse(raw),current=parse(storage().getItem(KEY)),byId=new Set(current.records.map(r=>r.id));
@@ -73,7 +101,7 @@
   let records=[];
   try{records=list();}catch(e){return {status:'warning',problems:[],warnings:['DNA storage unavailable or invalid: '+e.message],matches:[],lessons:LESSONS};}
   const hash=signature(p);
-  const same=records.filter(r=>r.hash===hash&&r.kind==='failure');
+  const same=records.filter(r=>r.kind==='failure'&&r.prompt.length>12&&r.hash===hash);
   for(const r of same)problems.push('This exact prompt was previously rejected ('+(FAILURES[r.reason]||'observed render failure')+'). Review the failure DNA before any paid audit.');
   // Explicit damage at second zero is a reliable text-only blocker; missing video motion is not.
   if(openingDust(p))problems.push('Opening frame requests dense dust/smoke. Start clear and make localized dust appear after damage.');
@@ -81,8 +109,9 @@
   if(earthquake&&!hasVisibleCue(p))warnings.push('No clear foreground ground-driven motion cue. Add body imbalance and synchronized visible environmental response.');
   if(earthquake&&/leaves?|foliage/i.test(p)&&!/ground|pavement|railing|pole|cable|wire/i.test(p))warnings.push('Foliage is the main visible motion cue; the scene may read as wind rather than shaking.');
   if(earthquake&&/\bdust\b/i.test(p)&&!/gradual|dispers|dissipat|thin|fade|after|crumbl|fall|damage|later/i.test(p))warnings.push('Dust timing is unspecified: rise from actual debris and disperse, not continuous smoke.');
+  const historical=records.filter(r=>r.origin==='observed-render'&&r.stage===stage&&isTohoku(topic)).map(r=>({id:r.id,grade:r.grade,reason:r.reason,notes:r.notes}));
   for(const r of records){if(r.kind!=='master')continue;if(r.family&&family&&r.family!==family)continue;if(r.stage===stage||r.family===family)matches.push({id:r.id,topic:r.topic,stage:r.stage,grade:r.grade});}
-  return {status:problems.length?'block':warnings.length?'warning':'pass',problems,warnings,matches:matches.slice(-5),lessons:LESSONS};
+  return {status:problems.length?'block':warnings.length?'warning':'pass',problems,warnings,matches:matches.slice(-5),historical,lessons:LESSONS};
  }
  function assertReady(context){
   const r=check(context);
@@ -101,6 +130,7 @@
   const section=doc.createElement('details');section.id='nerVideoDnaPanel';section.className='card';section.style.marginTop='12px';
   const title=doc.createElement('summary');title.textContent='🧬 VIDEO DNA · Approved + Failure Memory';section.append(title);
   const hint=doc.createElement('p');hint.textContent='LOCAL / FREE. Use after watching the rendered video. Saves exact text prompts and review notes, not MP4 files. No automatic project edits or approvals.';section.append(hint);
+  const historicalInfo=doc.createElement('p');historicalInfo.id='nerHistoricalP1Info';historicalInfo.style.fontSize='12px';historicalInfo.style.opacity='.88';historicalInfo.hidden=true;section.append(historicalInfo);
   const line=doc.createElement('div');line.style.display='flex';line.style.flexWrap='wrap';line.style.gap='8px';line.style.margin='8px 0';section.append(line);
   const elt=(tag,label,appendTo=line)=>{const e=doc.createElement(tag);e.textContent=label;appendTo.append(e);return e;};
   const stageSelect=elt('select','');stageSelect.setAttribute('aria-label','Choose panel for Video DNA review');
@@ -112,7 +142,17 @@
    if(cards.some(c=>c.dataset.stage===prior))stageSelect.value=prior;
    else if(cards.some(c=>c.dataset.stage===active))stageSelect.value=active;
   };
-  root.addEventListener('ld:production-built',refreshStages);
+  function refreshHistoricalInfo(){
+   const selected=stageSelect.value, t=doc.getElementById('topic')?.value||'';
+   historicalInfo.hidden=!(selected==='P1'&&isTohoku(t));
+   if(!historicalInfo.hidden){
+    const saved=list().some(r=>r.id===HISTORICAL_P1.id);
+    historicalInfo.textContent=(saved?'✅ P1 V1 HISTORICAL FAILURE DNA SAVED — ':'P1 V1 HISTORICAL FAILURE DNA — ')+
+      '8.5/10 · Kids → Coast → Kids. Recorded from reviewed video, not the missing original prompt. Approved P1 V2 is never blocked by this historical record.';
+   }
+  }
+  stageSelect.addEventListener('change',refreshHistoricalInfo);
+  root.addEventListener('ld:production-built',()=>{refreshStages();refreshHistoricalInfo();});
   const grade=elt('input','');grade.type='number';grade.min='0';grade.max='10';grade.step='0.1';grade.value='9.0';grade.style.width='78px';grade.setAttribute('aria-label','Rendered video grade');
   const reason=elt('select','');reason.setAttribute('aria-label','Rejected video failure reason');
   for(const [value,name] of Object.entries(FAILURES)){const opt=doc.createElement('option');opt.value=value;opt.textContent=name;reason.append(opt);}
@@ -121,7 +161,7 @@
   const addButton=(name,fn)=>{const b=elt('button',name,buttons);b.type='button';b.className='ghost small';b.addEventListener('click',fn);return b;};
   const result=elt('pre','',section);result.style.whiteSpace='pre-wrap';result.setAttribute('role','status');
   function current(){const card=doc.querySelector('.stage-card[data-stage="'+stageSelect.value+'"]')||root.LDSmartContinue?.currentCard?.();if(!card)throw Error('Open a production stage first.');return fromCard(card);}
-  function showCheck(){const data=current();if(!data.prompt)throw Error('Build or paste this stage prompt before DNA checking.');const r=check(data);result.textContent='FREE DNA '+r.status.toUpperCase()+'\n'+[...r.problems,...r.warnings].join('\n')+'\nMatching approved references: '+r.matches.length+'\n'+r.matches.map(m=>m.stage+' · '+m.topic+' · '+m.grade+'/10').join('\n')+'\nNo API credits used.';return r;}
+  function showCheck(){const data=current();if(!data.prompt)throw Error('Build or paste this stage prompt before DNA checking.');const r=check(data);result.textContent='FREE DNA '+r.status.toUpperCase()+'\n'+[...r.problems,...r.warnings].join('\n')+'\nHistorical failure lessons: '+r.historical.length+' (observation only; NOT an exact-prompt block)'+'\nMatching approved references: '+r.matches.length+'\n'+r.matches.map(m=>m.stage+' · '+m.topic+' · '+m.grade+'/10').join('\n')+'\nNo API credits used.';return r;}
   addButton('CHECK VIDEO DNA · FREE',()=>{try{showCheck();}catch(e){result.textContent=e.message;}});
   addButton('SAVE MASTER DNA',()=>{try{const d=current(),g=Number(grade.value);if(!(g>=9))throw Error('Master requires a reviewed video grade of 9.0+.');const out=save({...d,grade:g,kind:'master',notes:notes.value});result.textContent=out.existing?'Already saved. No duplicate added.':'MASTER DNA saved locally for future projects. Export to back up.';}catch(e){result.textContent=e.message;}});
   addButton('SAVE FAILURE DNA',()=>{try{const d=current(),g=Number(grade.value);if(!(g<9))throw Error('Failure requires a reviewed grade below 9.0.');const out=save({...d,grade:g,kind:'failure',reason:reason.value,notes:notes.value});result.textContent=out.existing?'Already saved. No duplicate added.':'FAILURE DNA saved. Matching exact prompts will be blocked before paid audit.';}catch(e){result.textContent=e.message;}});
@@ -129,8 +169,21 @@
   const file=elt('input','',section);file.type='file';file.accept='.json,application/json';file.hidden=true;
   addButton('IMPORT DNA JSON',()=>file.click());
   file.addEventListener('change',async()=>{try{const f=file.files?.[0];if(!f)return;if(f.size>2e6)throw Error('DNA JSON exceeds 2 MB.');const count=importRecords(await f.text());result.textContent=count+' new DNA records imported. Existing entries preserved.';}catch(e){result.textContent=e.message;}finally{file.value='';}});
-  smart.after(section);refreshStages();
+  smart.after(section);refreshStages();refreshHistoricalInfo();
  }
- if(root.document){root.addEventListener('ld:production-built',()=>root.queueMicrotask?root.queueMicrotask(mount):mount());root.addEventListener('load',mount);if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',mount);else mount();}
- return Object.freeze({VERSION,KEY,FAILURES,LESSONS,signature,list,save,check,assertReady,exportText,importRecords,fromCard,mount});
+ if(root.document){
+  const hydrate=()=>{
+   try{seedHistoricalP1(root.document.getElementById('topic')?.value||'');}catch(e){root.console?.warn?.('Video DNA historical P1 seed skipped:',e?.message||e);}
+   mount();
+   const info=root.document.getElementById('nerHistoricalP1Info');
+   if(info&&isTohoku(root.document.getElementById('topic')?.value||'')){
+    const has=list().some(r=>r.id===HISTORICAL_P1.id);
+    if(has)info.textContent='✅ P1 V1 HISTORICAL FAILURE DNA SAVED — 8.5/10 · Kids → Coast → Kids. Observed video, not exact prompt; P1 V2 stays protected.';
+   }
+  };
+  root.addEventListener('ld:production-built',()=>root.queueMicrotask?root.queueMicrotask(hydrate):hydrate());
+  root.addEventListener('load',hydrate);
+  if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',hydrate);else hydrate();
+ }
+ return Object.freeze({VERSION,KEY,FAILURES,LESSONS,HISTORICAL_P1,seedHistoricalP1,signature,list,save,check,assertReady,exportText,importRecords,fromCard,mount});
 });
