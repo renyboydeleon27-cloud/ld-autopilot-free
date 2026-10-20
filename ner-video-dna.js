@@ -103,6 +103,16 @@
   const hint=doc.createElement('p');hint.textContent='LOCAL / FREE. Use after watching the rendered video. Saves exact text prompts and review notes, not MP4 files. No automatic project edits or approvals.';section.append(hint);
   const line=doc.createElement('div');line.style.display='flex';line.style.flexWrap='wrap';line.style.gap='8px';line.style.margin='8px 0';section.append(line);
   const elt=(tag,label,appendTo=line)=>{const e=doc.createElement(tag);e.textContent=label;appendTo.append(e);return e;};
+  const stageSelect=elt('select','');stageSelect.setAttribute('aria-label','Choose panel for Video DNA review');
+  const refreshStages=()=>{
+   const cards=[...doc.querySelectorAll('.stage-card[data-stage]')];
+   const prior=stageSelect.value;const active=root.LDSmartContinue?.currentCard?.()?.dataset?.stage;
+   stageSelect.replaceChildren();
+   for(const card of cards){const opt=doc.createElement('option');opt.value=card.dataset.stage;opt.textContent=card.dataset.stage;stageSelect.append(opt);}
+   if(cards.some(c=>c.dataset.stage===prior))stageSelect.value=prior;
+   else if(cards.some(c=>c.dataset.stage===active))stageSelect.value=active;
+  };
+  root.addEventListener('ld:production-built',refreshStages);
   const grade=elt('input','');grade.type='number';grade.min='0';grade.max='10';grade.step='0.1';grade.value='9.0';grade.style.width='78px';grade.setAttribute('aria-label','Rendered video grade');
   const reason=elt('select','');reason.setAttribute('aria-label','Rejected video failure reason');
   for(const [value,name] of Object.entries(FAILURES)){const opt=doc.createElement('option');opt.value=value;opt.textContent=name;reason.append(opt);}
@@ -110,8 +120,8 @@
   const buttons=elt('div','',section);buttons.style.display='flex';buttons.style.flexWrap='wrap';buttons.style.gap='6px';
   const addButton=(name,fn)=>{const b=elt('button',name,buttons);b.type='button';b.className='ghost small';b.addEventListener('click',fn);return b;};
   const result=elt('pre','',section);result.style.whiteSpace='pre-wrap';result.setAttribute('role','status');
-  function current(){const card=root.LDSmartContinue?.currentCard?.()||doc.querySelector('.stage-card:not(.hidden)');if(!card)throw Error('Open a production stage first.');return fromCard(card);}
-  function showCheck(){const data=current();if(!data.prompt)throw Error('Build or paste this stage prompt before DNA checking.');const r=check(data);result.textContent='FREE DNA '+r.status.toUpperCase()+'\n'+[...r.problems,...r.warnings].join('\n')+'\nMatching approved references: '+r.matches.length+'\nNo API credits used.';return r;}
+  function current(){const card=doc.querySelector('.stage-card[data-stage="'+stageSelect.value+'"]')||root.LDSmartContinue?.currentCard?.();if(!card)throw Error('Open a production stage first.');return fromCard(card);}
+  function showCheck(){const data=current();if(!data.prompt)throw Error('Build or paste this stage prompt before DNA checking.');const r=check(data);result.textContent='FREE DNA '+r.status.toUpperCase()+'\n'+[...r.problems,...r.warnings].join('\n')+'\nMatching approved references: '+r.matches.length+'\n'+r.matches.map(m=>m.stage+' · '+m.topic+' · '+m.grade+'/10').join('\n')+'\nNo API credits used.';return r;}
   addButton('CHECK VIDEO DNA · FREE',()=>{try{showCheck();}catch(e){result.textContent=e.message;}});
   addButton('SAVE MASTER DNA',()=>{try{const d=current(),g=Number(grade.value);if(!(g>=9))throw Error('Master requires a reviewed video grade of 9.0+.');const out=save({...d,grade:g,kind:'master',notes:notes.value});result.textContent=out.existing?'Already saved. No duplicate added.':'MASTER DNA saved locally for future projects. Export to back up.';}catch(e){result.textContent=e.message;}});
   addButton('SAVE FAILURE DNA',()=>{try{const d=current(),g=Number(grade.value);if(!(g<9))throw Error('Failure requires a reviewed grade below 9.0.');const out=save({...d,grade:g,kind:'failure',reason:reason.value,notes:notes.value});result.textContent=out.existing?'Already saved. No duplicate added.':'FAILURE DNA saved. Matching exact prompts will be blocked before paid audit.';}catch(e){result.textContent=e.message;}});
@@ -119,8 +129,8 @@
   const file=elt('input','',section);file.type='file';file.accept='.json,application/json';file.hidden=true;
   addButton('IMPORT DNA JSON',()=>file.click());
   file.addEventListener('change',async()=>{try{const f=file.files?.[0];if(!f)return;if(f.size>2e6)throw Error('DNA JSON exceeds 2 MB.');const count=importRecords(await f.text());result.textContent=count+' new DNA records imported. Existing entries preserved.';}catch(e){result.textContent=e.message;}finally{file.value='';}});
-  smart.after(section);
+  smart.after(section);refreshStages();
  }
- if(root.document){root.addEventListener('ld:production-built',()=>root.queueMicrotask?root.queueMicrotask(mount):mount());if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',mount);else mount();}
+ if(root.document){root.addEventListener('ld:production-built',()=>root.queueMicrotask?root.queueMicrotask(mount):mount());root.addEventListener('load',mount);if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',mount);else mount();}
  return Object.freeze({VERSION,KEY,FAILURES,LESSONS,signature,list,save,check,assertReady,exportText,importRecords,fromCard,mount});
 });
