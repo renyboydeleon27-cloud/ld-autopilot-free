@@ -203,7 +203,7 @@ test('FREE single-stage repair fixes legacy P1 without affecting P2, preserves d
 });
 test('FREE repair fails closed on unknown location, saved audits, and approved panels',async()=>{
  const b=boot(),c=b.card('P1');b.nodes.topic.value='An unknown disaster';b.window.ldVideoContinuity={};
- const before=JSON.stringify(c);assert.throws(()=>b.r.prepareStage(c),/valid event year and location/);
+ const before=JSON.stringify(c);assert.throws(()=>b.r.prepareStage(c),/Event year must be explicit.*Scene location is missing/);
  assert.equal(JSON.stringify(c),before);
  b.nodes.topic.value='Tōhoku Earthquake and Tsunami — 2011';
  c.fields['.narration'].value='In March 2011, life was peaceful along Japan’s northeastern coast.';
@@ -293,4 +293,52 @@ test('Tōhoku P1/P2 V2: coast-first children continuity without camera reset or 
   assert.match(prompt,/Exactly 2 distinct people/);
   assert.doesNotMatch(prompt,/No cuts\.\s*Cut to|crossfade to/i,stage);
  }
+});
+
+test('Tōhoku P4 road-damage recipe produces concrete street-level shaking, never P3 overlook or tsunami',()=>{
+ const narration='The ground shook for minutes. Buildings swayed, roads cracked, and terrified residents struggled to remain standing.';
+ for(const topic of ['2011 Tōhoku Earthquake and Tsunami — Japan','2011 Tohoku Earthquake and Tsunami']){
+  const m=C.metadata(topic);
+  const s=C.plan({topic,stage:'P4',eventYear:Number(m.year),location:m.location,narration});
+  assert.equal(s.eventYear,2011);
+  assert.match(s.location.region,/Japan/);
+  assert.deepEqual(C.validate(s).issues,[]);
+  const prompt=C.compile(s);
+  assert.match(prompt,/EXACTLY 10 SECONDS/);
+  assert.match(prompt,/Strict true black-and-white grayscale/);
+  assert.match(prompt,/street-level|ground-level/);
+  assert.match(prompt,/asphalt seam|road crack/i);
+  assert.match(prompt,/fence post/i);
+  assert.doesNotMatch(s.location.setting,/elevated coastal overlook/);
+  assert.doesNotMatch(s.location.setting,/supported (?:hazard|contextual feature)/i);
+  assert.doesNotMatch(s.location.setting,/tsunami water (?:arrives|floods)/i);
+  assert.equal(s.timing[0].start,0);
+  assert.equal(s.timing.at(-1).end,10);
+  assert.equal(C.validatePayload(C.payload(s)).ok,true);
+ }
+});
+test('FREE P4 repair clears only P4 placeholders without touching approved P1-P3 or sending an audit',()=>{
+ const b=boot(),cards=['P1','P2','P3','P4'].map(s=>b.card(s));
+ b.nodes.topic.value='2011 Tōhoku Earthquake and Tsunami — Japan';
+ b.window.ldVideoContinuity={year:'2011',location:'Tōhoku, Japan'};
+ const [p1,p2,p3,p4]=cards;
+ for(const [i,c] of [p1,p2,p3].entries()){
+  c.fields['.done-toggle'].checked=true;
+  c.fields['.text-video-prompt'].value='EXACT APPROVED PROMPT '+(i+1);
+  c.dataset.core5Record='{"status":"APPROVED","immutable":true}';
+ }
+ p4.fields['.narration'].value='The ground shook for minutes. Buildings swayed, roads cracked, and terrified residents struggled to remain standing.';
+ p4.fields['.video-scene'].value='KEEP CURRENT SCENE — old generic placeholder for P4';
+ b.document.querySelectorAll=()=>cards;
+ const saved=cards.slice(0,3).map(c=>JSON.stringify(c));
+ assert.equal(b.r.preflight(p4).ok,false);
+ const scene=b.r.prepareStage(p4);
+ assert.equal(scene.stage,'P4');
+ assert.deepEqual(C.validate(scene).issues,[]);
+ assert.equal(b.r.preflight(p4).ok,true);
+ assert.match(b.r.build(p4),/road crack|asphalt seam/i);
+ assert.equal(JSON.parse(p4.dataset.core5SceneHistory)[0].scene,'KEEP CURRENT SCENE — old generic placeholder for P4');
+ assert.deepEqual(cards.slice(0,3).map(c=>JSON.stringify(c)),saved);
+ assert.equal(b.calls(),0);
+ assert.equal(p4.dataset.core5Record,undefined);
 });

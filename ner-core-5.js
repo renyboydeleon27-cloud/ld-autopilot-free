@@ -139,6 +139,27 @@ function recipe(r,f,narration='',topic=''){
   camera:{framing:'eye-level rear three-quarter medium-wide overlook view showing the observer, railing, roofs and distant sea',movement:'slow-push-in'},
   audio:'continuous low earthquake rumble with a restrained railing rattle; no voices, music or invented sirens'
  };
+ // Ground-level shaking and roadway damage after the offshore mainshock.
+ // Match narrated physical effects, not a panel number, so P3's approved
+ // elevated overlook and all unrelated earthquake topics stay untouched.
+ if(tohoku2011&&/\bground (?:shook|shakes|was shaking|continued shaking)\b/i.test(narration)&&
+    /\b(?:roads?|pavement|asphalt)\b[^.!?]{0,55}\b(?:cracked|cracks?|fractur(?:ed|es?)|split)\b/i.test(narration))return {
+  location:'ground-level northeastern Japanese residential street during the March 11, 2011 earthquake, with early-2010s houses, intact low-rise facades, asphalt pavement, one sturdy roadside fence post and a nearby utility pole with hanging cables; vigorous ground-driven shaking makes nearby houses and cables sway, a narrow crack gradually develops along an asphalt seam, and a few loose roof tiles later fall with dust rising only after impact; no tsunami water, collapsed buildings at the start, giant ground fissures or oversized dust clouds',
+  cast:[{id:'adult-1',description:'unnamed Japanese adult resident in ordinary early-2010s street clothing, visibly struggling for balance'}],
+  action:'adult-1 shifts their feet to regain balance during the shaking and grips the existing sturdy roadside fence post with one hand, holding on as the tremors continue',
+  camera:{framing:'human-height slightly side-on street-level medium-wide view holding the resident, sturdy fence post, road seam, houses and utility cables in one continuous composition',movement:'slow-push-in'},
+  audio:'deep continuous ground rumble, restrained structural and cable rattling, one asphalt crack and a few roof-tile impacts; no voices, sirens, music or narration',
+  choreography:{
+   actor:'adult-1',prop:'one sturdy fixed roadside fence post',
+   start:'the resident is already struggling to stand beside the fixed post, with knees flexed, feet on intact asphalt and one hand reaching toward the post; nearby houses and wires are already trembling; the road has no visible major crack or rubble',
+   motion:'ground-driven shaking increases; the resident takes one corrective step and grips the fixed post once; a narrow crack progresses along the visible asphalt seam while a few loose roof tiles fall under gravity and only their impact produces a small dust puff',
+   end:'the resident remains upright but unsteady, gripping the same fixed post; the small road crack stays visible, suspended wires continue oscillating with inertia and the brief dust puff thins away',
+   setting:'realistic March 2011 northeastern Japanese residential street with low-rise homes, an intact fence, utility pole and overhead wires; restrained localized earthquake damage, no floodwater',
+   continuity:'keep the same resident, clothing, hand, feet, fixed post and road seam throughout; damage never reverses; houses sway structurally without rubber-like deformation; dust cannot appear before falling material strikes',
+   visibility:'keep the full bracing gesture, fixed post, gradual road crack and nearby structural response visible without camera reversals or extra subjects',
+   sound:'continuous low quake rumble; cable and house rattles, localized asphalt cracking and synchronized roof-tile impacts only, without speech or music'
+  }
+ };
  if(f==='atmospheric-pollution'){const p=pollutionRecipe(r,narration);if(p)return p;}
  const quiet={location:'quiet representative local setting',cast:[{id:'adult-1',description:'unnamed adult observer'}],action:'adult-1 slowly lowers their head',camera:{framing:'human-height medium-wide',movement:'slow-push-in'},audio:'quiet local ambience'};
  const recipes={

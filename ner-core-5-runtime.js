@@ -132,7 +132,7 @@ function prepareStage(c){
  // Repeat taps must not replace a valid reviewed scene or duplicate backups.
  if(c.dataset.core5Spec){const existing=preflight(c);if(existing.ok)return existing.spec;}
  const next=reviewSpec(c),valid=C.validate(next);
- if(!valid.ok)throw Error('Free scene repair requires a valid event year and location: '+valid.issues.join(' '));
+ if(!valid.ok)throw Error('Free scene repair blocked by local scene validation: '+valid.issues.join(' '));
  const i=inputs(c),before={scene:i.legacyScene,spec:c.dataset.core5Spec||'',record:c.dataset.core5Record||''};
  if(before.scene||before.spec){
   let history=[];try{history=JSON.parse(c.dataset.core5SceneHistory||'[]');if(!Array.isArray(history))history=[];}catch{}
