@@ -29,3 +29,4 @@ jobs:
           node tests/core5-journal-inspection-browser.cjs
           node tests/core5-pwa-diagnostic-browser.cjs
           node tests/core5-pwa-browser.cjs
+          node tests/storybook-import-browser.cjs
