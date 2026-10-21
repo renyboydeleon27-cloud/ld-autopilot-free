@@ -346,5 +346,5 @@
   if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',mount);
   else mount();
  }
- return Object.freeze({VERSION,SCHEMA,STAGES,parse,validate,context,read,commit,review,exportWorkspace,hydrate,mount});
+ return Object.freeze({VERSION,SCHEMA,STAGES,parse,validate,backupFromFile,context,read,commit,review,exportWorkspace,hydrate,mount});
 });
