@@ -1,11 +1,11 @@
 /* User-controlled PWA updates. No project reset, worker unregister, or silent reload. */
 (function(){'use strict';
-const BUILD='5.1.38';
+const BUILD='5.1.39';
 function mount(){
  if(document.getElementById('appUpdateStatus'))return;
  const host=document.querySelector('.topbar');if(!host)return;
  const box=document.createElement('div'),button=document.createElement('button'),status=document.createElement('p');
- button.type='button';button.id='appUpdateButton';button.textContent='Check app update';status.id='appUpdateStatus';status.setAttribute('role','status');status.textContent='Core 5 · workflow build '+BUILD;box.append(button,status);host.append(box);
+ button.type='button';button.id='appUpdateButton';button.textContent='Check app update';status.id='appUpdateStatus';status.setAttribute('role','status');status.textContent='NER Studio · Story Book build '+BUILD;box.append(button,status);host.append(box);
  if(!('serviceWorker' in navigator)){button.disabled=true;status.textContent+=' · updates unavailable in this browser';return;}
  let reloadReady=false,checking=false,lastCheck=0;
  const watched=new WeakSet();
@@ -33,7 +33,7 @@ function mount(){
  }
  async function check(){
   if(checking||reloadReady)return;checking=true;lastCheck=Date.now();button.disabled=true;status.textContent='Checking for an app update…';
-  try{const reg=await registration();await reg.update();inspectController();if(!reloadReady)status.textContent=reg.installing?'Downloading update. Keep this page open.':'Core 5 · workflow build '+BUILD+' · update check complete.';}
+  try{const reg=await registration();await reg.update();inspectController();if(!reloadReady)status.textContent=reg.installing?'Downloading update. Keep this page open.':'NER Studio · Story Book build '+BUILD+' · update check complete.';}
   catch(e){status.textContent='Update check failed. Saved projects are unchanged. '+e.message;}
   finally{checking=false;button.disabled=false;}
  }
