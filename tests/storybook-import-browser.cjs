@@ -34,7 +34,8 @@ const book={schemaVersion:'ner.storybook.v1',bookId:'tohoku-directors-browser',r
    seed.stages[st]={narration:'Original '+st+' never replace',imagePrompt:'old image '+st,flowPrompt:'old flow '+st,done:/^P[1-4]$/.test(st),approvalCommitted:/^P[1-4]$/.test(st),videoMode:'text',textVideoPrompt:'old exact '+st,videoScene:'old scene '+st};
   seed.stages.P5.core5Record='{"status":"AUDITED","old":"journal must survive"}';
   await page.evaluate(s=>{localStorage.setItem('ld-autopilot-free-v1',JSON.stringify(s));localStorage.setItem('ld-autopilot-free-active-project','tohoku-storybook-test');},seed);
-  await page.goto(origin);await page.waitForFunction(()=>window.LDCore&&window.NERStoryBook&&document.querySelector('#nerBookBox'),{timeout:20000});
+  await page.goto(origin);try{await page.waitForFunction(()=>window.LDCore&&window.NERStoryBook&&document.querySelector('#nerBookBox'),null,{timeout:7000});}
+  catch(e){const state=await page.evaluate(()=>({ready:document.readyState,core:!!window.LDCore,storybook:!!window.NERStoryBook,box:!!document.getElementById('nerBookBox'),sample:document.body.innerText.slice(0,800)}));throw Error('Story Book boot diagnostic: '+JSON.stringify({state,errors}));}
   const before=await page.evaluate(()=>LDCore.collectState());
   await page.locator('#nerBookBox > summary').click();
   await page.locator('#nerBookFile').setInputFiles({name:'TOHOKU_STORY_BOOK.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(book))});
