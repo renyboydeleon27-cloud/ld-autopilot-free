@@ -35,11 +35,12 @@ const book={schemaVersion:'ner.storybook.v1',bookId:'tohoku-directors-browser',r
   await page.evaluate(s=>{localStorage.setItem('ld-autopilot-free-v1',JSON.stringify(s));localStorage.setItem('ld-autopilot-free-active-project','tohoku-storybook-test');},seed);
   await page.goto(origin);try{await page.waitForFunction(()=>window.LDCore&&window.NERStoryBook&&document.querySelector('#nerBookBox'),null,{timeout:7000});}
   catch(e){const state=await page.evaluate(()=>({ready:document.readyState,core:!!window.LDCore,storybook:!!window.NERStoryBook,box:!!document.getElementById('nerBookBox'),sample:document.body.innerText.slice(0,800)}));throw Error('Story Book boot diagnostic: '+JSON.stringify({state,errors}));}
-  const before=await page.evaluate(()=>LDCore.collectState());
   await page.locator('#nerBookBox > summary').click();
   await page.locator('#nerBookFile').setInputFiles({name:'TOHOKU_STORY_BOOK.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(book))});
   await page.waitForFunction(()=>!document.getElementById('nerBookDistribute').disabled);
   assert((await page.locator('#nerBookPreview').innerText()).includes('P14'));
+  await page.waitForTimeout(500);
+  const before=await page.evaluate(()=>LDCore.collectState());
   await page.locator('#nerBookDistribute').click();
   await page.waitForFunction(async()=>{try{return (await NERStoryBook.read())?.book?.panels?.length===14;}catch{return false;}});
   const after=await page.evaluate(()=>LDCore.collectState());
