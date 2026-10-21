@@ -18,7 +18,7 @@
  const text=(v,min,max=40000)=>typeof v==='string'&&v.trim().length>=min&&v.length<=max;
  function context(){
   const doc=root.document, title=trim(doc?.getElementById('projectTitle')?.textContent);
-  const topic=trim(doc?.getElementById('topic')?.value)||(title==='No production yet'?'':title);
+  const topic=title&&title!=='No production yet'?title:trim(doc?.getElementById('topic')?.value);
   const format=doc?.getElementById('format')?.value||'';
   const cards=[...(doc?.querySelectorAll('.stage-card[data-stage]')||[])];
   let projectId='';try{projectId=root.localStorage?.getItem('ld-autopilot-free-active-project')||'';}catch{}
@@ -31,7 +31,6 @@
  function parse(raw){
   if(typeof raw!=='string'||bytes(raw)>1000000)throw Error('Story Book JSON must be at most 1 MB.');
   let value;try{value=JSON.parse(raw);}catch{throw Error('Invalid Story Book JSON.');}
-  if(value?.exportFormat==='ner.storybook.workspace.v1'&&hasKeys(value,['book']))value=value.book;
   return value;
  }
  function validate(book,ctx){
@@ -97,7 +96,11 @@
    if(words<12||words>24)warning(name+': '+words+' narration words; verify actual TTS timing near 8 seconds.');
    const card=ctx?.cards?.find(c=>c.dataset.stage===p.stage);
    const protectedNative=!!(card?.querySelector('.done-toggle')?.checked||card?.dataset.approvalCommitted==='1'||root.NERCore5Runtime?.protectedPanel?.(card));
-   rows.push({stage:p.stage,protectedNative,words,grade:p.promptReview?.grade||0,location:p.direction?.location||''});
+   const nativeNarration=card?.querySelector('.narration')?.value||'';
+   const nativePrompt=card&&root.NERCore5Runtime?.preserve?.(card)||card?.dataset?.textVideoPrompt||'';
+   const difference=protectedNative&&((!!nativeNarration&&nativeNarration!==p.narration)|| (!!nativePrompt&&nativePrompt!==p.videoPrompt));
+   if(difference)warning(name+': APPROVED PANEL DIFFERENCE — original approval preserved; imported copy is a separate alternative.');
+   rows.push({stage:p.stage,protectedNative,difference,words,grade:p.promptReview?.grade||0,location:p.direction?.location||''});
   }
   for(let i=2;i<locations.length;i++)if(locations[i]&&locations[i]===locations[i-1]&&locations[i]===locations[i-2])warning('P'+(i-1)+'–P'+(i+1)+': three repeated settings; director should confirm visual variety.');
   if(Array.isArray(book.panels)&&seen.size!==14)error('Missing one or more unique panel IDs.');
@@ -119,9 +122,26 @@
   });}finally{db.close();}
  }
  function hashBook(book){return canonical(book);}
- async function commit(book,ctx=context()){
+  function backupFromFile(value){
+   if(value?.exportFormat!=='ner.storybook.workspace.v1')return null;
+   if(!exactlyKeys(value,['exportFormat','exportedAt','book','reviews','history']))throw Error('Workspace backup fields are incomplete or unexpected.');
+   if(typeof value.exportedAt!=='string'||!Number.isFinite(Date.parse(value.exportedAt)))throw Error('Invalid workspace export timestamp.');
+   if(!value.reviews||typeof value.reviews!=='object'||Array.isArray(value.reviews))throw Error('Invalid Story Book review backup.');
+   if(!Array.isArray(value.history)||value.history.length>50)throw Error('Invalid Story Book revision history.');
+   for(const [stage,r] of Object.entries(value.reviews)){
+    if(!STAGES.includes(stage)||!r||typeof r!=='object'||!['pending','rendered','approved','rejected'].includes(r.status)||typeof r.prompt!=='string'||r.prompt.length>40000||!Number.isInteger(r.promptRevision)||typeof r.note!=='string'||typeof r.filename!=='string'||typeof r.reason!=='string'||!(r.grade===null||Number.isFinite(r.grade)&&r.grade>=0&&r.grade<=10))throw Error('Invalid review backup for '+stage+'.');
+    const p=value.book?.panels?.find(x=>x.stage===stage);
+    if(!p||r.prompt!==p.videoPrompt||r.promptRevision!==value.book.revision)throw Error('Review backup does not match current panel version: '+stage);
+   }
+   for(const h of value.history){
+    if(!h||typeof h!=='object'||!h.book||!h.reviews||typeof h.reviews!=='object'||typeof h.savedAt!=='string'||!validate(h.book).ok)throw Error('Invalid saved previous Book revision.');
+   }
+   return value;
+  }
+ async function commit(book,ctx=context(),backup=null){
   const checked=validate(book,ctx);if(!checked.ok)throw Error(checked.errors.join(' '));
-  const key=scope(ctx),data=hashBook(book),db=await openDb();
+  if(backup&&backup.book!==book)throw Error('Workspace backup does not match selected Book.');
+   const key=scope(ctx),data=hashBook(book),db=await openDb();
   try{return await new Promise((resolve,reject)=>{
    let answer,problem=null;
    const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);
@@ -140,7 +160,7 @@
       store.put({scope:key,book,reviews:{},history,savedAt:new Date().toISOString()});
      }else{
       answer={status:'imported'};
-      store.put({scope:key,book,reviews:{},history:[],savedAt:new Date().toISOString()});
+      store.put({scope:key,book,reviews:backup?.reviews||{},history:backup?.history||[],savedAt:new Date().toISOString()});
      }
     }catch(err){problem=err;tx.abort();}
    };
@@ -159,7 +179,7 @@
     try{
      if(context().identity!==ctx.identity)throw Error('Active project changed. Review not saved.');
      const record=e.target.result;if(!record?.book)throw Error('Import a Story Book first.');
-     const status=details?.status||'pending',grade=details?.grade===''?null:Number(details?.grade),note=trim(details?.note),filename=trim(details?.filename),reason=trim(details?.reason);
+     const status=details?.status||'pending',grade=(details?.grade===''||details?.grade==null)?null:Number(details?.grade),note=trim(details?.note),filename=trim(details?.filename),reason=trim(details?.reason);
      if(!['pending','rendered','approved','rejected'].includes(status))throw Error('Invalid render status.');
      if(!Number.isFinite(grade)&&grade!==null)throw Error('Invalid render grade.');
      if(grade!==null&&(grade<0||grade>10))throw Error('Render grade must be 0–10.');
@@ -246,7 +266,7 @@
  async function hydrate(){
   if(!root.document)return;
   const ctx=context();
-  if(!ctx.topic||ctx.cards.filter(c=>STAGES.includes(c.dataset.stage)).length!==14){loaded=null;return;}
+  if(!ctx.topic||ctx.cards.filter(c=>STAGES.includes(c.dataset.stage)).length!==14){loaded=null;root.document?.querySelectorAll('.ner-storybook-stage')?.forEach(n=>n.remove());return;}
   const sequence=++loadSequence;
   try{
    const record=await read(ctx);if(sequence!==loadSequence||context().identity!==ctx.identity)return;
@@ -258,12 +278,13 @@
  function showPreview(){
   const place=root.document.getElementById('nerBookPreview');if(!place)return;
   place.replaceChildren();
-  if(!pending){place.append(el('p',{text:'Choose a complete JSON file first.'}));return;}
+  if(!pending){place.append(el('p',{text:'Choose a complete JSON file first.'}));root.document.getElementById('nerBookDistribute').disabled=true;return;}
   const result=validate(pending.book,context());
+  try{if(pending.backup)backupFromFile(pending.backup);}catch(e){result.ok=false;result.errors.push(e.message);}
   place.append(el('p',{text:result.ok?'✅ All 14 panels validated. No original panel will be overwritten.':'❌ Import blocked until all errors are fixed.'}));
   for(const e of result.errors)place.append(el('p',{text:'ERROR: '+e,style:'color:#fca5a5;font-size:12px;'}));
   for(const w of result.warnings)place.append(el('p',{text:'REVIEW: '+w,style:'color:#facc15;font-size:12px;'}));
-  for(const row of result.panels)place.append(el('p',{text:row.stage+' · '+row.location+' · prompt '+row.grade+'/10 · '+row.words+' narration words · '+(row.protectedNative?'original approved/Done preserved':'original stage preserved'),style:'font-size:12px;margin:5px 0;'}));
+  for(const row of result.panels)place.append(el('p',{text:row.stage+' · '+row.location+' · prompt '+row.grade+'/10 · '+row.words+' narration words · '+(row.protectedNative?'original approved/Done preserved':'original stage preserved')+(row.difference?' · DIFFERS FROM APPROVED ORIGINAL':''),style:'font-size:12px;margin:5px 0;'}));
   root.document.getElementById('nerBookDistribute').disabled=!result.ok;
   return result;
  }
@@ -282,7 +303,8 @@
    try{
     const file=input.files?.[0];if(!file)return;
     if(file.size>1000000)throw Error('File is larger than 1 MB.');
-    pending={book:parse(await file.text()),name:file.name};
+    const fileData=parse(await file.text());
+     pending={book:fileData?.exportFormat==='ner.storybook.workspace.v1'?fileData.book:fileData,backup:backupFromFile(fileData),name:file.name};
     status('Loaded '+file.name+' for preview. No project changes have been made.');
     showPreview();
    }catch(e){status(e.message,true);}
@@ -290,18 +312,18 @@
   });
   preview.addEventListener('click',showPreview);
   apply.addEventListener('click',async()=>{
-   const c=context(),valid=pending&&validate(pending.book,c);
+   const c=context(),valid=pending&&showPreview();
    if(!valid?.ok){showPreview();status('Import preview is invalid. Nothing changed.',true);return;}
    if(!root.confirm('Distribute all 14 Story Book panels as a SEPARATE, read-only overlay for '+c.topic+'? Original stages, approved prompts and journals will not be changed.'))return;
    apply.disabled=true;
    try{
-    const result=await commit(pending.book,c);
+    const result=await commit(pending.book,c,pending.backup);
     const verify=await read(c);
     if(!verify?.book||hashBook(verify.book)!==hashBook(pending.book))throw Error('Story Book readback verification failed. Export a backup and retry.');
     status('Story Book '+result.status+': all P1–P14 overlays ready. No API call or paid audit.');
     pending=null;await hydrate();showPreview();
    }catch(e){status(e.message,true);}
-   finally{apply.disabled=!pending||!validate(pending.book,context()).ok;}
+   finally{apply.disabled=true;if(pending)showPreview();}
   });
   exp.addEventListener('click',async()=>{
    try{
