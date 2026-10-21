@@ -44,10 +44,25 @@ test('blocks injected unrecognized fields and refuses invalid narration',()=>{
 });
 test('can reparse exported workspace without treating reviews as panel instructions',()=>{
  const original=book(),exported=api.exportWorkspace({book:original,reviews:{P5:{status:'rejected'}},history:[]});
- assert.equal(JSON.stringify(api.parse(exported)),JSON.stringify(original));
+ assert.equal(JSON.stringify(api.parse(exported).book),JSON.stringify(original));
+ assert.equal(api.parse(exported).exportFormat,'ner.storybook.workspace.v1');
 });
 test('prevents wrong project being treated as matching based on case-insensitive superficial text',()=>{
  const a=book(),c={...ctx,topic:'2011 Japanese coastal disaster but a different one'};
  assert.equal(api.validate(a,c).ok,false);
 });
 console.log('Story Book schema and approved-panel read-only gates loaded.');
+
+test('exported workspace retains review records for round-trip restore',()=>{
+ const original=book(),clip=original.panels[4].videoPrompt;
+ const record={book:original,reviews:{P5:{status:'rejected',grade:7.8,filename:'1000273755.mp4',reason:'camera-reset',note:'Camera-facing finish observed',promptRevision:1,prompt:clip,reviewedAt:'2026-10-21T14:00:00Z'}},history:[]};
+ const backup=api.parse(api.exportWorkspace(record));
+ assert.equal(api.backupFromFile(backup).reviews.P5.prompt,clip);
+ assert.equal(api.backupFromFile(backup).reviews.P5.grade,7.8);
+ assert.equal(valid(backup.book).ok,true);
+});
+test('corrupted workspace records cannot silently restore as approved',()=>{
+ const a=book(), backup=api.parse(api.exportWorkspace({book:a,reviews:{},history:[]}));
+ backup.reviews.P5={status:'approved',grade:10,filename:'foo.mp4',reason:'',note:'invented',promptRevision:1,prompt:'WRONG',reviewedAt:'2026-10-21T14:00:00Z'};
+ assert.throws(()=>api.backupFromFile(backup),/does not match/);
+});
