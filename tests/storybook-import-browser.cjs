@@ -51,6 +51,8 @@ const book={schemaVersion:'ner.storybook.v1',bookId:'tohoku-directors-browser',r
   assert.equal(await p5.count(),1);
   assert.equal(await p5.locator('textarea').nth(1).inputValue(),book.panels[4].videoPrompt);
   await page.locator('.stage-card[data-stage="P5"] .collapse-btn').click();
+  // Native stage cards are collapsed by default. Open the stage before clicking its imported overlay.
+  await page.locator('.stage-card[data-stage="P5"] .collapse-btn').click();
   await p5.locator('summary').click();
   await p5.locator('select').first().selectOption('rejected');
   await p5.locator('input[type="text"]').fill('1000273755.mp4');
