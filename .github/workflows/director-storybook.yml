@@ -1,0 +1,27 @@
+name: Director Story Book safe import
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  director-storybook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify PWA dependencies
+        run: node scripts/build-pwa-shell.cjs --check
+      - name: Verify Story Book safety rules and backup validation
+        run: node --test tests/storybook-import.test.cjs
+      - name: Prepare browser
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - name: Test Android-sized app, approved panel preservation, review and reload
+        run: node tests/storybook-import-browser.cjs
