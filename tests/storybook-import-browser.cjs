@@ -16,8 +16,7 @@ const book={schemaVersion:'ner.storybook.v1',bookId:'tohoku-directors-browser',r
   const file=new URL(req.url,'http://localhost').pathname;
   if(file==='/seed.html'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><title>Seed storage</title>');return;}
   if(file.startsWith('/api/')){requests++;res.writeHead(500).end('Denied by test');return;}
-  try{const fn=path.resolve(root,'.'+file);if(!fn.startsWith(root+path.sep)&&fn!==path.join(root,'index.html'))throw Error('forbidden');
-   const actual=file==='/'?path.join(root,'index.html'):fn;
+  try{const actual=file==='/'?path.join(root,'index.html'):path.resolve(root,'.'+file);if(!actual.startsWith(root+path.sep))throw Error('forbidden');
    res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.json')?'application/json':'text/html');
    res.end(fs.readFileSync(actual));
   }catch{res.writeHead(404).end();}
