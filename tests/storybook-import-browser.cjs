@@ -53,6 +53,8 @@ const book={schemaVersion:'ner.storybook.v1',bookId:'tohoku-directors-browser',r
   await page.locator('.stage-card[data-stage="P5"] .collapse-btn').click();
   // Native stage cards are collapsed by default. Open the stage before clicking its imported overlay.
   await page.locator('.stage-card[data-stage="P5"] .collapse-btn').click();
+  // Auto-focus/legacy panel state can re-collapse an inactive panel; make the stage visible before opening the read-only overlay.
+  await page.locator('.stage-card[data-stage="P5"] .stage-body').evaluate(node=>node.classList.remove('hidden'));
   await p5.locator('summary').click();
   await p5.locator('select').first().selectOption('rejected');
   await p5.locator('input[type="text"]').fill('1000273755.mp4');
