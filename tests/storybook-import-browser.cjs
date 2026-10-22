@@ -25,6 +25,7 @@ const book={schemaVersion:'ner.storybook.v1',bookId:'tohoku-directors-browser',r
  let browser;try{
   let launch={headless:true};if(process.env.CORE5_CHROMIUM_MODULE){const m=await import(process.env.CORE5_CHROMIUM_MODULE),c=m.default||m;launch={...launch,executablePath:await c.executablePath(),args:c.args};}
   browser=await chromium.launch(launch);const context=await browser.newContext({viewport:{width:393,height:851},serviceWorkers:'block',acceptDownloads:true});
+  await context.grantPermissions(['clipboard-read','clipboard-write']);
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   page.on('dialog',d=>d.accept());
   await page.goto(origin+'/seed.html');
@@ -56,6 +57,32 @@ const book={schemaVersion:'ner.storybook.v1',bookId:'tohoku-directors-browser',r
   // Auto-focus/legacy panel state can re-collapse an inactive panel; make the stage visible before opening the read-only overlay.
   await page.locator('.stage-card[data-stage="P5"] .stage-body').evaluate(node=>node.classList.remove('hidden'));
   await p5.locator('summary').click();
+  // No infinite hydration/re-render loop: a live overlay survives a short pause.
+  await p5.evaluate(node=>node.dataset.copyTestMarker='stable');
+  await page.waitForTimeout(450);
+  assert.equal(await p5.getAttribute('data-copy-test-marker'),'stable','Director overlay must not be rebuilt on every DOM mutation');
+  // Imported Director's Book button and original FULL T2V button must both
+  // copy the exact imported prompt, never the unrelated native Core 5 text.
+  const directorCopy=p5.locator('[data-director-copy="videoPrompt"]');
+  await directorCopy.click();
+  assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),book.panels[4].videoPrompt,'Director button copied exact prompt');
+  await card5.locator('.copy-active-video').click();
+  assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),book.panels[4].videoPrompt,'Legacy FULL button routes to imported Director prompt');
+  // Android WebView case: clipboard API is absent; synchronous execCommand
+  // must still place the full prompt on the system clipboard.
+  await page.evaluate(()=>{
+   window.readSavedClipboard=navigator.clipboard.readText.bind(navigator.clipboard);
+   Object.defineProperty(navigator,'clipboard',{configurable:true,value:undefined});
+  });
+  await directorCopy.click();
+  assert.equal(await page.evaluate(()=>window.readSavedClipboard()),book.panels[4].videoPrompt,'Android fallback copied exact prompt without clipboard API');
+  // Both clipboard routes blocked: present select-all fallback, never lie.
+  await page.evaluate(()=>{document.execCommand=()=>false;});
+  await directorCopy.click();
+  assert.match(await p5.locator('.ner-book-copy-result').first().innerText(),/Clipboard blocked/i);
+  await p5.locator('[data-director-select="videoPrompt"]').click();
+  assert.deepEqual(await p5.locator('textarea[data-director-field="videoPrompt"]').evaluate(e=>[e.selectionStart,e.selectionEnd]),[0,book.panels[4].videoPrompt.length]);
+
   await p5.locator('select').first().selectOption('rejected');
   await p5.locator('input[type="text"]').fill('1000273755.mp4');
   await p5.locator('input[type="number"]').fill('7.8');

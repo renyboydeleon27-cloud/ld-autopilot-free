@@ -6,7 +6,7 @@
  else root.NERStoryBook=api;
 })(typeof window!=='undefined'?window:globalThis,function(root){
  'use strict';
- const VERSION='1.0.0', SCHEMA='ner.storybook.v1', DB='ner-director-storybook-v1', STORE='projects';
+ const VERSION='1.1.0', SCHEMA='ner.storybook.v1', DB='ner-director-storybook-v1', STORE='projects';
  const STAGES=Array.from({length:14},(_,i)=>'P'+(i+1));
  const MANUAL=['HOOK','ENDING','THUMBNAIL'];
  const bytes=x=>new TextEncoder().encode(x).length;
@@ -203,26 +203,98 @@
  }
  function button(label){return el('button',{type:'button',class:'ghost small',text:label});}
  function status(msg,isError=false){const n=root.document.getElementById('nerBookStatus');if(n){n.textContent=msg;n.style.color=isError?'#fca5a5':'#a5d6b4';}}
- async function copy(s){
-  try{await root.navigator.clipboard.writeText(s);status('Exact Story Book text copied.');}
-  catch{status('Clipboard unavailable. Select and copy the read-only text below.',true);}
+ // Android PWA/WebView sometimes does not expose navigator.clipboard.
+ // Synchronous legacy selection is performed inside the actual button tap.
+ function legacyCopy(value){
+  const doc=root.document;
+  if(!doc?.body||typeof doc.execCommand!=='function')return false;
+  const input=doc.createElement('textarea');
+  input.value=value;input.readOnly=true;input.setAttribute('aria-hidden','true');
+  input.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;';
+  const previous=doc.activeElement;
+  doc.body.append(input);
+  try{
+   try{input.focus({preventScroll:true});}catch{input.focus();}
+   input.select();input.setSelectionRange?.(0,value.length);
+   return doc.execCommand('copy')===true;
+  }catch{return false;}
+  finally{
+   input.remove();
+   if(previous?.isConnected&&typeof previous.focus==='function'){
+    try{previous.focus({preventScroll:true});}catch{}
+   }
+  }
+ }
+ function copyMessage(button,message,isError=false){
+  if(!button)return;
+  let label=button.nextElementSibling;
+  if(!label?.classList?.contains('ner-book-copy-result')){
+   label=el('span',{class:'ner-book-copy-result',role:'status',style:'display:block;font-size:12px;margin:4px 0 8px;white-space:normal;'});
+   button.insertAdjacentElement('afterend',label);
+  }
+  label.style.color=isError?'#fca5a5':'#a5d6b4';
+  label.textContent=message;
+ }
+ async function copy(s,options={}){
+  const value=String(s||'');
+  if(!value.trim()){
+   copyMessage(options.button,'No Story Book text found to copy.',true);
+   status('No Story Book text found to copy.',true);
+   return false;
+  }
+  let copied=legacyCopy(value);
+  if(!copied){
+   try{
+    if(typeof root.navigator?.clipboard?.writeText==='function'){
+     await root.navigator.clipboard.writeText(value);copied=true;
+    }
+   }catch{}
+  }
+  if(copied){
+   copyMessage(options.button,'✓ Copied '+value.length+' characters from Director’s Story Book.');
+   status('Copied exact Director’s Book prompt ('+value.length+' characters).');
+  }else{
+   copyMessage(options.button,'Clipboard blocked. Tap SELECT ALL below and use your phone’s Copy option.',true);
+   status('Android clipboard unavailable. Use SELECT ALL on the Director’s Book prompt.',true);
+  }
+  return copied;
+ }
+ function selectText(field,button){
+  if(!field)return;
+  const holder=field.closest('details.ner-storybook-stage');
+  if(holder)holder.open=true;
+  try{field.focus({preventScroll:true});}catch{field.focus();}
+  field.select();field.setSelectionRange?.(0,field.value.length);
+  copyMessage(button,'Full text selected. Use your phone’s Copy option.');
  }
  function download(content,filename){
   const u=root.URL.createObjectURL(new Blob([content],{type:'application/json;charset=utf-8'})),a=el('a',{href:u,download:filename});
   root.document.body.append(a);a.click();a.remove();root.setTimeout(()=>root.URL.revokeObjectURL(u),1000);
  }
  function renderPanel(card,record){
-  card.querySelector('.ner-storybook-stage')?.remove();
   const stage=card.dataset.stage, p=record?.book?.panels?.find(x=>x.stage===stage);
-  if(!p)return;
-  const holder=el('details',{class:'ner-storybook-stage',style:'margin:10px 0;padding:12px;border:1px solid #36546a;border-radius:12px;background:#111d2b;'});
+  const existing=card.querySelector('.ner-storybook-stage');
+  if(!p){existing?.remove();return;}
   const originalProtected=!!(card.querySelector('.done-toggle')?.checked||card.dataset.approvalCommitted==='1'||root.NERCore5Runtime?.protectedPanel?.(card));
+  const fingerprint=record.book.bookId+'|'+record.book.revision+'|'+JSON.stringify(record.reviews?.[stage]||{})+'|'+String(originalProtected);
+  // Do not destroy copy controls on re-hydration or trigger an observer loop.
+  if(existing?.dataset.fingerprint===fingerprint)return;
+  existing?.remove();
+  const holder=el('details',{class:'ner-storybook-stage',style:'margin:10px 0;padding:12px;border:1px solid #36546a;border-radius:12px;background:#111d2b;'});
+  holder.dataset.fingerprint=fingerprint;
   holder.append(el('summary',{text:'📖 Director’s Book · '+stage+' · '+(originalProtected?'Original approved panel protected':'Imported overlay ready')}));
   holder.append(el('p',{text:'READ-ONLY OVERLAY · Native prompts, Core 5, Smart Continue, audit journals and Done flags are unchanged.',style:'font-size:12px;color:#a3b8c9;'}));
   const label=(t,v)=>{
    holder.append(el('p',{text:t,style:'font-size:12px;font-weight:700;color:#a3b8c9;margin:10px 0 4px;'}));
-   const ta=el('textarea',{readonly:'',rows:t==='Complete video prompt'?'8':'3',style:'width:100%;max-width:100%;box-sizing:border-box;'});ta.value=v;holder.append(ta);
-   const b=button('Copy exact '+t.toLowerCase());b.addEventListener('click',()=>copy(v));holder.append(b);
+   const field=t==='Complete video prompt'?'videoPrompt':'narration';
+   const ta=el('textarea',{readonly:'',rows:field==='videoPrompt'?'8':'3',style:'width:100%;max-width:100%;box-sizing:border-box;'});
+   ta.dataset.directorField=field;ta.value=v;holder.append(ta);
+   const b=button('📋 COPY '+stage+' '+(field==='videoPrompt'?'FULL DIRECTOR VIDEO PROMPT':'DIRECTOR NARRATION'));
+   b.dataset.directorCopy=field;
+   b.addEventListener('click',()=>copy(v,{button:b,field:ta}));holder.append(b);
+   const select=button('SELECT ALL · manual copy');
+   select.dataset.directorSelect=field;
+   select.addEventListener('click',()=>selectText(ta,select));holder.append(select);
   };
   holder.append(el('p',{text:'Scene: '+p.direction.location+' · Cast: '+p.direction.cast+' · Camera: '+p.direction.camera+' · Prompt review: '+p.promptReview.grade+'/10',style:'font-size:13px;'}));
   holder.append(el('p',{text:'Action: '+p.direction.action+' · Transition: '+p.direction.transitionOut,style:'font-size:13px;'}));
@@ -262,15 +334,30 @@
   holder.append(save,dna);
   card.querySelector('.stage-body')?.prepend(holder);
  }
- let pending=null,loaded=null,loadSequence=0;
+ let pending=null,loaded=null,loadedIdentity='',loadSequence=0;
+ // The green Copy FULL T2V button must copy the imported Director's prompt.
+ // Never overwrite the native Core 5 prompt, Done flags, or audit journals.
+ function redirectNativePromptCopy(event){
+  const button=event.target?.closest?.('.copy-active-video,.copy-text-video');
+  if(!button)return;
+  const card=button.closest('.stage-card[data-stage]');
+  if(!card||!STAGES.includes(card.dataset.stage)||!loaded?.book)return;
+  const ctx=context();
+  if(ctx.identity!==loadedIdentity||normalized(ctx.topic)!==normalized(loaded.book.project.topic))return;
+  const p=loaded.book.panels.find(row=>row.stage===card.dataset.stage);
+  if(!p)return;
+  event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+  const field=card.querySelector('.ner-storybook-stage textarea[data-director-field="videoPrompt"]');
+  copy(p.videoPrompt,{button,field});
+ }
  async function hydrate(){
   if(!root.document)return;
   const ctx=context();
-  if(!ctx.topic||ctx.cards.filter(c=>STAGES.includes(c.dataset.stage)).length!==14){loaded=null;root.document?.querySelectorAll('.ner-storybook-stage')?.forEach(n=>n.remove());return;}
+  if(!ctx.topic||ctx.cards.filter(c=>STAGES.includes(c.dataset.stage)).length!==14){loaded=null;loadedIdentity='';root.document?.querySelectorAll('.ner-storybook-stage')?.forEach(n=>n.remove());return;}
   const sequence=++loadSequence;
   try{
    const record=await read(ctx);if(sequence!==loadSequence||context().identity!==ctx.identity)return;
-   loaded=record;
+   loaded=record;loadedIdentity=ctx.identity;
    for(const card of ctx.cards)if(STAGES.includes(card.dataset.stage))renderPanel(card,record);
    const info=root.document.getElementById('nerBookInfo');if(info)info.textContent=record?.book?'Imported: '+record.book.bookId+' · revision '+record.book.revision+' · 14 panels':'No Story Book imported for this project.';
   }catch(e){status('Story Book storage: '+e.message,true);}
@@ -337,9 +424,14 @@
   actions.append(upload,preview,apply,exp,input);
   panel.append(actions,el('p',{id:'nerBookStatus',role:'status',text:'Ready for local Story Book import. No API credits.'}),el('p',{id:'nerBookInfo',text:'No Story Book imported for this project.',style:'font-size:12px;color:#a3b8c9;'}),el('div',{id:'nerBookPreview',style:'margin-top:8px;max-height:300px;overflow:auto;'}));
   target.parentNode.insertBefore(panel,target);
+  root.document.addEventListener('click',redirectNativePromptCopy,true);
   root.addEventListener('ld:production-built',()=>{root.setTimeout(hydrate,0);});
   const stages=root.document.getElementById('stages');
-  if(stages&&root.MutationObserver)new root.MutationObserver(()=>{root.setTimeout(hydrate,0);}).observe(stages,{childList:true});
+  // Only direct stage-card collection changes trigger hydration.
+  // Overlay mutations cannot cause re-render loops.
+  if(stages&&root.MutationObserver)new root.MutationObserver(mutations=>{
+   if(mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(n=>n.nodeType===1&&n.matches?.('.stage-card'))))root.setTimeout(hydrate,0);
+  }).observe(stages,{childList:true,subtree:false});
   hydrate();
  }
  if(root.document){
