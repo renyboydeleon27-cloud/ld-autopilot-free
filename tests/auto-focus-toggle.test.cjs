@@ -1,43 +1,39 @@
+/* Magnetic auto-scroll removal — permanent no-op and explicit manual navigation only. */
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const A=require('../ner-auto-focus.js');
-function setup(value){
- const storage=new Map(value===undefined?[]:[[A.KEY,value]]);let writes=0;
- globalThis.localStorage={getItem:key=>storage.get(key)??null,setItem(key,val){storage.set(key,val);writes++;}};
- return {storage,get writes(){return writes;}};
-}
-test('Auto Screen Focus defaults OFF and does not auto-scroll',()=>{
- const f=setup();let calls=0;
- const el={scrollIntoView(){calls++;}};
+const source=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
+
+test('legacy magnetic API is permanently OFF even with saved preference ON',()=>{
+ const writes=[];globalThis.localStorage={getItem:k=>k===A.KEY?'on':null,setItem:(...v)=>writes.push(v)};
+ let moves=0;const stage={scrollIntoView(){moves++;}};
  assert.equal(A.enabled(),false);
- assert.equal(A.scrollTo(el,{behavior:'smooth'}),false);
- assert.equal(calls,0);
- assert.equal(f.writes,0,'read-only setting cannot write project storage');
+ assert.equal(A.setEnabled(true),false);
+ assert.equal(A.scrollTo(stage,{behavior:'smooth'}),false);
+ assert.equal(A.mount(),false);
+ assert.equal(moves,0);
+ assert.equal(writes.length,0,'no saved project or toggle setting is ever changed');
 });
-test('ON/OFF changes only its own preference, persists across preference reads',()=>{
- const f=setup();
- const project='ld-autopilot-free-v1',audit='ner-core5-audit-journal';
- f.storage.set(project,'APPROVED_P3');f.storage.set(audit,'P3-JOURNAL');
- assert.equal(A.setEnabled(true),true);
- assert.equal(A.enabled(),true);
- const opts={behavior:'smooth'};let seen=null;
- assert.equal(A.scrollTo({scrollIntoView(arg){seen=arg;}},opts),true);
- assert.deepEqual(seen,opts);
- assert.equal(f.storage.get(A.KEY),'on');
- assert.equal(A.setEnabled(false),false);
- assert.equal(A.enabled(),false);
- assert.equal(f.storage.get(A.KEY),'off');
- assert.equal(f.storage.get(project),'APPROVED_P3');
- assert.equal(f.storage.get(audit),'P3-JOURNAL');
+test('release no longer loads the magnetic auto-focus module or its UI',()=>{
+ const html=source('index.html');
+ assert.doesNotMatch(html,/src="ner-auto-focus\.js/);
+ assert.match(html,/v5\.1\.40/);
+ const smart=source('smart-continue.js');
+ assert.doesNotMatch(smart,/NERAutoFocus/);
+ assert.doesNotMatch(smart,/scrollIntoView\s*\(/);
+ assert.doesNotMatch(smart,/restoreCurrentPanelViewport\(\{/,'no reload/return page jumps');
+ assert.match(smart,/function restoreCurrentPanelViewport\(\)\{return false;\}/);
 });
-test('a reload with previously enabled preference restores ON only when user selected it',()=>{
- setup('on');assert.equal(A.enabled(),true);
- setup('off');assert.equal(A.enabled(),false);
+test('new-project reset, project lock and project library cannot force page jumps',()=>{
+ for(const file of ['new-project-fix.js','project-locks.js','project-library.js']){
+   const text=source(file);
+   assert.doesNotMatch(text,/scrollIntoView\s*\(/,file);
+ }
+ assert.doesNotMatch(source('new-project-fix.js'),/Element\.prototype\.scrollIntoView|installViewportGuard|\.focus\s*\(/);
+ assert.doesNotMatch(source('project-library.js'),/topic\.focus\s*\(/);
 });
-test('manual stage navigation is not rewritten by the preference',()=>{
- const source=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
- assert.match(source,/function scrollToCard\(card\).*?card\.scrollIntoView/s);
- const smart=fs.readFileSync(path.join(__dirname,'..','smart-continue.js'),'utf8');
- assert.match(smart,/function restoreCurrentPanelViewport\(options=\{\}\)\{\s*clearTimeout\(viewportRestoreTimer\);\s*\/\/.*?\n\s*if\(!window\.NERAutoFocus\?\.enabled\(\)\)return;/s);
- assert.doesNotMatch(smart,/\.scrollIntoView\(/);
- assert.match(smart,/NERAutoFocus\?\.mount/);
+test('manual panel jump controls continue working when user explicitly taps them',()=>{
+ const app=source('app.js');
+ assert.match(app,/function scrollToCard\(card\).*?card\.scrollIntoView/s);
+ assert.match(app,/jumpStage\.addEventListener\('change',\(\)=>scrollToCard/s);
+ assert.match(app,/nextIncompleteBtn\.addEventListener\('click',nextIncomplete\)/);
 });

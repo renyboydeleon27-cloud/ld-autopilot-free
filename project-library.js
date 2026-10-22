@@ -266,7 +266,7 @@
     const auditCard=document.getElementById('auditCard');
     const stageNav=document.getElementById('stageNav');
 
-    if(topic){topic.value='';topic.focus();}
+    if(topic)topic.value='';
     if(format)format.value='shorts';window.LDStoryFormat?.reset();
     const premise=document.getElementById('storyPremise');if(premise)premise.value='';const bible=document.getElementById('storyBible');if(bible)bible.value='';const storySetup=document.getElementById('storySetup');if(storySetup)storySetup.hidden=true;const topicLabel=document.getElementById('topicLabel');if(topicLabel)topicLabel.textContent='Disaster topic';
     const category=document.getElementById('productionCategory');if(category)category.value='disaster';window.ldProductionCategory='disaster';

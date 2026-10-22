@@ -242,7 +242,6 @@ buildBtn.addEventListener('click',e=>{
   e.preventDefault();
   e.stopImmediatePropagation();
   showToast('Lock Video Mode, Visual Style and Color Treatment first.');
-  ui()?.scrollIntoView({behavior:'smooth',block:'center'});
 },true);
 
 document.getElementById('newProjectBtn')?.addEventListener('click',()=>setTimeout(resetForNewProject,0));
