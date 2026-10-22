@@ -144,10 +144,13 @@ function assertStageOwnsSmartRun(card){
 function setOpen(card,options={}){
   if(!card)return;
   cancelStaleActiveRequest(card.dataset.stage||'');
+  // While OFF, leave unrelated panels exactly as the user left them.
+  const magneticEnabled=window.NERAutoFocus?.enabled()===true;
   stages.querySelectorAll('.stage-card').forEach(c=>{
     const body=c.querySelector('.stage-body'),btn=c.querySelector('.collapse-btn');
     if(!body||!btn)return;
     const active=c===card;
+    if(!active&&!magneticEnabled)return;
     body.classList.toggle('hidden',!active);
     btn.textContent=active?'Close':'Open';
   });
@@ -388,6 +391,10 @@ function smartReadyStillCurrent(card){
     && !!card.dataset.smartReadySignature
     && card.dataset.smartReadySignature===readinessSignature(card);
 }
+function restoreOpenIfMagneticEnabled(card){
+  // Passive restore must never re-layout the user's viewport while OFF.
+  if(window.NERAutoFocus?.enabled()===true)setOpen(card,{scroll:false});
+}
 function restoreSmartSession(){
   const cards=eligibleCards();
   if(!cards.length)return null;
@@ -414,7 +421,7 @@ function restoreSmartSession(){
       card.dataset.smartReady='1';
       card.dataset.smartReadySignature=pending.signature;
       target=card;
-      setOpen(card,{scroll:false});
+      restoreOpenIfMagneticEnabled(card);
       buttonLabel(approveLabel(card));
       status('🟡 '+card.dataset.stage+' READY FOR APPROVAL · restored after returning to LD AUTO. If the Flow result is okay, press '+approveLabel(card)+'.','pass');
       updateTargetLabel();
@@ -428,7 +435,7 @@ function restoreSmartSession(){
     target=persistedReady;
     const signature=persistedReady.dataset.smartReadySignature;
     writeSmartSession({targetStage:persistedReady.dataset.stage||'',pending:{stage:persistedReady.dataset.stage||'',signature,readyAt:new Date().toISOString()}});
-    setOpen(persistedReady,{scroll:false});
+    restoreOpenIfMagneticEnabled(persistedReady);
     buttonLabel(approveLabel(persistedReady));
     status('🟡 '+persistedReady.dataset.stage+' READY FOR APPROVAL · restored from saved project state. If the Flow result is okay, press '+approveLabel(persistedReady)+'.','pass');
     updateTargetLabel();
@@ -436,7 +443,7 @@ function restoreSmartSession(){
   }
 
   if(target){
-    setOpen(target,{scroll:false});
+    restoreOpenIfMagneticEnabled(target);
     buttonLabel('🚀 SMART CONTINUE');
     updateTargetLabel();
   }
@@ -444,6 +451,12 @@ function restoreSmartSession(){
 }
 let lastHiddenAt=0;
 let viewportRestoreTimer=null;
+window.addEventListener('ner:auto-focus-changed',event=>{
+  if(event.detail?.enabled===false){
+    clearTimeout(viewportRestoreTimer);
+    viewportRestoreTimer=null;
+  }
+});
 function currentSessionCard(){
   const cards=eligibleCards();
   if(!cards.length||cards.every(stageDone))return null;
@@ -458,9 +471,12 @@ function restoreCurrentPanelViewport(options={}){
   if(!window.NERAutoFocus?.enabled())return;
   const delay=Number.isFinite(options.delay)?options.delay:140;
   viewportRestoreTimer=setTimeout(()=>{
+    viewportRestoreTimer=null;
+    if(!window.NERAutoFocus?.enabled())return;
     restoreSmartSession();
     const card=currentSessionCard();
     if(!card)return;
+    if(!window.NERAutoFocus?.enabled())return;
     setOpen(card,{scroll:false});
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       window.NERAutoFocus?.scrollTo(card,{behavior:options.smooth?'smooth':'auto',block:'start'});
