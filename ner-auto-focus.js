@@ -5,7 +5,7 @@
  if(typeof module==='object'&&module.exports)module.exports=api;
  else root.NERAutoFocus=api;
 })(typeof window!=='undefined'?window:globalThis,function(root){'use strict';
- const VERSION='1.0.0',KEY='ner-studio-auto-focus-v1';
+ const VERSION='1.0.1',KEY='ner-studio-auto-focus-v1';
  let fallback=false,lastSaved=true;
  function enabled(){
    try{const raw=root.localStorage?.getItem(KEY);return raw==='on'?true:raw==='off'?false:fallback;}
@@ -15,6 +15,8 @@
    fallback=!!next;lastSaved=false;
    try{root.localStorage?.setItem(KEY,fallback?'on':'off');lastSaved=!!root.localStorage;}
    catch{}
+   // Cancel delayed panel restores immediately when the switch changes.
+   try{root.dispatchEvent?.(new root.CustomEvent('ner:auto-focus-changed',{detail:{enabled:fallback}}));}catch{}
    update();
    return fallback;
  }
