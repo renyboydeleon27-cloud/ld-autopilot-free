@@ -141,7 +141,7 @@ function assertStageOwnsSmartRun(card){
   error.name='StaleSmartStage';
   throw error;
 }
-function setOpen(card,options={}){
+function setOpen(card){
   if(!card)return;
   cancelStaleActiveRequest(card.dataset.stage||'');
   stages.querySelectorAll('.stage-card').forEach(c=>{
@@ -152,7 +152,6 @@ function setOpen(card,options={}){
     btn.textContent=active?'Close':'Open';
   });
   writeSmartSession({targetStage:card.dataset.stage||''});
-  if(options.scroll!==false)window.NERAutoFocus?.scrollTo(card,{behavior:'smooth',block:'start'});
 }
 function nextCard(card){
   const cards=[...stages.querySelectorAll('.stage-card')].filter(eligible);
@@ -442,32 +441,8 @@ function restoreSmartSession(){
   }
   return target;
 }
-let lastHiddenAt=0;
-let viewportRestoreTimer=null;
-function currentSessionCard(){
-  const cards=eligibleCards();
-  if(!cards.length||cards.every(stageDone))return null;
-  const session=readSmartSession();
-  const remembered=session?.targetStage?cards.find(card=>card.dataset.stage===session.targetStage):null;
-  if(remembered&&!stageDone(remembered))return remembered;
-  return firstIncompleteCard(cards)||remembered||currentCard();
-}
-function restoreCurrentPanelViewport(options={}){
-  clearTimeout(viewportRestoreTimer);
-  // Background return and browser focus must never move the page while OFF.
-  if(!window.NERAutoFocus?.enabled())return;
-  const delay=Number.isFinite(options.delay)?options.delay:140;
-  viewportRestoreTimer=setTimeout(()=>{
-    restoreSmartSession();
-    const card=currentSessionCard();
-    if(!card)return;
-    setOpen(card,{scroll:false});
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      window.NERAutoFocus?.scrollTo(card,{behavior:options.smooth?'smooth':'auto',block:'start'});
-      updateTargetLabel();
-    }));
-  },delay);
-}
+// Kept for legacy callers: magnetic viewport focus is permanently disabled.
+function restoreCurrentPanelViewport(){return false;}
 
 function stopPhase(){
   if(phaseTimer){clearInterval(phaseTimer);phaseTimer=null;}
@@ -1004,8 +979,6 @@ async function prepareTextToVideo(card){
 
   const continuity=window.ldVideoContinuity||{};
   if(!/^\d{4}$/.test(String(continuity.year||''))||!String(continuity.location||'').trim()){
-    const ctx=document.getElementById('chapterVideoContext');
-    window.NERAutoFocus?.scrollTo(ctx,{behavior:'smooth',block:'center'});
     throw new Error('Fill in Event year and Main location once. SMART CONTINUE will handle the rest.');
   }
 
@@ -1172,7 +1145,6 @@ function openFinalAudit(){
   const auditCard=document.getElementById('auditCard');
   if(auditCard){
     auditCard.classList.remove('hidden');
-    window.NERAutoFocus?.scrollTo(auditCard,{behavior:'smooth',block:'start'});
   }
 }
 
@@ -1183,7 +1155,6 @@ async function run(){
   smartButtons().forEach(b=>b.disabled=true);
   try{
     if(!window.LDProjectLocks?.isLocked?.()&&!window.ldProjectLocks?.locked){
-      window.NERAutoFocus?.scrollTo(document.getElementById('ldProjectLocks'),{behavior:'smooth',block:'center'});
       throw new Error('Lock Video Mode, Visual Style and Color Treatment first.');
     }
     if(!stages.querySelector('.stage-card')){
@@ -1208,8 +1179,6 @@ async function run(){
     const narrationApproval=window.LDNarrationApproval;
     if(!hasCompletedStage&&narrationApproval&&typeof narrationApproval.isApproved==='function'&&!narrationApproval.isApproved()){
       const narrationBtn=document.getElementById('ldNarrationSmartBtn');
-      const narrationCard=document.getElementById('masterNarrationCard');
-      window.NERAutoFocus?.scrollTo(narrationCard,{behavior:'smooth',block:'start'});
       if(narrationBtn&&!narrationBtn.disabled){
         const mode=narrationBtn.dataset.mode||'generate';
         if(mode==='approve'){
@@ -1336,7 +1305,6 @@ function mountAdvanced(){
 
 function mount(){
   if(document.getElementById('ldSmartContinuePanel')){
-    window.NERAutoFocus?.mount();
     mountAdvanced();
     scheduleLocalReviewRevalidation();
     updateTargetLabel();
@@ -1360,7 +1328,6 @@ function mount(){
 
   }
 
-  window.NERAutoFocus?.mount();
   mountAdvanced();
   // Saved error text can outlive a local-policy update. Revalidate it locally
   // after all scripts restore the project; never spend an API call here.
@@ -1462,29 +1429,19 @@ window.addEventListener('ld:production-built',()=>{
     migrateStaleWellingtonP12();
     restoreSmartSession();
     scheduleTargetUpdate();
-    // Production restoration is the authoritative readiness event for magnetic focus.
-    // Do not wait for a later pageshow/focus event to position the active panel.
-    if(!document.hidden)restoreCurrentPanelViewport({delay:0});
     refreshApiCostCounter();
     scheduleLocalReviewRevalidation();
   },180);
 });
 
-// Keep the user's current production panel on-screen after switching to Flow or another app/tab.
+// Keep the session target on leaving without ever repositioning the viewport.
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){
-    lastHiddenAt=Date.now();
-    const card=currentCard();
-    if(card)writeSmartSession({targetStage:card.dataset.stage||''});
-    return;
-  }
-  if(Date.now()-lastHiddenAt>=300)restoreCurrentPanelViewport({delay:120});
+  if(!document.hidden)return;
+  const card=currentCard();
+  if(card)writeSmartSession({targetStage:card.dataset.stage||''});
 });
-window.addEventListener('pageshow',()=>{restoreCurrentPanelViewport({delay:180});scheduleLocalReviewRevalidation();});
-window.addEventListener('focus',()=>{
-  if(lastHiddenAt&&Date.now()-lastHiddenAt>=300)restoreCurrentPanelViewport({delay:100});
-  scheduleLocalReviewRevalidation();
-});
+window.addEventListener('pageshow',scheduleLocalReviewRevalidation);
+window.addEventListener('focus',scheduleLocalReviewRevalidation);
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     mount();
