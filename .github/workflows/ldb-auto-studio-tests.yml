@@ -1,0 +1,37 @@
+name: LDB Auto Studio approval checks
+on:
+  push:
+    paths:
+      - "ldb-auto-studio.html"
+      - "scripts/verify_ldb_approval.py"
+      - "tests/test_ldb_approval.py"
+      - "scripts/ldb_free_packager.py"
+      - "tests/test_ldb_free_packager.py"
+      - "tests/ldb-auto-studio-ui.test.cjs"
+      - ".github/workflows/ldb-free-production.yml"
+      - ".github/workflows/ldb-auto-studio-tests.yml"
+  pull_request:
+    paths:
+      - "ldb-auto-studio.html"
+      - "scripts/verify_ldb_approval.py"
+      - "tests/test_ldb_approval.py"
+      - "scripts/ldb_free_packager.py"
+      - "tests/test_ldb_free_packager.py"
+      - "tests/ldb-auto-studio-ui.test.cjs"
+      - ".github/workflows/ldb-free-production.yml"
+      - ".github/workflows/ldb-auto-studio-tests.yml"
+permissions:
+  contents: read
+jobs:
+  approval-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m unittest discover -s tests -p 'test_ldb*py' -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/ldb-auto-studio-ui.test.cjs

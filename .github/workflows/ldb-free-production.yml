@@ -1,0 +1,91 @@
+name: LDB approved FREE prompt production
+
+on:
+  push:
+    branches:
+      - main
+      - feature/ldb-auto-studio-ui
+    paths:
+      - "ldb-submissions/**"
+      - "scripts/ldb_free_packager.py"
+      - ".github/workflows/ldb-free-production.yml"
+  workflow_dispatch:
+    inputs:
+      episode_folder:
+        description: "Folder under ldb-submissions (leave blank to package all approved uploads)"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ldb-free-package-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verified-storyboard-package:
+    name: Validate approval and export free prompt package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Offline approval and output tests
+        run: python -m unittest discover -s tests -p 'test_ldb*py' -v
+      - name: Generate only for matching manual approvals
+        id: pack
+        env:
+          EPISODE_FOLDER: ${{ inputs.episode_folder }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+          from scripts.ldb_free_packager import make_package, make_package_from_bundle
+
+          root = Path("ldb-submissions")
+          requested = os.environ.get("EPISODE_FOLDER", "").strip()
+          if requested and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,69}", requested):
+              raise ValueError("Invalid episode folder name")
+          folders = ([root / requested] if requested
+                     else sorted(p for p in root.iterdir() if p.is_dir()) if root.exists() else [])
+          output = Path(os.environ["RUNNER_TEMP"]) / "ldb-production-packages"
+          count = 0
+          for folder in folders:
+              bundle = folder / "approved_bundle.json"
+              storyboard = folder / "storyboard.json"
+              approval = folder / "approval.json"
+              if bundle.exists():
+                  if storyboard.exists() or approval.exists():
+                      raise ValueError(f"Choose bundled OR paired submission, not both: {folder}")
+                  result = make_package_from_bundle(bundle, output / folder.name)
+              elif storyboard.exists() or approval.exists():
+                  if not storyboard.exists() or not approval.exists():
+                      raise ValueError(f"Both storyboard.json and approval.json required in {folder}")
+                  result = make_package(storyboard, approval, output / folder.name)
+              else:
+                  continue
+              print(f"APPROVAL PASS: {result['topic']}: PROMPTS ONLY (0 actual images)")
+              count += 1
+          if not count:
+              print("No approved input uploaded: no package generated.")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"has_packages={'true' if count else 'false'}\n")
+          PY
+      - name: Upload organized free prompt packages
+        if: steps.pack.outputs.has_packages == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ldb-approved-prompt-packages
+          path: ${{ runner.temp }}/ldb-production-packages
+          if-no-files-found: error
+          retention-days: 30
+      - name: Report honest completion boundary
+        if: steps.pack.outputs.has_packages == 'true'
+        run: |
+          echo "PROMPT PACKAGE READY; NOT FINAL PRODUCTION."
+          echo "Real image rendering, Flow video creation, Google Drive upload,"
+          echo "and automated email notifications are not connected."
