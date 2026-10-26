@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.ldb_free_packager import CLIPS, EXPECTED, make_package
+from scripts.ldb_free_packager import CLIPS, EXPECTED, make_package, make_package_from_bundle
 
 
 class FreePackageTests(unittest.TestCase):
@@ -40,6 +40,44 @@ class FreePackageTests(unittest.TestCase):
             "source": "local-manual-approval",
             "topic": "Example historical disaster"
         }), encoding="utf-8")
+
+    def write_bundle(self, *, override_story=None, override_approval=None):
+        raw = override_story if override_story is not None else self.storyboard.read_text(encoding="utf-8")
+        approval = override_approval if override_approval is not None else json.loads(self.approval.read_text(encoding="utf-8"))
+        bundle = self.home / "approved_bundle.json"
+        bundle.write_text(json.dumps({
+            "schema": "ldb-approved-bundle-v1",
+            "storyboard_utf8": raw,
+            "approval": approval
+        }, ensure_ascii=False), encoding="utf-8")
+        return bundle
+
+    def test_one_file_approved_bundle_generates_prompts(self):
+        report = make_package_from_bundle(self.write_bundle(), self.out)
+        self.assertEqual(report["package_status"], "PROMPTS_ONLY")
+        self.assertEqual(len(list((self.out / "image_prompts").glob("*.txt"))), 17)
+        self.assertEqual(report["actual_images_rendered"], 0)
+
+    def test_one_file_approval_hash_mismatch_is_blocked(self):
+        bundle = self.write_bundle(override_story=self.storyboard.read_text() + " ")
+        with self.assertRaisesRegex(ValueError, "hash mismatch"):
+            make_package_from_bundle(bundle, self.out)
+        self.assertFalse(self.out.exists())
+
+    def test_invalid_bundle_schema_blocked(self):
+        bundle = self.write_bundle()
+        data = json.loads(bundle.read_text())
+        data["schema"] = "other"
+        bundle.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "schema"):
+            make_package_from_bundle(bundle, self.out)
+
+    def test_unapproved_bundle_blocked(self):
+        approval = json.loads(self.approval.read_text())
+        approval["source"] = "automatically-approved"
+        bundle = self.write_bundle(override_approval=approval)
+        with self.assertRaisesRegex(ValueError, "manually approved"):
+            make_package_from_bundle(bundle, self.out)
 
     def test_package_counts_and_no_fake_renders(self):
         report = make_package(self.storyboard, self.approval, self.out)
