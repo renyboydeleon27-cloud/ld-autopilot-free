@@ -10,6 +10,7 @@ import hashlib
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 from scripts.verify_ldb_approval import EXPECTED, scene_map, verify
 
@@ -161,10 +162,38 @@ def make_package(storyboard_path, approval_path, destination):
     )
     return manifest
 
+
+def make_package_from_bundle(bundle_path, destination):
+    """Unpack one atomic submission locally and validate its original approval."""
+    bundle_path = Path(bundle_path)
+    if bundle_path.stat().st_size > 5_000_000:
+        raise ValueError("Approved submission exceeds 5 MB")
+    payload = json.loads(bundle_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or payload.get("schema") != "ldb-approved-bundle-v1":
+        raise ValueError("Unsupported approved bundle schema")
+    raw = payload.get("storyboard_utf8")
+    approval = payload.get("approval")
+    if not isinstance(raw, str) or not isinstance(approval, dict):
+        raise ValueError("Bundle requires storyboard_utf8 text and approval object")
+    if len(raw.encode("utf-8")) > 4_000_000:
+        raise ValueError("Story text too long")
+    if approval.get("source") != "local-manual-approval":
+        raise ValueError("Only manually approved storyboards can be packaged")
+    with tempfile.TemporaryDirectory(prefix="ldb-approved-") as folder:
+        original = Path(folder) / "storyboard.json"
+        approved = Path(folder) / "approval.json"
+        original.write_bytes(raw.encode("utf-8"))
+        approved.write_text(json.dumps(approval, ensure_ascii=False), encoding="utf-8")
+        return make_package(original, approved, destination)
+
+
 def main():
-    if len(sys.argv) != 4:
-        raise ValueError("Usage: ldb_free_packager.py storyboard.json approval.json output-folder")
-    report = make_package(*sys.argv[1:])
+    if len(sys.argv) == 4 and sys.argv[1] == "--bundle":
+        report = make_package_from_bundle(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 4:
+        report = make_package(*sys.argv[1:])
+    else:
+        raise ValueError("Usage: python -m scripts.ldb_free_packager [--bundle bundle.json output | storyboard.json approval.json output]")
     print(json.dumps({"status": report["package_status"], "topic": report["topic"],
                       "approval_gate": report["approval_gate"], "warnings": len(report["warnings"])}))
 
