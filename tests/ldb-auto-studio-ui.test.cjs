@@ -22,3 +22,11 @@ test('no paid render or remote execution in reviewer', () => {
   assert.doesNotMatch(rawScript[1], /\bXMLHttpRequest\b/);
   assert.doesNotMatch(rawScript[1], /\/api\//);
 });
+
+test('mobile app displays LDB Studio launcher without collapsing it', () => {
+  const main = fs.readFileSync('index.html', 'utf8');
+  assert.match(main, /<nav class="card" aria-label="Separate studios"/);
+  assert.match(main, /<a href="ldb-auto-studio\.html"[^>]+min-height:52px[^>]+>🎬 OPEN LDB AUTO STUDIO<\/a>/);
+  assert.doesNotMatch(main, /<details class="card"><summary>Separate studios<\/summary>/);
+  assert.match(main, /id="projectList"/);
+});
