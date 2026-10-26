@@ -1,54 +1,52 @@
-# LDB Auto Studio — approved storyboard inbox (development)
+# LDB Auto Studio — free, manually approved prompt package inbox
 
-The workflow in .github/workflows/ldb-free-production.yml can continue on
-GitHub-hosted Actions after the browser/phone is closed, but ONLY after the
-approved input files have been committed to a branch containing that workflow.
+IMPORTANT: The main NER STUDIO repository is PUBLIC. Files committed here can
+be read by anyone. Do not put private or unpublished scripts, personal data,
+API keys, or confidential storyboards into this folder. The one-file process
+is only appropriate for episodes that you explicitly agree may be public.
 
-## Mobile upload / handoff
+## Mobile workflow (single file)
 
-1. Open the LDB Auto Studio reviewer and import the 17-scene JSON.
-2. Review all 17 scenes; select Approve storyboard to export approval.json.
-3. Select Export original storyboard.json to save the exact bytes that were
-   hashed when approval was issued. Do not edit, reformat, or resave it.
-4. In a new episode subdirectory under ldb-submissions/ upload BOTH files:
-   storyboard.json and approval.json. Example:
-   ldb-submissions/episode-2026-10-26/.
-   GitHub's web UI can create the directory through Add file > Create new
-   file with ldb-submissions/episode-2026-10-26/README.md as a placeholder,
-   then Add file > Upload files within that directory. Commit the two
-   input files to the branch containing the workflow.
-5. Open Actions > LDB approved FREE prompt production and inspect run logs.
-   The ldb-approved-prompt-packages workflow artifact is available from a
-   successful run. Uploaded artifacts are retained for 30 days.
+1. Open LDB Auto Studio, import a complete HOOK + P1–P14 + ENDING +
+   THUMBNAIL storyboard JSON, and review all 17 scenes.
+2. Tap Approve storyboard. The browser downloads approved_bundle.json with
+   the exact JSON text and local SHA-256 approval. No per-panel approval.
+3. If the episode is suitable for a PUBLIC repository, create one unique
+   episode directory below ldb-submissions on the feature branch containing
+   the worker, e.g. episode-2026-10-26. In the GitHub web UI:
+   - Create ldb-submissions/episode-2026-10-26/README.md to create directory.
+   - In that directory use Add file > Upload files, upload approved_bundle.json,
+     and commit to the feature branch.
+4. GitHub Actions runs LDB approved FREE prompt production automatically.
+   Open the completed run to retrieve the artifact
+   ldb-approved-prompt-packages (available for 30 days).
 
-Or upload both files in ChatGPT and explicitly ask to put them in the GitHub
-inbox. A connector-mediated GitHub write can perform that upload in an active
-chat, but ChatGPT does not retain a permanent GitHub write session without a
-new user request.
+You can also send the approved_bundle.json in a ChatGPT conversation and
+explicitly instruct ChatGPT to upload to the GitHub episode inbox using your
+connected GitHub account. This action requires an active conversation and
+does not make the app itself a background uploader.
 
-## Absolute production boundary
+## Legacy two-file path
 
-- The approval means approve the reviewed storyboard as a whole.
-  It does not entail per-panel approvals for prompt packaging.
-- The workflow does NOT render images, create MP4 videos, open Google Flow,
-  call paid APIs, upload to Drive, or send Gmail completion emails.
-- Prompts include strict B/W historical anime for the 16 narrative stills.
-  Thumbnail gets the explicitly permitted full-color override.
-- HOOK and P1-P14 get fifteen continuous exactly-10-second Flow prompt drafts,
-  but NO synthesized audio/video.
-- Individual scene narration is copied if present; it is never fabricated.
-- production_audit.json lists missing motion/narration and pending final
-  production steps. Status remains PROMPTS_ONLY until real output is verified.
-- The SHA-256 approval checksum prevents accidental editing after approval,
-  but it is not a digital signature. Repository write-access controls protect
-  the queue. A person with write access could fabricate both input files.
-- No .env, API keys, secrets or recipient addresses belong in this repository.
-- PR #53 remains draft until CI/review and a conscious merge decision.
+Older approved storyboards may instead supply BOTH storyboard.json and
+approval.json in the episode folder. Do NOT mix bundle and legacy files for
+the same episode. The worker rejects ambiguous submissions.
 
-## Sample expected structure
+## What the worker actually does
 
-    ldb-submissions/
-      README.md
-      episode-2026-10-26/
-        storyboard.json
-        approval.json
+On the GitHub runner it verifies that the approved storyboard matches the
+exact SHA-256 approved text, has 17 stages, and that adjacent panel visuals
+are not identical. It exports:
+- 17 image prompt text files (HOOK, P1–P14, ENDING and THUMBNAIL).
+- 15 exact-ten-second Flow prompt files (HOOK, P1–P14).
+- 16 narration text files (HOOK, P1–P14, ENDING).
+- Honest audit/README showing that actual rendered images/videos = ZERO.
+
+This is free PROMPT PACKAGING, not autonomous image/video production.
+Nothing is uploaded to Google Drive, no Gmail is sent, and no paid API is used.
+No Android, InShot, Flow, Story Book, or Video DNA files are changed.
+
+The SHA-256 check is an accidental-change safeguard, NOT a tamper-proof
+digital signature; a person with GitHub write access could spoof a bundle.
+Before enabling real production, use a PRIVATE authentication/approval backend,
+an actual authorized renderer, quota/cost gates, and destination permissions.
