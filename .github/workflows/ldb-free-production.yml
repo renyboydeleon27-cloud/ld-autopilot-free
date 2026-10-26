@@ -44,20 +44,30 @@ jobs:
           import os
           import re
           from pathlib import Path
-          from scripts.ldb_free_packager import make_package
+          from scripts.ldb_free_packager import make_package, make_package_from_bundle
 
           root = Path("ldb-submissions")
           requested = os.environ.get("EPISODE_FOLDER", "").strip()
           if requested and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,69}", requested):
               raise ValueError("Invalid episode folder name")
-          sources = [root / requested / "storyboard.json"] if requested else sorted(root.glob("*/storyboard.json"))
+          folders = ([root / requested] if requested
+                     else sorted(p for p in root.iterdir() if p.is_dir()) if root.exists() else [])
           output = Path(os.environ["RUNNER_TEMP"]) / "ldb-production-packages"
           count = 0
-          for storyboard in sources:
-              approval = storyboard.parent / "approval.json"
-              if not storyboard.exists() or not approval.exists():
-                  raise ValueError(f"Both storyboard.json and approval.json required in {storyboard.parent}")
-              result = make_package(storyboard, approval, output / storyboard.parent.name)
+          for folder in folders:
+              bundle = folder / "approved_bundle.json"
+              storyboard = folder / "storyboard.json"
+              approval = folder / "approval.json"
+              if bundle.exists():
+                  if storyboard.exists() or approval.exists():
+                      raise ValueError(f"Choose bundled OR paired submission, not both: {folder}")
+                  result = make_package_from_bundle(bundle, output / folder.name)
+              elif storyboard.exists() or approval.exists():
+                  if not storyboard.exists() or not approval.exists():
+                      raise ValueError(f"Both storyboard.json and approval.json required in {folder}")
+                  result = make_package(storyboard, approval, output / folder.name)
+              else:
+                  continue
               print(f"APPROVAL PASS: {result['topic']}: PROMPTS ONLY (0 actual images)")
               count += 1
           if not count:
