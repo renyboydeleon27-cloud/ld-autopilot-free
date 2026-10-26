@@ -1,7 +1,7 @@
 """Free, approval-gated LDB prompt packager. No network, paid APIs, image rendering, or video editing.
 
 Usage:
-  python scripts/ldb_free_packager.py <storyboard.json> <approval.json> <output-folder>
+  python -m scripts.ldb_free_packager <storyboard.json> <approval.json> <output-folder>
 
 A successful run means PROMPT PACKAGE ONLY. It does NOT mean that any image
 has been rendered, that Flow produced videos, or that files reached Drive.
@@ -11,7 +11,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from verify_ldb_approval import EXPECTED, scene_map, verify
+from scripts.verify_ldb_approval import EXPECTED, scene_map, verify
 
 CLIPS = ["HOOK", *[f"P{i}" for i in range(1, 15)]]
 STYLE = (
