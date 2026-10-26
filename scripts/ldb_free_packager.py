@@ -63,13 +63,24 @@ def make_package(storyboard_path, approval_path, destination):
         if len(visual) < 12:
             raise ValueError(f"{key}: visual description must be at least 12 characters")
         scene_descriptions[key] = visual
+    # Neighboring scenes must not be literal duplicates. Flag near-duplicates
+    # for the director without silently rewriting approved compositions.
+    quality_warnings = []
+    for left, right in zip(EXPECTED[:-2], EXPECTED[1:-1]):
+        a = " ".join(scene_descriptions[left].lower().split())
+        b = " ".join(scene_descriptions[right].lower().split())
+        if a == b:
+            raise ValueError(f"{left}/{right}: adjacent visuals must differ")
+        from difflib import SequenceMatcher
+        if SequenceMatcher(None, a, b).ratio() > 0.94:
+            quality_warnings.append({"scene": right, "issue": f"Neighbor scene too visually similar in text to {left}; director should review"})
     # Complete validation before any output is written.
     if destination.exists() and any(destination.iterdir()):
         raise ValueError("Output folder must not contain existing files")
     destination.mkdir(parents=True, exist_ok=True)
     for folder in ("image_prompts", "flow_prompts", "narration"):
         (destination / folder).mkdir()
-    gaps = []
+    gaps = quality_warnings
     for key in EXPECTED:
         item = scenes[key]
         visual = scene_descriptions[key]
