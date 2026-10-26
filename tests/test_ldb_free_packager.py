@@ -90,6 +90,13 @@ class FreePackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must not contain"):
             make_package(self.storyboard, self.approval, self.out)
 
+    def test_exact_adjacent_visuals_blocked(self):
+        self.data["scenes"]["P7"]["visual"] = self.data["scenes"]["P6"]["visual"]
+        self.save()
+        with self.assertRaisesRegex(ValueError, "P6/P7"):
+            make_package(self.storyboard, self.approval, self.out)
+        self.assertFalse(self.out.exists())
+
     def test_rejects_no_manual_approval_source(self):
         self.save()
         approval = json.loads(self.approval.read_text())
