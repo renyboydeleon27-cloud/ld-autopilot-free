@@ -18,7 +18,7 @@ export async function deployDisabledRunner({env=process.env,fetcher=fetch,read=r
  let subdomain;
  try {subdomain=await api('/subdomain');}
  catch(e) {
-  if(e.message!=='CLOUDFLARE_HTTP_403_CODES_10063')throw e;
+  if(!['CLOUDFLARE_HTTP_403_CODES_10063','CLOUDFLARE_HTTP_404_CODES_10007'].includes(e.message))throw e;
   subdomain=await api('/subdomain',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({subdomain:'ner-ldb-studio-a437dd'})});
  }
  if(!subdomain?.subdomain)throw Error('SUBDOMAIN_VERIFICATION_FAILED');
