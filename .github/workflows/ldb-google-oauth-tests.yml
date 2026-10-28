@@ -1,0 +1,27 @@
+name: LDB Google OAuth security tests
+on:
+  push:
+    paths:
+      - "api/_ldb-google-oauth.js"
+      - "api/ldb-google-start.js"
+      - "api/ldb-google-callback.js"
+      - "tests/ldb-google-oauth.test.cjs"
+      - ".github/workflows/ldb-google-oauth-tests.yml"
+  pull_request:
+    paths:
+      - "api/_ldb-google-oauth.js"
+      - "api/ldb-google-start.js"
+      - "api/ldb-google-callback.js"
+      - "tests/ldb-google-oauth.test.cjs"
+      - ".github/workflows/ldb-google-oauth-tests.yml"
+permissions:
+  contents: read
+jobs:
+  oauth-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test tests/ldb-google-oauth.test.cjs
