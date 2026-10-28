@@ -37,7 +37,7 @@ self.addEventListener('activate',event=>{
 async function shellResponse(request){
  const cache=await caches.open(CACHE_NAME);
  const url=new URL(request.url);
- if(request.mode==='navigate'){
+ if(request.mode==='navigate'&&(url.pathname==='/'||url.pathname==='/index.html')){
   const page=await cache.match('./index.html');
   if(page)return page;
  }
