@@ -37,7 +37,9 @@ self.addEventListener('activate',event=>{
 async function shellResponse(request){
  const cache=await caches.open(CACHE_NAME);
  const url=new URL(request.url);
- if(request.mode==='navigate'){
+ // Only the app root may use the cached index shell. Other pages
+ // (including LDB AUTO STUDIO) must resolve their own HTML.
+ if(request.mode==='navigate'&&(url.pathname==='/'||url.pathname==='/index.html')){
   const page=await cache.match('./index.html');
   if(page)return page;
  }
