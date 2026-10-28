@@ -14,6 +14,14 @@ export async function deployDisabledRunner({env=process.env,fetcher=fetch,read=r
   if(!res.ok || data.success!==true) {const codes=(data.errors||[]).map(e=>e.code).filter(n=>Number.isInteger(n)).join(',');throw Error(`CLOUDFLARE_HTTP_${res.status}_CODES_${codes}`);}
   return data.result;
  };
+ // Register only a missing free workers.dev subdomain; never rename an existing one.
+ let subdomain;
+ try {subdomain=await api('/subdomain');}
+ catch(e) {
+  if(e.message!=='CLOUDFLARE_HTTP_403_CODES_10063')throw e;
+  subdomain=await api('/subdomain',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({subdomain:'ner-ldb-studio-a437dd'})});
+ }
+ if(!subdomain?.subdomain)throw Error('SUBDOMAIN_VERIFICATION_FAILED');
  // Read-only permission check; never overwrite another existing deployment.
  const scripts=await api('/scripts');
  if(!Array.isArray(scripts))throw Error('INVALID_SCRIPT_LIST');
