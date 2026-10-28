@@ -1,0 +1,36 @@
+name: Build isolated LDB navigation PWA shell
+on:
+  push:
+    branches: [fix/ldb-auto-studio-navigation-release]
+permissions:
+  contents: write
+concurrency:
+  group: isolated-ldb-navigation-shell
+  cancel-in-progress: false
+jobs:
+  build-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ldb-auto-studio-navigation-release
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate and commit deterministic PWA shell
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin fix/ldb-auto-studio-navigation-release
+            git reset --hard origin/fix/ldb-auto-studio-navigation-release
+            node scripts/build-pwa-shell.cjs
+            if git diff --quiet -- service-worker.js; then
+              echo "Shell current"
+              exit 0
+            fi
+            git add service-worker.js
+            git commit -m "Rebuild PWA cache for separate studio navigation"
+            if git push origin HEAD:fix/ldb-auto-studio-navigation-release; then exit 0; fi
+          done
+          exit 1
