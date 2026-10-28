@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { DurableObject } from 'cloudflare:workers';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { Checkpoints, SCENES } from './checkpoints.mjs';

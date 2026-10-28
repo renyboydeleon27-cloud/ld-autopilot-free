@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {deployDisabledRunner} from '../scripts/ldb-deploy-disabled-runner.mjs';
+const env={CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',CLOUDFLARE_API_TOKEN:'private-test-token'};
+const response=result=>Response.json({success:true,result});
+test('read access, disabled-only upload, SQLite and post-deployment verification',async()=>{let calls=0;const result=await deployDisabledRunner({env,read:async()=>'',fetcher:async(url,opts)=>{calls++;assert.equal(opts.headers.Authorization,'Bearer private-test-token');if(calls===1)return response([]);if(calls===2){assert.equal(opts.method,'PUT');const meta=JSON.parse(await opts.body.get('metadata').text());assert.deepEqual(meta.migrations.new_sqlite_classes,['LdbCoordinator']);assert.equal(meta.bindings.find(b=>b.name==='RUNNER_ENABLED').text,'false');assert.ok(!JSON.stringify(meta).includes('private-test-token'));return response({});}return response({bindings:[{name:'RUNNER_ENABLED',text:'false'},{name:'LDB_COORDINATOR',type:'durable_object_namespace'}]});}});assert.equal(result.status,'DEPLOYED_DISABLED');assert.equal(calls,3);});
+test('refuses existing worker rather than overwriting configuration',async()=>{let calls=0;await assert.rejects(deployDisabledRunner({env,fetcher:async()=>{calls++;return response([{id:'ner-ldb-runner'}]);}}),/WORKER_EXISTS/);assert.equal(calls,1);});
+test('provider errors contain numeric codes only, not provider text',async()=>{await assert.rejects(deployDisabledRunner({env,fetcher:async()=>Response.json({success:false,errors:[{code:10000,message:'private-test-token'}]},{status:403})}),e=>e.message==='CLOUDFLARE_HTTP_403_CODES_10000');});
