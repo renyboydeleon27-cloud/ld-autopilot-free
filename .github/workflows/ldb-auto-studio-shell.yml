@@ -7,6 +7,9 @@ on:
       - index.html
       - service-worker.js
       - .github/workflows/ldb-auto-studio-shell.yml
+concurrency:
+  group: ldb-pwa-shell-feature-branch
+  cancel-in-progress: false
 permissions:
   contents: write
 jobs:
@@ -21,12 +24,24 @@ jobs:
           node-version: "22"
       - name: Rebuild deterministic PWA shell
         run: node scripts/build-pwa-shell.cjs
-      - name: Commit generated service worker only when changed
+      - name: Commit generated worker with retry on concurrent branch updates
         run: |
-          if ! git diff --quiet -- service-worker.js; then
+          for attempt in 1 2 3 4 5; do
+            git fetch origin feature/ldb-auto-studio-ui
+            git reset --hard origin/feature/ldb-auto-studio-ui
+            node scripts/build-pwa-shell.cjs
+            if git diff --quiet -- service-worker.js; then
+              echo "PWA shell already current"
+              exit 0
+            fi
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add service-worker.js
-            git commit -m "Regenerate PWA shell for LDB Auto Studio link"
-            git push
-          fi
+            git commit -m "Regenerate PWA shell for LDB Auto Studio navigation"
+            if git push origin HEAD:feature/ldb-auto-studio-ui; then
+              exit 0
+            fi
+            echo "Concurrent branch update; retrying with latest commit"
+          done
+          echo "Could not publish PWA shell after retries" >&2
+          exit 1
