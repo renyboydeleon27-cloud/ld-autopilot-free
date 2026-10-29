@@ -57,3 +57,16 @@ def expansion(sha):
         f'PRIMARY ACTION: {shot[0]}.\n0–2s: {shot[1]}\n'
         f'2–6s: {shot[2]}\n6–10s: {shot[3]}\nSFX ONLY: {shot[4]}'
     )} for key, narration, shot in zip(KEYS, NARRATION, SHOTS)}
+
+IMAGE_NOTES = {
+    'HOOK': (
+        'PHYSICAL COMPOSITION: Medium shot showing both hands clearly. Her left shoulder rests against the doorpost; '
+        'her left palm rests on that wood. Her right elbow bends in front of her waist; the five natural fingers '
+        'of her RIGHT HAND visibly curl around the TOP CARRY HANDLE of ONE lantern. The lantern hangs directly '
+        'below this gripping right hand in FRONT of her lower torso, never beside or behind her body. '
+        'The hand-to-handle contact must be visible and mechanically support its weight. '
+        'The lantern is COMPLETELY EXTINGUISHED: dark empty glass panes, unlit wick, no flame, no white luminous '
+        'interior, no glow, no smoke, no steam. Only dim exterior moonlight illuminates the woman and the glass. '
+        'No floating lantern, hidden grip, extra hand or extra lamp.'
+    )
+}

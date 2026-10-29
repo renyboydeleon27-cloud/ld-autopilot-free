@@ -3,7 +3,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {createHash,randomBytes} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
-const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v2';
+const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v3';
 export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms))}={}) {
  if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT || !env.CLOUDFLARE_API_TOKEN || /\s/.test(env.CLOUDFLARE_API_TOKEN))throw Error('CONFIGURATION_REQUIRED');
  const bundle=JSON.parse(await read('/tmp/ldb-hook-package/render_job.json','utf8'));

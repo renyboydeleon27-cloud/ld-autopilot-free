@@ -13,7 +13,7 @@ import sys
 import tempfile
 from pathlib import Path
 from scripts.verify_ldb_approval import EXPECTED, scene_map, verify
-from scripts.ldb_profiles.lake_nyos import expansion, SOURCES
+from scripts.ldb_profiles.lake_nyos import expansion, SOURCES, IMAGE_NOTES
 
 CLIPS = EXPECTED[:-1]
 STYLE = (
@@ -92,6 +92,7 @@ def make_package(storyboard_path, approval_path, destination):
             f"LIVING DISASTER BOOK — {topic} — {key}\n\n"
             f"IMAGE ONLY — STATIC REFERENCE STILL\n{image_style}\n\n"
             f"SPECIFIC DIRECTOR'S STORYBOARD VISUAL:\n{visual}\n\n"
+            f"{IMAGE_NOTES.get(key, '') if additions else ''}\n\n"
             "This is a STILL IMAGE, not a video. Keep historical continuity "
             "and avoid repeating a neighboring panel's camera composition.\n"
         )
