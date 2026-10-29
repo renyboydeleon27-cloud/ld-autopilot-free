@@ -50,7 +50,7 @@ export class Checkpoints {
     let image;
     try {image=await this.render(claim.scenes[claim.index].image_prompt);}
     catch(e) {
-      await this.s.transaction(async tx=>{const j=await tx.get('job');j.status='NEEDS_REVIEW';j.error=e?.code==='QUOTA_OR_RATE_LIMIT'?'PROVIDER_QUOTA_REVIEW':'INFERENCE_FAILED_OR_AMBIGUOUS';await tx.put('job',j);});return;
+      await this.s.transaction(async tx=>{const j=await tx.get('job');j.status='NEEDS_REVIEW';j.error=e?.code==='QUOTA_OR_RATE_LIMIT'?'PROVIDER_QUOTA_REVIEW':'INFERENCE_FAILED_OR_AMBIGUOUS';j.providerCode=['CONFIGURATION_REQUIRED','AUTHORIZATION_FAILED','PROVIDER_FAILED','INVALID_IMAGE_RESPONSE','INVALID_IMAGE','INVALID_PORTRAIT_DIMENSIONS','PROVIDER_UNAVAILABLE_OR_INVALID_RESPONSE','RESPONSE_TOO_LARGE','QUOTA_OR_RATE_LIMIT'].includes(e?.code)?e.code:'UNKNOWN_RENDER_FAILURE';await tx.put('job',j);});return;
     }
     if(!image?.bytes || image.bytes.length>8000000 || image.width!==576 || image.height!==1024) {
       await this.s.transaction(async tx=>{const j=await tx.get('job');j.status='NEEDS_REVIEW';j.error='INVALID_RENDER_OUTPUT';await tx.put('job',j);});return;

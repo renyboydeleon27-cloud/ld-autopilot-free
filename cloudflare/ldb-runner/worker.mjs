@@ -21,7 +21,7 @@ export class LdbCoordinator extends DurableObject {
   const path=new URL(req.url).pathname;
   try {
    if(req.method==='GET' && path==='/status') {
-    const j=await this.core.status();return json({job:j?{id:j.id,status:j.status,completedScenes:j.index,totalScenes:17,outputs:j.outputs,error:j.error}:null,autoProductionReady:false,deliveryConnected:false});
+    const j=await this.core.status();return json({job:j?{id:j.id,status:j.status,completedScenes:j.index,totalScenes:17,outputs:j.outputs,error:j.error,providerCode:j.providerCode}:null,autoProductionReady:false,deliveryConnected:false});
    }
    if(req.method==='GET' && /^\/images\/(HOOK|P[1-9]|P1[0-4]|ENDING|THUMBNAIL)$/.test(path)) {
     const scene=path.split('/').at(-1),j=await this.core.status();

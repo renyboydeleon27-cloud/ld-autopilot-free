@@ -3,7 +3,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {createHash,randomBytes} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
-const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality';
+const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v2';
 export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms))}={}) {
  if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT || !env.CLOUDFLARE_API_TOKEN || /\s/.test(env.CLOUDFLARE_API_TOKEN))throw Error('CONFIGURATION_REQUIRED');
  const bundle=JSON.parse(await read('/tmp/ldb-hook-package/render_job.json','utf8'));
@@ -24,7 +24,7 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
  const files=['cloudflare/ldb-runner/worker.mjs','cloudflare/ldb-runner/checkpoints.mjs','lib/ldb/cloudflare-image.mjs','lib/ldb/approved-render-job.mjs'];
  const bindings=[{name:'LDB_COORDINATOR',type:'durable_object_namespace',class_name:'LdbCoordinator'},
  ...Object.entries({RUNNER_ENABLED:'true',FREE_PLAN_CONFIRMED:'true',HOOK_ONLY_TEST:'true',CLOUDFLARE_ACCOUNT_ID:ACCOUNT}).map(([name,text])=>({name,type:'plain_text',text})),
- {name:'CLOUDFLARE_API_TOKEN',type:'secret_text',text:token},{name:'RUNNER_SECRET',type:'secret_text',text:key}];
+ {name:'AI',type:'ai'},{name:'RUNNER_SECRET',type:'secret_text',text:key}];
  const form=new FormData();form.set('metadata',new Blob([JSON.stringify({main_module:files[0],compatibility_date:'2026-10-28',compatibility_flags:['nodejs_compat'],bindings,migrations:{new_tag:'v1',new_sqlite_classes:['LdbCoordinator']}})],{type:'application/json'}));
  for(const path of files)form.set(path,new Blob([await read(path)],{type:'application/javascript+module'}),path);
  let result,bytes,primaryError;
@@ -50,7 +50,7 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
   for(let i=0;i<48;i++){
    await sleep(5000);job=(await (await call('/status')).json()).job;
    if(job?.status==='TEST_PAUSED')break;
-   if(job?.status==='NEEDS_REVIEW')throw Error('RENDER_NEEDS_REVIEW');
+   if(job?.status==='NEEDS_REVIEW')throw Error('RENDER_NEEDS_REVIEW_'+(job.providerCode||'UNKNOWN'));
   }
   if(job?.status!=='TEST_PAUSED'||job.completedScenes!==1)throw Error('HOOK_TEST_INCOMPLETE');
   const response=await call('/images/HOOK');bytes=Buffer.from(await response.arrayBuffer());
@@ -62,7 +62,7 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
  }catch(e){primaryError=e}
  // Remove temporary runtime credentials even on a failed acceptance test.
  const cleanup=[];
- for(const name of ['CLOUDFLARE_API_TOKEN','RUNNER_SECRET'])try{await api(`/scripts/${NAME}/secrets/${name}`,{method:'DELETE'});}catch{cleanup.push(name)}
+ for(const name of ['RUNNER_SECRET'])try{await api(`/scripts/${NAME}/secrets/${name}`,{method:'DELETE'});}catch{cleanup.push(name)}
  if(cleanup.length)throw Error('TEST_SECRET_CLEANUP_FAILED');
  if(primaryError)throw primaryError;
  return {report:{...result,runtimeCredentialsRemoved:true},bytes};

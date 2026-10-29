@@ -26,3 +26,9 @@ test('invalid success, base64 and non-image outputs rejected',async()=>{
 });
 
 test('square output rejected before delivery',async()=>{const square=Buffer.from(bytes);square.writeUInt32BE(1024,16);await assert.rejects(generateImage({...opts,fetcher:async()=>response({success:true,result:{image:square.toString('base64')}})}),/INVALID_PORTRAIT_DIMENSIONS/);});
+test('native Workers AI binding sends serialized multipart without REST token',async()=>{
+ const bytes=Buffer.alloc(120);Buffer.from([137,80,78,71,13,10,26,10]).copy(bytes);bytes.write('IHDR',12);bytes.writeUInt32BE(576,16);bytes.writeUInt32BE(1024,20);
+ let calls=0;
+ const env={CLOUDFLARE_ACCOUNT_ID:'a'.repeat(32),AI:{run:async(model,input)=>{calls++;assert.equal(model,MODEL);const req=new Request('https://example.invalid',{method:'POST',body:input.multipart.body,headers:{'Content-Type':input.multipart.contentType},duplex:'half'});const form=await req.formData();assert.equal(form.get('width'),'576');assert.equal(form.get('height'),'1024');return {image:bytes.toString('base64')};}}};
+ const result=await generateImage({prompt:'Approved still image',freePlanConfirmed:true,env,fetcher:()=>assert.fail('REST fallback')});assert.equal(result.width,576);assert.equal(calls,1);
+});
