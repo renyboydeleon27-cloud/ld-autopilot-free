@@ -14,6 +14,7 @@ on:
       - "lib/ldb/**"
       - "cloudflare/ldb-runner/**"
       - ".github/workflows/ldb-free-production.yml"
+      - ".github/workflows/ldb-auto-studio-tests.yml"
   workflow_dispatch:
     inputs:
       episode_folder:
