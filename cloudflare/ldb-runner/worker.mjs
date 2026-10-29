@@ -15,7 +15,7 @@ export default {
  }
 };
 export class LdbCoordinator extends DurableObject {
- constructor(ctx,env) {super(ctx,env);this.core=new Checkpoints(ctx.storage,{render:prompt=>generateImage({prompt,env,freePlanConfirmed:env.FREE_PLAN_CONFIRMED==='true'})});}
+ constructor(ctx,env) {super(ctx,env);this.core=new Checkpoints(ctx.storage,{maxScenes:env.HOOK_ONLY_TEST==='true'?1:17,initialDelay:env.HOOK_ONLY_TEST==='true'?30000:1000,render:prompt=>generateImage({prompt,env,freePlanConfirmed:env.FREE_PLAN_CONFIRMED==='true'})});}
  async alarm() {if(this.env.RUNNER_ENABLED==='true' && this.env.FREE_PLAN_CONFIRMED==='true')await this.core.tick();}
  async fetch(req) {
   const path=new URL(req.url).pathname;
