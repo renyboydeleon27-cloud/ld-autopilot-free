@@ -36,7 +36,7 @@ from the earlier runner work. This branch adds strict expanded-job validation,
 ENDING Flow validation and authenticated checksum-verified raw-image download.
 A separate `ner-ldb-runner-quality` script name prevents accidental replacement
 of the previously deployed disabled runner. Both enable flags default to false.
-This branch has NOT been deployed to Cloudflare or production Vercel.
+Isolated HOOK-only Cloudflare test workers and static Vercel previews were subsequently deployed. Production Vercel remains unchanged. See hook-cloud-acceptance.json for the live test results.
 
 API (server-to-server bearer authentication; never embed RUNNER_SECRET in HTML):
 
@@ -49,7 +49,7 @@ Approval files alone are not authentication. A trusted server must authenticate
 the user before forwarding a job. This owner-facing gateway is not implemented.
 
 SQLite-backed Durable Object checkpoints and chunks are persistent cloud storage;
-tests currently use a serialized in-memory storage double, not a deployed runtime.
+unit tests use a serialized in-memory storage double. HOOK-only live alarm/checkpoint tests now also passed, as recorded in hook-cloud-acceptance.json.
 One job is retained; starting a different job is blocked until an archival/delivery
 lifecycle is implemented. Ambiguous inference failure is held for review rather
 than automatically billed again. STOP lets an in-flight render finish and preserves it.
@@ -93,3 +93,9 @@ checksums have passed. The 17 conversation-approved reference images are not
 available in this repo and must not be represented by generated placeholders.
 
 This is PROMPTS_ONLY plus tested backend components, not completed AUTO production.
+
+## Live HOOK acceptance update
+
+Native Workers AI binding produced real JPEGs and the live STOP/resume, authentication, persistent checkpoint and download checksum checks passed. Two isolated one-image native trials are halted at TEST_PAUSED; the earlier REST trial remains held at NEEDS_REVIEW. No automatic inference retries occurred. Runtime control secrets were removed after each trial; the native workers never received a Cloudflare API token. Vercel Cloudflare credentials were temporarily restricted to the reviewed test branch for each preview build, then restored to production-only. Production alias still points at main commit e86ab41.
+
+Visual quality is REJECTED: even the improved HOOK still shows an illuminated lantern. Do not deliver it as an approved final asset. Raw images require exact grayscale normalization; the offline normalization check passed but is not yet wired to cloud delivery. The reference images approved in chat must be compared before claiming continuity. Full episode generation, owner UI, Google vault, Drive and Gmail remain incomplete.
