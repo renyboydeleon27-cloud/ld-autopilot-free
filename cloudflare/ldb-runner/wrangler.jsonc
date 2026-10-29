@@ -1,0 +1,14 @@
+{
+  "name": "ner-ldb-runner-quality",
+  "main": "worker.mjs",
+  "account_id": "a437dda5f38ba6b10991684b8388760b",
+  "compatibility_date": "2026-10-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "CLOUDFLARE_ACCOUNT_ID": "a437dda5f38ba6b10991684b8388760b",
+    "RUNNER_ENABLED": "false",
+    "FREE_PLAN_CONFIRMED": "false"
+  },
+  "durable_objects": {"bindings": [{"name":"LDB_COORDINATOR","class_name":"LdbCoordinator"}]},
+  "migrations": [{"tag":"v1","new_sqlite_classes":["LdbCoordinator"]}]
+}

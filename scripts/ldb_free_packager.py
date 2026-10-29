@@ -13,8 +13,9 @@ import sys
 import tempfile
 from pathlib import Path
 from scripts.verify_ldb_approval import EXPECTED, scene_map, verify
+from scripts.ldb_profiles.lake_nyos import expansion, SOURCES
 
-CLIPS = ["HOOK", *[f"P{i}" for i in range(1, 15)]]
+CLIPS = EXPECTED[:-1]
 STYLE = (
     "Hand-drawn 2D historical anime ONLY, strict TRUE BLACK-AND-WHITE neutral "
     "grayscale, vertical 9:16, historically plausible architecture, clothing, "
@@ -53,6 +54,7 @@ def make_package(storyboard_path, approval_path, destination):
         raise ValueError("Approval must originate from explicit storyboard approval")
     data = json.loads(storyboard_path.read_text(encoding="utf-8"))
     scenes = scene_map(data)
+    additions = expansion(verified_sha)
     topic = (text_field(data, "topic", "title", "episode_topic")
              or approved.get("topic") or "Untitled disaster")
     if not isinstance(topic, str) or len(topic) > 240:
@@ -96,6 +98,7 @@ def make_package(storyboard_path, approval_path, destination):
         (destination / "image_prompts" / f"{key}.txt").write_text(image_prompt, encoding="utf-8")
         if key in CLIPS:
             motion = text_field(item, "flow_prompt", "video_prompt", "motion_prompt", "motion")
+            motion = motion or additions.get(key, {}).get("motion", "")
             if not motion:
                 motion = (
                     "Preserve the approved storyboard composition. Use physically "
@@ -118,6 +121,7 @@ def make_package(storyboard_path, approval_path, destination):
             (destination / "flow_prompts" / f"{key}.txt").write_text(flow, encoding="utf-8")
         if key != "THUMBNAIL":
             narration = text_field(item, "narration", "voiceover", "voice_over", "voice_over_text")
+            narration = narration or additions.get(key, {}).get("narration", "")
             if not narration:
                 gaps.append({"scene": key, "issue": "Narration not supplied; left blank, no historical facts fabricated"})
             (destination / "narration" / f"{key}.txt").write_text(narration + ("\n" if narration else ""), encoding="utf-8")
@@ -137,16 +141,50 @@ def make_package(storyboard_path, approval_path, destination):
         "pending": [
             "Historical fact/chronology verification by a trusted reviewer",
             "Render 17 individual static images using an authorized image generation provider",
-            "Externally render 15 ten-second clips in Flow if desired",
+            "Externally render 16 ten-second clips in Flow if desired",
             "Inspect actual images and rendered clips before final release",
             "Upload actual assets and package to authorized Google Drive destination"
         ],
         "files_generated": {
             "image_prompts": 17,
-            "flow_prompts": 15,
+            "flow_prompts": len(CLIPS),
             "narration_files": 16
         },
         "warnings": gaps,
+    }
+    manifest["production_expansion"] = {
+        "applied": bool(additions), "bound_to_original_hash": verified_sha if additions else None,
+        "sources": SOURCES if additions else [],
+        "note": "Authored representative dramatization; characters are not identified historical witnesses. Narration duration is estimated, not recorded."
+    }
+    manifest["narration_nonempty"] = sum(bool(p.read_text().strip()) for p in (destination / "narration").glob("*.txt"))
+    manifest["narration_timing"] = {
+        p.stem: {"words": len(p.read_text().split()), "estimated_seconds_at_150_wpm": round(len(p.read_text().split()) / 2.5, 1)}
+        for p in sorted((destination / "narration").glob("*.txt"))
+    }
+    (destination / "storyboard").mkdir()
+    (destination / "storyboard" / "approved_storyboard.json").write_bytes(storyboard_path.read_bytes())
+    (destination / "storyboard" / "approval.json").write_bytes(approval_path.read_bytes())
+    if additions:
+        # Server-only submission, authenticated by the runner's bearer credential.
+        # Expansion does not change the original storyboard or its approval hash.
+        render_scenes = []
+        for key in EXPECTED:
+            render_scenes.append({
+                "id": key,
+                "image_prompt": (destination / "image_prompts" / f"{key}.txt").read_text(encoding="utf-8"),
+                "flow_prompt": (destination / "flow_prompts" / f"{key}.txt").read_text(encoding="utf-8") if key in CLIPS else "",
+                "narration": (destination / "narration" / f"{key}.txt").read_text(encoding="utf-8") if key in CLIPS else ""
+            })
+        (destination / "render_job.json").write_text(json.dumps({
+            "schema": "ldb-approved-render-job-v1",
+            "storyboard_utf8": storyboard_path.read_text(encoding="utf-8"),
+            "approval": approved,
+            "render_scenes": render_scenes
+        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    manifest["file_checksums_sha256"] = {
+        p.relative_to(destination).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted(destination.rglob("*")) if p.is_file()
     }
     (destination / "production_audit.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     (destination / "README.txt").write_text(
@@ -155,7 +193,7 @@ def make_package(storyboard_path, approval_path, destination):
         "NOT COMPLETE: no images or videos were generated.\n"
         "No Drive upload or notification email was sent.\n"
         "Images: image_prompts/HOOK, P1-P14, ENDING, THUMBNAIL.\n"
-        "Flow prompts: flow_prompts/HOOK and P1-P14, each exactly 10 seconds.\n"
+        "Flow prompts: flow_prompts/HOOK, P1-P14 and ENDING, each exactly 10 seconds.\n"
         "Narration: narration/HOOK, P1-P14, ENDING. Empty files need manual content.\n"
         "Review production_audit.json before declaring final delivery.\n",
         encoding="utf-8"

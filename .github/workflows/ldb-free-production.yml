@@ -5,9 +5,14 @@ on:
     branches:
       - main
       - feature/ldb-auto-studio-ui
+      - feature/ldb-production-quality
     paths:
       - "ldb-submissions/**"
-      - "scripts/ldb_free_packager.py"
+      - "scripts/ldb*.py"
+      - "scripts/ldb_profiles/**"
+      - "tests/*ldb*"
+      - "lib/ldb/**"
+      - "cloudflare/ldb-runner/**"
       - ".github/workflows/ldb-free-production.yml"
   workflow_dispatch:
     inputs:
@@ -33,6 +38,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install image decoder
+        run: python -m pip install Pillow==12.3.0
+      - name: Offline runner, provider gate and OAuth tests
+        run: node --test tests/ldb-approved-render-job.test.mjs tests/ldb-cloudflare-image.test.mjs tests/ldb-durable-checkpoints.test.mjs tests/ldb-google-oauth.test.cjs tests/ldb-auto-studio-ui.test.cjs
       - name: Offline approval and output tests
         run: python -m unittest discover -s tests -p 'test_ldb*py' -v
       - name: Generate only for matching manual approvals
