@@ -4,6 +4,13 @@ const ORIGIN = 'https://ld-autopilot-free.vercel.app';
 const CALLBACK = ORIGIN + '/api/ldb-google-callback';
 const OWNER = 'renyboydeleon27@gmail.com';
 const SCOPES = ['openid','email','https://www.googleapis.com/auth/gmail.send','https://www.googleapis.com/auth/drive.file'];
+function callbackUrl(env=process.env) {
+  if(env.VERCEL_ENV==='preview') {
+    if(!/^ld-autopilot-free-[a-z0-9-]+\.vercel\.app$/.test(env.VERCEL_URL||'')) throw Error('Invalid preview origin');
+    return 'https://'+env.VERCEL_URL+'/api/ldb-google-callback';
+  }
+  return CALLBACK;
+}
 function config() {
   const clientId = process.env.LDB_GOOGLE_CLIENT_ID;
   const clientSecret = process.env.LDB_GOOGLE_CLIENT_SECRET;
@@ -12,7 +19,7 @@ function config() {
   const vaultUrl=process.env.LDB_GOOGLE_VAULT_URL;
   const vaultSecret=process.env.LDB_GOOGLE_VAULT_SECRET;
   if (!vaultUrl || !/^https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev$/.test(vaultUrl) || !vaultSecret || vaultSecret.length<32) throw new Error('Google vault configuration incomplete');
-  return {clientId,clientSecret,key:Buffer.from(key,'hex'),vaultUrl,vaultSecret};
+  return {callback:callbackUrl(),clientId,clientSecret,key:Buffer.from(key,'hex'),vaultUrl,vaultSecret};
 }
 function cookies(req){return Object.fromEntries((req.headers.cookie||'').split(';').map(x=>x.trim()).filter(Boolean).map(x=>{const n=x.indexOf('=');return [x.slice(0,n),x.slice(n+1)]}));}
 function seal(value,key){const iv=crypto.randomBytes(12);const cipher=crypto.createCipheriv('aes-256-gcm',key,iv);const data=Buffer.concat([cipher.update(JSON.stringify(value)),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),data]).toString('base64url');}
@@ -24,4 +31,4 @@ async function vault(cfg,path,body){
  if(!response.ok)throw Error('VAULT_UNAVAILABLE');
  return response.json();
 }
-module.exports={OWNER,vault,config,cookies,seal,unseal,cookie,html,ORIGIN,CALLBACK,SCOPES};
+module.exports={callbackUrl,OWNER,vault,config,cookies,seal,unseal,cookie,html,ORIGIN,CALLBACK,SCOPES};

@@ -14,3 +14,9 @@ test('wrong account, unverified email and missing scope never save credentials',
 test('durable claim rejection prevents code exchange and replay',()=>configured(async()=>{const calls=mocks({claim:false}),r=res();await callback(request(),r);assert.equal(r.statusCode,502);assert.equal(calls.length,1);}));
 test('malformed, expired, future and Unicode state rejected without network',()=>configured(async()=>{const calls=mocks();for(const overrides of [{exp:null},{exp:Date.now()-1},{exp:Date.now()+9999999},{state:'é'.repeat(32)},{verifier:'short'}]){const r=res();await callback(request(overrides),r);assert.equal(r.statusCode,400);}assert.equal(calls.length,0);}));
 test('missing session rejected',()=>configured(async()=>{const r=res();await callback({method:'GET',url:'/',headers:{}},r);assert.equal(r.statusCode,400);}));
+
+test('preview callback uses platform URL, fails closed for invalid host',()=>{
+ assert.equal(oauth.callbackUrl({VERCEL_ENV:'preview',VERCEL_URL:'ld-autopilot-free-test-team.vercel.app'}),'https://ld-autopilot-free-test-team.vercel.app/api/ldb-google-callback');
+ for(const host of ['', 'evil.example', 'ld-autopilot-free-x.vercel.app.evil.example','ld-autopilot-free-x.vercel.app/path'])assert.throws(()=>oauth.callbackUrl({VERCEL_ENV:'preview',VERCEL_URL:host}));
+ assert.equal(oauth.callbackUrl({VERCEL_ENV:'production',VERCEL_URL:'ignored.example'}),oauth.CALLBACK);
+});

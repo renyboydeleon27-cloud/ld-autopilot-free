@@ -15,7 +15,7 @@ module.exports=async function handler(req,res){
  const code=u.searchParams.get('code');if(!code)return html(res,400,'Missing Google authorization code.');
  try{
   await vault(cfg,'/claim',{id:crypto.createHash('sha256').update(state).digest('hex'),expiresAt:pending.exp});
-  const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code,client_id:cfg.clientId,client_secret:cfg.clientSecret,redirect_uri:CALLBACK,grant_type:'authorization_code',code_verifier:pending.verifier}),signal:AbortSignal.timeout(12000)});
+  const response=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code,client_id:cfg.clientId,client_secret:cfg.clientSecret,redirect_uri:cfg.callback,grant_type:'authorization_code',code_verifier:pending.verifier}),signal:AbortSignal.timeout(12000)});
   if(!response.ok)return html(res,502,'Google authorization could not be completed.');
   const data=await response.json();
   if(typeof data.access_token!=='string'||typeof data.refresh_token!=='string'||!data.access_token||!data.refresh_token||data.token_type?.toLowerCase()!=='bearer')return html(res,409,'Google did not provide the required authorization. Please reconnect.');

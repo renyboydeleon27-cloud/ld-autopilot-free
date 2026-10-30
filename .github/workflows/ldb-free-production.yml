@@ -47,7 +47,7 @@ jobs:
       - name: Install image decoder
         run: python -m pip install Pillow==12.3.0
       - name: Offline runner, provider gate and OAuth tests
-        run: node --test tests/ldb-hook-cloud-test.test.mjs tests/ldb-approved-render-job.test.mjs tests/ldb-cloudflare-image.test.mjs tests/ldb-durable-checkpoints.test.mjs tests/ldb-google-oauth.test.cjs tests/ldb-google-vault.test.mjs tests/ldb-google-delivery.test.mjs tests/ldb-auto-studio-ui.test.cjs
+        run: node --test tests/ldb-hook-cloud-test.test.mjs tests/ldb-approved-render-job.test.mjs tests/ldb-cloudflare-image.test.mjs tests/ldb-durable-checkpoints.test.mjs tests/ldb-google-oauth.test.cjs tests/ldb-google-vault.test.mjs tests/ldb-google-provision.test.mjs tests/ldb-google-delivery.test.mjs tests/ldb-auto-studio-ui.test.cjs
       - name: Offline approval and output tests
         run: python -m unittest discover -s tests -p 'test_ldb*py' -v
       - name: Generate only for matching manual approvals
