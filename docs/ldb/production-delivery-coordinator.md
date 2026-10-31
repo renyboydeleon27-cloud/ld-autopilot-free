@@ -1,0 +1,11 @@
+# Production delivery coordinator — 2026-10-31
+
+Development commit 2e02575d0d4a9663264406d4b32ac261d370f392 adds a backend-only delivery coordinator. It requires a trusted audited plan, all 17 image scene identities, 17 image prompts, 16 Flow prompts, 16 narrations and supporting documents (69 assets). Assets are rehashed before upload. File IDs/checksums use the previously live-tested DriveDelivery adapter.
+
+The coordinator persists STOP/resume, verified progress and a bounded three-attempt retry count per asset. A STOP during an in-flight upload preserves its result and prevents the next asset. Storage is checked before upload; insufficient space pauses delivery. Six new tests plus 38 Google tests passed (44 total). Coordinator execution was tested with mocks, not a live full episode.
+
+Live Drive storage check returned HTTP 200 and remaining=15362845168 bytes (15.36 GB decimal) on the connected owner account. Report: https://ld-autopilot-free-nio1d09k8-renyboydeleon-5731.vercel.app/storage-check.json . Deployment dpl_6vf3upPuSgzwAW9AfBGzwHvycf16. Storage can change; every upload batch must recheck. No subscription/payment change was made.
+
+Only authenticated capacity diagnostics are wired into the live vault. The production coordinator is NOT yet wired to the runner's Durable Object alarms or public app controls. Next work must create the trusted audited asset plan from actual 17-scene data, supply immutable bytes, then wire coordinator alarms and real milestones. Recovered reference mapping/visual QA is still pending. Do not represent the coordinator as a running background episode job.
+
+No episode upload or new Gmail send occurred in this step. Stable preview alias restored to app deployment dpl_6G176AN2qaPbzNDajZqSrFPecJnc. Cloudflare credential scopes restored; vault namespace/bindings preserved. Production unchanged.
