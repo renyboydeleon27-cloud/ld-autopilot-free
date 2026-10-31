@@ -13,7 +13,7 @@ for(const path of ['/status','/claim']){
  if(path==='/status'&&r.ok){const d=await r.json();report.googleConnected=d.connected===true;}
  }catch{report.checks[path]={error:'NETWORK_FAILED'};}
 }
-try{const r=await fetch('https://openidconnect.googleapis.com/.well-known/openid-configuration',{redirect:'error',signal:AbortSignal.timeout(15000)});report.checks.discovery={httpStatus:r.status};}catch{report.checks.discovery={error:'NETWORK_FAILED'};}
+try{const r=await fetch('https://accounts.google.com/.well-known/openid-configuration',{redirect:'error',signal:AbortSignal.timeout(15000)});report.checks.discovery={httpStatus:r.status};}catch{report.checks.discovery={error:'NETWORK_FAILED'};}
 await mkdir('cloudflare/ldb-google-vault/public',{recursive:true});
 await writeFile('cloudflare/ldb-google-vault/public/connection-check.json',JSON.stringify(report));
 console.log(JSON.stringify(report));

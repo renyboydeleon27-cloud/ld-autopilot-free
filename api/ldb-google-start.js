@@ -4,6 +4,8 @@ const {config,seal,cookie,html,CALLBACK,SCOPES,OWNER}=require('./_ldb-google-oau
 module.exports=async function handler(req,res){
   if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).end();}
   let cfg;try{cfg=config();}catch{return html(res,503,'Google connection is not configured yet.');}
+  // Canonical preview host keeps the state cookie and registered callback together.
+  if(process.env.VERCEL_ENV==='preview' && req.headers?.host && req.headers.host!==new URL(cfg.callback).host){res.writeHead(302,{Location:new URL('/api/ldb-google-start',cfg.callback).href});return res.end();}
   const state=crypto.randomBytes(24).toString('base64url');
   const verifier=crypto.randomBytes(32).toString('base64url');
   const challenge=crypto.createHash('sha256').update(verifier).digest('base64url');

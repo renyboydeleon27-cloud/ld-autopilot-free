@@ -6,6 +6,7 @@ const OWNER = 'renyboydeleon27@gmail.com';
 const SCOPES = ['openid','email','https://www.googleapis.com/auth/gmail.send','https://www.googleapis.com/auth/drive.file'];
 function callbackUrl(env=process.env) {
   if(env.VERCEL_ENV==='preview') {
+    if(env.VERCEL_BRANCH_URL==='ld-autopilot-free-git-feature-ldb-pro-7f581c-renyboydeleon-5731.vercel.app') return 'https://'+env.VERCEL_BRANCH_URL+'/api/ldb-google-callback';
     if(!/^ld-autopilot-free-[a-z0-9-]+\.vercel\.app$/.test(env.VERCEL_URL||'')) throw Error('Invalid preview origin');
     return 'https://'+env.VERCEL_URL+'/api/ldb-google-callback';
   }

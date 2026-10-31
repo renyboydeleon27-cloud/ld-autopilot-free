@@ -20,3 +20,14 @@ test('preview callback uses platform URL, fails closed for invalid host',()=>{
  for(const host of ['', 'evil.example', 'ld-autopilot-free-x.vercel.app.evil.example','ld-autopilot-free-x.vercel.app/path'])assert.throws(()=>oauth.callbackUrl({VERCEL_ENV:'preview',VERCEL_URL:host}));
  assert.equal(oauth.callbackUrl({VERCEL_ENV:'production',VERCEL_URL:'ignored.example'}),oauth.CALLBACK);
 });
+
+test('trusted branch callback stays stable and start redirects before setting cookie',()=>configured(async()=>{
+ process.env.VERCEL_ENV='preview';process.env.VERCEL_URL='ld-autopilot-free-new-team.vercel.app';process.env.VERCEL_BRANCH_URL='ld-autopilot-free-git-feature-ldb-pro-7f581c-renyboydeleon-5731.vercel.app';
+ const r=res();await start({method:'GET',headers:{host:process.env.VERCEL_URL}},r);assert.equal(r.statusCode,302);assert.equal(r.headers['Set-Cookie'],undefined);assert.ok(r.headers.Location.startsWith('https://'+process.env.VERCEL_BRANCH_URL+'/'));
+}));
+test('failed identity and vault save expose only fixed stage, never credentials',()=>configured(async()=>{
+ for(const [path,stage] of [['/userinfo','ACCOUNT_VERIFICATION'],['/credentials','VAULT_SAVE']]){
+ const calls=mocks();const original=global.fetch;global.fetch=async(url,opts)=>{if(url.endsWith(path))throw Error('secret-sensitive-response');return original(url,opts);};
+ const r=res();await callback(request(),r);assert.equal(r.statusCode,502);assert.ok(r.body.includes(stage));assert.doesNotMatch(JSON.stringify(r),/secret-sensitive|access-secret|refresh-secret/);
+ }
+}));
