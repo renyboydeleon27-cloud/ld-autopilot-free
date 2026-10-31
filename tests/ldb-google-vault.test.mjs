@@ -27,3 +27,5 @@ test('default fetch keeps its global receiver for Workers runtime compatibility'
  const original=globalThis.fetch;globalThis.fetch=async function(){assert.equal(this,globalThis);return {ok:true,json:async()=>({access_token:'test-access',token_type:'Bearer',expires_in:3600})};};
  try{const {vault}=fixture();await vault.save(credentials);assert.equal((await vault.verify()).verified,true);}finally{globalThis.fetch=original;}
 });
+
+test('refresh sends encoded form bytes and refuses to follow redirects',async()=>{const {vault}=fixture(async(url,options)=>{assert.equal(options.redirect,'manual');assert.equal(typeof options.body,'string');assert.equal(new URLSearchParams(options.body).get('grant_type'),'refresh_token');return {ok:false,json:async()=>({})};});await vault.save(credentials);await assert.rejects(vault.verify(),/^Error: GOOGLE_REFRESH_HTTP_FAILED$/);});
