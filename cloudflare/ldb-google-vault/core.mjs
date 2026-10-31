@@ -37,7 +37,8 @@ export class GoogleVault {
   if(!record||record.reconnectRequired)throw Error('GOOGLE_RECONNECT_REQUIRED');
   const saved=this.decrypt(record.ciphertext);
   let response,data;
-  try{response=await this.fetcher('https://oauth2.googleapis.com/token',{method:'POST',redirect:'error',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:saved.refreshToken,client_id:this.clientId,client_secret:this.clientSecret}),signal:AbortSignal.timeout(12000)});data=await response.json();}catch{throw Error('GOOGLE_REFRESH_UNAVAILABLE');}
+  try{response=await this.fetcher('https://oauth2.googleapis.com/token',{method:'POST',redirect:'error',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:saved.refreshToken,client_id:this.clientId,client_secret:this.clientSecret}),signal:AbortSignal.timeout(12000)});}catch(error){throw Error(error?.name==='TypeError'?'GOOGLE_REFRESH_TRANSPORT_TYPE':error?.name==='TimeoutError'||error?.name==='AbortError'?'GOOGLE_REFRESH_TIMEOUT':'GOOGLE_REFRESH_UNAVAILABLE');}
+  try{data=await response.json();}catch{throw Error('GOOGLE_REFRESH_RESPONSE_INVALID');}
   if(!response.ok){
    if(data.error==='invalid_grant'){
     await this.storage.transaction(async tx=>{const current=await tx.get('credentials');if(current?.ciphertext===record.ciphertext)await tx.put('credentials',{...record,reconnectRequired:true});});
