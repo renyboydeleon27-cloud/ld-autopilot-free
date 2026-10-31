@@ -8,7 +8,7 @@ function fixture(){
  const id='d'.repeat(64),map=new Map();
  const outputs=ALL_SCENES.map((scene,i)=>{
   const bytes=Buffer.from('durable-image-'+i);
-  map.set('image:'+i+':0,new Uint8Array(bytes));
+  map.set('image:'+i+':0',new Uint8Array(bytes));
   return {scene,chunks:1,bytes:bytes.length,sha256:sha(bytes),mimeType:'image/jpeg'};
  });
  map.set('job',{id,index:17,status:'IMAGES_READY',outputs});
