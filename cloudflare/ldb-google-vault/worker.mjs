@@ -13,6 +13,9 @@ export class LdbGoogleVault extends DurableObject {
  async fetch(req){
   const path=new URL(req.url).pathname;
   if(req.method==='GET'&&path==='/status')return json(await this.core.status());
+  if(req.method==='POST'&&path==='/verify'){
+   try{return json(await this.core.verify());}catch{return json({verified:false,status:'GOOGLE_VERIFICATION_FAILED'},502);}
+  }
   if(req.method!=='POST'||!['/claim','/credentials'].includes(path))return json({status:'NOT_FOUND'},404);
   try{
    const reader=req.body?.getReader();if(!reader)throw Error();

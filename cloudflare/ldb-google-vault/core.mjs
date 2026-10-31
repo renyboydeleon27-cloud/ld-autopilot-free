@@ -24,6 +24,7 @@ export class GoogleVault {
   await this.storage.put('credentials',record);this.access=null;
  }
  async status(){const r=await this.storage.get('credentials');return {connected:!!r&&!r.reconnectRequired,reconnectRequired:!!r?.reconnectRequired,deliveryReady:false};}
+ async verify(){await this.accessToken();return {verified:true,refreshUsable:true,deliveryReady:false};}
  // Internal adapter only: there is deliberately no HTTP token-export route.
  async accessToken(){
   if(this.refreshing)return this.refreshing;

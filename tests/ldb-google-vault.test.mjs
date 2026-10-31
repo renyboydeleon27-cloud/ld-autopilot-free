@@ -20,3 +20,6 @@ test('UTF-8 credentials round-trip and existing AES-GCM records remain readable'
  const bytes=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);
  const legacy=Buffer.concat([iv,cipher.getAuthTag(),bytes]).toString('base64');assert.deepEqual(vault.decrypt(legacy),value);
 });
+
+test('verification refreshes internally and exports only boolean capability status',async()=>{const {vault}=fixture(async()=>({ok:true,json:async()=>({access_token:'access-private',token_type:'Bearer',expires_in:3600})}));await vault.save(credentials);assert.deepEqual(await vault.verify(),{verified:true,refreshUsable:true,deliveryReady:false});});
+test('verification cannot report success after refresh failure',async()=>{const {vault}=fixture(async()=>{throw Error('private-response');});await vault.save(credentials);await assert.rejects(vault.verify(),/^Error: GOOGLE_REFRESH_UNAVAILABLE$/);});
