@@ -1,5 +1,6 @@
 import {DurableObject} from 'cloudflare:workers';
 import {createHash,timingSafeEqual} from 'node:crypto';
+import {storageCapacity} from '../../lib/ldb/production-delivery.mjs';
 import {acceptance} from './acceptance.mjs';
 import {GoogleVault} from './core.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
@@ -13,6 +14,7 @@ export class LdbGoogleVault extends DurableObject {
  constructor(ctx,env){super(ctx,env);this.storage=ctx.storage;this.core=new GoogleVault(ctx.storage,{key:env.VAULT_KEY,clientId:env.GOOGLE_CLIENT_ID,clientSecret:env.GOOGLE_CLIENT_SECRET});}
  async fetch(req){
   const path=new URL(req.url).pathname;
+  if(req.method==='GET'&&path==='/capacity'){try{return json(await storageCapacity(()=>this.core.accessToken()));}catch{return json({status:'STORAGE_CHECK_UNAVAILABLE'},502);}}
   if(req.method==='GET'&&path==='/status')return json(await this.core.status());
   if(req.method==='POST'&&path==='/acceptance'){try{return json(await acceptance(this.storage,this.core));}catch(error){const codes=['DRIVE_ID_UNAVAILABLE','DRIVE_VERIFY_UNAVAILABLE','DRIVE_CONTENT_MISMATCH','DRIVE_UPLOAD_UNCONFIRMED','DRIVE_REQUEST_UNCERTAIN','DRIVE_RETRY_LIMIT'];return json({status:codes.includes(error.message)?error.message:'ACCEPTANCE_FAILED'},502);}}
   if(req.method==='POST'&&path==='/verify'){
