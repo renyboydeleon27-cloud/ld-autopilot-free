@@ -7,7 +7,7 @@ export class GoogleVault {
   if(!/^[a-f0-9]{64}$/i.test(key||''))throw Error('VAULT_NOT_CONFIGURED');
   this.storage=storage;this.key=Buffer.from(key,'hex');this.clientId=clientId;this.clientSecret=clientSecret;this.fetcher=fetcher;this.now=now;
  }
- encrypt(value){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',this.key,iv);cipher.setAAD(AAD);const bytes=Buffer.concat([cipher.update(JSON.stringify(value)),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),bytes]).toString('base64');}
+ encrypt(value){const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',this.key,iv);cipher.setAAD(AAD);const bytes=Buffer.concat([cipher.update(Buffer.from(JSON.stringify(value),'utf8')),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),bytes]).toString('base64');}
  decrypt(value){try{const bytes=Buffer.from(value,'base64'),cipher=createDecipheriv('aes-256-gcm',this.key,bytes.subarray(0,12));cipher.setAAD(AAD);cipher.setAuthTag(bytes.subarray(12,28));return JSON.parse(Buffer.concat([cipher.update(bytes.subarray(28)),cipher.final()]).toString());}catch{throw Error('VAULT_DATA_INVALID');}}
  async claim({id,expiresAt}){
   const now=this.now();

@@ -11,3 +11,12 @@ test('claims survive process replacement, reject replay, expire and bound storag
 test('refresh is single-flight, cached only in memory and contains no durable access token',async()=>{let calls=0;const {vault,storage}=fixture(async()=>{calls++;return {ok:true,json:async()=>({access_token:'access-private',token_type:'Bearer',expires_in:3600})};});await vault.save(credentials);assert.deepEqual(await Promise.all([vault.accessToken(),vault.accessToken()]),['access-private','access-private']);assert.equal(await vault.accessToken(),'access-private');assert.equal(calls,1);assert.doesNotMatch(JSON.stringify([...storage.data]),/access-private/);});
 test('invalid_grant marks reconnect and suppresses future refresh',async()=>{let calls=0;const {vault}=fixture(async()=>{calls++;return {ok:false,json:async()=>({error:'invalid_grant',error_description:'SECRET'})};});await vault.save(credentials);await assert.rejects(vault.accessToken(),/^Error: GOOGLE_RECONNECT_REQUIRED$/);await assert.rejects(vault.accessToken());assert.equal(calls,1);assert.equal((await vault.status()).reconnectRequired,true);});
 test('network failure sanitizes errors without deleting saved credentials',async()=>{const {vault}=fixture(async()=>{throw Error('SECRET');});await vault.save(credentials);await assert.rejects(vault.accessToken(),/^Error: GOOGLE_REFRESH_UNAVAILABLE$/);assert.equal((await vault.status()).connected,true);});
+
+test('UTF-8 credentials round-trip and existing AES-GCM records remain readable',async()=>{
+ const {createCipheriv}=await import('node:crypto');
+ const {vault,storage}=fixture();const value={...credentials,subject:'subject-ñ-測試'};
+ await vault.save(value);assert.deepEqual(vault.decrypt((await storage.get('credentials')).ciphertext),value);
+ const iv=Buffer.alloc(12,7),cipher=createCipheriv('aes-256-gcm',Buffer.from('ab'.repeat(32),'hex'),iv);cipher.setAAD(Buffer.from('ldb-google-vault-v1:'+OWNER));
+ const bytes=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);
+ const legacy=Buffer.concat([iv,cipher.getAuthTag(),bytes]).toString('base64');assert.deepEqual(vault.decrypt(legacy),value);
+});

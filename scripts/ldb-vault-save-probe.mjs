@@ -1,7 +1,7 @@
 // Isolated synthetic Cloudflare runtime test; never reads or writes real Google credentials.
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {randomBytes} from 'node:crypto';
-const account='a437dda5f38ba6b10991684b8388760b',name='ner-ldb-vault-save-probe-v1';
+const account='a437dda5f38ba6b10991684b8388760b',name='ner-ldb-vault-save-probe-v2';
 if(process.env.VERCEL_ENV!=='preview'||process.env.CLOUDFLARE_ACCOUNT_ID!==account||!process.argv.includes('--synthetic-only'))throw Error('PREVIEW_CONFIGURATION_REQUIRED');
 const secret=randomBytes(32).toString('hex');
 const api=async(path,options={})=>{const r=await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/workers`+path,{...options,redirect:'error',headers:{Authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN,...options.headers},signal:AbortSignal.timeout(60000)});const d=await r.json();if(!r.ok||!d.success)throw Error('CLOUDFLARE_HTTP_'+r.status);return d.result;};
