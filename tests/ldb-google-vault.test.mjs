@@ -23,3 +23,7 @@ test('UTF-8 credentials round-trip and existing AES-GCM records remain readable'
 
 test('verification refreshes internally and exports only boolean capability status',async()=>{const {vault}=fixture(async()=>({ok:true,json:async()=>({access_token:'access-private',token_type:'Bearer',expires_in:3600})}));await vault.save(credentials);assert.deepEqual(await vault.verify(),{verified:true,refreshUsable:true,deliveryReady:false});});
 test('verification cannot report success after refresh failure',async()=>{const {vault}=fixture(async()=>{throw Error('private-response');});await vault.save(credentials);await assert.rejects(vault.verify(),/^Error: GOOGLE_REFRESH_UNAVAILABLE$/);});
+test('default fetch keeps its global receiver for Workers runtime compatibility',async()=>{
+ const original=globalThis.fetch;globalThis.fetch=async function(){assert.equal(this,globalThis);return {ok:true,json:async()=>({access_token:'test-access',token_type:'Bearer',expires_in:3600})};};
+ try{const {vault}=fixture();await vault.save(credentials);assert.equal((await vault.verify()).verified,true);}finally{globalThis.fetch=original;}
+});
