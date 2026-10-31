@@ -42,7 +42,9 @@ export class GoogleVault {
    if(data.error==='invalid_grant'){
     await this.storage.transaction(async tx=>{const current=await tx.get('credentials');if(current?.ciphertext===record.ciphertext)await tx.put('credentials',{...record,reconnectRequired:true});});
     throw Error('GOOGLE_RECONNECT_REQUIRED');
-   }throw Error('GOOGLE_REFRESH_UNAVAILABLE');
+   }if(data.error==='invalid_client')throw Error('GOOGLE_CLIENT_REJECTED');
+   if(data.error==='invalid_request')throw Error('GOOGLE_REFRESH_REQUEST_REJECTED');
+   throw Error('GOOGLE_REFRESH_HTTP_FAILED');
   }
   if(typeof data.access_token!=='string'||!data.access_token||data.token_type?.toLowerCase()!=='bearer'||!Number.isFinite(data.expires_in)||data.expires_in<120||data.expires_in>86400)throw Error('GOOGLE_REFRESH_INVALID');
   // A reconnect can race a pending refresh; never return a superseded account token.
