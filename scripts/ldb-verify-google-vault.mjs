@@ -15,6 +15,7 @@ for(const b of before.bindings)if(!after.bindings.some(a=>a.name===b.name&&a.typ
 const r=await fetch(process.env.LDB_GOOGLE_VAULT_URL+'/status',{headers:{Authorization:'Bearer '+process.env.LDB_GOOGLE_VAULT_SECRET},redirect:'error',signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('UPDATED_VAULT_STATUS_FAILED');const status=await r.json();
 await mkdir('cloudflare/ldb-google-vault/public',{recursive:true});
 const v=await fetch(process.env.LDB_GOOGLE_VAULT_URL+'/verify',{method:'POST',headers:{Authorization:'Bearer '+process.env.LDB_GOOGLE_VAULT_SECRET},redirect:'error',signal:AbortSignal.timeout(20000)});
-const verified=v.ok&&(await v.json()).verified===true;
-const report={googleConnected:status.connected===true,refreshVerified:verified,namespacePreserved:true,bindingsPreserved:true,driveUploadTested:false,gmailSendTested:false};
+const result=await v.json();const verified=v.ok&&result.verified===true;
+const codes=['NOT_FOUND','VAULT_DATA_INVALID','GOOGLE_NOT_CONFIGURED','GOOGLE_RECONNECT_REQUIRED','GOOGLE_REFRESH_UNAVAILABLE','GOOGLE_REFRESH_INVALID','GOOGLE_CONNECTION_CHANGED','GOOGLE_VERIFICATION_FAILED'];
+const report={googleConnected:status.connected===true,refreshVerified:verified,verificationHttpStatus:v.status,diagnostic:verified?'PASS':codes.includes(result.status)?result.status:'UNKNOWN',namespacePreserved:true,bindingsPreserved:true,driveUploadTested:false,gmailSendTested:false};
 await writeFile('cloudflare/ldb-google-vault/public/refresh-check.json',JSON.stringify(report));console.log(JSON.stringify(report));

@@ -14,7 +14,7 @@ export class LdbGoogleVault extends DurableObject {
   const path=new URL(req.url).pathname;
   if(req.method==='GET'&&path==='/status')return json(await this.core.status());
   if(req.method==='POST'&&path==='/verify'){
-   try{return json(await this.core.verify());}catch{return json({verified:false,status:'GOOGLE_VERIFICATION_FAILED'},502);}
+   try{return json(await this.core.verify());}catch(error){const allowed=['VAULT_DATA_INVALID','GOOGLE_NOT_CONFIGURED','GOOGLE_RECONNECT_REQUIRED','GOOGLE_REFRESH_UNAVAILABLE','GOOGLE_REFRESH_INVALID','GOOGLE_CONNECTION_CHANGED'];return json({verified:false,status:allowed.includes(error.message)?error.message:'GOOGLE_VERIFICATION_FAILED'},502);}
   }
   if(req.method!=='POST'||!['/claim','/credentials'].includes(path))return json({status:'NOT_FOUND'},404);
   try{
