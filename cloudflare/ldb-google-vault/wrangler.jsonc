@@ -1,0 +1,10 @@
+{
+ "name":"ner-ldb-google-vault-quality",
+ "main":"worker.mjs",
+ "account_id":"a437dda5f38ba6b10991684b8388760b",
+ "compatibility_date":"2026-10-28",
+ "compatibility_flags":["nodejs_compat"],
+ "vars":{"VAULT_ENABLED":"false"},
+ "durable_objects":{"bindings":[{"name":"GOOGLE_VAULT","class_name":"LdbGoogleVault"}]},
+ "migrations":[{"tag":"v1","new_sqlite_classes":["LdbGoogleVault"]}]
+}

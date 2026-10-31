@@ -1,48 +1,33 @@
 'use strict';
-const test=require('node:test');
-const assert=require('node:assert/strict');
-const crypto=require('node:crypto');
-const oauth=require('../api/_ldb-google-oauth');
-const start=require('../api/ldb-google-start');
-const callback=require('../api/ldb-google-callback');
-function res(){return {statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;},status(v){this.statusCode=v;return this;},writeHead(v,h){this.statusCode=v;Object.assign(this.headers,h);return this;},end(v){this.body=v||'';return this;}};}
-test('AES-GCM encrypted OAuth state round-trip and tampering blocked',()=>{
- const key=crypto.randomBytes(32),token=oauth.seal({state:'abc',exp:Date.now()+1000},key);
- assert.equal(oauth.unseal(token,key).state,'abc');
- assert.throws(()=>oauth.unseal(token.slice(0,-2)+'xx',key));
+const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const oauth=require('../api/_ldb-google-oauth'),start=require('../api/ldb-google-start'),callback=require('../api/ldb-google-callback');
+function res(){return {statusCode:200,headers:{},setHeader(k,v){this.headers[k]=v;return this;},status(v){this.statusCode=v;return this;},writeHead(v,h){this.statusCode=v;Object.assign(this.headers,h);return this;},end(v){this.body=v||'';return this;}};}
+async function configured(fn){const env={...process.env},fetcher=global.fetch;Object.assign(process.env,{LDB_GOOGLE_CLIENT_ID:'client-test',LDB_GOOGLE_CLIENT_SECRET:'secret-test',LDB_GOOGLE_COOKIE_KEY:'ab'.repeat(32),LDB_GOOGLE_VAULT_URL:'https://vault.example.workers.dev',LDB_GOOGLE_VAULT_SECRET:'s'.repeat(32)});try{await fn();}finally{process.env=env;global.fetch=fetcher;}}
+const state='s'.repeat(32);
+function request(overrides={}){const pending=oauth.seal({state,verifier:'v'.repeat(43),exp:Date.now()+60000,...overrides},Buffer.from('ab'.repeat(32),'hex'));return {method:'GET',url:'/api/ldb-google-callback?code=abc&state='+state,headers:{cookie:'ldb_google_pending='+pending}};}
+function mocks({email=oauth.OWNER,verified=true,scope=oauth.SCOPES.join(' '),claim=true}={}){const calls=[];global.fetch=async(url,opts)=>{calls.push({url,opts});let data={ok:true};if(url.endsWith('/claim')&&!claim)return {ok:false};if(url.includes('oauth2.googleapis.com'))data={access_token:'access-secret',refresh_token:'refresh-secret',scope,token_type:'Bearer'};if(url.includes('/userinfo'))data={email,email_verified:verified,sub:'123'};return {ok:true,json:async()=>data};};return calls;}
+test('AES-GCM round-trip rejects tampering',()=>{const key=crypto.randomBytes(32),value=oauth.seal({state},key);assert.equal(oauth.unseal(value,key).state,state);assert.throws(()=>oauth.unseal(value.slice(0,-8)+'aaaaaaaa',key));});
+test('missing vault fails closed before authorization',()=>configured(async()=>{delete process.env.LDB_GOOGLE_VAULT_SECRET;const r=res();await start({method:'GET'},r);assert.equal(r.statusCode,503);}));
+test('start uses PKCE, exact callback, sender hint, encrypted HttpOnly state',()=>configured(async()=>{const r=res();await start({method:'GET'},r);const u=new URL(r.headers.Location);assert.equal(r.statusCode,302);assert.equal(u.searchParams.get('redirect_uri'),oauth.CALLBACK);assert.equal(u.searchParams.get('login_hint'),oauth.OWNER);assert.equal(u.searchParams.get('code_challenge_method'),'S256');assert.match(r.headers['Set-Cookie'],/HttpOnly; Secure; SameSite=Lax/);}));
+test('valid callback saves only to vault and leaks no tokens to browser',()=>configured(async()=>{const calls=mocks();const r=res();await callback(request(),r);assert.equal(r.statusCode,200);assert.equal(calls.length,4);assert.ok(calls[0].url.endsWith('/claim'));assert.ok(calls[3].url.endsWith('/credentials'));assert.equal(JSON.parse(calls[3].opts.body).refreshToken,'refresh-secret');assert.doesNotMatch(JSON.stringify(r),/access-secret|refresh-secret/);assert.match(r.body,/saved securely/);}));
+test('wrong account, unverified email and missing scope never save credentials',()=>configured(async()=>{for(const option of [{email:'other@gmail.com'},{verified:false},{scope:'openid email'}]){const calls=mocks(option),r=res();await callback(request(),r);assert.equal(r.statusCode,403);assert.ok(!calls.some(x=>x.url.endsWith('/credentials')));}}));
+test('durable claim rejection prevents code exchange and replay',()=>configured(async()=>{const calls=mocks({claim:false}),r=res();await callback(request(),r);assert.equal(r.statusCode,502);assert.equal(calls.length,1);}));
+test('malformed, expired, future and Unicode state rejected without network',()=>configured(async()=>{const calls=mocks();for(const overrides of [{exp:null},{exp:Date.now()-1},{exp:Date.now()+9999999},{state:'é'.repeat(32)},{verifier:'short'}]){const r=res();await callback(request(overrides),r);assert.equal(r.statusCode,400);}assert.equal(calls.length,0);}));
+test('missing session rejected',()=>configured(async()=>{const r=res();await callback({method:'GET',url:'/',headers:{}},r);assert.equal(r.statusCode,400);}));
+
+test('preview callback uses platform URL, fails closed for invalid host',()=>{
+ assert.equal(oauth.callbackUrl({VERCEL_ENV:'preview',VERCEL_URL:'ld-autopilot-free-test-team.vercel.app'}),'https://ld-autopilot-free-test-team.vercel.app/api/ldb-google-callback');
+ for(const host of ['', 'evil.example', 'ld-autopilot-free-x.vercel.app.evil.example','ld-autopilot-free-x.vercel.app/path'])assert.throws(()=>oauth.callbackUrl({VERCEL_ENV:'preview',VERCEL_URL:host}));
+ assert.equal(oauth.callbackUrl({VERCEL_ENV:'production',VERCEL_URL:'ignored.example'}),oauth.CALLBACK);
 });
-test('OAuth start fails closed without server configuration',async()=>{
- const old={...process.env};
- try{delete process.env.LDB_GOOGLE_CLIENT_ID;delete process.env.LDB_GOOGLE_CLIENT_SECRET;delete process.env.LDB_GOOGLE_COOKIE_KEY;
- const r=res();await start({method:'GET',headers:{}},r);assert.equal(r.statusCode,503);assert.match(r.body,/not configured/);}
- finally{process.env=old;}
-});
-test('OAuth start sets PKCE challenge and encrypted state cookie',async()=>{
- const old={...process.env};
- try{process.env.LDB_GOOGLE_CLIENT_ID='client-test';process.env.LDB_GOOGLE_CLIENT_SECRET='secret-test';process.env.LDB_GOOGLE_COOKIE_KEY='ab'.repeat(32);
- const r=res();await start({method:'GET',headers:{}},r);assert.equal(r.statusCode,302);
- const u=new URL(r.headers.Location);assert.equal(u.searchParams.get('redirect_uri'),oauth.CALLBACK);
- assert.equal(u.searchParams.get('code_challenge_method'),'S256');
- assert.match(r.headers['Set-Cookie'],/HttpOnly; Secure; SameSite=Lax/);
- const c=r.headers['Set-Cookie'].split(';')[0].split('=')[1];
- const pending=oauth.unseal(c,Buffer.from('ab'.repeat(32),'hex'));
- assert.equal(pending.state,u.searchParams.get('state'));assert.ok(pending.verifier);}
- finally{process.env=old;}
-});
-test('OAuth callback rejects missing or invalid session without token exchange',async()=>{
- const old={...process.env};
- try{process.env.LDB_GOOGLE_CLIENT_ID='client-test';process.env.LDB_GOOGLE_CLIENT_SECRET='secret-test';process.env.LDB_GOOGLE_COOKIE_KEY='ab'.repeat(32);
- const r=res();await callback({method:'GET',url:'/api/ldb-google-callback?code=abc&state=bad',headers:{}},r);
- assert.equal(r.statusCode,400);assert.match(r.body,/session expired/);}
- finally{process.env=old;}
-});
-test('OAuth callback does not store refresh token in browser cookies',async()=>{
- const old={...process.env},originalFetch=global.fetch;
- try{process.env.LDB_GOOGLE_CLIENT_ID='client-test';process.env.LDB_GOOGLE_CLIENT_SECRET='secret-test';process.env.LDB_GOOGLE_COOKIE_KEY='ab'.repeat(32);
- const key=Buffer.from('ab'.repeat(32),'hex'),pending=oauth.seal({state:'valid',verifier:'verifier',exp:Date.now()+60000},key);
- global.fetch=async()=>({ok:true,json:async()=>({access_token:'access-secret',refresh_token:'refresh-secret'})});
- const r=res();await callback({method:'GET',url:'/api/ldb-google-callback?code=abc&state=valid',headers:{cookie:'ldb_google_pending='+pending}},r);
- assert.equal(r.statusCode,200);assert.doesNotMatch(JSON.stringify(r.headers),/refresh-secret|ldb_google_token/);
- assert.match(r.body,/No tokens saved/);}
- finally{process.env=old;global.fetch=originalFetch;}
-});
+
+test('trusted branch callback stays stable and start redirects before setting cookie',()=>configured(async()=>{
+ process.env.VERCEL_ENV='preview';process.env.VERCEL_URL='ld-autopilot-free-new-team.vercel.app';process.env.VERCEL_BRANCH_URL='ld-autopilot-free-git-feature-ldb-pro-7f581c-renyboydeleon-5731.vercel.app';
+ const r=res();await start({method:'GET',headers:{host:process.env.VERCEL_URL}},r);assert.equal(r.statusCode,302);assert.equal(r.headers['Set-Cookie'],undefined);assert.ok(r.headers.Location.startsWith('https://'+process.env.VERCEL_BRANCH_URL+'/'));
+}));
+test('failed identity and vault save expose only fixed stage, never credentials',()=>configured(async()=>{
+ for(const [path,stage] of [['/userinfo','ACCOUNT_VERIFICATION'],['/credentials','VAULT_SAVE']]){
+ const calls=mocks();const original=global.fetch;global.fetch=async(url,opts)=>{if(url.endsWith(path))throw Error('secret-sensitive-response');return original(url,opts);};
+ const r=res();await callback(request(),r);assert.equal(r.statusCode,502);assert.ok(r.body.includes(stage));assert.doesNotMatch(JSON.stringify(r),/secret-sensitive|access-secret|refresh-secret/);
+ }
+}));

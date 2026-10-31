@@ -1,0 +1,22 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {GoogleVault,OWNER} from '../cloudflare/ldb-google-vault/core.mjs';
+class Storage {data=new Map();async get(k){return structuredClone(this.data.get(k));}async put(k,v){this.data.set(k,structuredClone(v));}async transaction(fn){return fn(this);}}
+const credentials={email:OWNER,subject:'123',refreshToken:'refresh-private',scopes:['https://www.googleapis.com/auth/drive.file','https://www.googleapis.com/auth/gmail.send']};
+function fixture(fetcher){const storage=new Storage();return {storage,vault:new GoogleVault(storage,{key:'ab'.repeat(32),clientId:'client',clientSecret:'secret',fetcher,now:()=>1000000})};}
+test('credentials encrypted at rest and status never exports secrets',async()=>{const {storage,vault}=fixture();await vault.save(credentials);const record=await storage.get('credentials');assert.doesNotMatch(JSON.stringify(record),/refresh-private|renyboy/);assert.equal(vault.decrypt(record.ciphertext).refreshToken,'refresh-private');assert.deepEqual(await vault.status(),{connected:true,reconnectRequired:false,deliveryReady:false});});
+test('wrong key and tampered ciphertext fail closed',async()=>{const {vault}=fixture();const encrypted=vault.encrypt(credentials);const other=new GoogleVault(new Storage(),{key:'cd'.repeat(32)});assert.throws(()=>other.decrypt(encrypted),/VAULT_DATA_INVALID/);assert.throws(()=>vault.decrypt(encrypted.slice(0,-12)+'aaaaaaaaaaaa'),/VAULT_DATA_INVALID/);});
+test('rejects wrong owner and missing scopes',async()=>{const {vault,storage}=fixture();await assert.rejects(vault.save({...credentials,email:'other@gmail.com'}));await assert.rejects(vault.save({...credentials,scopes:[]}));assert.equal(storage.data.size,0);});
+test('claims survive process replacement, reject replay, expire and bound storage',async()=>{const {vault,storage}=fixture();await vault.claim({id:'a'.repeat(64),expiresAt:1001000});const again=new GoogleVault(storage,{key:'ab'.repeat(32),now:()=>1000000});await assert.rejects(again.claim({id:'a'.repeat(64),expiresAt:1001000}),/CLAIM_REJECTED/);for(let i=0;i<23;i++)await vault.claim({id:i.toString(16).padStart(64,'0'),expiresAt:1001000});await assert.rejects(vault.claim({id:'b'.repeat(64),expiresAt:1001000}));const later=new GoogleVault(storage,{key:'ab'.repeat(32),now:()=>1002000});await later.claim({id:'a'.repeat(64),expiresAt:1003000});assert.equal((await storage.get('claims')).length,1);});
+test('refresh is single-flight, cached only in memory and contains no durable access token',async()=>{let calls=0;const {vault,storage}=fixture(async()=>{calls++;return {ok:true,json:async()=>({access_token:'access-private',token_type:'Bearer',expires_in:3600})};});await vault.save(credentials);assert.deepEqual(await Promise.all([vault.accessToken(),vault.accessToken()]),['access-private','access-private']);assert.equal(await vault.accessToken(),'access-private');assert.equal(calls,1);assert.doesNotMatch(JSON.stringify([...storage.data]),/access-private/);});
+test('invalid_grant marks reconnect and suppresses future refresh',async()=>{let calls=0;const {vault}=fixture(async()=>{calls++;return {ok:false,json:async()=>({error:'invalid_grant',error_description:'SECRET'})};});await vault.save(credentials);await assert.rejects(vault.accessToken(),/^Error: GOOGLE_RECONNECT_REQUIRED$/);await assert.rejects(vault.accessToken());assert.equal(calls,1);assert.equal((await vault.status()).reconnectRequired,true);});
+test('network failure sanitizes errors without deleting saved credentials',async()=>{const {vault}=fixture(async()=>{throw Error('SECRET');});await vault.save(credentials);await assert.rejects(vault.accessToken(),/^Error: GOOGLE_REFRESH_UNAVAILABLE$/);assert.equal((await vault.status()).connected,true);});
+
+test('UTF-8 credentials round-trip and existing AES-GCM records remain readable',async()=>{
+ const {createCipheriv}=await import('node:crypto');
+ const {vault,storage}=fixture();const value={...credentials,subject:'subject-ñ-測試'};
+ await vault.save(value);assert.deepEqual(vault.decrypt((await storage.get('credentials')).ciphertext),value);
+ const iv=Buffer.alloc(12,7),cipher=createCipheriv('aes-256-gcm',Buffer.from('ab'.repeat(32),'hex'),iv);cipher.setAAD(Buffer.from('ldb-google-vault-v1:'+OWNER));
+ const bytes=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);
+ const legacy=Buffer.concat([iv,cipher.getAuthTag(),bytes]).toString('base64');assert.deepEqual(vault.decrypt(legacy),value);
+});

@@ -87,9 +87,9 @@ class FreePackageTests(unittest.TestCase):
         self.assertEqual(report["actual_videos_rendered"], 0)
         self.assertFalse(report["drive_uploaded"])
         self.assertEqual(len(list((self.out / "image_prompts").glob("*.txt"))), 17)
-        self.assertEqual(len(list((self.out / "flow_prompts").glob("*.txt"))), 15)
+        self.assertEqual(len(list((self.out / "flow_prompts").glob("*.txt"))), 16)
         self.assertEqual(len(list((self.out / "narration").glob("*.txt"))), 16)
-        self.assertEqual(len(CLIPS), 15)
+        self.assertEqual(len(CLIPS), 16)
 
     def test_visual_and_video_locks(self):
         make_package(self.storyboard, self.approval, self.out)
@@ -100,7 +100,7 @@ class FreePackageTests(unittest.TestCase):
         self.assertIn("Full-color illustration permitted", thumbnail)
         self.assertIn("EXACTLY 10 SECONDS", clip)
         self.assertIn("NO voice", clip)
-        self.assertFalse((self.out / "flow_prompts" / "ENDING.txt").exists())
+        self.assertTrue((self.out / "flow_prompts" / "ENDING.txt").exists())
         self.assertFalse((self.out / "flow_prompts" / "THUMBNAIL.txt").exists())
 
     def test_no_approval_no_output(self):
