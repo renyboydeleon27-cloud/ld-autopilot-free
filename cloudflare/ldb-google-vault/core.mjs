@@ -3,7 +3,7 @@ export const OWNER='renyboydeleon27@gmail.com';
 const REQUIRED=['https://www.googleapis.com/auth/drive.file','https://www.googleapis.com/auth/gmail.send'];
 const AAD=Buffer.from('ldb-google-vault-v1:'+OWNER);
 export class GoogleVault {
- constructor(storage,{key,clientId,clientSecret,fetcher=fetch,now=Date.now}){
+ constructor(storage,{key,clientId,clientSecret,fetcher=(...args)=>globalThis.fetch(...args),now=Date.now}){
   if(!/^[a-f0-9]{64}$/i.test(key||''))throw Error('VAULT_NOT_CONFIGURED');
   this.storage=storage;this.key=Buffer.from(key,'hex');this.clientId=clientId;this.clientSecret=clientSecret;this.fetcher=fetcher;this.now=now;
  }
