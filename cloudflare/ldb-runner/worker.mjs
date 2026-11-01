@@ -4,6 +4,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { Checkpoints, SCENES } from './checkpoints.mjs';
 import { validateRenderJob } from '../../lib/ldb/approved-render-job.mjs';
 import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
+import { deliveryReadiness } from '../../lib/ldb/delivery-readiness.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {
  async fetch(request,env) {
@@ -20,6 +21,10 @@ export class LdbCoordinator extends DurableObject {
  async fetch(req) {
   const path=new URL(req.url).pathname;
   try {
+   if(req.method==='GET' && path==='/delivery-readiness') {
+    const job=await this.core.status();
+    return json(deliveryReadiness({job}));
+   }
    if(req.method==='GET' && path==='/status') {
     const j=await this.core.status();return json({job:j?{id:j.id,status:j.status,completedScenes:j.index,totalScenes:17,outputs:j.outputs,error:j.error,providerCode:j.providerCode}:null,autoProductionReady:false,deliveryConnected:false});
    }
