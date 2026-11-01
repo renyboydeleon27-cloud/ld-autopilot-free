@@ -41,3 +41,12 @@ test('corrupted asset blocks delivery without advancing index',async()=>{
 test('unapproved plans cannot queue',async()=>{
  const f=fixture();await assert.rejects(new ProductionDelivery(f.storage,f.opts).submit({...f.plan,approvalVerified:false}),/DELIVERY_NOT_APPROVED/);
 });
+
+test('stop during corrupt upload preserves NEEDS_REVIEW and blocks resume',async()=>{
+ const f=fixture();const coordinator=new ProductionDelivery(f.storage,f.opts);
+ f.opts.readAsset=async()=>{await coordinator.stop();return Buffer.from('corrupted');};
+ await coordinator.submit(f.plan);await coordinator.tick();
+ assert.equal(f.state.get('delivery').status,'NEEDS_REVIEW');
+ assert.equal(f.state.get('delivery').index,0);
+ await assert.rejects(coordinator.resume(),/RESUME_NOT_SAFE/);
+});
