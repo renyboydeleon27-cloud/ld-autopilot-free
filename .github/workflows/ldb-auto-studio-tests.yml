@@ -23,6 +23,9 @@ on:
       - "scripts/ldb_profiles/**"
       - "tests/test_ldb*.py"
       - "tests/ldb-auto-studio-ui.test.cjs"
+      - "tests/*delivery*.test.mjs"
+      - "tests/durable-*.test.mjs"
+      - "lib/ldb/**"
       - ".github/workflows/ldb-free-production.yml"
       - ".github/workflows/ldb-auto-studio-tests.yml"
 permissions:
