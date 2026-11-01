@@ -42,4 +42,4 @@ jobs:
           node-version: '22'
       - run: node --test tests/ldb-auto-studio-ui.test.cjs
       - name: Verify 69-file offline delivery and durable storage
-        run: node --test tests/production-delivery-69-offline.test.mjs tests/durable-text-assets.test.mjs tests/durable-delivery-asset-reader.test.mjs tests/resume-durable-approved-delivery.test.mjs tests/delivery-readiness.test.mjs
+        run: node --test tests/production-delivery-69-offline.test.mjs tests/durable-text-assets.test.mjs tests/durable-delivery-asset-reader.test.mjs tests/resume-durable-approved-delivery.test.mjs tests/delivery-readiness.test.mjs tests/submit-durable-approved-delivery.test.mjs
