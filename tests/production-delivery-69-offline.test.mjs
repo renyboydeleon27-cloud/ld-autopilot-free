@@ -43,8 +43,9 @@ test('unapproved plans cannot queue',async()=>{
 });
 
 test('stop during corrupt upload preserves NEEDS_REVIEW and blocks resume',async()=>{
- const f=fixture();const coordinator=new ProductionDelivery(f.storage,f.opts);
+ const f=fixture();let coordinator;
  f.opts.readAsset=async()=>{await coordinator.stop();return Buffer.from('corrupted');};
+ coordinator=new ProductionDelivery(f.storage,f.opts);
  await coordinator.submit(f.plan);await coordinator.tick();
  assert.equal(f.state.get('delivery').status,'NEEDS_REVIEW');
  assert.equal(f.state.get('delivery').index,0);
