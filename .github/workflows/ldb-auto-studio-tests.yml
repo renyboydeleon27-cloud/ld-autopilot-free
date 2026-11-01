@@ -9,6 +9,9 @@ on:
       - "scripts/ldb_profiles/**"
       - "tests/test_ldb*.py"
       - "tests/ldb-auto-studio-ui.test.cjs"
+      - "tests/*delivery*.test.mjs"
+      - "tests/durable-*.test.mjs"
+      - "lib/ldb/**"
       - ".github/workflows/ldb-free-production.yml"
       - ".github/workflows/ldb-auto-studio-tests.yml"
   pull_request:
@@ -38,3 +41,5 @@ jobs:
         with:
           node-version: '22'
       - run: node --test tests/ldb-auto-studio-ui.test.cjs
+      - name: Verify 69-file offline delivery and durable storage
+        run: node --test tests/production-delivery-69-offline.test.mjs tests/durable-text-assets.test.mjs tests/durable-delivery-asset-reader.test.mjs tests/resume-durable-approved-delivery.test.mjs
