@@ -11,3 +11,9 @@ const base={deliveryStorage,imageStorage,textStorage,drive,capacity,expectedJobI
 test('rejects missing trusted backends before any side effects',async()=>{await assert.rejects(submitDurableApprovedDelivery({}),/TRUSTED_DELIVERY_BACKEND_REQUIRED/);});
 test('requires reviewer audit before reading runner storage',async()=>{await assert.rejects(submitDurableApprovedDelivery(base),/TRUSTED_REVIEW_REQUIRED/);});
 test('refuses incomplete runner images without queue or upload',async()=>{await assert.rejects(submitDurableApprovedDelivery({...base,approvedAudit:{}}),/RUNNER_IMAGES_NOT_READY/);});
+
+test('refuses mismatched runner job before delivery queue',async()=>{
+ map.set('job',{id:'b'.repeat(64),status:'IMAGES_READY',index:17,outputs:Array(17).fill({})});
+ try{await assert.rejects(submitDurableApprovedDelivery({...base,approvedAudit:{}}),/RUNNER_IMAGES_NOT_READY/);}
+ finally{map.delete('job');}
+});
