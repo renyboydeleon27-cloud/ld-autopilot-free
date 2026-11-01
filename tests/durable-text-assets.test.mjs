@@ -15,3 +15,6 @@ test('rejects image category and invalid job id',async()=>{const f=setup();await
 
 test('idempotent writes reject corrupted stored bytes instead of silently accepting',async()=>{const f=setup();await f.store.put(f.a,f.bytes);const k=[...f.m.keys()].find(k=>k.endsWith(':0'));f.m.set(k,Buffer.from('tampered'));await assert.rejects(f.store.put(f.a,f.bytes),/ASSET_INTEGRITY_FAILED/);});
 test('text storage rejects unknown delivery categories',async()=>{const f=setup();await assert.rejects(f.store.put({...f.a,category:'Unexpected'},f.bytes),/INVALID_TEXT_ASSET/);});
+
+test('text storage rejects missing write bytes',async()=>{const f=setup();await assert.rejects(f.store.put(f.a),/INVALID_TEXT_ASSET_BYTES/);});
+test('text storage rejects category substitution for the same key',async()=>{const f=setup();await f.store.put(f.a,f.bytes);await assert.rejects(f.store.read({...f.a,category:'Image prompts'}),/DELIVERY_ASSET_CHANGED/);await assert.rejects(f.store.put({...f.a,category:'Image prompts'},f.bytes),/DELIVERY_ASSET_CHANGED/);});
