@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {submitDurableApprovedDelivery} from '../lib/ldb/submit-durable-approved-delivery.mjs';
+const jobId='a'.repeat(64);
+const map=new Map(),imageStorage={get:async k=>map.get(k)};
+const textStorage={get:async()=>undefined,transaction:async fn=>fn({get:async()=>undefined,put:async()=>{}})};
+const deliveryStorage={transaction:async()=>{throw Error('SHOULD_NOT_QUEUE')}};
+const drive={put:async()=>{throw Error('SHOULD_NOT_UPLOAD')}};
+const capacity=async()=>{throw Error('SHOULD_NOT_CHECK_CAPACITY')};
+const base={deliveryStorage,imageStorage,textStorage,drive,capacity,expectedJobId:jobId};
+test('rejects missing trusted backends before any side effects',async()=>{await assert.rejects(submitDurableApprovedDelivery({}),/TRUSTED_DELIVERY_BACKEND_REQUIRED/);});
+test('requires reviewer audit before reading runner storage',async()=>{await assert.rejects(submitDurableApprovedDelivery(base),/TRUSTED_REVIEW_REQUIRED/);});
+test('refuses incomplete runner images without queue or upload',async()=>{await assert.rejects(submitDurableApprovedDelivery({...base,approvedAudit:{}}),/RUNNER_IMAGES_NOT_READY/);});
