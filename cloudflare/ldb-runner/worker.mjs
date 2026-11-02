@@ -24,8 +24,10 @@ export class LdbCoordinator extends DurableObject {
   try {
    if(req.method==='GET' && path==='/delivery-next-action') {
     // Trusted server-side records only. Never accept a browser-supplied delivery plan.
-    const plan=await this.ctx.storage.get('delivery:approved-plan');
-    const snapshot=await this.ctx.storage.get('delivery:checkpoint');
+    // Read the actual ProductionDelivery durable checkpoint. There is no
+    // separate browser-writable approval record and this endpoint never uploads.
+    const snapshot=await this.ctx.storage.get('delivery');
+    const plan=snapshot?.plan;
     if(!plan || !snapshot)return json({status:'DELIVERY_NOT_CONFIGURED'},503);
     try {return json(deliveryNextAction(plan,snapshot));}
     catch {return json({status:'DELIVERY_BLOCKED'},409);}
