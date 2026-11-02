@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {ProductionDelivery,validateDeliveryPlan} from '../lib/ldb/production-delivery.mjs';
+import {DriveDelivery} from '../lib/ldb/google-delivery.mjs';
 const sha=s=>createHash('sha256').update(s).digest('hex');
 const scenes=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
 function fixture(){
@@ -162,4 +163,88 @@ test('STOP during third asset preserves three verified files across a restart',a
  assert.equal(f.state.get('delivery').index,4);
  assert.equal(f.state.get('delivery').verified.length,4);
  assert.equal(new Set(f.state.get('delivery').verified.map(x=>x.key)).size,4);
+});
+
+test('actual DriveDelivery adapter recovers 69 files after ambiguous upload and lost checkpoint',async()=>{
+ const f=fixture();
+ const reservations=new Map();
+ const driveStorage={
+  get:async key=>structuredClone(reservations.get(key)),
+  put:async(key,value)=>reservations.set(key,structuredClone(value)),
+  transaction:async fn=>{
+   const changes=new Map();
+   const tx={
+    get:async key=>structuredClone(changes.has(key)?changes.get(key):reservations.get(key)),
+    put:async(key,value)=>changes.set(key,structuredClone(value))
+   };
+   const result=await fn(tx);
+   for(const [key,value] of changes)reservations.set(key,value);
+   return result;
+  }
+ };
+ let nextId=0,created=0,ambiguousOnce=true;
+ const remote=new Map();
+ const fakeGoogle=async(url,options={})=>{
+  if(url.includes('/generateIds?'))return {ok:true,json:async()=>({ids:['offlineFile'+(++nextId)]})};
+  if(options.method==='POST'){
+   const multipart=url.includes('uploadType=multipart'),body=options.body;
+   const raw=multipart?Buffer.from(body):null;
+   const metadata=multipart
+    ?JSON.parse(raw.toString('utf8').match(/\r\n\r\n(\{[^\r\n]+\})\r\n--/)[1])
+    :JSON.parse(body);
+   let bytes=null;
+   if(multipart){
+    const marker=Buffer.from('Content-Type: '+metadata.mimeType+'\r\n\r\n');
+    const begin=raw.indexOf(marker)+marker.length;
+    const end=raw.lastIndexOf(Buffer.from('\r\n--'));
+    assert.ok(begin>=marker.length&&end>begin,'valid mock multipart');
+    bytes=raw.subarray(begin,end);
+   }
+   assert.ok(!remote.has(metadata.id),'server must not create a duplicate ID');
+   remote.set(metadata.id,{
+    ...metadata,trashed:false,
+    ...(bytes?{
+     size:String(bytes.length),
+     md5Checksum:createHash('md5').update(bytes).digest('hex'),
+     sha256Checksum:sha(bytes)
+    }:{})
+   });
+   created++;
+   if(bytes&&ambiguousOnce){ambiguousOnce=false;throw Error('simulated timeout after remote creation');}
+   return {ok:true,status:200};
+  }
+  const item=remote.get(new URL(url).pathname.split('/').at(-1));
+  return {ok:!!item,status:item?200:404,json:async()=>item};
+ };
+ f.opts.drive=new DriveDelivery(driveStorage,{tokenProvider:async()=>'offline-only-token',fetcher:fakeGoogle});
+ const originalTransaction=f.storage.transaction;
+ let loseCheckpoint=true;
+ f.storage.transaction=fn=>originalTransaction(tx=>fn({
+  ...tx,
+  put:async(key,value)=>{
+   if(loseCheckpoint&&key==='delivery'&&value?.index===1&&value?.verified?.length===1){
+    loseCheckpoint=false;throw Error('SIMULATED_CHECKPOINT_FAILURE');
+   }
+   return tx.put(key,value);
+  }
+ }));
+ await new ProductionDelivery(f.storage,f.opts).submit(f.plan);
+ await new ProductionDelivery(f.storage,f.opts).tick();
+ assert.equal(loseCheckpoint,false,'checkpoint failure was exercised');
+ assert.equal(ambiguousOnce,false,'remote creation timeout was exercised');
+ assert.equal(f.state.get('delivery').index,0,'lost checkpoint does not claim delivery');
+ assert.equal(f.state.get('delivery').status,'RETRY_WAIT');
+ const createdBeforeRestart=created;
+ await new ProductionDelivery(f.storage,f.opts).tick();
+ assert.equal(f.state.get('delivery').index,1);
+ assert.equal(created,createdBeforeRestart,'restart does not recreate uploaded file or folders');
+ for(let i=1;i<69;i++)await new ProductionDelivery(f.storage,f.opts).tick();
+ const done=f.state.get('delivery');
+ assert.equal(done.status,'COMPLETE');
+ assert.equal(done.verified.length,69);
+ assert.equal(new Set(done.verified.map(x=>x.id)).size,69);
+ assert.equal([...remote.values()].filter(x=>x.mimeType!=='application/vnd.google-apps.folder').length,69);
+ const filesBeforeReplay=remote.size;
+ await new ProductionDelivery(f.storage,f.opts).tick();
+ assert.equal(remote.size,filesBeforeReplay,'completed delivery cannot make more remote files');
 });
