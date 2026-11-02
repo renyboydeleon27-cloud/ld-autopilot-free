@@ -10,13 +10,24 @@ import { dispatchCoordinatorAlarm } from './delivery-alarm.mjs';
 import { createGoogleDeliveryBridge } from './google-delivery-bridge.mjs';
 import { resumeDurableApprovedDelivery } from '../../lib/ldb/resume-durable-approved-delivery.mjs';
 import { stopProduction, resumeProduction } from '../../lib/ldb/production-controls.mjs';
+import { probeGoogleVaultBinding } from './bridge-probe.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {
  async fetch(request,env) {
-  if(env.RUNNER_ENABLED!=='true' || env.FREE_PLAN_CONFIRMED!=='true' || !env.RUNNER_SECRET || env.RUNNER_SECRET.length<32)return json({status:'SETUP_REQUIRED'},503);
+  const probe=new URL(request.url).pathname==='/delivery-bridge-probe';
+  // A probe is allowed while generation/upload are OFF. It requires an
+  // independent owner secret and the dedicated diagnostic feature flag.
+  if(typeof env.RUNNER_SECRET!=='string'||env.RUNNER_SECRET.length<32 ||
+     (probe?env.BRIDGE_PROBE_ENABLED!=='true':env.RUNNER_ENABLED!=='true'||env.FREE_PLAN_CONFIRMED!=='true'))
+   return json({status:'SETUP_REQUIRED'},503);
   const provided=request.headers.get('Authorization')||'';
   const a=createHash('sha256').update(provided).digest(),b=createHash('sha256').update(`Bearer ${env.RUNNER_SECRET}`).digest();
   if(!timingSafeEqual(a,b))return json({status:'UNAUTHORIZED'},401);
+  if(probe){
+   if(request.method!=='GET')return json({status:'METHOD_NOT_ALLOWED'},405);
+   try{return json(await probeGoogleVaultBinding(env));}
+   catch{return json({status:'BRIDGE_PROBE_UNAVAILABLE',productionReady:false},503);}
+  }
   return env.LDB_COORDINATOR.getByName('single-owner-v1').fetch(request);
  }
 };

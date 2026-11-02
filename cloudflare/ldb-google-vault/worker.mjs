@@ -5,11 +5,20 @@ import {acceptance} from './acceptance.mjs';
 import {GoogleVault} from './core.mjs';
 import {createVaultLocalDriveBackend} from './delivery-backend.mjs';
 import {isDeliveryBridgePath,handleVaultDeliveryBridge} from './delivery-bridge.mjs';
+import {isBridgeHealthPath,handleVaultBridgeHealth} from './bridge-probe.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {async fetch(req,env){
  if(env.VAULT_ENABLED!=='true'||!env.VAULT_SECRET||env.VAULT_SECRET.length<32||!/^[a-f0-9]{64}$/i.test(env.VAULT_KEY||''))return json({status:'SETUP_REQUIRED'},503);
  const hash=s=>createHash('sha256').update(s).digest();
  const path=new URL(req.url).pathname;
+ if(isBridgeHealthPath(path)){
+  // Completely separate read-only secret and flag: no Drive, Gmail or OAuth.
+  if(env.BRIDGE_PROBE_ENABLED!=='true'||typeof env.GOOGLE_BRIDGE_PROBE_SECRET!=='string'||env.GOOGLE_BRIDGE_PROBE_SECRET.length<32)
+   return json({status:'SETUP_REQUIRED'},503);
+  if(!timingSafeEqual(hash(req.headers.get('Authorization')||''),hash('Bearer '+env.GOOGLE_BRIDGE_PROBE_SECRET)))
+   return json({status:'UNAUTHORIZED'},401);
+  return env.GOOGLE_VAULT.getByName('single-owner-v1').fetch(req);
+ }
  // Only the dedicated, independently provisioned service secret may call the
  // internal Drive bridge. Normal OAuth vault credentials cannot authorize it.
  if(isDeliveryBridgePath(path)){
@@ -24,6 +33,9 @@ export class LdbGoogleVault extends DurableObject {
  constructor(ctx,env){super(ctx,env);this.storage=ctx.storage;this.core=new GoogleVault(ctx.storage,{key:env.VAULT_KEY,clientId:env.GOOGLE_CLIENT_ID,clientSecret:env.GOOGLE_CLIENT_SECRET});}
  async fetch(req){
   const path=new URL(req.url).pathname;
+  if(isBridgeHealthPath(path))return handleVaultBridgeHealth(req,{
+   enabled:this.env.BRIDGE_PROBE_ENABLED==='true',secret:this.env.GOOGLE_BRIDGE_PROBE_SECRET
+  });
   if(isDeliveryBridgePath(path))return handleVaultDeliveryBridge(req,{
    enabled:this.env.DELIVERY_BRIDGE_ENABLED==='true',secret:this.env.GOOGLE_DELIVERY_BRIDGE_SECRET,
    createBackend:()=>createVaultLocalDriveBackend({vault:this.core,storage:this.storage,enabled:true})
