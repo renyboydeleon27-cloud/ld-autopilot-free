@@ -6,6 +6,7 @@ import { validateRenderJob } from '../../lib/ldb/approved-render-job.mjs';
 import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
 import { deliveryReadiness } from '../../lib/ldb/delivery-readiness.mjs';
 import { deliveryNextAction } from '../../lib/ldb/delivery-coordinator-gate.mjs';
+import { dispatchCoordinatorAlarm } from './delivery-alarm.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {
  async fetch(request,env) {
@@ -18,7 +19,10 @@ export default {
 };
 export class LdbCoordinator extends DurableObject {
  constructor(ctx,env) {super(ctx,env);this.core=new Checkpoints(ctx.storage,{maxScenes:env.HOOK_ONLY_TEST==='true'?1:17,initialDelay:env.HOOK_ONLY_TEST==='true'?30000:1000,render:prompt=>generateImage({prompt,env,freePlanConfirmed:env.FREE_PLAN_CONFIRMED==='true'})});}
- async alarm() {if(this.env.RUNNER_ENABLED==='true' && this.env.FREE_PLAN_CONFIRMED==='true')await this.core.tick();}
+ async alarm() {
+  if(this.env.RUNNER_ENABLED==='true' && this.env.FREE_PLAN_CONFIRMED==='true')
+   await dispatchCoordinatorAlarm({storage:this.ctx.storage,imageCore:this.core});
+ }
  async fetch(req) {
   const path=new URL(req.url).pathname;
   try {
