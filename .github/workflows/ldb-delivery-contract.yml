@@ -17,6 +17,7 @@ on:
       - 'cloudflare/ldb-google-vault/worker.mjs'
       - 'cloudflare/ldb-google-vault/delivery-bridge.mjs'
       - 'tests/ldb-google-delivery-bridge.test.mjs'
+      - 'tests/ldb-private-bridge-69-offline.test.mjs'
       - 'tests/ldb-production-controls.test.mjs'
       - 'lib/ldb/production-controls.mjs'
   workflow_dispatch:
@@ -35,6 +36,6 @@ jobs:
         with:
           node-version: '22'
       - name: Run coordinator gate tests
-        run: node --test tests/ldb-delivery-coordinator-gate.test.mjs tests/ldb-google-delivery.test.mjs tests/production-delivery-69-offline.test.mjs tests/ldb-google-delivery-bridge.test.mjs tests/ldb-production-controls.test.mjs
+        run: node --test tests/ldb-delivery-coordinator-gate.test.mjs tests/ldb-google-delivery.test.mjs tests/production-delivery-69-offline.test.mjs tests/ldb-google-delivery-bridge.test.mjs tests/ldb-private-bridge-69-offline.test.mjs tests/ldb-production-controls.test.mjs
       - name: Run offline delivery contract tests
         run: python -m unittest discover -s tests -p 'test_ldb_delivery_contract.py' -v && python -m unittest discover -s tests -p 'test_ldb_restart_recovery.py' -v
