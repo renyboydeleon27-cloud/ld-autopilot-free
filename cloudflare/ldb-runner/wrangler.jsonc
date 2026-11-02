@@ -7,8 +7,10 @@
   "vars": {
     "CLOUDFLARE_ACCOUNT_ID": "a437dda5f38ba6b10991684b8388760b",
     "RUNNER_ENABLED": "false",
-    "FREE_PLAN_CONFIRMED": "false"
+    "FREE_PLAN_CONFIRMED": "false",
+    "DELIVERY_BRIDGE_ENABLED": "false"
   },
+  "services": [{"binding":"GOOGLE_VAULT","service":"ner-ldb-google-vault-quality"}],
   "durable_objects": {"bindings": [{"name":"LDB_COORDINATOR","class_name":"LdbCoordinator"}]},
   "migrations": [{"tag":"v1","new_sqlite_classes":["LdbCoordinator"]}]
 }

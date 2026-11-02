@@ -3,10 +3,20 @@ import {createHash,timingSafeEqual} from 'node:crypto';
 import {storageCapacity} from '../../lib/ldb/production-delivery.mjs';
 import {acceptance} from './acceptance.mjs';
 import {GoogleVault} from './core.mjs';
+import {createVaultLocalDriveBackend} from './delivery-backend.mjs';
+import {isDeliveryBridgePath,handleVaultDeliveryBridge} from './delivery-bridge.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {async fetch(req,env){
  if(env.VAULT_ENABLED!=='true'||!env.VAULT_SECRET||env.VAULT_SECRET.length<32||!/^[a-f0-9]{64}$/i.test(env.VAULT_KEY||''))return json({status:'SETUP_REQUIRED'},503);
  const hash=s=>createHash('sha256').update(s).digest();
+ const path=new URL(req.url).pathname;
+ // Only the dedicated, independently provisioned service secret may call the
+ // internal Drive bridge. Normal OAuth vault credentials cannot authorize it.
+ if(isDeliveryBridgePath(path)){
+  if(env.DELIVERY_BRIDGE_ENABLED!=='true'||!env.GOOGLE_DELIVERY_BRIDGE_SECRET||env.GOOGLE_DELIVERY_BRIDGE_SECRET.length<32)return json({status:'SETUP_REQUIRED'},503);
+  if(!timingSafeEqual(hash(req.headers.get('Authorization')||''),hash('Bearer '+env.GOOGLE_DELIVERY_BRIDGE_SECRET)))return json({status:'UNAUTHORIZED'},401);
+  return env.GOOGLE_VAULT.getByName('single-owner-v1').fetch(req);
+ }
  if(!timingSafeEqual(hash(req.headers.get('Authorization')||''),hash('Bearer '+env.VAULT_SECRET)))return json({status:'UNAUTHORIZED'},401);
  return env.GOOGLE_VAULT.getByName('single-owner-v1').fetch(req);
 }};
@@ -14,6 +24,10 @@ export class LdbGoogleVault extends DurableObject {
  constructor(ctx,env){super(ctx,env);this.storage=ctx.storage;this.core=new GoogleVault(ctx.storage,{key:env.VAULT_KEY,clientId:env.GOOGLE_CLIENT_ID,clientSecret:env.GOOGLE_CLIENT_SECRET});}
  async fetch(req){
   const path=new URL(req.url).pathname;
+  if(isDeliveryBridgePath(path))return handleVaultDeliveryBridge(req,{
+   enabled:this.env.DELIVERY_BRIDGE_ENABLED==='true',secret:this.env.GOOGLE_DELIVERY_BRIDGE_SECRET,
+   createBackend:()=>createVaultLocalDriveBackend({vault:this.core,storage:this.storage,enabled:true})
+  });
   if(req.method==='GET'&&path==='/capacity'){try{return json(await storageCapacity(()=>this.core.accessToken()));}catch{return json({status:'STORAGE_CHECK_UNAVAILABLE'},502);}}
   if(req.method==='GET'&&path==='/status')return json(await this.core.status());
   if(req.method==='POST'&&path==='/acceptance'){try{return json(await acceptance(this.storage,this.core));}catch(error){const codes=['DRIVE_ID_UNAVAILABLE','DRIVE_VERIFY_UNAVAILABLE','DRIVE_CONTENT_MISMATCH','DRIVE_UPLOAD_UNCONFIRMED','DRIVE_REQUEST_UNCERTAIN','DRIVE_RETRY_LIMIT'];return json({status:codes.includes(error.message)?error.message:'ACCEPTANCE_FAILED'},502);}}

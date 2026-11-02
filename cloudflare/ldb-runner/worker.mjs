@@ -7,6 +7,8 @@ import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
 import { deliveryReadiness } from '../../lib/ldb/delivery-readiness.mjs';
 import { deliveryNextAction } from '../../lib/ldb/delivery-coordinator-gate.mjs';
 import { dispatchCoordinatorAlarm } from './delivery-alarm.mjs';
+import { createGoogleDeliveryBridge } from './google-delivery-bridge.mjs';
+import { resumeDurableApprovedDelivery } from '../../lib/ldb/resume-durable-approved-delivery.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {
  async fetch(request,env) {
@@ -20,8 +22,21 @@ export default {
 export class LdbCoordinator extends DurableObject {
  constructor(ctx,env) {super(ctx,env);this.core=new Checkpoints(ctx.storage,{maxScenes:env.HOOK_ONLY_TEST==='true'?1:17,initialDelay:env.HOOK_ONLY_TEST==='true'?30000:1000,render:prompt=>generateImage({prompt,env,freePlanConfirmed:env.FREE_PLAN_CONFIRMED==='true'})});}
  async alarm() {
-  if(this.env.RUNNER_ENABLED==='true' && this.env.FREE_PLAN_CONFIRMED==='true')
-   await dispatchCoordinatorAlarm({storage:this.ctx.storage,imageCore:this.core});
+  if(this.env.RUNNER_ENABLED!=='true'||this.env.FREE_PLAN_CONFIRMED!=='true')return;
+  // Inert by default. Only a fully audited, persisted 69-asset delivery
+  // checkpoint can pass dispatchCoordinatorAlarm's trusted readiness gate.
+  // Google access and refresh tokens remain inside the separate vault Worker.
+  let bridge=null;
+  if(this.env.DELIVERY_BRIDGE_ENABLED==='true'){
+   try{bridge=createGoogleDeliveryBridge(this.env);}catch{/* Stay disabled if configuration is missing. */}
+  }
+  await dispatchCoordinatorAlarm({storage:this.ctx.storage,imageCore:this.core,
+   deliveryEnabled:bridge!==null,
+   ...(bridge?{createDelivery:({jobId})=>resumeDurableApprovedDelivery({
+     deliveryStorage:this.ctx.storage,imageStorage:this.ctx.storage,textStorage:this.ctx.storage,
+     drive:bridge.drive,capacity:bridge.capacity,jobId
+   })}:{})
+  });
  }
  async fetch(req) {
   const path=new URL(req.url).pathname;

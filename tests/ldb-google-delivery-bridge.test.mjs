@@ -1,0 +1,72 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {createGoogleDeliveryBridge} from '../cloudflare/ldb-runner/google-delivery-bridge.mjs';
+import {handleVaultDeliveryBridge,isDeliveryBridgePath} from '../cloudflare/ldb-google-vault/delivery-bridge.mjs';
+const SECRET='test-separate-bridge-secret-long-enough-12345';
+const sha=b=>createHash('sha256').update(b).digest('hex');
+const base={key:'a'.repeat(64),name:'HOOK.txt',mimeType:'text/plain',parentId:'folder-123',bytes:Buffer.from('sample recovered text')};
+function setup(){
+ const uploaded=new Map();let calls=0;
+ const createBackend=()=>({capacity:async()=>({unlimited:false,remaining:'10000000'}),drive:{put:async a=>{
+  calls++;
+  const previous=uploaded.get(a.key);
+  if(previous){assert.equal(sha(a.bytes),previous.sha);return {id:previous.id,status:'VERIFIED',sha256:previous.sha};}
+  const saved={id:'googlefile'+calls,sha:a.bytes?sha(a.bytes):null};uploaded.set(a.key,saved);
+  return {id:saved.id,status:'VERIFIED',sha256:saved.sha};
+ }}});
+ const service={fetch:async(url,options)=>handleVaultDeliveryBridge(new Request(url,options),{enabled:true,secret:SECRET,createBackend})};
+ const env={DELIVERY_BRIDGE_ENABLED:'true',GOOGLE_DELIVERY_BRIDGE_SECRET:SECRET,GOOGLE_VAULT:service};
+ return {env,service,uploaded,get calls(){return calls;}};
+}
+test('client is fail closed until dedicated service binding, enable flag and secret are configured',async()=>{
+ const f=setup();
+ for(const env of [{...f.env,DELIVERY_BRIDGE_ENABLED:'false'},{...f.env,GOOGLE_VAULT:null},{...f.env,GOOGLE_DELIVERY_BRIDGE_SECRET:'short'}])
+  assert.throws(()=>createGoogleDeliveryBridge(env),/DELIVERY_BRIDGE_UNAVAILABLE/);
+ assert.equal(isDeliveryBridgePath('/internal/drive/put'),true);
+ assert.equal(isDeliveryBridgePath('/internal/credentials'),false);
+});
+test('authenticated service-bound request delivers hashed bytes and capacity without tokens',async()=>{
+ const f=setup(),bridge=createGoogleDeliveryBridge(f.env);
+ assert.deepEqual(await bridge.capacity(),{unlimited:false,remaining:'10000000'});
+ const result=await bridge.drive.put(base);
+ assert.deepEqual(result,{status:'VERIFIED',id:'googlefile1',sha256:sha(base.bytes),bytes:base.bytes.length});
+ const again=await bridge.drive.put(base);
+ assert.deepEqual(again,result);
+ assert.equal(f.uploaded.size,1);
+ const folder=await bridge.drive.put({key:'b'.repeat(64),name:'Living Disaster Book',mimeType:'application/vnd.google-apps.folder'});
+ assert.equal(folder.status,'VERIFIED');assert.equal(folder.sha256,null);
+ assert.equal(f.uploaded.size,2);
+ assert.ok(!JSON.stringify(result).includes(SECRET));
+});
+test('bridge never accepts unauthenticated or mismatched service secret',async()=>{
+ const f=setup();
+ const r=await f.service.fetch('https://ldb-vault.internal/internal/drive/capacity',{method:'GET'});
+ assert.equal(r.status,401);assert.equal(f.calls,0);
+ const disabled=await handleVaultDeliveryBridge(new Request('https://vault/internal/drive/capacity',{headers:{Authorization:'Bearer '+SECRET}}),{enabled:false,secret:SECRET,createBackend:()=>{throw Error('must not create')}});
+ assert.equal(disabled.status,503);
+ const forged=createGoogleDeliveryBridge({...f.env,GOOGLE_DELIVERY_BRIDGE_SECRET:'wrong-bridge-secret-but-long-enough-000'});
+ await assert.rejects(forged.drive.put(base),/DELIVERY_BRIDGE_UNAVAILABLE/);
+ assert.equal(f.calls,0);
+});
+test('bad digest, missing payload, wrong MIME and unknown metadata fail before Drive',async()=>{
+ const f=setup();const header='Bearer '+SECRET;
+ const meta=(props={})=>Buffer.from(JSON.stringify({key:base.key,name:base.name,parentId:base.parentId,mimeType:base.mimeType,bytes:base.bytes.length,sha256:sha(base.bytes),...props})).toString('base64url');
+ const url='https://vault/internal/drive/put';
+ for(const options of [
+  {method:'POST',headers:{Authorization:header,'X-LDB-Asset-Info':meta({sha256:'b'.repeat(64)}),'Content-Type':'application/octet-stream'},body:base.bytes},
+  {method:'POST',headers:{Authorization:header,'X-LDB-Asset-Info':meta(),'Content-Type':'application/octet-stream'}},
+  {method:'POST',headers:{Authorization:header,'X-LDB-Asset-Info':meta(),'Content-Type':'text/plain'},body:base.bytes},
+  {method:'POST',headers:{Authorization:header,'X-LDB-Asset-Info':meta({approvalVerified:true}),'Content-Type':'application/octet-stream'},body:base.bytes}
+ ]){
+  const res=await f.service.fetch(url,options);assert.ok([422,415,502].includes(res.status));
+ }
+ assert.equal(f.calls,0);
+});
+test('never provides extra endpoints, browser flags or overlarge asset bytes',async()=>{
+ const f=setup(),bridge=createGoogleDeliveryBridge(f.env);
+ for(const bad of [{...base,mimeType:'application/javascript'},{...base,key:'wrong'},{...base,bytes:Buffer.alloc(8_000_001)},{...base,name:'../bad.txt'}])
+  await assert.rejects(bridge.drive.put(bad),/DELIVERY_BRIDGE_UNAVAILABLE/);
+ const res=await f.service.fetch('https://vault/internal/drive/gmail',{method:'POST',headers:{Authorization:'Bearer '+SECRET}});
+ assert.equal(res.status,404);assert.equal(f.calls,0);
+});
