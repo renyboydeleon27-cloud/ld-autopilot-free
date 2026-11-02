@@ -9,6 +9,8 @@ on:
       - 'tests/production-delivery-69-offline.test.mjs'
       - 'lib/ldb/production-delivery.mjs'
       - 'lib/ldb/delivery-coordinator-gate.mjs'
+      - 'cloudflare/ldb-runner/delivery-alarm.mjs'
+      - 'cloudflare/ldb-runner/worker.mjs'
   workflow_dispatch:
 jobs:
   contract:
