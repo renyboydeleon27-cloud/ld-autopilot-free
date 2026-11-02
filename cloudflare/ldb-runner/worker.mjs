@@ -5,6 +5,7 @@ import { Checkpoints, SCENES } from './checkpoints.mjs';
 import { validateRenderJob } from '../../lib/ldb/approved-render-job.mjs';
 import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
 import { deliveryReadiness } from '../../lib/ldb/delivery-readiness.mjs';
+import { deliveryNextAction } from '../../lib/ldb/delivery-coordinator-gate.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {
  async fetch(request,env) {
@@ -21,6 +22,14 @@ export class LdbCoordinator extends DurableObject {
  async fetch(req) {
   const path=new URL(req.url).pathname;
   try {
+   if(req.method==='GET' && path==='/delivery-next-action') {
+    // Trusted server-side records only. Never accept a browser-supplied delivery plan.
+    const plan=await this.ctx.storage.get('delivery:approved-plan');
+    const snapshot=await this.ctx.storage.get('delivery:checkpoint');
+    if(!plan || !snapshot)return json({status:'DELIVERY_NOT_CONFIGURED'},503);
+    try {return json(deliveryNextAction(plan,snapshot));}
+    catch {return json({status:'DELIVERY_BLOCKED'},409);}
+   }
    if(req.method==='GET' && path==='/delivery-readiness') {
     const job=await this.core.status();
     return json(deliveryReadiness({job}));
