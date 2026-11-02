@@ -11,6 +11,8 @@ export async function dispatchCoordinatorAlarm({storage,imageCore,deliveryEnable
     typeof imageCore.status!=='function'||typeof imageCore.tick!=='function')
   throw Error('TRUSTED_ALARM_BACKEND_REQUIRED');
  const job=await imageCore.status();
+ // STOP must prevent Drive alarms even when all images are ready.
+ if(job?.stop===true)return {status:'PRODUCTION_PAUSED'};
  if(job&&!IMAGE_TERMINAL.has(job.status)){
   await imageCore.tick();
   return {status:'IMAGE_TICK'};

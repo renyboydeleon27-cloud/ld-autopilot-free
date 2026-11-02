@@ -11,6 +11,7 @@ on:
       - "tests/ldb-auto-studio-ui.test.cjs"
       - "tests/*delivery*.test.mjs"
       - "tests/durable-*.test.mjs"
+      - "tests/ldb-production-controls.test.mjs"
       - "lib/ldb/**"
       - "cloudflare/ldb-runner/**"
       - "cloudflare/ldb-google-vault/**"
@@ -27,6 +28,7 @@ on:
       - "tests/ldb-auto-studio-ui.test.cjs"
       - "tests/*delivery*.test.mjs"
       - "tests/durable-*.test.mjs"
+      - "tests/ldb-production-controls.test.mjs"
       - "lib/ldb/**"
       - ".github/workflows/ldb-free-production.yml"
       - ".github/workflows/ldb-auto-studio-tests.yml"
@@ -47,4 +49,4 @@ jobs:
           node-version: '22'
       - run: node --test tests/ldb-auto-studio-ui.test.cjs
       - name: Verify 69-file offline delivery and durable storage
-        run: node --test tests/production-delivery-69-offline.test.mjs tests/durable-text-assets.test.mjs tests/durable-delivery-asset-reader.test.mjs tests/resume-durable-approved-delivery.test.mjs tests/delivery-readiness.test.mjs tests/submit-durable-approved-delivery.test.mjs tests/ldb-google-delivery-bridge.test.mjs
+        run: node --test tests/production-delivery-69-offline.test.mjs tests/durable-text-assets.test.mjs tests/durable-delivery-asset-reader.test.mjs tests/resume-durable-approved-delivery.test.mjs tests/delivery-readiness.test.mjs tests/submit-durable-approved-delivery.test.mjs tests/ldb-google-delivery-bridge.test.mjs tests/ldb-production-controls.test.mjs

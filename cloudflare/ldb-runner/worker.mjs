@@ -9,6 +9,7 @@ import { deliveryNextAction } from '../../lib/ldb/delivery-coordinator-gate.mjs'
 import { dispatchCoordinatorAlarm } from './delivery-alarm.mjs';
 import { createGoogleDeliveryBridge } from './google-delivery-bridge.mjs';
 import { resumeDurableApprovedDelivery } from '../../lib/ldb/resume-durable-approved-delivery.mjs';
+import { stopProduction, resumeProduction } from '../../lib/ldb/production-controls.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {
  async fetch(request,env) {
@@ -72,8 +73,16 @@ export class LdbCoordinator extends DurableObject {
     if(createHash('sha256').update(bytes).digest('hex')!==meta.sha256)throw Error('CORRUPT_IMAGE');
     return new Response(bytes,{headers:{'Content-Type':meta.mimeType,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-LDB-SHA256':meta.sha256,'X-LDB-Visual-Audit':'PENDING'}});
    }
-   if(req.method==='POST' && path==='/stop'){await this.core.stop();return json({ok:true});}
-   if(req.method==='POST' && path==='/resume'){await this.core.resume();return json({ok:true});}
+   if(req.method==='POST' && path==='/stop'){
+    const outcome=await stopProduction({core:this.core,storage:this.ctx.storage});
+    return json({ok:true,...outcome});
+   }
+   if(req.method==='POST' && path==='/resume'){
+    let connectorReady=false;
+    try{createGoogleDeliveryBridge(this.env);connectorReady=true;}catch{/* Fail closed. */}
+    const outcome=await resumeProduction({core:this.core,storage:this.ctx.storage,deliveryEnabled:connectorReady});
+    return json({ok:true,...outcome});
+   }
    if(req.method==='POST' && path==='/jobs') {
     // Enforce streaming size limit even if Content-Length is absent or forged.
     const reader=req.body?.getReader();if(!reader)return json({status:'INVALID_BUNDLE'},400);
