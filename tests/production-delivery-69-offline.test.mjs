@@ -58,3 +58,13 @@ test('stopping an already failed delivery preserves NEEDS_REVIEW',async()=>{
  assert.equal(f.state.get('delivery').status,'NEEDS_REVIEW');
  await assert.rejects(coordinator.resume(),/RESUME_NOT_SAFE/);
 });
+
+test('Drive verification without a file ID cannot advance delivery',async()=>{
+ const f=fixture();
+ f.opts.drive={put:async a=>a.bytes?{status:'VERIFIED',sha256:sha(a.bytes)}:{id:'folder-id'}};
+ const coordinator=new ProductionDelivery(f.storage,f.opts);
+ await coordinator.submit(f.plan);await coordinator.tick();
+ assert.equal(f.state.get('delivery').status,'NEEDS_REVIEW');
+ assert.equal(f.state.get('delivery').index,0);
+ assert.equal(f.state.get('delivery').verified.length,0);
+});
