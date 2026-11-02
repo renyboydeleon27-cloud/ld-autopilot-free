@@ -5,6 +5,8 @@ on:
       - 'tests/test_ldb_delivery_contract.py'
       - 'tests/test_ldb_restart_recovery.py'
       - '.github/workflows/ldb-delivery-contract.yml'
+      - 'tests/ldb-delivery-coordinator-gate.test.mjs'
+      - 'lib/ldb/delivery-coordinator-gate.mjs'
   workflow_dispatch:
 jobs:
   contract:
@@ -17,5 +19,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run coordinator gate tests
+        run: node --test tests/ldb-delivery-coordinator-gate.test.mjs
       - name: Run offline delivery contract tests
         run: python -m unittest discover -s tests -p 'test_ldb_delivery_contract.py' -v && python -m unittest discover -s tests -p 'test_ldb_restart_recovery.py' -v
