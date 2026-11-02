@@ -33,8 +33,10 @@ export class LdbCoordinator extends DurableObject {
     catch {return json({status:'DELIVERY_BLOCKED'},409);}
    }
    if(req.method==='GET' && path==='/delivery-readiness') {
-    const job=await this.core.status();
-    return json(deliveryReadiness({job}));
+    // Observe the trusted durable checkpoint only; never accept browser state.
+    // This reports readiness but cannot start or resume Google delivery.
+    const [job,delivery]=await Promise.all([this.core.status(),this.ctx.storage.get('delivery')]);
+    return json(deliveryReadiness({job,delivery}));
    }
    if(req.method==='GET' && path==='/status') {
     const j=await this.core.status();return json({job:j?{id:j.id,status:j.status,completedScenes:j.index,totalScenes:17,outputs:j.outputs,error:j.error,providerCode:j.providerCode}:null,autoProductionReady:false,deliveryConnected:false});
