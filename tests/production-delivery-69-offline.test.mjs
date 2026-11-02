@@ -51,3 +51,10 @@ test('stop during corrupt upload preserves NEEDS_REVIEW and blocks resume',async
  assert.equal(f.state.get('delivery').index,0);
  await assert.rejects(coordinator.resume(),/RESUME_NOT_SAFE/);
 });
+
+test('stopping an already failed delivery preserves NEEDS_REVIEW',async()=>{
+ const f=fixture(),coordinator=new ProductionDelivery(f.storage,{...f.opts,readAsset:async()=>Buffer.from('corrupted')});
+ await coordinator.submit(f.plan);await coordinator.tick();await coordinator.stop();
+ assert.equal(f.state.get('delivery').status,'NEEDS_REVIEW');
+ await assert.rejects(coordinator.resume(),/RESUME_NOT_SAFE/);
+});
