@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {ProductionDelivery,validateDeliveryPlan} from '../lib/ldb/production-delivery.mjs';
+import {dispatchCoordinatorAlarm} from '../cloudflare/ldb-runner/delivery-alarm.mjs';
+
 import {DriveDelivery} from '../lib/ldb/google-delivery.mjs';
 const sha=s=>createHash('sha256').update(s).digest('hex');
 const scenes=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];
@@ -247,4 +249,50 @@ test('actual DriveDelivery adapter recovers 69 files after ambiguous upload and 
  const filesBeforeReplay=remote.size;
  await new ProductionDelivery(f.storage,f.opts).tick();
  assert.equal(remote.size,filesBeforeReplay,'completed delivery cannot make more remote files');
+});
+
+test('Cloudflare alarm route remains inert without a trusted Drive connector',async()=>{
+ const f=fixture();
+ await new ProductionDelivery(f.storage,f.opts).submit(f.plan);
+ const outputs=[...scenes,'THUMBNAIL'].map(scene=>({
+  scene,sha256:sha('render:'+scene),mimeType:'image/jpeg',bytes:100,chunks:1
+ }));
+ const imageJob={id:f.plan.jobId,status:'IMAGES_READY',index:17,outputs};
+ const alarmStorage={get:async key=>f.state.get(key)};
+ let factoryCalls=0;
+ const core={status:async()=>imageJob,tick:async()=>assert.fail('images already complete')};
+ const init={storage:alarmStorage,imageCore:core,createDelivery:()=>{
+  factoryCalls++;return new ProductionDelivery(f.storage,f.opts);
+ }};
+ const disabled=await dispatchCoordinatorAlarm({...init,deliveryEnabled:false});
+ assert.equal(disabled.status,'DELIVERY_CONNECTOR_DISABLED');
+ assert.equal(factoryCalls,0);
+ assert.equal(f.state.get('delivery').index,0);
+ const enabled=await dispatchCoordinatorAlarm({...init,deliveryEnabled:true});
+ assert.equal(enabled.status,'DELIVERY_TICK');
+ assert.equal(factoryCalls,1);
+ assert.equal(f.state.get('delivery').index,1);
+ assert.equal(f.state.get('delivery').verified.length,1);
+ await new ProductionDelivery(f.storage,f.opts).stop();
+ assert.equal((await dispatchCoordinatorAlarm({...init,deliveryEnabled:true})).status,'DELIVERY_PAUSED');
+ assert.equal(factoryCalls,1);
+ assert.equal(f.state.get('delivery').index,1);
+});
+
+test('Cloudflare alarm route rejects forged checkpoints before any delivery',async()=>{
+ const f=fixture();
+ await new ProductionDelivery(f.storage,f.opts).submit(f.plan);
+ const outputs=[...scenes,'THUMBNAIL'].map(scene=>({
+  scene,sha256:sha('render:'+scene),mimeType:'image/jpeg',bytes:100,chunks:1
+ }));
+ const job={id:f.plan.jobId,status:'IMAGES_READY',index:17,outputs};
+ let factoryCalls=0;
+ const opts={storage:{get:async key=>f.state.get(key)},imageCore:{
+  status:async()=>job,tick:async()=>assert.fail('no image tick')
+ },deliveryEnabled:true,createDelivery:()=>{factoryCalls++;throw Error('should not create');}};
+ const stored=f.state.get('delivery');
+ stored.fingerprint='0'.repeat(64);
+ assert.equal((await dispatchCoordinatorAlarm(opts)).status,'DELIVERY_BLOCKED');
+ assert.equal(factoryCalls,0);
+ assert.equal(stored.index,0);
 });
