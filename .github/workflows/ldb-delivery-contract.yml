@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'tests/test_ldb_delivery_contract.py'
+      - 'tests/test_ldb_restart_recovery.py'
       - '.github/workflows/ldb-delivery-contract.yml'
   workflow_dispatch:
 jobs:
@@ -17,4 +18,4 @@ jobs:
         with:
           python-version: '3.11'
       - name: Run offline delivery contract tests
-        run: python -m unittest discover -s tests -p 'test_ldb_delivery_contract.py' -v
+        run: python -m unittest discover -s tests -p 'test_ldb_*.py' -v
