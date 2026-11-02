@@ -68,3 +68,79 @@ test('Drive verification without a file ID cannot advance delivery',async()=>{
  assert.equal(f.state.get('delivery').index,0);
  assert.equal(f.state.get('delivery').verified.length,0);
 });
+
+
+test('checkpoint write failure after a confirmed upload is recovered without a duplicate asset',async()=>{
+ const f=fixture(),first=f.plan.assets[0],originalTransaction=f.storage.transaction;
+ let failOnce=true,assetCalls=0;
+ const originalPut=f.opts.drive.put;
+ f.opts.drive.put=async a=>{
+  if(a.key===first.key && a.bytes instanceof Uint8Array)assetCalls++;
+  return originalPut(a);
+ };
+ f.storage.transaction=fn=>originalTransaction(tx=>fn({
+  ...tx,
+  put:async(k,v)=>{
+   if(failOnce&&k==='delivery'&&v?.index===1&&v?.verified?.length===1){
+    failOnce=false;
+    throw Error('SIMULATED_CHECKPOINT_WRITE_FAILURE');
+   }
+   return tx.put(k,v);
+  }
+ }));
+ const original=new ProductionDelivery(f.storage,f.opts);
+ await original.submit(f.plan);
+ await original.tick();
+ assert.equal(failOnce,false,'simulated checkpoint failure actually occurred');
+ assert.equal(f.state.get('delivery').index,0,'uncommitted checkpoint cannot claim success');
+ assert.equal(f.state.get('delivery').status,'RETRY_WAIT');
+ const remote=f.uploaded.get(first.key);
+ assert.equal(remote?.status,'VERIFIED','upload succeeded before checkpoint failure');
+ let restarted=new ProductionDelivery(f.storage,f.opts);
+ await restarted.tick();
+ assert.equal(f.state.get('delivery').index,1);
+ assert.equal(f.uploaded.get(first.key),remote,'same remote file is reconciled');
+ assert.equal(assetCalls,2,'recovery re-inspects the same logical asset');
+ for(let i=1;i<69;i++){
+  restarted=new ProductionDelivery(f.storage,f.opts);
+  await restarted.tick();
+ }
+ const done=f.state.get('delivery');
+ assert.equal(done.status,'COMPLETE');
+ assert.equal(done.verified.length,69);
+ assert.equal(new Set(done.verified.map(x=>x.id)).size,69,'unique remote identities');
+ const count=f.uploaded.size;
+ await new ProductionDelivery(f.storage,f.opts).tick();
+ assert.equal(f.uploaded.size,count,'replayed COMPLETE job makes no more files');
+});
+
+test('STOP during third asset preserves three verified files across a restart',async()=>{
+ const f=fixture();
+ const initial=new ProductionDelivery(f.storage,f.opts);
+ await initial.submit(f.plan);
+ await initial.tick();
+ await initial.tick();
+ assert.equal(f.state.get('delivery').index,2);
+ let current;
+ current=new ProductionDelivery(f.storage,{
+  ...f.opts,
+  readAsset:async asset=>{
+   await current.stop();
+   return Buffer.from(f.bytes.get(asset.key));
+  }
+ });
+ await current.tick();
+ assert.equal(f.state.get('delivery').status,'STOPPED');
+ assert.equal(f.state.get('delivery').index,3);
+ assert.equal(f.state.get('delivery').verified.length,3);
+ const uploadCount=f.uploaded.size;
+ const reconstructed=new ProductionDelivery(f.storage,f.opts);
+ await reconstructed.tick();
+ assert.equal(f.state.get('delivery').index,3,'STOP blocks replayed alarms');
+ assert.equal(f.uploaded.size,uploadCount,'STOP creates no additional file');
+ await reconstructed.resume();
+ await reconstructed.tick();
+ assert.equal(f.state.get('delivery').index,4);
+ assert.equal(f.state.get('delivery').verified.length,4);
+ assert.equal(new Set(f.state.get('delivery').verified.map(x=>x.key)).size,4);
+});
