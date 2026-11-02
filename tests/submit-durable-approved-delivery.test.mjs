@@ -53,3 +53,18 @@ test('corrupted persisted image blocks queue creation',async()=>{
  await assert.rejects(submitDurableApprovedDelivery(f),/RUNNER_IMAGE_CHECKSUM_MISMATCH/);
  assert.equal(f.deliveries.has('delivery'),false);assert.equal(f.uploads.size,0);
 });
+
+test('corrupted persisted text after queue cannot be uploaded',async()=>{
+ const f=durableFixture();
+ const {checkpoint}=await submitDurableApprovedDelivery(f);
+ const first=checkpoint.plan.assets[16];
+ assert.equal(first.category,'Storyboard');
+ const chunkKey='text:'+jobId+':'+first.key+':0';
+ assert.ok(f.texts.has(chunkKey));
+ f.texts.set(chunkKey,new Uint8Array(Buffer.from('tampered')));
+ const coordinator=resumeDurableApprovedDelivery({...f,jobId});
+ await coordinator.tick();
+ assert.equal(f.deliveries.get('delivery').index,0);
+ assert.equal(f.deliveries.get('delivery').status,'NEEDS_REVIEW');
+ assert.equal([...f.uploads.values()].filter(x=>x.status==='VERIFIED').length,0);
+});
