@@ -1,8 +1,9 @@
 import {createHash} from 'node:crypto';
-import {DriveDelivery,SENDER,RECIPIENT} from '../../lib/ldb/google-delivery.mjs';
+import {SENDER,RECIPIENT} from '../../lib/ldb/google-delivery.mjs';
+import {createVaultLocalDriveBackend} from './delivery-backend.mjs';
 const key=s=>createHash('sha256').update('ldb-google-acceptance-v1:'+s).digest('hex');
 export async function acceptance(storage,vault,fetcher=(...args)=>globalThis.fetch(...args)){
- const drive=new DriveDelivery(storage,{tokenProvider:()=>vault.accessToken(),fetcher});
+ const {drive}=createVaultLocalDriveBackend({storage,vault,enabled:true,fetcher});
  const folder=await drive.put({key:key('folder'),name:'NER STUDIO - Connection Test',mimeType:'application/vnd.google-apps.folder'});
  const bytes=Buffer.from('NER STUDIO Google integration acceptance test.\nThis test file verifies cloud delivery only. Lake Nyos production is not complete.\n');
  const file=await drive.put({key:key('file'),name:'connection-test.txt',parentId:folder.id,mimeType:'text/plain',bytes});
