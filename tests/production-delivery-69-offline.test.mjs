@@ -13,7 +13,26 @@ function fixture(){
  }
  const plan={jobId:'a'.repeat(64),approvalVerified:true,visualAudit:'PASS',episode:'Lake Nyos 1986',assets};
  validateDeliveryPlan(plan);
- const state=new Map(),storage={transaction:async fn=>fn({get:async k=>state.get(k),put:async(k,v)=>state.set(k,structuredClone(v)),setAlarm:async()=>{},deleteAlarm:async()=>{}})};
+ // Emulate atomic Durable Object transactions: in-place mutations and failed
+ // writes must not leak into persisted state before commit.
+ const state=new Map();
+ let transactionTail=Promise.resolve();
+ const storage={transaction:fn=>{
+  const attempt=transactionTail.then(async()=>{
+   const changes=new Map();
+   const tx={
+    get:async key=>structuredClone(changes.has(key)?changes.get(key):state.get(key)),
+    put:async(key,value)=>{changes.set(key,structuredClone(value));},
+    setAlarm:async()=>{},
+    deleteAlarm:async()=>{}
+   };
+   const result=await fn(tx);
+   for(const [key,value] of changes)state.set(key,value);
+   return result;
+  });
+  transactionTail=attempt.catch(()=>{});
+  return attempt;
+ }};
  const uploaded=new Map();const drive={put:async a=>{
   const key=a.key||sha('folder:'+a.name+':'+(a.parentId||''));if(uploaded.has(key))return uploaded.get(key);
   const value=a.bytes instanceof Uint8Array?{id:key,status:'VERIFIED',sha256:sha(a.bytes)}:{id:key};
