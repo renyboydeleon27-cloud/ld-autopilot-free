@@ -6,13 +6,17 @@ class Storage {data=new Map();queue=Promise.resolve();async get(k){return struct
 const hash=(b,a='sha256')=>createHash(a).update(b).digest('hex');
 const bytes=Buffer.from('actual deliverable bytes');
 const asset={key:'a'.repeat(64),name:'HOOK.txt',parentId:'folder1',mimeType:'text/plain',bytes};
-function driveServer({ambiguous=false,missing=false,corrupt=false}={}){
+function driveServer({ambiguous=false,missing=false,corrupt=false,omitSha=false,mediaBytes=bytes,mediaUnavailable=false}={}){
  const files=new Map(),calls=[];let generated=0;
  const fetcher=async(url,options={})=>{calls.push({url,method:options.method||'GET'});
   if(url.includes('/generateIds?'))return {ok:true,json:async()=>({ids:['generated'+(++generated)]})};
+  if(url.includes('?alt=media')){
+   if(mediaUnavailable)return {ok:false,status:503};
+   return {ok:true,status:200,arrayBuffer:async()=>Uint8Array.from(mediaBytes).buffer};
+  }
   if(options.method==='POST'){
    const body=options.body.toString(),metadata=JSON.parse(body.match(/\r\n\r\n(\{.*?\})\r\n--/s)?.[1]||body);
-   if(!missing)files.set(metadata.id,{...metadata,trashed:false,size:String(bytes.length),md5Checksum:hash(bytes,'md5'),sha256Checksum:corrupt?'0'.repeat(64):hash(bytes)});
+   if(!missing)files.set(metadata.id,{...metadata,trashed:false,size:String(bytes.length),md5Checksum:hash(bytes,'md5'),...(!omitSha?{sha256Checksum:corrupt?'0'.repeat(64):hash(bytes)}:{})});
    if(ambiguous)throw Error('timeout SECRET');return {ok:true,status:200};
   }
   const id=new URL(url).pathname.split('/').at(-1),value=files.get(id);
@@ -23,6 +27,33 @@ const makeDrive=(s,server)=>new DriveDelivery(s,{tokenProvider:async()=>'private
 test('Drive uploads once, verifies both checksums, restart reuses saved ID',async()=>{
  const s=new Storage(),server=driveServer();const first=await makeDrive(s,server).put(asset),second=await makeDrive(s,server).put(asset);
  assert.deepEqual(first,second);assert.equal(server.files.size,1);assert.equal(server.calls.filter(x=>x.method==='POST').length,1);assert.equal(server.calls.filter(x=>x.url.includes('generateIds')).length,1);assert.doesNotMatch(JSON.stringify([...s.data]),/private-token/);
+});
+test('missing SHA-256 metadata triggers actual-byte verification and reuses the file ID',async()=>{
+ const s=new Storage(),server=driveServer({omitSha:true});
+ const first=await makeDrive(s,server).put(asset);
+ assert.equal(first.status,'VERIFIED');
+ assert.equal(server.calls.filter(x=>x.url.includes('?alt=media')).length,1);
+ const second=await makeDrive(s,server).put(asset);
+ assert.equal(second.id,first.id);
+ assert.equal(server.files.size,1);
+ assert.equal(server.calls.filter(x=>x.method==='POST').length,1);
+ assert.equal(server.calls.filter(x=>x.url.includes('?alt=media')).length,2);
+});
+test('missing SHA-256 and wrong downloaded bytes block verification',async()=>{
+ const bad=Buffer.from(bytes);bad[0]^=1;
+ const s=new Storage(),server=driveServer({omitSha:true,mediaBytes:bad});
+ await assert.rejects(makeDrive(s,server).put(asset),/DRIVE_CONTENT_MISMATCH/);
+ assert.notEqual((await s.get('drive:'+asset.key)).status,'VERIFIED');
+});
+test('missing SHA-256 and unavailable media block verification',async()=>{
+ const s=new Storage(),server=driveServer({omitSha:true,mediaUnavailable:true});
+ await assert.rejects(makeDrive(s,server).put(asset),/DRIVE_VERIFY_UNAVAILABLE/);
+ assert.notEqual((await s.get('drive:'+asset.key)).status,'VERIFIED');
+});
+test('missing SHA-256 and oversized media block verification',async()=>{
+ const s=new Storage(),server=driveServer({omitSha:true,mediaBytes:Buffer.concat([bytes,Buffer.from('extra')])});
+ await assert.rejects(makeDrive(s,server).put(asset),/DRIVE_CONTENT_MISMATCH/);
+ assert.notEqual((await s.get('drive:'+asset.key)).status,'VERIFIED');
 });
 test('ambiguous successful upload is reconciled without duplicate creation',async()=>{
  const s=new Storage(),server=driveServer({ambiguous:true});const result=await makeDrive(s,server).put(asset);assert.equal(result.status,'VERIFIED');assert.equal(server.files.size,1);
