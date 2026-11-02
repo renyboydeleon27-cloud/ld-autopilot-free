@@ -20,3 +20,12 @@ test('combined reader recovers image and text from persisted storage',async()=>{
  await assert.rejects(reader(img),/RUNNER_IMAGE_CHUNK_MISSING/);
  assert.deepEqual(await reader(narration),words);
 });
+
+test('rejects thumbnail/category swaps before reading image storage',async()=>{
+ const id='a'.repeat(64),imageStorage={get:async()=>{throw Error('STORAGE_SHOULD_NOT_BE_READ');}};
+ const records=new Map(),textStorage={get:async k=>records.get(k),transaction:async fn=>fn({get:async k=>records.get(k),put:async(k,v)=>records.set(k,v)})};
+ const reader=durableDeliveryAssetReader({imageStorage,textStorage,jobId:id});
+ const base={key:'b'.repeat(64),sha256:'c'.repeat(64),bytes:10,mimeType:'image/png'};
+ await assert.rejects(reader({...base,scene:'THUMBNAIL',category:'Approved reference images'}),/RUNNER_IMAGE_CATEGORY_MISMATCH/);
+ await assert.rejects(reader({...base,scene:'HOOK',category:'Thumbnail'}),/RUNNER_IMAGE_CATEGORY_MISMATCH/);
+});
