@@ -1,0 +1,35 @@
+name: LDB Cloudflare offline compile gate
+on:
+  pull_request:
+    paths:
+      - 'cloudflare/ldb-runner/**'
+      - 'cloudflare/ldb-google-vault/**'
+      - 'lib/ldb/**'
+      - 'scripts/ldb-cloudflare-build-gate.mjs'
+      - '.github/workflows/ldb-cloudflare-build-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  worker-build:
+    name: Compile both Workers without deployment or credentials
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Enforce deployment-safety defaults
+        run: node scripts/ldb-cloudflare-build-gate.mjs
+      - name: Compile Google Vault Worker (dry run)
+        run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-google-vault/wrangler.jsonc --outdir /tmp/ldb-vault-build
+      - name: Compile LDB Runner Worker (dry run)
+        run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-runner/wrangler.jsonc --outdir /tmp/ldb-runner-build
+      - name: Verify the two built bundles
+        run: |
+          test -n "$(find /tmp/ldb-vault-build -type f -name '*.js' -print -quit)"
+          test -n "$(find /tmp/ldb-runner-build -type f -name '*.js' -print -quit)"
+          echo "PASS: Both Workers compiled offline. No account authentication, uploads, paid image calls or deployment."

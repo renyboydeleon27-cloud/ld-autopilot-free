@@ -17,3 +17,10 @@ A read-only authenticated probe was added to verify the exact service binding wi
 
 ## 69-asset cross-worker transport regression
 `tests/ldb-private-bridge-69-offline.test.mjs` joins the actual `ProductionDelivery` coordinator with the private client `createGoogleDeliveryBridge` and vault receiver `handleVaultDeliveryBridge` using a fake in-memory Drive. It tests all 69 text/image manifest entries and 10 required folders across reconstructed coordinator instances, STOP/Resume, failed checksum gating, and transient bridge failure. It never uses real image inference, Google OAuth, Google Drive or Gmail. It provides stronger offline integration evidence but DOES NOT prove the real Cloudflare service binding or user Drive account works. Keep all worker delivery flags disabled until live independent acceptance.
+
+
+## Wrangler compile gate — November 2, 2026
+
+GitHub Actions workflow `LDB Cloudflare offline compile gate` builds both Worker bundles with `wrangler deploy --dry-run` and checks that all production toggles remain OFF. It uses no Cloudflare credentials, does not deploy, send Gmail, upload to Google Drive, or generate images. It verifies the required Durable Object bindings and migrations and the private service-binding name. The runner and vault already have matching Cloudflare account IDs.
+
+This only proves that both Workers can be compiled and configured safely. It does not verify a live Cloudflare service binding or any production assets. Never enable `RUNNER_ENABLED`, `VAULT_ENABLED`, `DELIVERY_BRIDGE_ENABLED`, or `FREE_PLAN_CONFIRMED` to make this check pass; the safety gate explicitly rejects enabled flags.
