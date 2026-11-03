@@ -94,8 +94,11 @@ function bundledSource(){
 }
 test('automatic 52 text assets use persisted storyboard and audited 17-image bytes through delivery',async()=>{
  const f=durableFixture(),oldJob=f.images.get('job'),bundle=bundledSource();
+ const actualJobId=digest(bundle.storyboard_utf8);
+ f.expectedJobId=actualJobId;
+ f.approvedAudit={...f.approvedAudit,jobId:actualJobId};
  f.images.delete('job');
- await new Checkpoints(f.imageStorage).submit(jobId,bundle.render_scenes,{approvedBundle:bundle});
+ await new Checkpoints(f.imageStorage).submit(actualJobId,bundle.render_scenes,{approvedBundle:bundle});
  const sourceJob=f.images.get('job');
  f.images.set('job',{...sourceJob,status:'IMAGES_READY',index:17,outputs:oldJob.outputs});
  const {checkpoint}=await submitDurableApprovedDelivery({...f,otherAssets:undefined,episode:undefined});
@@ -103,7 +106,7 @@ test('automatic 52 text assets use persisted storyboard and audited 17-image byt
  assert.equal(checkpoint.plan.assets.length,69);
  assert.equal(checkpoint.plan.assets.filter(x=>x.category==='Narration').length,16);
  assert.equal(f.uploads.size,0,'queueing is not a Drive upload');
- for(let i=0;i<69;i++)await resumeDurableApprovedDelivery({...f,jobId}).tick();
+ for(let i=0;i<69;i++)await resumeDurableApprovedDelivery({...f,jobId:actualJobId}).tick();
  assert.equal(f.deliveries.get('delivery').status,'COMPLETE');
  assert.equal(f.deliveries.get('delivery').verified.length,69);
 });
