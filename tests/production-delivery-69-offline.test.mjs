@@ -311,5 +311,5 @@ test('new episode delivery uses an isolated Google folder and preserves 69-asset
  await co.submit(custom);
  await co.tick();
  assert.equal(f.state.get('delivery').index,1);
- assert.deepEqual(seen,['Living Disaster Book','1923 Great Kantō Earthquake','Approved reference images']);
+ assert.deepEqual(seen,['Living Disaster Book','1923 Great Kantō Earthquake','Storyboard']);
 });
