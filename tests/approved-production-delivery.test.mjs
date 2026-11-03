@@ -40,3 +40,18 @@ test('rejected image blocks delivery',()=>{
  const f=fixture();f.approvedAudit.scenes[0].result='FAIL';
  assert.throws(()=>prepareApprovedProductionDelivery(f),/INVALID_VISUAL_AUDIT/);
 });
+
+test('another approved disaster episode gets its own correctly named delivery folder',()=>{
+ const f=fixture();
+ const result=prepareApprovedProductionDelivery({...f,episode:'2011 Tōhoku Earthquake and Tsunami'});
+ assert.equal(result.plan.episode,'2011 Tōhoku Earthquake and Tsunami');
+ assert.equal(result.plan.assets.length,69);
+ assert.equal(result.fingerprint.length,64);
+ assert.notEqual(result.fingerprint,prepareApprovedProductionDelivery(f).fingerprint);
+});
+test('unsafe episode title cannot create a Google Drive delivery plan',()=>{
+ for(const episode of ['',' ','../escape','Lake/Nyos','Lake\\\\Nyos',' Lake Nyos','Lake Nyos ','A..B','A\\nB','A'.repeat(121)]){
+  const f=fixture();
+  assert.throws(()=>prepareApprovedProductionDelivery({...f,episode}),/INVALID_EPISODE_NAME/,episode);
+ }
+});

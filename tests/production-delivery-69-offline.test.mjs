@@ -296,3 +296,20 @@ test('Cloudflare alarm route rejects forged checkpoints before any delivery',asy
  assert.equal(factoryCalls,0);
  assert.equal(stored.index,0);
 });
+
+test('new episode delivery uses an isolated Google folder and preserves 69-asset contract',async()=>{
+ const f=fixture();
+ const custom={...f.plan,episode:'1923 Great Kantō Earthquake'};
+ const seen=[];
+ f.opts.drive={put:async asset=>{
+  if(asset.mimeType==='application/vnd.google-apps.folder')seen.push(asset.name);
+  return asset.bytes instanceof Uint8Array
+   ?{id:asset.key,status:'VERIFIED',sha256:sha(asset.bytes)}
+   :{id:asset.key};
+ }};
+ const co=new ProductionDelivery(f.storage,f.opts);
+ await co.submit(custom);
+ await co.tick();
+ assert.equal(f.state.get('delivery').index,1);
+ assert.deepEqual(seen,['Living Disaster Book','1923 Great Kantō Earthquake','Approved reference images']);
+});

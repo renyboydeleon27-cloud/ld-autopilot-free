@@ -69,3 +69,11 @@ test('corrupted persisted text after queue cannot be uploaded',async()=>{
  assert.equal(f.deliveries.get('delivery').status,'NEEDS_REVIEW');
  assert.equal([...f.uploads.values()].filter(x=>x.status==='VERIFIED').length,17);
 });
+
+test('trusted durable submission carries a distinct approved disaster title to the saved checkpoint',async()=>{
+ const f=durableFixture();
+ const {checkpoint}=await submitDurableApprovedDelivery({...f,episode:'Great Molasses Flood — Boston 1919'});
+ assert.equal(checkpoint.plan.episode,'Great Molasses Flood — Boston 1919');
+ assert.equal(checkpoint.plan.assets.length,69);
+ assert.equal(f.uploads.size,0,'submission cannot contact Google Drive');
+});
