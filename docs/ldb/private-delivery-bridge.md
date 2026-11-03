@@ -28,3 +28,31 @@ This only proves that both Workers can be compiled and configured safely. It doe
 ## Read-only probe without Google Vault credentials — November 3, 2026
 
 Fixed a previously hidden live-test blocker: the Vault Worker initially required `VAULT_ENABLED=true`, `VAULT_SECRET`, and `VAULT_KEY` before even considering `/internal/bridge/health`. This meant a zero-Google-access probe could not run with production toggles OFF. The Vault edge now routes only that single authenticated path before the vault credential gate, directly to the independent probe handler. The probe never initializes the Durable Object, touches Google OAuth, accesses Drive/Gmail, or enables render. It still requires `BRIDGE_PROBE_ENABLED=true` on both Workers plus the separately provisioned `GOOGLE_BRIDGE_PROBE_SECRET` on both Workers and `RUNNER_SECRET` for the caller. Everything else remains OFF. This verifies only service-binding transport and the read-only secret, not real image production or Drive delivery. GitHub integration tests exercise disabled vault credentials, wrong secrets, POST refusal, and unknown-path refusal.
+
+
+## Isolated Cloudflare binding probe (2026-11-03; NOT DEPLOYED)
+
+The new `wrangler.probe.jsonc` configurations target **separate** Workers named `ner-ldb-vault-binding-probe` and `ner-ldb-runner-binding-probe`. They do not overwrite the existing quality Workers. The vault has no public workers.dev URL. Both allow only `BRIDGE_PROBE_ENABLED=true`; image rendering, Drive, Vault OAuth, and FREE_PLAN_CONFIRMED remain OFF. A GitHub Actions offline compile gate checks all four Worker bundles and refuses dangerous settings.
+
+Before any actual deployment, an operator must confirm Cloudflare plan limits and authorize a test deployment in their own Cloudflare account. In a trusted local checkout of the development branch, use Wrangler dry runs:
+
+```bash
+node scripts/ldb-cloudflare-isolated-probe-gate.mjs
+npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-google-vault/wrangler.probe.jsonc
+npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-runner/wrangler.probe.jsonc
+```
+
+To actually deploy the isolated probes (requires operator login and approval; not done by CI), deploy Vault then Runner:
+
+```bash
+npx --yes wrangler@4 login
+npx --yes wrangler@4 deploy --config cloudflare/ldb-google-vault/wrangler.probe.jsonc
+npx --yes wrangler@4 deploy --config cloudflare/ldb-runner/wrangler.probe.jsonc
+npx --yes wrangler@4 secret put GOOGLE_BRIDGE_PROBE_SECRET --config cloudflare/ldb-google-vault/wrangler.probe.jsonc
+npx --yes wrangler@4 secret put GOOGLE_BRIDGE_PROBE_SECRET --config cloudflare/ldb-runner/wrangler.probe.jsonc
+npx --yes wrangler@4 secret put RUNNER_SECRET --config cloudflare/ldb-runner/wrangler.probe.jsonc
+```
+
+Use the **same new 32+ character random** `GOOGLE_BRIDGE_PROBE_SECRET` in both isolated Workers and a **different new** 32+ character `RUNNER_SECRET` in Runner. Enter them only through the secret prompts; never publish them in GitHub, chats, screenshots or logs. On a trusted machine, export `LDB_PROBE_URL` (the actual Runner HTTPS workers.dev URL ending in `/delivery-bridge-probe`) and `LDB_RUNNER_SECRET` (same Runner secret) into the local process environment; do **not** pass secrets as command arguments. Then run `node scripts/ldb-live-binding-probe.mjs`. It only sends GET and refuses redirects, unsafe URLs and unexpected responses. A PASS proves **only** private Worker binding and authentication, not production or Drive delivery.
+
+Cloudflare details: https://developers.cloudflare.com/workers/wrangler/commands/workers/ and https://developers.cloudflare.com/workers/configuration/secrets/ .

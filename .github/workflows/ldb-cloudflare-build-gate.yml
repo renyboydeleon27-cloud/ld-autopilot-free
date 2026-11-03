@@ -6,6 +6,9 @@ on:
       - 'cloudflare/ldb-google-vault/**'
       - 'lib/ldb/**'
       - 'scripts/ldb-cloudflare-build-gate.mjs'
+      - 'scripts/ldb-cloudflare-isolated-probe-gate.mjs'
+      - 'scripts/ldb-live-binding-probe.mjs'
+      - 'tests/ldb-isolated-probe-config.test.mjs'
       - '.github/workflows/ldb-cloudflare-build-gate.yml'
   workflow_dispatch:
 
@@ -24,6 +27,14 @@ jobs:
           node-version: '22'
       - name: Enforce deployment-safety defaults
         run: node scripts/ldb-cloudflare-build-gate.mjs
+      - name: Validate isolated read-only probe configs and smoke-test guards
+        run: |
+          node scripts/ldb-cloudflare-isolated-probe-gate.mjs
+          node --test tests/ldb-isolated-probe-config.test.mjs
+      - name: Compile isolated Vault probe without deploying
+        run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-google-vault/wrangler.probe.jsonc --outdir /tmp/ldb-vault-probe-build
+      - name: Compile isolated Runner probe without deploying
+        run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-runner/wrangler.probe.jsonc --outdir /tmp/ldb-runner-probe-build
       - name: Compile Google Vault Worker (dry run)
         run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-google-vault/wrangler.jsonc --outdir /tmp/ldb-vault-build
       - name: Compile LDB Runner Worker (dry run)
@@ -32,4 +43,6 @@ jobs:
         run: |
           test -n "$(find /tmp/ldb-vault-build -type f -name '*.js' -print -quit)"
           test -n "$(find /tmp/ldb-runner-build -type f -name '*.js' -print -quit)"
-          echo "PASS: Both Workers compiled offline. No account authentication, uploads, paid image calls or deployment."
+          test -n "$(find /tmp/ldb-vault-probe-build -type f -name '*.js' -print -quit)"
+          test -n "$(find /tmp/ldb-runner-probe-build -type f -name '*.js' -print -quit)"
+          echo "PASS: Original and isolated probe Workers compiled offline. No auth, uploads, paid calls or deployment."
