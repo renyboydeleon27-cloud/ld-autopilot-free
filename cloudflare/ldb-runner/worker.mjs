@@ -100,7 +100,7 @@ export class LdbCoordinator extends DurableObject {
     let size=0;const chunks=[];for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>100000){await reader.cancel();return json({status:'BUNDLE_TOO_LARGE'},413);}chunks.push(Buffer.from(value));}
     const bundle=JSON.parse(Buffer.concat(chunks).toString('utf8'));
     const {id,scenes}=validateRenderJob(bundle);
-    const job=await this.core.submit(id,scenes);return json({id:job.id,status:job.status},202);
+    const job=await this.core.submit(id,scenes,{approvedBundle:bundle});return json({id:job.id,status:job.status},202);
    }
    return json({status:'NOT_FOUND'},404);
   }catch {return json({status:'REQUEST_REJECTED'},409);}
