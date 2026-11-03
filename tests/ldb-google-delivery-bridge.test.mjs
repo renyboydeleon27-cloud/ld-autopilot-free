@@ -71,7 +71,7 @@ test('never provides extra endpoints, browser flags or overlarge asset bytes',as
  assert.equal(res.status,404);assert.equal(f.calls,0);
 });
 import {probeGoogleVaultBinding} from '../cloudflare/ldb-runner/bridge-probe.mjs';
-import {handleVaultBridgeHealth,isBridgeHealthPath} from '../cloudflare/ldb-google-vault/bridge-probe.mjs';
+import {handleVaultBridgeHealth,isBridgeHealthPath,routeVaultHealthProbe} from '../cloudflare/ldb-google-vault/bridge-probe.mjs';
 const PSECRET='independent-test-probe-secret-very-long-2026';
 function diagnosticFixture(){
  let requests=0;
@@ -109,4 +109,37 @@ test('probe refuses invalid vault response and never returns a secret',async()=>
   await assert.rejects(probeGoogleVaultBinding({...f.env,GOOGLE_VAULT:{fetch:async()=>response}}),/BRIDGE_PROBE_UNAVAILABLE/);
  }
  assert.ok(!JSON.stringify(await probeGoogleVaultBinding(f.env)).includes(PSECRET));
+});
+
+test('live-style Vault edge health route works with ALL production and OAuth credential gates OFF',async()=>{
+ let durableObjectCalls=0,driveCalls=0;
+ const env={
+  VAULT_ENABLED:'false',DELIVERY_BRIDGE_ENABLED:'false',RUNNER_ENABLED:'false',
+  BRIDGE_PROBE_ENABLED:'true',GOOGLE_BRIDGE_PROBE_SECRET:PSECRET,
+  GOOGLE_VAULT:{getByName:()=>{durableObjectCalls++;throw Error('DO MUST STAY OFF');}},
+  GOOGLE_CLIENT_ID:undefined,GOOGLE_CLIENT_SECRET:undefined,VAULT_KEY:undefined,
+  VAULT_SECRET:undefined
+ };
+ const endpoint='https://ldb-vault.internal/internal/bridge/health';
+ const serve=async(url,options)=>routeVaultHealthProbe(new Request(url,options),env);
+ const result=await probeGoogleVaultBinding({
+  BRIDGE_PROBE_ENABLED:'true',GOOGLE_BRIDGE_PROBE_SECRET:PSECRET,
+  DELIVERY_BRIDGE_ENABLED:'false',GOOGLE_VAULT:{fetch:serve}
+ });
+ assert.deepEqual(result,{status:'BRIDGE_AUTHENTICATED',productionReady:false});
+ assert.equal(durableObjectCalls,0);
+ assert.equal(driveCalls,0);
+ assert.equal((await serve(endpoint,{method:'POST',headers:{Authorization:'Bearer '+PSECRET}})).status,405);
+ assert.equal((await serve(endpoint,{headers:{Authorization:'Bearer not-the-secret'}})).status,401);
+ assert.equal(routeVaultHealthProbe(new Request('https://ldb-vault.internal/capacity'),env),null);
+ assert.equal((await routeVaultHealthProbe(new Request(endpoint,{headers:{Authorization:'Bearer '+PSECRET}}),{...env,BRIDGE_PROBE_ENABLED:'false'})).status,503);
+ assert.equal((await routeVaultHealthProbe(new Request(endpoint,{headers:{Authorization:'Bearer '+PSECRET}}),{...env,GOOGLE_BRIDGE_PROBE_SECRET:undefined})).status,503);
+});
+test('Vault edge source routes read-only probe ahead of disabled production credential gate',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const worker=await readFile(new URL('../cloudflare/ldb-google-vault/worker.mjs',import.meta.url),'utf8');
+ const probe=worker.indexOf('const probe=routeVaultHealthProbe(req,env);');
+ const vault=worker.indexOf("if(env.VAULT_ENABLED!=='true'");
+ assert.ok(probe>0&&vault>probe,'read-only health check must not require OAuth setup');
+ assert.ok(worker.includes('if(probe)return probe;'));
 });
