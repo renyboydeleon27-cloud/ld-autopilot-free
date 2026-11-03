@@ -44,6 +44,8 @@ test('unsafe URLs refuse to send bearer secrets',async()=>{
  let called=0;const fetcher=async()=>{called++;throw Error('unwanted network')};
  for(const bad of ['http://owner.workers.dev/delivery-bridge-probe',
   'https://attacker.example/delivery-bridge-probe',
+  'https://attacker.account.workers.dev/delivery-bridge-probe',
+  'https://ner-ldb-runner-binding-probe.other.account.workers.dev/delivery-bridge-probe',
   'https://owner.workers.dev/stop',
   url+'?token=oops',
   'https://user:pass@owner.workers.dev/delivery-bridge-probe',

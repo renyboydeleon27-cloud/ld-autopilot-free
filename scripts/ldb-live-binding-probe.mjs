@@ -5,8 +5,9 @@ const fail=code=>{throw Error(code)};
 export async function verifyLiveBindingProbe({url,secret,fetcher=globalThis.fetch}={}){
  let u;
  try{u=new URL(url);}catch{fail('INVALID_PROBE_URL')}
- if(u.protocol!=='https:'||!u.hostname.endsWith('.workers.dev')||
-    u.hostname==='.workers.dev'||u.pathname!=='/delivery-bridge-probe'||
+ if(u.protocol!=='https:'||
+    !/^ner-ldb-runner-binding-probe\.[a-z0-9-]+\.workers\.dev$/.test(u.hostname)||
+    u.pathname!=='/delivery-bridge-probe'||
     u.search||u.hash||u.port||u.username||u.password)fail('UNSAFE_PROBE_URL');
  if(typeof secret!=='string'||secret.length<32)fail('PROBE_SECRET_REQUIRED');
  let res,body;

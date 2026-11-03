@@ -56,3 +56,7 @@ npx --yes wrangler@4 secret put RUNNER_SECRET --config cloudflare/ldb-runner/wra
 Use the **same new 32+ character random** `GOOGLE_BRIDGE_PROBE_SECRET` in both isolated Workers and a **different new** 32+ character `RUNNER_SECRET` in Runner. Enter them only through the secret prompts; never publish them in GitHub, chats, screenshots or logs. On a trusted machine, export `LDB_PROBE_URL` (the actual Runner HTTPS workers.dev URL ending in `/delivery-bridge-probe`) and `LDB_RUNNER_SECRET` (same Runner secret) into the local process environment; do **not** pass secrets as command arguments. Then run `node scripts/ldb-live-binding-probe.mjs`. It only sends GET and refuses redirects, unsafe URLs and unexpected responses. A PASS proves **only** private Worker binding and authentication, not production or Drive delivery.
 
 Cloudflare details: https://developers.cloudflare.com/workers/wrangler/commands/workers/ and https://developers.cloudflare.com/workers/configuration/secrets/ .
+
+### Worker-specific URL validation — November 3, 2026
+
+The optional read-only smoke verifier now rejects all workers.dev hosts except the exact isolated Runner Worker naming pattern `ner-ldb-runner-binding-probe.<owner-subdomain>.workers.dev`. An accidentally pasted or malicious different Worker URL cannot receive the Runner Bearer secret. The verifier also refuses redirects, query strings, non-HTTPS and alternate paths; all tests are offline. Cloudflare deployment is still operator-controlled and has not been performed here.
