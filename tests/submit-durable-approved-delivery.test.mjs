@@ -77,3 +77,40 @@ test('trusted durable submission carries a distinct approved disaster title to t
  assert.equal(checkpoint.plan.assets.length,69);
  assert.equal(f.uploads.size,0,'submission cannot contact Google Drive');
 });
+
+import {Checkpoints} from '../cloudflare/ldb-runner/checkpoints.mjs';
+import {SCENES as APPROVED_SCENES} from '../lib/ldb/approved-render-job.mjs';
+function bundledSource(){
+ const storyboard_utf8=JSON.stringify({title:'1923 Great Kantō Earthquake',
+  scenes:Object.fromEntries(APPROVED_SCENES.map(scene=>[scene,{visual:'Original approved '+scene}]))});
+ return {schema:'ldb-approved-render-job-v1',storyboard_utf8,
+  approval:{schema:'ldb-storyboard-approval-v1',source:'local-manual-approval',
+   hash_algorithm:'sha256-utf8-original-json',requires_backend_verification:true,
+   storyboard_id:digest(storyboard_utf8),approved_scene_count:17},
+  render_scenes:APPROVED_SCENES.map(scene=>({id:scene,
+   image_prompt:'Historic anime Original approved '+scene,
+   narration:'Independent English narration '+scene,
+   flow_prompt:'EXACTLY 10 SECONDS; 0–2s: Start; 2–6s: Move; 6–10s: Hold '+scene}))};
+}
+test('automatic 52 text assets use persisted storyboard and audited 17-image bytes through delivery',async()=>{
+ const f=durableFixture(),oldJob=f.images.get('job'),bundle=bundledSource();
+ f.images.delete('job');
+ await new Checkpoints(f.imageStorage).submit(jobId,bundle.render_scenes,{approvedBundle:bundle});
+ const sourceJob=f.images.get('job');
+ f.images.set('job',{...sourceJob,status:'IMAGES_READY',index:17,outputs:oldJob.outputs});
+ const {checkpoint}=await submitDurableApprovedDelivery({...f,otherAssets:undefined,episode:undefined});
+ assert.equal(checkpoint.plan.episode,'1923 Great Kantō Earthquake');
+ assert.equal(checkpoint.plan.assets.length,69);
+ assert.equal(checkpoint.plan.assets.filter(x=>x.category==='Narration').length,16);
+ assert.equal(f.uploads.size,0,'queueing is not a Drive upload');
+ for(let i=0;i<69;i++)await resumeDurableApprovedDelivery({...f,jobId}).tick();
+ assert.equal(f.deliveries.get('delivery').status,'COMPLETE');
+ assert.equal(f.deliveries.get('delivery').verified.length,69);
+});
+test('legacy job without original approval source refuses automatic packaging',async()=>{
+ const f=durableFixture();
+ await assert.rejects(submitDurableApprovedDelivery({...f,otherAssets:undefined}),
+   /APPROVED_SOURCE_UNAVAILABLE/);
+ assert.equal(f.deliveries.has('delivery'),false);
+ assert.equal(f.uploads.size,0);
+});
