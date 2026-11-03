@@ -1,0 +1,42 @@
+{
+  "verified_at": "2026-10-29T18:40:46.821Z",
+  "storyboard_sha256": "75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05",
+  "model": "@cf/black-forest-labs/flux-2-klein-4b",
+  "integration": "native Workers AI binding",
+  "cloud_execution": "PASS",
+  "unauthenticated_requests_blocked": true,
+  "stop_before_inference": "PASS",
+  "resume_triggers_alarm": "PASS",
+  "persistent_image_checkpoint": "PASS",
+  "checksum_verified_after_download": true,
+  "full_jpeg_decode": "PASS",
+  "width": 576,
+  "height": 1024,
+  "worker": "ner-ldb-runner-quality-v3",
+  "checkpoint_status": "TEST_PAUSED",
+  "completed_scenes": 1,
+  "total_scenes": 17,
+  "raw_bytes": 422398,
+  "raw_sha256": "ce94be38546e7f5b50c649e6a298facd4fe25e04787bce9d262dcf8d512e7158",
+  "raw_max_rgb_channel_difference": 7,
+  "local_normalized_png_sha256": "365e0285af1daf56cb127ed32a06bc63a346bcad9bc46b79c84cc52929585178",
+  "normalization_in_cloud": false,
+  "visual_quality": "REJECTED",
+  "visual_issues": [
+    "The revised image now visibly grips the lantern handle, but the lantern still appears illuminated despite the extinguished-lamp requirement.",
+    "Raw RGB channels are not identical; exact grayscale normalization is required.",
+    "Historical setting, clothing and identity continuity have not been verified against the user's approved reference images."
+  ],
+  "prior_trials": [
+    {"worker":"ner-ldb-runner-quality","status":"NEEDS_REVIEW","images_saved":0,"error":"INFERENCE_FAILED_OR_AMBIGUOUS","retried_automatically":false},
+    {"worker":"ner-ldb-runner-quality-v2","status":"TEST_PAUSED","images_saved":1,"visual_quality":"REJECTED","issues":["Lantern appears lit and unsupported by a visible gripping hand."]}
+  ],
+  "preview_deployment": "dpl_DgUKUT2FramyX6vYYJ9vcsvTAzFv",
+  "preview_url": "https://ld-autopilot-free-bv66y1cuc-renyboydeleon-5731.vercel.app",
+  "runtime_control_secret_removed": true,
+  "cloudflare_api_token_in_native_worker": false,
+  "vercel_cloudflare_variables_restored_to_production_only": true,
+  "production_release_unchanged": "e86ab4117d2e1de129d29b5bd6269162bbde946a",
+  "google_connected": false,
+  "full_auto_production_ready": false
+}
