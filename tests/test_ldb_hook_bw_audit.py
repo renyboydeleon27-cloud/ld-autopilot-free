@@ -70,6 +70,7 @@ class HookBlackWhiteReviewTests(unittest.TestCase):
 
 
     def test_isolated_v5_preview_links_review_only_and_preserves_original(self):
+        self.raw = self.root / "HOOK.jpg"  # Exact isolated runner output filename
         self.make_jpeg()
         original = self.raw.read_bytes()
         index = self.root / "index.html"
