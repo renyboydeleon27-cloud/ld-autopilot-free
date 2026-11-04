@@ -32,3 +32,40 @@ test('missing configuration never calls provider',async()=>{await assert.rejects
 
 
 test("unknown or paid plan never calls provider",async()=>{await assert.rejects(hookCloudTest({env,fetcher:()=>assert.fail("network")}),/FREE_PLAN_CONFIRMATION_REQUIRED/);});
+
+test('V5 refuses unprepared bundle before any Cloudflare API call',async()=>{
+ const h=await harness();
+ await assert.rejects(hookCloudTest({...h.options,workerName:'ner-ldb-runner-quality-v5',fetcher:()=>assert.fail('unexpected network')}),/HOOK_V5_PROMPT_REQUIRED/);
+ assert.equal(h.getSubmits(),0);
+});
+test('V5 uses a new isolated Worker and preserves original V4 evidence',async()=>{
+ const h=await harness();
+ const originalRead=h.options.read,originalFetch=h.options.fetcher;
+ let puts=0;
+ const read=async path=>{
+  const data=await originalRead(path);
+  if(path.endsWith('render_job.json')){
+   const {prepareHookV5}=await import('../scripts/ldb-prepare-hook-v5.mjs');
+   return JSON.stringify(prepareHookV5(JSON.parse(data)));
+  }
+  return data;
+ };
+ const fetcher=async(url,opts)=>{
+  if(opts?.method==='PUT'){
+   puts++;
+   assert.ok(url.endsWith('/scripts/ner-ldb-runner-quality-v5'));
+  }
+  return originalFetch(url,opts);
+ };
+ const result=await hookCloudTest({...h.options,read,fetcher,workerName:'ner-ldb-runner-quality-v5'});
+ assert.equal(puts,1);
+ assert.equal(result.report.worker,'ner-ldb-runner-quality-v5');
+ assert.equal(result.report.completedScenes,1);
+ assert.deepEqual(h.removed,['RUNNER_SECRET']);
+ assert.equal(h.getSubmits(),1);
+});
+test('worker names outside explicit V4/V5 allowlist never reach Cloudflare',async()=>{
+ const h=await harness();
+ for(const workerName of ['ner-ldb-runner-quality','ner-ldb-runner-quality-v6','../../quality',''])
+  await assert.rejects(hookCloudTest({...h.options,workerName,fetcher:()=>assert.fail('unexpected network')}),/UNAPPROVED_TEST_WORKER/);
+});
