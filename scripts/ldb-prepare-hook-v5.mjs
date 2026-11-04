@@ -4,15 +4,17 @@ import {readFile,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
 export const APPROVAL_ID='75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05';
+// Keep the full packager-produced HOOK prompt below the Workers AI 2048-char
+// limit. The existing storyboard visual and physical-reference notes remain
+// intact; add only the high-priority composition/neutrality corrections.
 export const COMPOSITION_LOCK=[
- 'HOOK-only composition lock: three-quarter medium shot of ONE woman beside the doorway.',
- 'Her upper shoulder is visibly pressed against the vertical wooden doorpost; the contact point must be unmistakable.',
- 'She holds a nonburning kerosene lantern by its U-shaped top handle at hip height with believable five-finger anatomy.',
- 'Lantern glass is dark, with an extinguished wick: absolutely NO flame, NO illuminated glass and NO glow.',
- 'Moon and sun must remain entirely OUTSIDE the image frame, with no visible sky disk.',
- 'Ambient dim lighting only; no gas-cloud effects.',
- 'Strict BLACK, WHITE and neutral gray only, all RGB channels equal (R=G=B); hand-drawn flat-shaded historical 2D anime.',
- 'No sepia, colored highlights, realistic photo texture, words, logos or watermark.'
+ 'HOOK-only composition lock: Three-quarter medium shot.',
+ 'LEFT SHOULDER touches wooden doorpost; left palm flat on wood.',
+ 'RIGHT HAND wraps five natural fingers around TOP HANDLE of ONE lantern hanging at hip; clearly load-bearing.',
+ 'Lantern OFF: black wick, dark glass, no flame, glow or halo.',
+ 'Moon OUTSIDE frame; NO visible moon disk. Faint ambient night light only.',
+ 'Strict BLACK, WHITE, neutral GRAY with R=G=B; flat hand-inked historical 2D anime.',
+ 'No color, sepia, photorealism, text or watermark.'
 ].join(' ');
 export function prepareHookV5(bundle){
  const validated=validateRenderJob(bundle);

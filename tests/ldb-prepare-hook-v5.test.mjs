@@ -24,7 +24,7 @@ test('HOOK V5 preserves original approval and changes only one image prompt',asy
  assert.equal(validateRenderJob(prepared).id,APPROVAL_ID);
  assert.equal(prepared.render_scenes.length,17);
  assert.ok(prepared.render_scenes[0].image_prompt.includes(COMPOSITION_LOCK));
- assert.ok(prepared.render_scenes[0].image_prompt.includes('Moon and sun must remain entirely OUTSIDE'));
+ assert.ok(prepared.render_scenes[0].image_prompt.includes('Moon OUTSIDE frame'));
  assert.ok(prepared.render_scenes[0].image_prompt.includes('R=G=B'));
  assert.notEqual(prepared.render_scenes[0].image_prompt,raw.render_scenes[0].image_prompt);
  assert.deepEqual(prepared.render_scenes.slice(1),raw.render_scenes.slice(1));
@@ -37,4 +37,33 @@ test('HOOK V5 rejects nonapproved storyboard and duplicate preparation',async()=
  assert.throws(()=>prepareHookV5(prepared),/DIAGNOSTIC_ALREADY_PREPARED/);
  raw.storyboard_utf8+=' ';
  assert.throws(()=>prepareHookV5(raw),/WRONG_TEST_APPROVAL|INVALID_APPROVED_RENDER_JOB/);
+});
+
+test('real Lake Nyos free-packager HOOK V5 remains inside Cloudflare 2048-char limit',async()=>{
+ const {spawnSync}=await import('node:child_process');
+ const {mkdtemp,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const {fileURLToPath}=await import('node:url');
+ const root=fileURLToPath(new URL('../',import.meta.url));
+ const original=fileURLToPath(new URL('../ldb-submissions/lake-nyos-1986-test/approved_bundle.json',import.meta.url));
+ const temp=await mkdtemp(join(tmpdir(),'ldb-hook-v5-regression-'));
+ try{
+  const output=join(temp,'package');
+  const run=spawnSync('python3',['-m','scripts.ldb_free_packager','--bundle',original,output],
+   {cwd:root,encoding:'utf8',timeout:30000});
+  assert.equal(run.status,0,run.stderr?.slice(0,1200));
+  const raw=JSON.parse(await readFile(join(output,'render_job.json'),'utf8'));
+  assert.equal(validateRenderJob(raw).id,APPROVAL_ID);
+  const originalPrompt=raw.render_scenes[0].image_prompt;
+  assert.ok(originalPrompt.length<2048,'packaged HOOK already exceeds provider bound');
+  const prepared=prepareHookV5(raw);
+  const hookPrompt=prepared.render_scenes[0].image_prompt;
+  assert.ok(hookPrompt.length<=2048,'REAL approved HOOK V5 exceeds 2048-character provider limit: '+hookPrompt.length);
+  assert.ok(hookPrompt.includes(JSON.parse(raw.storyboard_utf8).scenes.HOOK.visual));
+  assert.ok(hookPrompt.includes('Moon OUTSIDE frame; NO visible moon disk.'));
+  assert.ok(hookPrompt.includes('R=G=B'));
+  assert.equal(validateRenderJob(prepared).id,APPROVAL_ID);
+  assert.deepEqual(prepared.render_scenes.slice(1),raw.render_scenes.slice(1));
+ }finally{await rm(temp,{recursive:true,force:true});}
 });
