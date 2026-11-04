@@ -70,3 +70,25 @@ class HookBlackWhiteReviewTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_isolated_v5_preview_links_review_only_and_preserves_original(self):
+        self.make_jpeg()
+        original = self.raw.read_bytes()
+        index = self.root / "index.html"
+        index.write_text("<h1>Original HOOK</h1>", encoding="utf-8")
+        report = make_review(self.raw, self.review, preview_compare=True)
+        self.assertEqual(original, self.raw.read_bytes())
+        comparison = (self.review / "index.html").read_text(encoding="utf-8")
+        self.assertIn("NOT APPROVED", comparison)
+        self.assertIn("../HOOK.jpg", comparison)
+        self.assertIn(report["correctedFile"], comparison)
+        self.assertIn("review-only/index.html", index.read_text(encoding="utf-8"))
+        self.assertFalse(report["productionDeliveryAllowed"])
+        again = make_review(self.raw, self.review, preview_compare=True)
+        self.assertEqual(again, report)
+
+    def test_preview_mode_rejects_unrelated_source_without_creating_public_page(self):
+        self.make_jpeg()
+        with self.assertRaisesRegex(ReviewError, "INVALID_PREVIEW_COMPARISON_LOCATION"):
+            make_review(self.raw, self.root / "unrelated", preview_compare=True)
+        self.assertFalse((self.root / "unrelated" / "index.html").exists())

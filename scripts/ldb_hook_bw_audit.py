@@ -4,6 +4,7 @@ Produces a new neutral RGB PNG, leaving the provider-rendered source unchanged.
 It fixes color-channel inequality ONLY, never pose, objects, anatomy or continuity.
 """
 import argparse
+from html import escape
 import hashlib
 import io
 import json
@@ -67,7 +68,7 @@ def write_immutable(path, content):
         if path.read_bytes() != content:
             raise ReviewError("EXISTING_OUTPUT_DIFFERS")
 
-def make_review(source, output_dir):
+def make_review(source, output_dir, *, preview_compare=False):
     source, raw, rgb = load_source(source)
     before = neutrality(rgb)
     # Grayscale luminance is the ONLY transformation. RGB PNG ensures
@@ -117,14 +118,42 @@ def make_review(source, output_dir):
             raise ReviewError("EXISTING_OUTPUT_DIFFERS")
     write_immutable(candidate_path, normalized)
     write_immutable(report_path, rendered_report)
+    if preview_compare:
+        # Only a single isolated HOOK preview may expose a comparison page.
+        # This NEVER changes image bytes or grants visual approval.
+        if source.name != "HOOK.jpg" or root.resolve().parent != source.parent.resolve():
+            raise ReviewError("INVALID_PREVIEW_COMPARISON_LOCATION")
+        comparison = (
+            '<!doctype html><html lang="en"><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<title>HOOK V5 — not approved</title>'
+            '<style>body{font:16px system-ui;max-width:820px;margin:20px auto;padding:0 16px}'
+            'figure{width:min(44%,340px);display:inline-block;vertical-align:top;margin:0 2% 20px 0}'
+            'img{width:100%;height:auto}strong{color:#982d17}</style>'
+            '<h1>HOOK V5: original vs strict grayscale</h1>'
+            '<p><strong>NOT APPROVED</strong> — grayscale correction does not verify pose, '
+            'anatomy, history, or approved reference continuity.</p>'
+            '<figure><img src="../HOOK.jpg" alt="Original HOOK image"><figcaption>Original (unchanged)</figcaption></figure>'
+            '<figure><img src="' + escape(candidate_name, quote=True) + '" alt="Exact B/W review candidate">'
+            '<figcaption>Neutral RGB PNG (review only)</figcaption></figure>'
+            '<p><a href="' + escape(report_name, quote=True) + '">Pixel audit and SHA-256 (JSON)</a></p></html>'
+        ).encode("utf-8")
+        write_immutable(root / "index.html", comparison)
+        root_index = source.parent / "index.html"
+        existing = root_index.read_text(encoding="utf-8")
+        marker = '<p><a href="review-only/index.html">Compare original and grayscale candidate (NOT APPROVED)</a></p>'
+        if marker not in existing:
+            # Keep the original image/report links and status statement.
+            root_index.write_text(existing + marker, encoding="utf-8")
     return report
 
 def main():
     parser = argparse.ArgumentParser(description="Prepare an offline exact-grayscale review candidate; never approves production")
     parser.add_argument("--input", required=True, type=Path, help="Existing raw provider HOOK JPG/PNG")
     parser.add_argument("--output-dir", required=True, type=Path, help="Separate review-only output folder")
+    parser.add_argument("--preview-compare", action="store_true", help="Create isolated V5 comparison page, never production approval")
     args = parser.parse_args()
-    report = make_review(args.input, args.output_dir)
+    report = make_review(args.input, args.output_dir, preview_compare=args.preview_compare)
     print(json.dumps(report, ensure_ascii=False))
 
 if __name__ == "__main__":

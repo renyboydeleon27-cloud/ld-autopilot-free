@@ -67,3 +67,15 @@ test('real Lake Nyos free-packager HOOK V5 remains inside Cloudflare 2048-char l
   assert.deepEqual(prepared.render_scenes.slice(1),raw.render_scenes.slice(1));
  }finally{await rm(temp,{recursive:true,force:true});}
 });
+
+test('V5 wrapper preflights grayscale decoder before cloud call and publishes review after rendering',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const s=await readFile(new URL('../scripts/ldb-run-hook-v5.mjs',import.meta.url),'utf8');
+ const decoder=s.indexOf('from PIL import Image, ImageOps');
+ const packager=s.indexOf('scripts.ldb_free_packager');
+ const cloud=s.indexOf('scripts/ldb-hook-cloud-test.mjs');
+ const grayscale=s.indexOf('scripts.ldb_hook_bw_audit');
+ assert.ok(decoder>0&&packager>decoder&&cloud>packager&&grayscale>cloud);
+ assert.ok(s.includes('--preview-compare'));
+ assert.ok(s.includes('--hook-v5'));
+});
