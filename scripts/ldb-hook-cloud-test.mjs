@@ -2,10 +2,13 @@
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {createHash,randomBytes} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
+import {workerModules} from './ldb-worker-module-graph.mjs';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
-const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v3';
-export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms))}={}) {
+const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v4';
+export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms)),freePlanConfirmed=false}={}) {
  if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT || !env.CLOUDFLARE_API_TOKEN || /\s/.test(env.CLOUDFLARE_API_TOKEN))throw Error('CONFIGURATION_REQUIRED');
+ if(freePlanConfirmed!==true)throw Error('FREE_PLAN_CONFIRMATION_REQUIRED');
+ const modules=await workerModules('cloudflare/ldb-runner/worker.mjs',{read});
  const bundle=JSON.parse(await read('/tmp/ldb-hook-package/render_job.json','utf8'));
  const validated=validateRenderJob(bundle);
  const token=env.CLOUDFLARE_API_TOKEN, key=randomBytes(32).toString('hex');
@@ -21,12 +24,12 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
  const sub=await api('/subdomain');
  if(!/^[a-z0-9-]+$/.test(sub?.subdomain||''))throw Error('INVALID_WORKERS_SUBDOMAIN');
  const endpoint=`https://${NAME}.${sub.subdomain}.workers.dev`;
- const files=['cloudflare/ldb-runner/worker.mjs','cloudflare/ldb-runner/checkpoints.mjs','lib/ldb/cloudflare-image.mjs','lib/ldb/approved-render-job.mjs'];
+ const entry='cloudflare/ldb-runner/worker.mjs';
  const bindings=[{name:'LDB_COORDINATOR',type:'durable_object_namespace',class_name:'LdbCoordinator'},
- ...Object.entries({RUNNER_ENABLED:'true',FREE_PLAN_CONFIRMED:'true',HOOK_ONLY_TEST:'true',CLOUDFLARE_ACCOUNT_ID:ACCOUNT}).map(([name,text])=>({name,type:'plain_text',text})),
+ ...Object.entries({RUNNER_ENABLED:'true',FREE_PLAN_CONFIRMED:'true',HOOK_ONLY_TEST:'true',DELIVERY_BRIDGE_ENABLED:'false',BRIDGE_PROBE_ENABLED:'false',CLOUDFLARE_ACCOUNT_ID:ACCOUNT}).map(([name,text])=>({name,type:'plain_text',text})),
  {name:'AI',type:'ai'},{name:'RUNNER_SECRET',type:'secret_text',text:key}];
- const form=new FormData();form.set('metadata',new Blob([JSON.stringify({main_module:files[0],compatibility_date:'2026-10-28',compatibility_flags:['nodejs_compat'],bindings,migrations:{new_tag:'v1',new_sqlite_classes:['LdbCoordinator']}})],{type:'application/json'}));
- for(const path of files)form.set(path,new Blob([await read(path)],{type:'application/javascript+module'}),path);
+ const form=new FormData();form.set('metadata',new Blob([JSON.stringify({main_module:entry,compatibility_date:'2026-10-28',compatibility_flags:['nodejs_compat'],bindings,migrations:{new_tag:'v1',new_sqlite_classes:['LdbCoordinator']}})],{type:'application/json'}));
+ for(const [path,source] of modules)form.set(path,new Blob([source],{type:'application/javascript+module'}),path);
  let result,bytes,primaryError;
  try {
   await api(`/scripts/${NAME}`,{method:'PUT',body:form});
@@ -70,9 +73,12 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  if(!process.argv.includes('--one-approved-hook-free-only')){console.error('EXPLICIT_HOOK_TEST_FLAG_REQUIRED');process.exit(1)}
  try{
-  const {report,bytes}=await hookCloudTest();const folder='cloudflare/ldb-runner/public';await mkdir(folder,{recursive:true});
+  const today=new Date().toISOString().slice(0,10);
+  if(process.env.LDB_WORKERS_PLAN!=='free'||process.env.LDB_FREE_PLAN_VERIFIED_DATE!==today)throw Error('CURRENT_FREE_PLAN_VERIFICATION_REQUIRED');
+  const {report,bytes}=await hookCloudTest({freePlanConfirmed:true});const folder='cloudflare/ldb-runner/public';await mkdir(folder,{recursive:true});
   await writeFile(`${folder}/HOOK.jpg`,bytes);await writeFile(`${folder}/report.json`,JSON.stringify(report,null,2));
   await writeFile(`${folder}/index.html`,'<!doctype html><meta name="viewport" content="width=device-width"><title>LDB HOOK test</title><h1>HOOK cloud test</h1><p>One raw image only. Visual QA and full production are not complete.</p><a href="report.json">Test report</a><p><img style="max-width:100%" src="HOOK.jpg"></p>');
   console.log(JSON.stringify(report));
  }catch(e){console.error(/^[A-Z0-9_]+$/.test(e.message)?e.message:'HOOK_TEST_FAILED');process.exit(1)}
 }
+

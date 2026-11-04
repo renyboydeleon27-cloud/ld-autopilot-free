@@ -24,8 +24,11 @@ async function harness(failRender=false){
   if(path==='/images/HOOK')return new Response(bytes,{headers:{'X-LDB-SHA256':sha}});
   return Response.json({job:{id:bundle.approval.storyboard_id,status:stage,completedScenes:stage==='TEST_PAUSED'?1:0,outputs:[{scene:'HOOK',sha256:sha}]}});
  };
- return {options:{env,fetcher,sleep:async()=>{},read:async p=>p.endsWith('render_job.json')?JSON.stringify(bundle):'module'},removed,getSubmits:()=>submits};
+ return {options:{env,freePlanConfirmed:true,fetcher,sleep:async()=>{},read:async p=>p.endsWith('render_job.json')?JSON.stringify(bundle):'module'},removed,getSubmits:()=>submits};
 }
 test('one job only, authenticated STOP/resume, checksum and credential cleanup',async()=>{const h=await harness();const r=await hookCloudTest(h.options);assert.equal(r.report.completedScenes,1);assert.equal(h.getSubmits(),1);assert.deepEqual(h.removed,['RUNNER_SECRET']);assert.ok(!JSON.stringify(r.report).includes(env.CLOUDFLARE_API_TOKEN));});
 test('render failure still removes credentials without resubmission',async()=>{const h=await harness(true);await assert.rejects(hookCloudTest(h.options),/RENDER_NEEDS_REVIEW/);assert.equal(h.getSubmits(),1);assert.equal(h.removed.length,1);});
 test('missing configuration never calls provider',async()=>{await assert.rejects(hookCloudTest({env:{},fetcher:()=>assert.fail('network')}),/CONFIGURATION_REQUIRED/);});
+
+
+test("unknown or paid plan never calls provider",async()=>{await assert.rejects(hookCloudTest({env,fetcher:()=>assert.fail("network")}),/FREE_PLAN_CONFIRMATION_REQUIRED/);});
