@@ -1,4 +1,5 @@
 import json
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -75,6 +76,24 @@ class HookBlackWhiteReviewTests(unittest.TestCase):
         original = self.raw.read_bytes()
         index = self.root / "index.html"
         index.write_text("<h1>Original HOOK</h1>", encoding="utf-8")
+        evidence = {
+            "worker": "ner-ldb-runner-quality-v5",
+            "status": "HOOK_CLOUD_TEST_PASSED",
+            "checkpointStatus": "TEST_PAUSED",
+            "completedScenes": 1,
+            "totalScenes": 17,
+            "runtimeCredentialsRemoved": True,
+            "fullAutoProduction": False,
+            "googleConnected": False,
+            "storyboard_sha256": "75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05",
+            "output": {
+                "scene": "HOOK",
+                "sha256": hashlib.sha256(original).hexdigest(),
+                "bytes": len(original),
+                "width": 576, "height": 1024, "mimeType": "image/jpeg",
+            },
+        }
+        (self.root / "report.json").write_text(json.dumps(evidence), encoding="utf-8")
         report = make_review(self.raw, self.review, preview_compare=True)
         self.assertEqual(original, self.raw.read_bytes())
         comparison = (self.review / "index.html").read_text(encoding="utf-8")
@@ -91,6 +110,50 @@ class HookBlackWhiteReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ReviewError, "INVALID_PREVIEW_COMPARISON_LOCATION"):
             make_review(self.raw, self.root / "unrelated", preview_compare=True)
         self.assertFalse((self.root / "unrelated" / "index.html").exists())
+
+
+    def test_v5_preview_fails_closed_without_a_verified_cloud_report(self):
+        self.raw = self.root / "HOOK.jpg"
+        self.make_jpeg()
+        original = self.raw.read_bytes()
+        # The wrong worker, a stale checksum, or a missing report cannot publish
+        # a page or even a review-only image. No source bytes are modified.
+        valid = {
+            "worker": "ner-ldb-runner-quality-v5",
+            "status": "HOOK_CLOUD_TEST_PASSED",
+            "checkpointStatus": "TEST_PAUSED",
+            "completedScenes": 1,
+            "totalScenes": 17,
+            "runtimeCredentialsRemoved": True,
+            "fullAutoProduction": False,
+            "googleConnected": False,
+            "storyboard_sha256": "75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05",
+            "output": {
+                "scene": "HOOK",
+                "sha256": hashlib.sha256(original).hexdigest(),
+                "bytes": len(original), "width": 576,
+                "height": 1024, "mimeType": "image/jpeg",
+            },
+        }
+        with self.assertRaisesRegex(ReviewError, "V5_CLOUD_REPORT_REQUIRED"):
+            make_review(self.raw, self.review, preview_compare=True)
+        self.assertFalse(self.review.exists())
+        for changes in (
+            {"worker": "ner-ldb-runner-quality-v4"},
+            {"completedScenes": 17},
+            {"runtimeCredentialsRemoved": False},
+            {"checkpointStatus": "QUEUED"},
+            {"storyboard_sha256": "0" * 64},
+            {"output": {**valid["output"], "sha256": "0" * 64}},
+            {"output": {**valid["output"], "width": 1024}},
+            {"googleConnected": True},
+        ):
+            record = {**valid, **changes}
+            (self.root / "report.json").write_text(json.dumps(record), encoding="utf-8")
+            with self.assertRaisesRegex(ReviewError, "V5_CLOUD_REPORT_MISMATCH"):
+                make_review(self.raw, self.review, preview_compare=True)
+            self.assertFalse(self.review.exists())
+        self.assertEqual(original, self.raw.read_bytes())
 
 if __name__ == "__main__":
     unittest.main()

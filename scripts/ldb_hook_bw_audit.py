@@ -68,8 +68,43 @@ def write_immutable(path, content):
         if path.read_bytes() != content:
             raise ReviewError("EXISTING_OUTPUT_DIFFERS")
 
+def verify_v5_execution(source, raw):
+    """Fail before any review artifact is written if the preview is not real V5."""
+    try:
+        report = json.loads((source.parent / "report.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeDecodeError) as exc:
+        raise ReviewError("V5_CLOUD_REPORT_REQUIRED") from exc
+    out = report.get("output") if isinstance(report, dict) else None
+    if not isinstance(out, dict) or any((
+        report.get("worker") != "ner-ldb-runner-quality-v5",
+        report.get("status") != "HOOK_CLOUD_TEST_PASSED",
+        report.get("checkpointStatus") != "TEST_PAUSED",
+        report.get("completedScenes") != 1,
+        report.get("totalScenes") != 17,
+        report.get("runtimeCredentialsRemoved") is not True,
+        report.get("fullAutoProduction") is not False,
+        report.get("googleConnected") is not False,
+        report.get("storyboard_sha256") != "75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05",
+        out.get("scene") != "HOOK",
+        out.get("sha256") != digest(raw),
+        out.get("bytes") != len(raw),
+        out.get("width") != EXPECTED_SIZE[0],
+        out.get("height") != EXPECTED_SIZE[1],
+        out.get("mimeType") != "image/jpeg",
+    )):
+        raise ReviewError("V5_CLOUD_REPORT_MISMATCH")
+    return report
+
+
 def make_review(source, output_dir, *, preview_compare=False):
     source, raw, rgb = load_source(source)
+    # Validate the full isolated V5 report BEFORE creating even a review folder.
+    # A synthetic or mislabeled image must not produce a misleading cloud preview.
+    root = Path(output_dir)
+    if preview_compare:
+        if source.name != "HOOK.jpg" or root.resolve() != (source.parent / "review-only").resolve():
+            raise ReviewError("INVALID_PREVIEW_COMPARISON_LOCATION")
+        verify_v5_execution(source, raw)
     before = neutrality(rgb)
     # Grayscale luminance is the ONLY transformation. RGB PNG ensures
     # exact R=G=B even after the candidate is saved and reopened.
@@ -84,7 +119,6 @@ def make_review(source, output_dir, *, preview_compare=False):
         after = neutrality(checked)
     if not after["neutralRgbExact"]:
         raise ReviewError("NORMALIZED_OUTPUT_NOT_NEUTRAL")
-    root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     prefix = re.sub(r"[^a-zA-Z0-9_-]", "-", source.stem).strip("-") or "HOOK"
     base = prefix + "." + digest(raw)[:12]
@@ -121,8 +155,6 @@ def make_review(source, output_dir, *, preview_compare=False):
     if preview_compare:
         # Only a single isolated HOOK preview may expose a comparison page.
         # This NEVER changes image bytes or grants visual approval.
-        if source.name != "HOOK.jpg" or root.resolve().parent != source.parent.resolve():
-            raise ReviewError("INVALID_PREVIEW_COMPARISON_LOCATION")
         comparison = (
             '<!doctype html><html lang="en"><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
