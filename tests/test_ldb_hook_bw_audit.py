@@ -72,6 +72,7 @@ class HookBlackWhiteReviewTests(unittest.TestCase):
 
     def test_isolated_v5_preview_links_review_only_and_preserves_original(self):
         self.raw = self.root / "HOOK.jpg"  # Exact isolated runner output filename
+        self.review = self.root / "review-only"
         self.make_jpeg()
         original = self.raw.read_bytes()
         index = self.root / "index.html"
@@ -114,6 +115,7 @@ class HookBlackWhiteReviewTests(unittest.TestCase):
 
     def test_v5_preview_fails_closed_without_a_verified_cloud_report(self):
         self.raw = self.root / "HOOK.jpg"
+        self.review = self.root / "review-only"
         self.make_jpeg()
         original = self.raw.read_bytes()
         # The wrong worker, a stale checksum, or a missing report cannot publish
