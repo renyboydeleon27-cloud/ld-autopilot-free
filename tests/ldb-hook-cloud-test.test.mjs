@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-import {hookCloudTest} from '../scripts/ldb-hook-cloud-test.mjs';
+import {hookCloudTest,assertV5PreviewScope} from '../scripts/ldb-hook-cloud-test.mjs';
 const env={CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',CLOUDFLARE_API_TOKEN:'private-test-token'};
 async function harness(failRender=false){
  const bundle=JSON.parse(await readFile(new URL('../ldb-submissions/lake-nyos-1986-test/approved_bundle.json',import.meta.url),'utf8'));
@@ -68,4 +68,15 @@ test('worker names outside explicit V4/V5 allowlist never reach Cloudflare',asyn
  const h=await harness();
  for(const workerName of ['ner-ldb-runner-quality','ner-ldb-runner-quality-v6','../../quality',''])
   await assert.rejects(hookCloudTest({...h.options,workerName,fetcher:()=>assert.fail('unexpected network')}),/UNAPPROVED_TEST_WORKER/);
+});
+
+test('V5 CLI refuses local or Production execution before any Cloudflare call',()=>{
+ const args=['node','scripts/ldb-hook-cloud-test.mjs','--one-approved-hook-free-only','--hook-v5'];
+ for(const env of [
+  {},{VERCEL_ENV:'production',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance'},
+  {VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'main'},
+  {VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feature/other-branch'}
+ ])assert.throws(()=>assertV5PreviewScope({args,env}),/V5_PREVIEW_ONLY|V5_APPROVED_BRANCH_REQUIRED/);
+ assert.equal(assertV5PreviewScope({args,env:{VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance'}}),true);
+ assert.equal(assertV5PreviewScope({args:args.filter(a=>a!=='--hook-v5'),env:{VERCEL_ENV:'production'}}),true);
 });

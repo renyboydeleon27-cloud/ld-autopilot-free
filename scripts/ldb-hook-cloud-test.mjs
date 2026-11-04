@@ -5,6 +5,13 @@ import {pathToFileURL} from 'node:url';
 import {workerModules} from './ldb-worker-module-graph.mjs';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v4', V5_NAME='ner-ldb-runner-quality-v5';
+export function assertV5PreviewScope({args=[],env={}}={}){
+ if(!args.includes('--hook-v5'))return true; // Existing V4 diagnostics unchanged.
+ if(env.VERCEL_ENV!=='preview')throw Error('V5_PREVIEW_ONLY');
+ if(env.VERCEL_GIT_COMMIT_REF!=='feature/ldb-image-acceptance')throw Error('V5_APPROVED_BRANCH_REQUIRED');
+ return true;
+}
+
 export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms)),freePlanConfirmed=false,workerName=NAME}={}) {
  if(workerName!==NAME&&workerName!==V5_NAME)throw Error('UNAPPROVED_TEST_WORKER');
  if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT || !env.CLOUDFLARE_API_TOKEN || /\s/.test(env.CLOUDFLARE_API_TOKEN))throw Error('CONFIGURATION_REQUIRED');
@@ -82,6 +89,7 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  if(!process.argv.includes('--one-approved-hook-free-only')){console.error('EXPLICIT_HOOK_TEST_FLAG_REQUIRED');process.exit(1)}
  try{
+  assertV5PreviewScope({args:process.argv,env:process.env});
   const today=new Date().toISOString().slice(0,10);
   if(process.env.LDB_WORKERS_PLAN!=='free'||process.env.LDB_FREE_PLAN_VERIFIED_DATE!==today)throw Error('CURRENT_FREE_PLAN_VERIFICATION_REQUIRED');
   const {report,bytes}=await hookCloudTest({freePlanConfirmed:true,workerName:process.argv.includes('--hook-v5')?V5_NAME:NAME});const folder='cloudflare/ldb-runner/public';await mkdir(folder,{recursive:true});
