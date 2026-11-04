@@ -23,3 +23,13 @@ The test report's original visualAudit=PENDING is retained as immutable executio
 Resolve strict B/W and composition checks, compare approved references, render and audit all 17 scenes within free quota, run the real 69-deliverable Drive/Gmail acceptance and live recovery tests. PR62's delivery-count fix is separate and not included in this deployment. Do not merge production based on this smoke test.
 
 Cloud execution passing is not a completed episode. No production percentage is asserted.
+
+
+## November 4 — HOOK V5 grayscale preparation (development only)
+The cloud trial proved a real JPEG and valid checkpoint, but the source failed exact neutral RGB. This update adds a **separate, local review-only** Python tool (`scripts/ldb_hook_bw_audit.py`) that fully decodes a 576×1024 JPEG/PNG, reports unequal RGB-channel pixel counts, and writes a new lossless RGB PNG where every pixel satisfies R=G=B. The original rendered JPEG is never modified and both SHA-256 digests are recorded. The generated PNG is explicitly `GRAYSCALE_CANDIDATE_ONLY`: composition, historical accuracy, hands, moon framing and original reference continuity are still unverified and `productionDeliveryAllowed=false`. The tool never updates worker checkpoints or triggers inference/Drive/Gmail. Usage after obtaining the genuine HOOK image under an authorized secure workflow:
+
+```bash
+python -m scripts.ldb_hook_bw_audit --input ./HOOK.jpg --output-dir ./hook-review-only
+```
+
+A separate offline `scripts/ldb-prepare-hook-v5.mjs` rewords the HOOK diagnostic to prohibit a visible moon, clearly require shoulder contact and believable lantern grip, and request exact neutral R=G=B colors without altering the original storyboard approval hash or the other 16 scenes. It DOES NOT run inference; a new provider trial still requires current Free plan and quota evidence and explicit test authorization. Python and Node offline tests cover color correction, checksums, invalid input, no auto-approval, and approval-hash preservation.
