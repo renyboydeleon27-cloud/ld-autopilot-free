@@ -68,8 +68,6 @@ class HookBlackWhiteReviewTests(unittest.TestCase):
         self.assertEqual(result["status"], "GRAYSCALE_CANDIDATE_ONLY")
         self.assertFalse(result["compositionVerified"])
 
-if __name__ == "__main__":
-    unittest.main()
 
     def test_isolated_v5_preview_links_review_only_and_preserves_original(self):
         self.make_jpeg()
@@ -92,3 +90,6 @@ if __name__ == "__main__":
         with self.assertRaisesRegex(ReviewError, "INVALID_PREVIEW_COMPARISON_LOCATION"):
             make_review(self.raw, self.root / "unrelated", preview_compare=True)
         self.assertFalse((self.root / "unrelated" / "index.html").exists())
+
+if __name__ == "__main__":
+    unittest.main()
