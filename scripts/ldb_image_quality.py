@@ -9,12 +9,18 @@ import json
 from pathlib import Path
 from PIL import Image, ImageOps, UnidentifiedImageError
 from scripts.verify_ldb_approval import EXPECTED
+from scripts.ldb_audit_image import audit_image
 
 MAX_BYTES = 8_000_000
 
 def normalize_image(raw, scene):
     if scene not in EXPECTED or not raw or len(raw) > MAX_BYTES:
         raise ValueError('Invalid scene or image size')
+    source_audit = audit_image(raw, scene)
+    # Color is the only source failure this operation can fix. Never hide a
+    # transparent, animated, malformed, blank or incorrectly sized input.
+    if any(reason != 'NON_NEUTRAL_STORY_IMAGE' for reason in source_audit['reasons']):
+        raise ValueError('Source image failed structural audit')
     try:
         with Image.open(io.BytesIO(raw)) as probe:
             if probe.format not in {'PNG', 'JPEG'} or probe.size != (576, 1024):
@@ -38,6 +44,9 @@ def normalize_image(raw, scene):
     except (UnidentifiedImageError, OSError, SyntaxError) as exc:
         raise ValueError('Image failed full decode') from exc
     normalized = buffer.getvalue()
+    pixel_audit = audit_image(normalized, scene)
+    if pixel_audit['structural_check'] != 'PASS':
+        raise ValueError('Normalized image failed independent pixel audit')
     return normalized, {
         'scene': scene, 'width': 576, 'height': 1024,
         'source_sha256': hashlib.sha256(raw).hexdigest(),
@@ -46,6 +55,7 @@ def normalize_image(raw, scene):
         'bytes': len(normalized), 'neutral_grayscale': equal,
         'structural_check': 'PASS', 'visual_check': 'PENDING',
         'delivery_ready': False,
+        'pixel_audit': pixel_audit,
     }
 
 def prepare_images(sources, destination):
