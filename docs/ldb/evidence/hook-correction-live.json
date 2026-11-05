@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-05",
+  "status": "CLOUD_CORRECTION_PASSED",
+  "deployment": "dpl_DPe8bAh3s4DwmajBaVjgxj2ce5dR",
+  "url": "https://ld-autopilot-free-3mn8ob118-renyboydeleon-5731.vercel.app",
+  "sourceCommit": "cb3184ff9e0eb99bc8b9bddf2ff226d7fab2e873",
+  "cloudAudit": {
+    "schema": "ldb-prepared-render-v1",
+    "jobId": "75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05",
+    "scene": "HOOK",
+    "filename": "HOOK.png",
+    "audit": {
+      "scene": "HOOK",
+      "width": 576,
+      "height": 1024,
+      "source_sha256": "0932a8a4e7cfed7c7babd8b354b7facc29debf294d041ef69cb864697a4e1c46",
+      "sha256": "28d8e4a28b781745e0a1a11b11a52134db26c2383098b967224b9583987aa822",
+      "md5": "c936607fdb796a6051a1de98881faea7",
+      "bytes": 550336,
+      "neutral_grayscale": true,
+      "structural_check": "PASS",
+      "visual_check": "PENDING",
+      "delivery_ready": false,
+      "pixel_audit": {
+        "scene": "HOOK",
+        "sha256": "28d8e4a28b781745e0a1a11b11a52134db26c2383098b967224b9583987aa822",
+        "bytes": 550336,
+        "structural_check": "PASS",
+        "visual_check": "PENDING",
+        "delivery_ready": false,
+        "reasons": [],
+        "width": 576,
+        "height": 1024,
+        "neutral_grayscale": true,
+        "max_channel_spread": 0,
+        "non_neutral_pixels": 0
+      }
+    },
+    "visual_check": "PENDING",
+    "delivery_ready": false
+  },
+  "independentDownload": {
+    "sha256": "28d8e4a28b781745e0a1a11b11a52134db26c2383098b967224b9583987aa822",
+    "bytes": 550336,
+    "size": [
+      576,
+      1024
+    ],
+    "neutral": true
+  },
+  "newInference": false,
+  "visualAcceptance": "NOT_ACCEPTED",
+  "visualNotes": [
+    "Lantern remains unlit; no visible text or watermark.",
+    "Shoulder support against doorpost is not clearly depicted.",
+    "Character consistency with approved reference images remains unverified."
+  ],
+  "productionComplete": false
+}
