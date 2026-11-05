@@ -8,9 +8,11 @@ export const APPROVAL_ID='75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b7
 // limit. The existing storyboard visual and physical-reference notes remain
 // intact; add only the high-priority composition/neutrality corrections.
 export const COMPOSITION_LOCK=[
- 'HOOK-only composition lock: Three-quarter medium shot.',
+ 'HOOK-only composition lock: Three-quarter view including knees and whole lantern.',
+ 'Adult Cameroonian woman: patterned cloth headwrap, loose short-sleeved blouse, long patterned wrap skirt.',
+ 'Torso sags toward post, knees slightly bent, tired worried face looking downward.',
  'LEFT SHOULDER touches wooden doorpost; left palm flat on wood.',
- 'RIGHT HAND wraps five natural fingers around TOP HANDLE of ONE lantern hanging at hip; clearly load-bearing.',
+ 'RIGHT HAND wraps five natural fingers around TOP HANDLE of ONE lantern hanging vertically beside thigh under gravity; arm naturally lowered.',
  'Lantern OFF: black wick, dark glass, no flame, glow or halo.',
  'Moon OUTSIDE frame; NO visible moon disk. Faint ambient night light only.',
  'Strict BLACK, WHITE, neutral GRAY with R=G=B; flat hand-inked historical 2D anime.',
