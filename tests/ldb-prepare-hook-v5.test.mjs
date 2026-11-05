@@ -64,6 +64,15 @@ test('real Lake Nyos free-packager HOOK V5 remains inside Cloudflare 2048-char l
   assert.ok(hookPrompt.includes('Moon OUTSIDE frame; NO visible moon disk.'));
   assert.ok(hookPrompt.includes('R=G=B'));
   assert.equal(validateRenderJob(prepared).id,APPROVAL_ID);
+  assert.ok(originalPrompt.includes('PHYSICAL COMPOSITION:'));
+  assert.ok(originalPrompt.includes('never beside or behind her body'));
+  assert.ok(!hookPrompt.includes('PHYSICAL COMPOSITION:'));
+  assert.ok(!hookPrompt.includes('never beside or behind her body'));
+  assert.ok(hookPrompt.includes('Adult Cameroonian woman: patterned cloth headwrap'));
+  assert.ok(hookPrompt.includes('LEFT SHOULDER touches wooden doorpost'));
+  assert.ok(hookPrompt.includes('RIGHT HAND wraps five natural fingers'));
+  assert.ok(hookPrompt.length<1600,'unexpected HOOK duplication: '+hookPrompt.length);
+  assert.equal(raw.render_scenes[0].image_prompt,originalPrompt,'must not mutate source');
   assert.deepEqual(prepared.render_scenes.slice(1),raw.render_scenes.slice(1));
  }finally{await rm(temp,{recursive:true,force:true});}
 });
@@ -78,4 +87,21 @@ test('V5 wrapper preflights grayscale decoder before cloud call and publishes re
  assert.ok(decoder>0&&packager>decoder&&cloud>packager&&grayscale>cloud);
  assert.ok(s.includes('--preview-compare'));
  assert.ok(s.includes('--hook-v5'));
+});
+
+test('malformed or repeated generated HOOK notes are rejected without changing source',async()=>{
+ const raw=await fixture();
+ const start='PHYSICAL COMPOSITION:',end='No floating lantern, hidden grip, extra hand or extra lamp.';
+ for(const note of [
+  start+' altered note',
+  end,
+  start+' repeated '+start+' '+end,
+  start+' '+end+' '+end
+ ]){
+  const item=JSON.parse(JSON.stringify(raw));
+  item.render_scenes[0].image_prompt+=' '+note;
+  const unchanged=JSON.stringify(item);
+  assert.throws(()=>prepareHookV5(item),/HOOK_NOTE_FORMAT_CHANGED/);
+  assert.equal(JSON.stringify(item),unchanged);
+ }
 });

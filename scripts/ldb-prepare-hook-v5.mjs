@@ -4,9 +4,10 @@ import {readFile,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
 export const APPROVAL_ID='75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05';
-// Keep the full packager-produced HOOK prompt below the Workers AI 2048-char
-// limit. The existing storyboard visual and physical-reference notes remain
-// intact; add only the high-priority composition/neutrality corrections.
+// Keep the original approved storyboard bytes and 16 other scenes unchanged.
+// The Python packager supplies an older 754-character PHYSICAL COMPOSITION note
+// that contradicts the newer V5 lantern pose. Replace that generated note,
+// rather than append a second redundant direction past the 2048-char limit.
 export const COMPOSITION_LOCK=[
  'HOOK-only composition lock: Three-quarter view including knees and whole lantern.',
  'Adult Cameroonian woman: patterned cloth headwrap, loose short-sleeved blouse, long patterned wrap skirt.',
@@ -25,7 +26,22 @@ export function prepareHookV5(bundle){
  const hook=prepared.render_scenes[0];
  if(hook.id!=='HOOK')throw Error('WRONG_SCENE');
  if(hook.image_prompt.includes('HOOK-only composition lock:'))throw Error('DIAGNOSTIC_ALREADY_PREPARED');
- hook.image_prompt+='\n'+COMPOSITION_LOCK;
+ const startTag='PHYSICAL COMPOSITION:';
+ const endTag='No floating lantern, hidden grip, extra hand or extra lamp.';
+ const before=hook.image_prompt;
+ const start=before.indexOf(startTag),end=before.indexOf(endTag);
+ // The expected generated HOOK notes are not an approved storyboard field.
+ // Fail closed for partially modified or repeated notes; preserve the original.
+ if(start!==-1||end!==-1){
+  if(start<0||end<start||
+     before.indexOf(startTag,start+startTag.length)!==-1||
+     before.indexOf(endTag,end+endTag.length)!==-1)
+   throw Error('HOOK_NOTE_FORMAT_CHANGED');
+  hook.image_prompt=before.slice(0,start)+COMPOSITION_LOCK+before.slice(end+endTag.length);
+ }else{
+  // Minimal synthetic/unit-test prompts do not contain packager notes.
+  hook.image_prompt+='\n'+COMPOSITION_LOCK;
+ }
  if(hook.image_prompt.length>2048)throw Error('HOOK_PROMPT_TOO_LONG');
  if(validateRenderJob(prepared).id!==validated.id)throw Error('STORYBOARD_HASH_CHANGED');
  if(prepared.storyboard_utf8!==bundle.storyboard_utf8)throw Error('STORYBOARD_TEXT_CHANGED');

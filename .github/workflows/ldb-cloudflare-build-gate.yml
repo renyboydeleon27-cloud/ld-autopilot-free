@@ -9,6 +9,8 @@ on:
       - 'scripts/ldb-cloudflare-isolated-probe-gate.mjs'
       - 'scripts/ldb-live-binding-probe.mjs'
       - 'tests/ldb-isolated-probe-config.test.mjs'
+      - 'scripts/ldb-prepare-hook-v5.mjs'
+      - 'tests/ldb-prepare-hook-v5.test.mjs'
       - '.github/workflows/ldb-cloudflare-build-gate.yml'
   workflow_dispatch:
 
