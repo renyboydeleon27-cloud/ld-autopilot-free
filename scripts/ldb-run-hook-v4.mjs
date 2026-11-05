@@ -16,3 +16,10 @@ if(audit.delivery_ready!==false||audit.visual_check!=='PENDING')throw Error('INV
 writeFileSync('cloudflare/ldb-runner/public/pixel-audit.json',JSON.stringify(audit,null,2)+'\n');
 console.log('Pixel audit: '+audit.structural_check+'; visual approval still required.');
 
+
+// Persist correction separately; source render and checkpoint remain immutable.
+const prepare=spawnSync('python3',['-m','scripts.ldb_prepare_rendered_image',
+ '--source','cloudflare/ldb-runner/public/HOOK.jpg',
+ '--checkpoint','cloudflare/ldb-runner/public/report.json',
+ '--destination','cloudflare/ldb-runner/public/prepared'],{stdio:'inherit'});
+if(prepare.status!==0)throw Error('CORRECTED_RENDER_PERSISTENCE_FAILED');
