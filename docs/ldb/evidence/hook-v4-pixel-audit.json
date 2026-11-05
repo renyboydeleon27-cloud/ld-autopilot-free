@@ -1,0 +1,16 @@
+{
+  "scene": "HOOK",
+  "sha256": "0932a8a4e7cfed7c7babd8b354b7facc29debf294d041ef69cb864697a4e1c46",
+  "bytes": 368754,
+  "structural_check": "FAIL",
+  "visual_check": "PENDING",
+  "delivery_ready": false,
+  "reasons": [
+    "NON_NEUTRAL_STORY_IMAGE"
+  ],
+  "width": 576,
+  "height": 1024,
+  "neutral_grayscale": false,
+  "max_channel_spread": 7,
+  "non_neutral_pixels": 330622
+}
