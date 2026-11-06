@@ -18,9 +18,10 @@ function read(path) {
 const [runner,vault]=paths.map(read);
 assert.equal(runner.name,'ner-ldb-runner-quality');
 assert.equal(vault.name,'ner-ldb-google-vault-quality');
+assert.equal(runner.vars.QUALITY_IMPORT_ENABLED,'false');
 assert.match(runner.account_id,/^[a-f0-9]{32}$/);
 assert.equal(vault.account_id,runner.account_id,'both Workers must be in the same account');
 assert.deepEqual(runner.services,[{binding:'GOOGLE_VAULT',service:vault.name}]);
-for(const k of ['RUNNER_ENABLED','FREE_PLAN_CONFIRMED','DELIVERY_BRIDGE_ENABLED','BRIDGE_PROBE_ENABLED'])assert.equal(runner.vars[k],'false');
-for(const k of ['VAULT_ENABLED','DELIVERY_BRIDGE_ENABLED','BRIDGE_PROBE_ENABLED'])assert.equal(vault.vars[k],'false');
+for(const k of ['RUNNER_ENABLED','FREE_PLAN_CONFIRMED','DELIVERY_BRIDGE_ENABLED','BRIDGE_PROBE_ENABLED','GMAIL_MILESTONES_ENABLED'])assert.equal(runner.vars[k],'false');
+for(const k of ['VAULT_ENABLED','DELIVERY_BRIDGE_ENABLED','BRIDGE_PROBE_ENABLED','GMAIL_MILESTONES_ENABLED'])assert.equal(vault.vars[k],'false');
 console.log('PASS: Both Worker configs target one account; migrations and binding valid; all production flags OFF.');

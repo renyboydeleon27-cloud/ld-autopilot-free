@@ -63,6 +63,11 @@ test('real Lake Nyos free-packager HOOK V5 remains inside Cloudflare 2048-char l
   assert.ok(hookPrompt.includes(JSON.parse(raw.storyboard_utf8).scenes.HOOK.visual));
   assert.ok(hookPrompt.includes('Moon OUTSIDE frame; NO visible moon disk.'));
   assert.ok(hookPrompt.includes('R=G=B'));
+  assert.ok(hookPrompt.includes('beside thigh'));
+  assert.ok(!hookPrompt.includes('never beside or behind'));
+  assert.equal(prepared.storyboard_utf8,raw.storyboard_utf8);
+  assert.equal(prepared.render_scenes[0].flow_prompt,raw.render_scenes[0].flow_prompt);
+  assert.equal(prepared.render_scenes[0].narration,raw.render_scenes[0].narration);
   assert.equal(validateRenderJob(prepared).id,APPROVAL_ID);
   assert.deepEqual(prepared.render_scenes.slice(1),raw.render_scenes.slice(1));
  }finally{await rm(temp,{recursive:true,force:true});}

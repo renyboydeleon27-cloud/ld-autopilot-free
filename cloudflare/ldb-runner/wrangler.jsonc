@@ -9,7 +9,9 @@
     "RUNNER_ENABLED": "false",
     "FREE_PLAN_CONFIRMED": "false",
     "DELIVERY_BRIDGE_ENABLED": "false",
-    "BRIDGE_PROBE_ENABLED": "false"
+    "BRIDGE_PROBE_ENABLED": "false",
+    "QUALITY_IMPORT_ENABLED": "false",
+    "GMAIL_MILESTONES_ENABLED": "false"
   },
   "services": [{"binding":"GOOGLE_VAULT","service":"ner-ldb-google-vault-quality"}],
   "durable_objects": {"bindings": [{"name":"LDB_COORDINATOR","class_name":"LdbCoordinator"}]},

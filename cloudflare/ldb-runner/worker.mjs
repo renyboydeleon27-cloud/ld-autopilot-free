@@ -11,9 +11,17 @@ import { createGoogleDeliveryBridge } from './google-delivery-bridge.mjs';
 import { resumeDurableApprovedDelivery } from '../../lib/ldb/resume-durable-approved-delivery.mjs';
 import { stopProduction, resumeProduction } from '../../lib/ldb/production-controls.mjs';
 import { probeGoogleVaultBinding } from './bridge-probe.mjs';
+import { notifyProductionMilestones } from '../../lib/ldb/production-milestones.mjs';
+import {isQualityImportPath,handleQualityImport} from './quality-import.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {
  async fetch(request,env) {
+  if(isQualityImportPath(new URL(request.url).pathname)){
+   if(env.RUNNER_ENABLED!=='true'||env.QUALITY_IMPORT_ENABLED!=='true'||typeof env.QUALITY_IMPORT_SECRET!=='string'||env.QUALITY_IMPORT_SECRET.length<32||env.QUALITY_IMPORT_SECRET===env.RUNNER_SECRET)return json({status:'SETUP_REQUIRED'},503);
+   const a=createHash('sha256').update(request.headers.get('Authorization')||'').digest(),b=createHash('sha256').update('Bearer '+env.QUALITY_IMPORT_SECRET).digest();
+   if(!timingSafeEqual(a,b))return json({status:'UNAUTHORIZED'},401);
+   return env.LDB_COORDINATOR.getByName('single-owner-v1').fetch(request);
+  }
   const probe=new URL(request.url).pathname==='/delivery-bridge-probe';
   // A probe is allowed while generation/upload are OFF. It requires an
   // independent owner secret and the dedicated diagnostic feature flag.
@@ -49,9 +57,13 @@ export class LdbCoordinator extends DurableObject {
      drive:bridge.drive,capacity:bridge.capacity,jobId
    })}:{})
   });
+  if(bridge&&this.env.GMAIL_MILESTONES_ENABLED==='true')await notifyProductionMilestones({storage:this.ctx.storage,notify:bridge.notifyMilestone});
  }
  async fetch(req) {
   const path=new URL(req.url).pathname;
+  if(isQualityImportPath(path))return handleQualityImport(req,{storage:this.ctx.storage,
+   enabled:this.env.QUALITY_IMPORT_ENABLED==='true',secret:this.env.QUALITY_IMPORT_SECRET,
+   createBackend:()=>createGoogleDeliveryBridge(this.env)});
   try {
    if(req.method==='GET' && path==='/delivery-next-action') {
     // Trusted server-side records only. Never accept a browser-supplied delivery plan.

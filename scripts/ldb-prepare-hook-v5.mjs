@@ -5,8 +5,8 @@ import {pathToFileURL} from 'node:url';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
 export const APPROVAL_ID='75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05';
 // Keep the full packager-produced HOOK prompt below the Workers AI 2048-char
-// limit. The existing storyboard visual and physical-reference notes remain
-// intact; add only the high-priority composition/neutrality corrections.
+// limit. Preserve the approved visual verbatim; replace the legacy physical
+// notes because they place the lantern in front, contradicting this V5 pose.
 export const COMPOSITION_LOCK=[
  'HOOK-only composition lock: Three-quarter view including knees and whole lantern.',
  'Adult Cameroonian woman: patterned cloth headwrap, loose short-sleeved blouse, long patterned wrap skirt.',
@@ -25,7 +25,14 @@ export function prepareHookV5(bundle){
  const hook=prepared.render_scenes[0];
  if(hook.id!=='HOOK')throw Error('WRONG_SCENE');
  if(hook.image_prompt.includes('HOOK-only composition lock:'))throw Error('DIAGNOSTIC_ALREADY_PREPARED');
- hook.image_prompt+='\n'+COMPOSITION_LOCK;
+ const visual=JSON.parse(prepared.storyboard_utf8).scenes.HOOK.visual;
+ // Build one consistent still prompt instead of appending contradictory notes.
+ hook.image_prompt=[
+  'IMAGE ONLY — STATIC REFERENCE STILL. Vertical 9:16. Cameroon, 1986.',
+  'Historically plausible architecture, clothing, technology and geography.',
+  'SPECIFIC DIRECTOR\'S STORYBOARD VISUAL:',visual,COMPOSITION_LOCK,
+  'No CGI, 3D, live-action or chibi. No floating lantern, hidden grip, extra hand or extra lamp.'
+ ].join('\n');
  if(hook.image_prompt.length>2048)throw Error('HOOK_PROMPT_TOO_LONG');
  if(validateRenderJob(prepared).id!==validated.id)throw Error('STORYBOARD_HASH_CHANGED');
  if(prepared.storyboard_utf8!==bundle.storyboard_utf8)throw Error('STORYBOARD_TEXT_CHANGED');
