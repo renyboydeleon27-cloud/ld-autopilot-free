@@ -208,12 +208,17 @@ test('private image staging and trusted review queue all 69 assets without uploa
  await new Checkpoints(storage).submit(id,bundle.render_scenes,{approvedBundle:bundle});
  map.set('job',{...map.get('job'),status:'IMAGES_READY',index:17,outputs:old.outputs});
  f.approvedAudit.jobId=id;
- const secret='independent-quality-review-secret-123456789';
- const options={storage,enabled:true,secret,createBackend:()=>({drive:f.drive,capacity:f.capacity})};
- const request=(path,body,headers={})=>new Request('https://runner'+path,{method:'POST',headers:{Authorization:'Bearer '+secret,...headers},body});
+ const stageSecret='independent-image-staging-secret-123456789';
+ const reviewSecret='independent-quality-review-secret-123456789';
+ const env={RUNNER_ENABLED:'true',QUALITY_IMPORT_ENABLED:'true',QUALITY_REVIEW_ENABLED:'true',
+  DELIVERY_BRIDGE_ENABLED:'true',QUALITY_IMPORT_SECRET:stageSecret,
+  QUALITY_REVIEW_SECRET:reviewSecret,RUNNER_SECRET:'runner-separate-test-secret-long-enough-12345'};
+ const options={storage,env,createBackend:()=>({drive:f.drive,capacity:f.capacity})};
+ const request=(path,body,headers={},secret=stageSecret)=>new Request('https://runner'+path,{method:'POST',headers:{Authorization:'Bearer '+secret,...headers},body});
  const noauth=await handleQualityImport(new Request('https://runner/internal/quality/image',{method:'POST'}),options);
  assert.equal(noauth.status,401);
- const disabled=await handleQualityImport(request('/internal/quality/review','{}'),{...options,enabled:false});
+ const disabled=await handleQualityImport(request('/internal/quality/review','{}',{},reviewSecret),
+  {...options,env:{...env,QUALITY_REVIEW_ENABLED:'false'}});
  assert.equal(disabled.status,503);
  for(let i=0;i<17;i++){
   const audit=f.normalized.audits[i];
@@ -225,9 +230,11 @@ test('private image staging and trusted review queue all 69 assets without uploa
  }
  assert.equal(map.has('delivery'),false,'staging alone does not approve delivery');
  assert.equal(f.uploads.size,0);
- const rejected=await handleQualityImport(request('/internal/quality/review',JSON.stringify({approvedAudit:{...f.approvedAudit,reviewerVerified:false}})),options);
+ const stageCannotApprove=await handleQualityImport(request('/internal/quality/review',JSON.stringify({approvedAudit:f.approvedAudit})),options);
+ assert.equal(stageCannotApprove.status,401);
+ const rejected=await handleQualityImport(request('/internal/quality/review',JSON.stringify({approvedAudit:{...f.approvedAudit,reviewerVerified:false}}),{},reviewSecret),options);
  assert.equal(rejected.status,409);assert.equal(map.has('delivery'),false);
- const response=await handleQualityImport(request('/internal/quality/review',JSON.stringify({approvedAudit:f.approvedAudit})),options);
+ const response=await handleQualityImport(request('/internal/quality/review',JSON.stringify({approvedAudit:f.approvedAudit}),{},reviewSecret),options);
  assert.equal(response.status,202);
  assert.equal((await response.json()).assets,69);
  assert.equal(map.get('delivery').status,'QUEUED');

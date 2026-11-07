@@ -86,7 +86,7 @@ test('one real staged image stays queued for review; staging-only credential can
  assert.equal((await stage.json()).status,'STAGED');
  assert.equal(creates,0);
  assert.equal(f.map.has('delivery'),false);
- assert.equal(f.map.get('prepared-audit:'+jobId+':HOOK).sha256,sha(normalized));
+ assert.equal(f.map.get('prepared-audit:'+jobId+':HOOK').sha256,sha(normalized));
  for(const attempted of [
   req('review',STAGE,'POST',{headers:{'Content-Type':'application/json'},body:JSON.stringify({approvedAudit:{jobId,status:'PASS',reviewerVerified:true}})}),
   req('review',REVIEW,'POST',{headers:{'Content-Type':'application/json'},body:JSON.stringify({approvedAudit:{jobId,status:'PASS',reviewerVerified:true}})})
