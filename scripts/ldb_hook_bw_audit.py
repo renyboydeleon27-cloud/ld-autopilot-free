@@ -88,9 +88,15 @@ def verify_v5_execution(source, raw):
         out.get("scene") != "HOOK",
         out.get("sha256") != digest(raw),
         out.get("bytes") != len(raw),
-        out.get("width") != EXPECTED_SIZE[0],
-        out.get("height") != EXPECTED_SIZE[1],
+        # The authenticated Runner /status projection deliberately omits
+        # width/height, unlike its internal durable image metadata. The JPEG
+        # itself is decoded and checked for 576x1024 in load_source().
+        # If both dimensions ARE supplied, they must still match; a partial
+        # or contradictory dimension pair is an invalid report.
+        (("width" in out or "height" in out) and
+         (out.get("width") != EXPECTED_SIZE[0] or out.get("height") != EXPECTED_SIZE[1])),
         out.get("mimeType") != "image/jpeg",
+        out.get("visualAudit") not in (None, "PENDING"),
     )):
         raise ReviewError("V5_CLOUD_REPORT_MISMATCH")
     return report

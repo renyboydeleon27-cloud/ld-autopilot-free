@@ -106,6 +106,81 @@ class HookBlackWhiteReviewTests(unittest.TestCase):
         again = make_review(self.raw, self.review, preview_compare=True)
         self.assertEqual(again, report)
 
+
+    def test_real_runner_status_projection_omits_dimensions_but_checked_jpeg_remains_valid(self):
+        """Nov 7 V5 cloud status includes hash and bytes, but omits width/height."""
+        self.raw = self.root / "HOOK.jpg"
+        self.review = self.root / "review-only"
+        self.make_jpeg()
+        initial = self.raw.read_bytes()
+        (self.root / "index.html").write_text("<h1>HOOK original</h1>", encoding="utf-8")
+        evidence = {
+            "worker": "ner-ldb-runner-quality-v5",
+            "status": "HOOK_CLOUD_TEST_PASSED",
+            "checkpointStatus": "TEST_PAUSED",
+            "completedScenes": 1,
+            "totalScenes": 17,
+            "runtimeCredentialsRemoved": True,
+            "isolatedWorkerRemoved": True,
+            "fullAutoProduction": False,
+            "googleConnected": False,
+            "storyboard_sha256": "75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05",
+            "output": {
+                "scene": "HOOK",
+                "sha256": hashlib.sha256(initial).hexdigest(),
+                "bytes": len(initial),
+                "mimeType": "image/jpeg",
+                "visualAudit": "PENDING"
+            }
+        }
+        (self.root / "report.json").write_text(json.dumps(evidence), encoding="utf-8")
+        result = make_review(self.raw, self.review, preview_compare=True)
+        self.assertEqual(self.raw.read_bytes(), initial)
+        self.assertEqual(result["humanVisualAudit"], "PENDING")
+        self.assertFalse(result["productionDeliveryAllowed"])
+        self.assertTrue(result["correctedNeutrality"]["neutralRgbExact"])
+        self.assertTrue((self.review / "index.html").exists())
+        # Requiring metadata dimensions would have incorrectly rejected the
+        # real Nov 7 cloud result. The decoded JPEG remains size-checked.
+
+    def test_optional_status_dimensions_cannot_override_actual_image_dimensions(self):
+        self.raw = self.root / "HOOK.jpg"
+        self.review = self.root / "review-only"
+        self.make_jpeg()
+        initial = self.raw.read_bytes()
+        (self.root / "index.html").write_text("<h1>HOOK original</h1>", encoding="utf-8")
+        record = {
+            "worker": "ner-ldb-runner-quality-v5",
+            "status": "HOOK_CLOUD_TEST_PASSED",
+            "checkpointStatus": "TEST_PAUSED",
+            "completedScenes": 1,
+            "totalScenes": 17,
+            "runtimeCredentialsRemoved": True,
+            "fullAutoProduction": False,
+            "googleConnected": False,
+            "storyboard_sha256": "75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05",
+            "output": {
+                "scene": "HOOK",
+                "sha256": hashlib.sha256(initial).hexdigest(),
+                "bytes": len(initial),
+                "mimeType": "image/jpeg",
+                "visualAudit": "PENDING"
+            }
+        }
+        for extra in (
+            {"width": 1024, "height": 576},
+            {"width": 576},
+            {"height": 1024},
+            {"visualAudit": "PASS"},
+            {"sha256": "0" * 64}
+        ):
+            report = {**record, "output": {**record["output"], **extra}}
+            (self.root / "report.json").write_text(json.dumps(report), encoding="utf-8")
+            with self.assertRaisesRegex(ReviewError, "V5_CLOUD_REPORT_MISMATCH"):
+                make_review(self.raw, self.review, preview_compare=True)
+            self.assertFalse(self.review.exists())
+        self.assertEqual(self.raw.read_bytes(), initial)
+
     def test_preview_mode_rejects_unrelated_source_without_creating_public_page(self):
         self.make_jpeg()
         with self.assertRaisesRegex(ReviewError, "INVALID_PREVIEW_COMPARISON_LOCATION"):
