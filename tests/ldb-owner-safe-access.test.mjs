@@ -29,7 +29,7 @@ test('unauthorized start, resume, render or data writes are blocked if Free flag
  for(const [method,path] of [
   ['POST','/jobs'],['POST','/resume'],['POST','/images/HOOK'],
   ['GET','/jobs'],['GET','/stop'],['POST','/status'],
-  ['GET','/images/P15'],['GET','/images/../../status'],
+  ['GET','/images/P15'],['GET','/images/P1%2Fstatus'],
   ['GET','/delivery-progress'],['POST','/delivery-readiness'],
   ['POST','/delivery-next-action']
  ]){
