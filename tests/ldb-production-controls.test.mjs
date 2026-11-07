@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {stopProduction,resumeProduction} from '../lib/ldb/production-controls.mjs';
+import {stopProduction,resumeProduction,resumeApprovedDeliveryOnly} from '../lib/ldb/production-controls.mjs';
 import {dispatchCoordinatorAlarm} from '../cloudflare/ldb-runner/delivery-alarm.mjs';
 import {validateDeliveryPlan} from '../lib/ldb/production-delivery.mjs';
 const hash=s=>createHash('sha256').update(String(s)).digest('hex');
@@ -110,4 +110,45 @@ test('Free inference OFF never bypasses STOP, missing bridge, forged checkpoint 
   assert.notEqual(result.status,'DELIVERY_TICK',mode);
   assert.equal(calls,0,mode);
  }
+});
+
+
+test('approved delivery can be safely resumed without calling the image provider',async()=>{
+ const f=setup();
+ await stopProduction(f);
+ const response=await resumeApprovedDeliveryOnly({...f,deliveryEnabled:true,now:()=>100});
+ assert.equal(response.status,'DELIVERY_RESUMED');
+ assert.equal(f.data.get('job').status,'IMAGES_READY');
+ assert.equal(f.data.get('job').stop,false);
+ assert.equal(f.data.get('delivery').stopped,false);
+ assert.equal(f.metrics.coreResume,0,'no image resume was allowed');
+ assert.equal(f.metrics.alarmCount,1,'one delivery alarm scheduled');
+});
+test('delivery-only Resume fails closed for incomplete images, tampering or missing bridge',async()=>{
+ for(const mode of ['QUEUED','NO_DELIVERY','BAD_FINGERPRINT','MISSING_REVIEW','NO_CONNECTOR','ACTIVE_UPLOAD']){
+  const f=setup({imageStatus:mode==='QUEUED'?'QUEUED':'IMAGES_READY',withDelivery:mode!=='NO_DELIVERY'});
+  await stopProduction(f);
+  if(mode==='BAD_FINGERPRINT')f.data.get('delivery').fingerprint='c'.repeat(64);
+  if(mode==='MISSING_REVIEW')f.data.get('delivery').plan.visualAudit='PENDING';
+  if(mode==='ACTIVE_UPLOAD') {
+   const d=f.data.get('delivery');d.stopped=true;d.status='UPLOADING';
+  }
+  await assert.rejects(
+   resumeApprovedDeliveryOnly({...f,deliveryEnabled:mode!=='NO_CONNECTOR'}),
+   /DELIVERY_ONLY_RESUME_NOT_ALLOWED|INVALID_DELIVERY_CHECKPOINT|DELIVERY_CONNECTOR_DISABLED|RESUME_NOT_SAFE/,
+   mode
+  );
+  assert.equal(f.metrics.coreResume,0,'image resume blocked: '+mode);
+  assert.equal(f.metrics.alarmCount,0,'no delivery alarm triggered: '+mode);
+ }
+});
+test('delivery-only Resume rejects unstopped or already completed jobs',async()=>{
+ const running=setup();
+ await assert.rejects(resumeApprovedDeliveryOnly({...running,deliveryEnabled:true}),
+  /DELIVERY_ONLY_RESUME_NOT_ALLOWED/);
+ const completed=setup({deliveryStatus:'COMPLETE'});
+ assert.equal((await stopProduction(completed)).status,'ALREADY_COMPLETE');
+ await assert.rejects(resumeApprovedDeliveryOnly({...completed,deliveryEnabled:true}),
+  /DELIVERY_ONLY_RESUME_NOT_ALLOWED/);
+ assert.equal(completed.metrics.coreResume,0);
 });

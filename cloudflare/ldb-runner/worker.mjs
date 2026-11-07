@@ -12,7 +12,7 @@ import { deliveryNextAction } from '../../lib/ldb/delivery-coordinator-gate.mjs'
 import { dispatchCoordinatorAlarm } from './delivery-alarm.mjs';
 import { createGoogleDeliveryBridge } from './google-delivery-bridge.mjs';
 import { resumeDurableApprovedDelivery } from '../../lib/ldb/resume-durable-approved-delivery.mjs';
-import { stopProduction, resumeProduction } from '../../lib/ldb/production-controls.mjs';
+import { stopProduction, resumeProduction, resumeApprovedDeliveryOnly } from '../../lib/ldb/production-controls.mjs';
 import { probeGoogleVaultBinding } from './bridge-probe.mjs';
 import { notifyProductionMilestones } from '../../lib/ldb/production-milestones.mjs';
 import {isQualityImportPath,qualityImportGate,handleQualityImport} from './quality-import.mjs';
@@ -109,6 +109,17 @@ export class LdbCoordinator extends DurableObject {
     let connectorReady=false;
     try{createGoogleDeliveryBridge(this.env);connectorReady=true;}catch{/* Fail closed. */}
     const outcome=await resumeProduction({core:this.core,storage:this.ctx.storage,deliveryEnabled:connectorReady});
+    return json({ok:true,...outcome});
+   }
+   if(req.method==='POST' && path==='/resume-delivery'){
+    // Dedicated path: the edge requires owner auth + RUNNER_ENABLED + bridge,
+    // then this Durable Object checks the immutable reviewed 69-file plan.
+    // This can NEVER resume image generation or bypass the Free AI gate.
+    try{createGoogleDeliveryBridge(this.env);}
+    catch{return json({status:'DELIVERY_CONNECTOR_DISABLED'},503);}
+    const outcome=await resumeApprovedDeliveryOnly({
+      core:this.core,storage:this.ctx.storage,deliveryEnabled:true
+    });
     return json({ok:true,...outcome});
    }
    if(req.method==='POST' && path==='/jobs') {

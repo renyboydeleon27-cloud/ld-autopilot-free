@@ -73,3 +73,38 @@ test('safe routes with extra path segments cannot bypass Free-plan gate',async()
   assert.deepEqual(await code(ownerAccessGate(request(path),disabled)),{http:503,code:'SETUP_REQUIRED'});
  }
 });
+
+
+test('delivery-only Resume is owner-authenticated while Free inference is OFF',async()=>{
+ const settings={...disabled,RUNNER_ENABLED:'true',DELIVERY_BRIDGE_ENABLED:'true'};
+ assert.equal(isOwnerSafeRoute(request('/resume-delivery','POST')),false,
+  'delivery resume is NOT a generic safety path');
+ assert.equal(ownerAccessGate(request('/resume-delivery','POST'),settings),null);
+ assert.deepEqual(await code(ownerAccessGate(request('/resume-delivery','POST',null),settings)),
+  {http:401,code:'UNAUTHORIZED'});
+ assert.deepEqual(await code(ownerAccessGate(request('/resume-delivery','POST','wrong'),settings)),
+  {http:401,code:'UNAUTHORIZED'});
+ // The existing /resume remains blocked to prevent image inference.
+ assert.deepEqual(await code(ownerAccessGate(request('/resume','POST'),settings)),
+  {http:503,code:'SETUP_REQUIRED'});
+});
+test('delivery Resume requires both master RUNNER switch and private bridge',async()=>{
+ for(const settings of [
+  {...disabled,DELIVERY_BRIDGE_ENABLED:'true'},
+  {...disabled,RUNNER_ENABLED:'true',DELIVERY_BRIDGE_ENABLED:'false'},
+  {...disabled,RUNNER_ENABLED:'true',DELIVERY_BRIDGE_ENABLED:undefined},
+  {...disabled,RUNNER_ENABLED:'true',DELIVERY_BRIDGE_ENABLED:'true',RUNNER_SECRET:'short'}
+ ]){
+  assert.deepEqual(await code(ownerAccessGate(request('/resume-delivery','POST'),settings)),
+   {http:503,code:'SETUP_REQUIRED'});
+ }
+ const settings={...disabled,RUNNER_ENABLED:'true',DELIVERY_BRIDGE_ENABLED:'true'};
+ for(const [method,path] of [
+  ['GET','/resume-delivery'],['POST','/resume-delivery/'],
+  ['POST','/resume-delivery/reset'],['POST','/resume-delivery%2Fretry'],
+  ['PUT','/resume-delivery']
+ ]){
+  assert.deepEqual(await code(ownerAccessGate(request(path,method),settings)),
+   {http:503,code:'SETUP_REQUIRED'},method+' '+path);
+ }
+});

@@ -14,6 +14,7 @@ export function isOwnerSafeRoute(req){
 export function ownerAccessGate(req,env={}){
  const path=new URL(req.url).pathname;
  const probe=path==='/delivery-bridge-probe';
+ const deliveryResume=req.method==='POST'&&path==='/resume-delivery';
  const ownerSafe=isOwnerSafeRoute(req);
  const secret=env.RUNNER_SECRET;
  if(typeof secret!=='string'||secret.length<32)return deny(503,'SETUP_REQUIRED');
@@ -21,6 +22,11 @@ export function ownerAccessGate(req,env={}){
  // Even authenticated callers cannot start or resume with Free-plan OFF.
  if(probe){
   if(env.BRIDGE_PROBE_ENABLED!=='true')return deny(503,'SETUP_REQUIRED');
+ }else if(deliveryResume){
+  // Delivery-only Resume is never an AI resume and requires the live master
+  // switch and private Google bridge. The DO rechecks all approved assets.
+  if(env.RUNNER_ENABLED!=='true'||env.DELIVERY_BRIDGE_ENABLED!=='true')
+   return deny(503,'SETUP_REQUIRED');
  }else if(!ownerSafe&&(env.RUNNER_ENABLED!=='true'||env.FREE_PLAN_CONFIRMED!=='true')){
   return deny(503,'SETUP_REQUIRED');
  }
