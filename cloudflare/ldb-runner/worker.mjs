@@ -40,7 +40,9 @@ export default {
 export class LdbCoordinator extends DurableObject {
  constructor(ctx,env) {super(ctx,env);this.core=new Checkpoints(ctx.storage,{maxScenes:env.HOOK_ONLY_TEST==='true'?1:17,initialDelay:env.HOOK_ONLY_TEST==='true'?30000:1000,render:prompt=>generateImage({prompt,env,freePlanConfirmed:env.FREE_PLAN_CONFIRMED==='true'})});}
  async alarm() {
-  if(this.env.RUNNER_ENABLED!=='true'||this.env.FREE_PLAN_CONFIRMED!=='true')return;
+  // Master RUNNER_ENABLED stops all background work. The Free quota flag
+  // gates AI generation only, not explicitly reviewed Google delivery.
+  if(this.env.RUNNER_ENABLED!=='true')return;
   // Inert by default. Only a fully audited, persisted 69-asset delivery
   // checkpoint can pass dispatchCoordinatorAlarm's trusted readiness gate.
   // Google access and refresh tokens remain inside the separate vault Worker.
@@ -49,6 +51,7 @@ export class LdbCoordinator extends DurableObject {
    try{bridge=createGoogleDeliveryBridge(this.env);}catch{/* Stay disabled if configuration is missing. */}
   }
   await dispatchCoordinatorAlarm({storage:this.ctx.storage,imageCore:this.core,
+   imageEnabled:this.env.FREE_PLAN_CONFIRMED==='true',
    deliveryEnabled:bridge!==null,
    ...(bridge?{createDelivery:({jobId})=>resumeDurableApprovedDelivery({
      deliveryStorage:this.ctx.storage,imageStorage:this.ctx.storage,textStorage:this.ctx.storage,

@@ -6,7 +6,7 @@ import {deliveryReadiness} from '../../lib/ldb/delivery-readiness.mjs';
 const IMAGE_TERMINAL=new Set(['IMAGES_READY','TEST_PAUSED','NEEDS_REVIEW','STOPPED']);
 const DELIVERY_HOLD=new Set(['COMPLETE','NEEDS_REVIEW','WAITING_STORAGE','STOPPED']);
 
-export async function dispatchCoordinatorAlarm({storage,imageCore,deliveryEnabled=false,createDelivery}={}){
+export async function dispatchCoordinatorAlarm({storage,imageCore,imageEnabled=true,deliveryEnabled=false,createDelivery}={}){
  if(!storage||typeof storage.get!=='function'||!imageCore||
     typeof imageCore.status!=='function'||typeof imageCore.tick!=='function')
   throw Error('TRUSTED_ALARM_BACKEND_REQUIRED');
@@ -14,6 +14,8 @@ export async function dispatchCoordinatorAlarm({storage,imageCore,deliveryEnable
  // STOP must prevent Drive alarms even when all images are ready.
  if(job?.stop===true)return {status:'PRODUCTION_PAUSED'};
  if(job&&!IMAGE_TERMINAL.has(job.status)){
+  // No new provider request while Free plan is unverified.
+  if(imageEnabled!==true)return {status:'IMAGE_GENERATION_DISABLED'};
   await imageCore.tick();
   return {status:'IMAGE_TICK'};
  }

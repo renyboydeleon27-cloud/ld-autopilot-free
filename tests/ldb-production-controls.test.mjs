@@ -71,3 +71,43 @@ test('during image generation STOP/RESUME uses existing Checkpoints logic',async
  assert.equal((await stopProduction(f)).status,'IMAGE_STOP_REQUESTED');assert.equal(f.metrics.coreStop,1);
  assert.equal((await resumeProduction(f)).status,'IMAGE_RESUMED');assert.equal(f.metrics.coreResume,1);
 });
+
+test('Free inference OFF cannot tick incomplete images even with Google delivery configured',async()=>{
+ for(const status of ['QUEUED','RENDERING','WAITING_QUOTA']){
+  const f=setup({imageStatus:status});
+  let calls=0;
+  const result=await dispatchCoordinatorAlarm({
+   storage:f.storage,imageCore:f.core,imageEnabled:false,
+   deliveryEnabled:true,createDelivery:()=>{calls++;return {tick:async()=>{calls++;}};}
+  });
+  assert.equal(result.status,'IMAGE_GENERATION_DISABLED');
+  assert.equal(calls,0,'no uploads or provider requests on incomplete batch');
+ }
+});
+test('Free inference OFF still permits previously reviewed immutable Google delivery',async()=>{
+ const f=setup(),calls=[];
+ const result=await dispatchCoordinatorAlarm({
+  storage:f.storage,imageCore:f.core,imageEnabled:false,
+  deliveryEnabled:true,createDelivery:({jobId})=>{
+   calls.push('coordinator:'+jobId);return {tick:async()=>calls.push('verified-delivery-tick')};
+  }
+ });
+ assert.equal(result.status,'DELIVERY_TICK');
+ assert.deepEqual(calls,['coordinator:'+f.p.jobId,'verified-delivery-tick']);
+});
+test('Free inference OFF never bypasses STOP, missing bridge, forged checkpoint or missing review',async()=>{
+ for(const mode of ['STOP','NO_BRIDGE','FORGED','NOT_REVIEWED','NO_DELIVERY']){
+  const f=setup({withDelivery:mode!=='NO_DELIVERY'});
+  if(mode==='STOP')f.data.get('job').stop=true;
+  if(mode==='FORGED')f.data.get('delivery').fingerprint='f'.repeat(64);
+  if(mode==='NOT_REVIEWED')f.data.get('delivery').plan.visualAudit='PENDING';
+  let calls=0;
+  const result=await dispatchCoordinatorAlarm({
+   storage:f.storage,imageCore:f.core,imageEnabled:false,
+   deliveryEnabled:mode!=='NO_BRIDGE',
+   createDelivery:()=>{calls++;return {tick:async()=>{calls++}}}
+  });
+  assert.notEqual(result.status,'DELIVERY_TICK',mode);
+  assert.equal(calls,0,mode);
+ }
+});
