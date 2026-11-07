@@ -24,3 +24,12 @@ A review handoff could start 69-file preparation before the owner pressed STOP. 
 The trusted submitDurableApprovedDelivery path now passes a fail-closed queueGuard into ProductionDelivery.submit. The guard runs INSIDE the delivery storage transaction before writing any queue checkpoint. It requires the immutable original 17 image identities and hashes, exact job ID, IMAGES_READY, index 17 and the current stop flag not true. On the actual LdbCoordinator, image and delivery records share the same Durable Object storage, providing a common transactional boundary. Synthetic tests with separate stores read the live source but are not claimed to offer cross-store atomicity.
 
 Added race tests for STOP before queue, shared-store Durable Object STOP, and image metadata replacement. Every test must reject without creating a delivery checkpoint or uploading to Google. No inference, deployment, paid service, email or production-flag changes.
+
+
+## Authenticated STOP and read-only monitoring while Free inference is disabled — November 7, 2026
+
+The former Runner Worker gate required `FREE_PLAN_CONFIRMED=true` before **every** owner request, including `GET /status` and `POST /stop`. If an operator safely disabled AI generation, they could accidentally lose STOP/status access at the same time.
+
+The new pure route helper `cloudflare/ldb-runner/owner-access.mjs` permits only **exact owner-authenticated** GET /status, /delivery-readiness, /delivery-next-action, /images/{valid-scene} and POST /stop when `RUNNER_ENABLED` and/or `FREE_PLAN_CONFIRMED` is OFF. The strong `RUNNER_SECRET` is still mandatory and verified at the Worker edge using timing-safe comparison. No credentials are exposed publicly. Starting a job, resuming inference, other HTTP methods/paths, and every other command remain blocked unless both feature flags are enabled; the independent binding probe keeps its previous opt-in flag. The actual Durable Object alarm remains disabled whenever Free confirmation is OFF.
+
+This is a development-branch safety correction, **not** permission to bypass Free quota checks or connect a paid provider. New regression tests cover auth denial, strict method/path allowlist, legacy gate, secret misconfiguration and probe behavior. No Cloudflare call, Drive upload, Gmail send or production merge.

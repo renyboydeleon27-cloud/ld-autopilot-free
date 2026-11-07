@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { DurableObject } from 'cloudflare:workers';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash } from 'node:crypto';
+import { ownerAccessGate } from './owner-access.mjs';
 import { Checkpoints, SCENES } from './checkpoints.mjs';
 import { validateRenderJob } from '../../lib/ldb/approved-render-job.mjs';
 import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
@@ -23,14 +24,10 @@ export default {
    return env.LDB_COORDINATOR.getByName('single-owner-v1').fetch(request);
   }
   const probe=new URL(request.url).pathname==='/delivery-bridge-probe';
-  // A probe is allowed while generation/upload are OFF. It requires an
-  // independent owner secret and the dedicated diagnostic feature flag.
-  if(typeof env.RUNNER_SECRET!=='string'||env.RUNNER_SECRET.length<32 ||
-     (probe?env.BRIDGE_PROBE_ENABLED!=='true':env.RUNNER_ENABLED!=='true'||env.FREE_PLAN_CONFIRMED!=='true'))
-   return json({status:'SETUP_REQUIRED'},503);
-  const provided=request.headers.get('Authorization')||'';
-  const a=createHash('sha256').update(provided).digest(),b=createHash('sha256').update(`Bearer ${env.RUNNER_SECRET}`).digest();
-  if(!timingSafeEqual(a,b))return json({status:'UNAUTHORIZED'},401);
+  // Keep owner safety/read-only routes reachable even when inference or the
+  // daily Free-plan confirmation is OFF. All routes still require owner auth.
+  const denied=ownerAccessGate(request,env);
+  if(denied)return denied;
   if(probe){
    if(request.method!=='GET')return json({status:'METHOD_NOT_ALLOWED'},405);
    try{return json(await probeGoogleVaultBinding(env));}
