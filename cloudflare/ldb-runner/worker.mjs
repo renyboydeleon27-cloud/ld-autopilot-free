@@ -7,6 +7,7 @@ import { validateRenderJob } from '../../lib/ldb/approved-render-job.mjs';
 import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
 import { deliveryReadiness } from '../../lib/ldb/delivery-readiness.mjs';
 import { productionProgressSnapshot } from '../../lib/ldb/production-progress.mjs';
+import { productionAcceptanceSnapshot, readMilestoneReceipts } from '../../lib/ldb/production-acceptance.mjs';
 import { deliveryNextAction } from '../../lib/ldb/delivery-coordinator-gate.mjs';
 import { dispatchCoordinatorAlarm } from './delivery-alarm.mjs';
 import { createGoogleDeliveryBridge } from './google-delivery-bridge.mjs';
@@ -81,7 +82,9 @@ export class LdbCoordinator extends DurableObject {
     // Read-only and owner-authenticated at the edge. Never claim 100% from
     // just image generation or from untrusted Drive/visual-review metadata.
     const [job,delivery]=await Promise.all([this.core.status(),this.ctx.storage.get('delivery')]);
-    return json(productionProgressSnapshot({job,delivery}));
+    const receipts=await readMilestoneReceipts(this.ctx.storage,job?.id);
+    return json({...productionProgressSnapshot({job,delivery}),
+     acceptance:productionAcceptanceSnapshot({job,delivery,receipts})});
    }
    if(req.method==='GET' && /^\/images\/(HOOK|P[1-9]|P1[0-4]|ENDING|THUMBNAIL)$/.test(path)) {
     const scene=path.split('/').at(-1),j=await this.core.status();
