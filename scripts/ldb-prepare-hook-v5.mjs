@@ -8,13 +8,13 @@ export const APPROVAL_ID='75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b7
 // limit. Preserve the approved visual verbatim; replace the legacy physical
 // notes because they place the lantern in front, contradicting this V5 pose.
 export const COMPOSITION_LOCK=[
- 'HOOK-only composition lock: Three-quarter view including knees and whole lantern.',
+ 'HOOK-only composition lock: Close three-quarter view including knees and whole lantern; doorway and hut wall fill the background.',
  'Adult Cameroonian woman: patterned cloth headwrap, loose short-sleeved blouse, long patterned wrap skirt.',
- 'Torso sags toward post, knees slightly bent, tired worried face looking downward.',
- 'LEFT SHOULDER touches wooden doorpost; left palm flat on wood.',
+ 'Her weight rests on the post: slumped torso, visibly bent knees, lowered chin and tired worried downward gaze.',
+ 'LEFT SHOULDER pressed directly against wooden doorpost with zero gap; left upper arm close to torso, left palm resting on wood.',
  'RIGHT HAND wraps five natural fingers around TOP HANDLE of ONE lantern hanging vertically beside thigh under gravity; arm naturally lowered.',
- 'Lantern OFF: black wick, dark glass, no flame, glow or halo.',
- 'Moon OUTSIDE frame; NO visible moon disk. Faint ambient night light only.',
+ 'The extinguished lantern is a dark object: black wick, charcoal-gray glass interior as dark as its metal frame. No white center, flame, glow, halo or emitted light.',
+ 'Moon OUTSIDE frame; NO visible moon disk. Crop out the sky entirely; background contains only wooden doorway and dark thatched hut. Dim diffuse ambient light.',
  'Strict BLACK, WHITE, neutral GRAY with R=G=B; flat hand-inked historical 2D anime.',
  'No color, sepia, photorealism, text or watermark.'
 ].join(' ');
