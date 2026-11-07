@@ -52,3 +52,8 @@ The V5-only test runner now checks whether Pillow is available **before** any Cl
 
 ### V5 visual review evidence guard (November 4, 2026)
 In `--preview-compare` mode the Python reviewer now refuses to emit any files unless an adjacent V5 cloud execution `report.json` proves the exact isolated Worker, one saved HOOK, `TEST_PAUSED`, runtime credential cleanup, the immutable approved storyboard hash, original JPEG byte count and SHA-256, 576x1024 dimensions, and no full production or Google delivery. The report check runs **before** creating the review folder. No image generation, Google access, account configuration, or production update occurs. New regression tests cover missing evidence, V4 substitution, forged checksum, wrong dimensions, wrong storyboard, attempted Google delivery, and incomplete cleanup.
+
+
+### V5 isolated test Worker cleanup — November 7, 2026 (code-only)
+
+The one-HOOK V5 acceptance script previously deleted the temporary owner runtime secret but left the disposable V5 Worker script in the Cloudflare account. The safe V5 runner now marks the Worker creation attempt before PUT (covering an ambiguous transport outcome), deletes the temporary owner secret, and then **deletes only** the approved `ner-ldb-runner-quality-v5` Worker. Historical V4 test resources and normal quality/production Workers are explicitly outside the cleanup target. Cleanup runs on both successful and failed rendering, and a deletion failure returns a hard failure rather than a false success report. For a successful V5 report, `isolatedWorkerRemoved:true` records that the cleanup API responded successfully. No live Cloudflare calls were made for this code-only change; full cleanup remains to be verified in the next authorized Free-plan V5 test.

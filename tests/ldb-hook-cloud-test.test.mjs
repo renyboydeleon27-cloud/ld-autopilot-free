@@ -61,7 +61,8 @@ test('V5 uses a new isolated Worker and preserves original V4 evidence',async()=
  assert.equal(puts,1);
  assert.equal(result.report.worker,'ner-ldb-runner-quality-v5');
  assert.equal(result.report.completedScenes,1);
- assert.deepEqual(h.removed,['RUNNER_SECRET']);
+ assert.deepEqual(h.removed,['RUNNER_SECRET','ner-ldb-runner-quality-v5']);
+ assert.equal(result.report.isolatedWorkerRemoved,true);
  assert.equal(h.getSubmits(),1);
 });
 test('worker names outside explicit V4/V5 allowlist never reach Cloudflare',async()=>{
@@ -79,4 +80,43 @@ test('V5 CLI refuses local or Production execution before any Cloudflare call',(
  ])assert.throws(()=>assertV5PreviewScope({args,env}),/V5_PREVIEW_ONLY|V5_APPROVED_BRANCH_REQUIRED/);
  assert.equal(assertV5PreviewScope({args,env:{VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance'}}),true);
  assert.equal(assertV5PreviewScope({args:args.filter(a=>a!=='--hook-v5'),env:{VERCEL_ENV:'production'}}),true);
+});
+
+test('V5 render failure cleans secret and isolated Worker without another AI request',async()=>{
+ const h=await harness(true);
+ const originalRead=h.options.read;
+ const read=async path=>{
+  const raw=await originalRead(path);
+  if(path.endsWith('render_job.json')){
+   const {prepareHookV5}=await import('../scripts/ldb-prepare-hook-v5.mjs');
+   return JSON.stringify(prepareHookV5(JSON.parse(raw)));
+  }
+  return raw;
+ };
+ await assert.rejects(hookCloudTest({...h.options,read,workerName:'ner-ldb-runner-quality-v5'}),/RENDER_NEEDS_REVIEW/);
+ assert.deepEqual(h.removed,['RUNNER_SECRET','ner-ldb-runner-quality-v5']);
+ assert.equal(h.getSubmits(),1);
+});
+test('V5 cleanup deletion failure never returns a success report',async()=>{
+ const h=await harness();
+ const originalRead=h.options.read,originalFetch=h.options.fetcher,removed=[];
+ const read=async path=>{
+  const raw=await originalRead(path);
+  if(path.endsWith('render_job.json')){
+   const {prepareHookV5}=await import('../scripts/ldb-prepare-hook-v5.mjs');
+   return JSON.stringify(prepareHookV5(JSON.parse(raw)));
+  }
+  return raw;
+ };
+ const fetcher=async(url,opts={})=>{
+  if(url.endsWith('/scripts/ner-ldb-runner-quality-v5')&&opts.method==='DELETE'){
+   removed.push('DELETE_V5_ATTEMPTED');
+   return Response.json({success:false,errors:[]},{status:503});
+  }
+  return originalFetch(url,opts);
+ };
+ await assert.rejects(hookCloudTest({...h.options,read,fetcher,workerName:'ner-ldb-runner-quality-v5'}),/TEST_RUNTIME_CLEANUP_FAILED/);
+ assert.deepEqual(removed,['DELETE_V5_ATTEMPTED']);
+ assert.ok(h.removed.includes('RUNNER_SECRET'),'secret must be removed even when delete fails');
+ assert.equal(h.getSubmits(),1,'deletion failure must not trigger another render');
 });

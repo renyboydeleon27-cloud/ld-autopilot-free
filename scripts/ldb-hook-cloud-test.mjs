@@ -46,8 +46,11 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
  {name:'AI',type:'ai'},{name:'RUNNER_SECRET',type:'secret_text',text:key}];
  const form=new FormData();form.set('metadata',new Blob([JSON.stringify({main_module:entry,compatibility_date:'2026-10-28',compatibility_flags:['nodejs_compat'],bindings,migrations:{new_tag:'v1',new_sqlite_classes:['LdbCoordinator']}})],{type:'application/json'}));
  for(const [path,source] of modules)form.set(path,new Blob([source],{type:'application/javascript+module'}),path);
- let result,bytes,primaryError;
+ let result,bytes,primaryError,workerPutAttempted=false;
  try {
+  // Mark attempt BEFORE the HTTP call. A transport timeout can still have
+  // created a Worker; cleanup must run for that ambiguous outcome.
+  workerPutAttempted=true;
   await api(`/scripts/${workerName}`,{method:'PUT',body:form});
   await api(`/scripts/${workerName}/subdomain`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:true,previews_enabled:false})});
   const call=async(path,method='GET',body)=>{
@@ -79,12 +82,25 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
   if(persisted.id!==validated.id||persisted.completedScenes!==1)throw Error('CHECKPOINT_VERIFICATION_FAILED');
   result={status:'HOOK_CLOUD_TEST_PASSED',worker:workerName,storyboard_sha256:validated.id,unauthenticatedBlocked:true,stopBeforeRender:true,resumeStartedRender:true,completedScenes:1,totalScenes:17,checkpointStatus:job.status,output:job.outputs[0],fullAutoProduction:false,googleConnected:false,verifiedAt:new Date().toISOString()};
  }catch(e){primaryError=e}
- // Remove temporary runtime credentials even on a failed acceptance test.
+ // Remove credentials even when cloud rendering failed or timed out.
+ // V5 is an isolated disposable diagnostic, so also remove its *own*
+ // Worker script. Never delete historical V4 or production quality Workers.
  const cleanup=[];
- for(const name of ['RUNNER_SECRET'])try{await api(`/scripts/${workerName}/secrets/${name}`,{method:'DELETE'});}catch{cleanup.push(name)}
- if(cleanup.length)throw Error('TEST_SECRET_CLEANUP_FAILED');
+ for(const name of ['RUNNER_SECRET'])try{
+  await api(`/scripts/${workerName}/secrets/${name}`,{method:'DELETE'});
+ }catch{cleanup.push('RUNNER_SECRET')}
+ let isolatedWorkerRemoved=false;
+ if(workerName===V5_NAME&&workerPutAttempted){
+  try{
+   await api(`/scripts/${workerName}`,{method:'DELETE'});
+   isolatedWorkerRemoved=true;
+  }catch{cleanup.push('ISOLATED_V5_WORKER')}
+ }
+ // Fail closed: never publish evidence as PASS after a failed cleanup.
+ if(cleanup.length)throw Error('TEST_RUNTIME_CLEANUP_FAILED');
  if(primaryError)throw primaryError;
- return {report:{...result,runtimeCredentialsRemoved:true},bytes};
+ return {report:{...result,runtimeCredentialsRemoved:true,
+  ...(workerName===V5_NAME?{isolatedWorkerRemoved}:{})},bytes};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  if(!process.argv.includes('--one-approved-hook-free-only')){console.error('EXPLICIT_HOOK_TEST_FLAG_REQUIRED');process.exit(1)}
