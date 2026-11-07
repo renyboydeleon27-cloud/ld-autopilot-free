@@ -15,7 +15,15 @@ export async function dispatchCoordinatorAlarm({storage,imageCore,imageEnabled=t
  if(job?.stop===true)return {status:'PRODUCTION_PAUSED'};
  if(job&&!IMAGE_TERMINAL.has(job.status)){
   // No new provider request while Free plan is unverified.
-  if(imageEnabled!==true)return {status:'IMAGE_GENERATION_DISABLED'};
+  if(imageEnabled!==true){
+    // Do not strand a previously claimed in-flight request when the Free
+    // flag is withdrawn. The dedicated method only manages its watchdog.
+    if(job.status==='RENDERING'&&typeof imageCore.watchdogOnly==='function'){
+      const recovery=await imageCore.watchdogOnly();
+      return {status:'IMAGE_GENERATION_DISABLED',watchdog:recovery.status};
+    }
+    return {status:'IMAGE_GENERATION_DISABLED'};
+  }
   await imageCore.tick();
   return {status:'IMAGE_TICK'};
  }

@@ -43,3 +43,7 @@ The existing scene runner persisted a `RENDERING` claim before calling the image
 ## Free inference gate independent from reviewed Drive delivery (November 7, 2026)
 
 RUNNER_ENABLED remains the master background kill switch. FREE_PLAN_CONFIRMED now gates AI image generation but does not stall previously completed 17-image, approved, immutable 69-file Google delivery. The existing trusted delivery checks, explicitly enabled private bridge, Google storage preflight, STOP and review failure still block unsafe uploads. If the image batch is incomplete, imageEnabled=false never ticks the image model. This is a code-only change with offline regression tests; no Cloudflare inference, Drive upload, Gmail or production deployment was initiated. Actual live OAuth/delivery acceptance remains pending.
+
+### Free-quota OFF still preserves an in-flight watchdog (November 7, 2026)
+
+A Free quota flag change during an active RENDERING claim must not silence its durable watchdog. New Checkpoints.watchdogOnly() re-arms the existing claim deadline, or marks expired ambiguous inference as NEEDS_REVIEW, without calling the provider or Google APIs. dispatchCoordinatorAlarm invokes only that read/hold path while imageEnabled=false and a claim is in flight. STOP remains authoritative; an image returned during STOP is still preserved. Tests simulate a real asynchronous provider request, repeated alarm, quota toggle and timeout with only one provider invocation.

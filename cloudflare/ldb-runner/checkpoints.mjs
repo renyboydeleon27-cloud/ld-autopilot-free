@@ -42,6 +42,24 @@ export class Checkpoints {
       j.stop=false;j.status='QUEUED';await tx.put('job',j);await tx.setAlarm(this.now()+1000);return j;
     });
   }
+  // Watchdog-only recovery is safe while the Free inference gate is OFF:
+  // it may rearm an unresolved claim or hold for human review, but it can
+  // NEVER initiate a provider request or advance the next image.
+  async watchdogOnly() {
+    return this.s.transaction(async tx=>{
+      const j=await tx.get('job');
+      if(!j||j.status!=='RENDERING')return {status:'NO_ACTIVE_RENDER'};
+      if(j.stop===true)return {status:'PRODUCTION_PAUSED'};
+      const deadline=j.claim?.watchdogAt;
+      if(Number.isSafeInteger(deadline)&&this.now()<deadline){
+        await tx.setAlarm(deadline);
+        return {status:'RENDER_CLAIM_WAITING'};
+      }
+      j.status='NEEDS_REVIEW';j.error='AMBIGUOUS_INFERENCE';
+      await tx.put('job',j);await tx.deleteAlarm();
+      return {status:'RENDER_NEEDS_REVIEW'};
+    });
+  }
   async tick() {
     const claim=await this.s.transaction(async tx=>{
       const j=await tx.get('job');if(!j || ['IMAGES_READY','TEST_PAUSED','NEEDS_REVIEW'].includes(j.status))return null;
