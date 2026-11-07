@@ -97,3 +97,74 @@ test('one real staged image stays queued for review; staging-only credential can
  assert.equal(creates,0,'a partial 1/17 set never invokes Google backend');
  assert.equal(f.map.has('delivery'),false);
 });
+
+test('review-only batch status requires reviewer secret but no Google delivery permission',async()=>{
+ const off={...env,DELIVERY_BRIDGE_ENABLED:'false'};
+ assert.deepEqual(await check(req('status',REVIEW,'GET'),off),{status:200});
+ assert.deepEqual(await check(req('status',STAGE,'GET'),off),{status:401,code:'UNAUTHORIZED'});
+ assert.deepEqual(await check(req('status',REVIEW,'POST'),off),{status:405,code:'METHOD_NOT_ALLOWED'});
+ assert.deepEqual(await check(req('status',REVIEW,'GET'),{...off,QUALITY_REVIEW_ENABLED:'false'}),{status:503,code:'SETUP_REQUIRED'});
+});
+test('17-stage status is a single non-approving overview; missing scenes do not contact Google',async()=>{
+ const f=storageFixture(),off={...env,DELIVERY_BRIDGE_ENABLED:'false'};
+ let googleCalls=0;
+ const backend=()=>{googleCalls++;throw Error('GOOGLE_MUST_NOT_BE_CALLED')};
+ const statusReq=()=>req('status',REVIEW,'GET');
+ const empty=await handleQualityImport(statusReq(),{storage:f.storage,env:off,createBackend:backend});
+ assert.equal(empty.status,200);
+ const e=await empty.json();
+ assert.equal(e.stagedVerified,0);assert.equal(e.missingScenes,17);
+ assert.equal(e.reviewReady,false);assert.equal(e.deliveryReady,false);
+ for(const [i,scene] of ALL_SCENES.entries()){
+  const raw=Buffer.from('original provider render '+scene);
+  const corrected=Buffer.from('corrected candidate for '+scene);
+  const audit={scene,bytes:corrected.length,sha256:sha(corrected),source_sha256:sha(raw)};
+  const body=Buffer.from(JSON.stringify({jobId,audit})).toString('base64url');
+  const staged=await handleQualityImport(req('image',STAGE,'POST',{
+   headers:{'Content-Type':'application/octet-stream','X-LDB-Image-Audit':body},
+   body:corrected
+  }),{storage:f.storage,env:off,createBackend:backend});
+  assert.equal(staged.status,200,'stage '+scene);
+  if(i===0){
+   const partial=await (await handleQualityImport(statusReq(),{storage:f.storage,env:off,createBackend:backend})).json();
+   assert.equal(partial.stagedVerified,1);
+   assert.equal(partial.reviewReady,false);
+   assert.equal(partial.scenes[0].sha256,sha(corrected));
+   assert.equal(partial.scenes[1].status,'MISSING');
+  }
+ }
+ const response=await handleQualityImport(statusReq(),{storage:f.storage,env:off,createBackend:backend});
+ assert.equal(response.status,200);
+ const result=await response.json();
+ assert.equal(result.status,'REVIEW_CANDIDATES_READY');
+ assert.equal(result.stagedVerified,17);assert.equal(result.missingScenes,0);
+ assert.equal(result.scenes.length,17);
+ assert.equal(result.visualAudit,'PENDING');
+ assert.equal(result.deliveryReady,false);
+ assert.equal(result.googleUploadsStarted,false);
+ assert.equal(f.map.has('delivery'),false);
+ assert.equal(googleCalls,0);
+});
+test('STOP and tampered prepared bytes never claim review candidates ready',async()=>{
+ const f=storageFixture(),off={...env,DELIVERY_BRIDGE_ENABLED:'false'};
+ const corrected=Buffer.from('HOOK corrected candidate');
+ const original=Buffer.from('original provider render HOOK');
+ const audit={scene:'HOOK',bytes:corrected.length,sha256:sha(corrected),source_sha256:sha(original)};
+ const staged=await handleQualityImport(req('image',STAGE,'POST',{
+  headers:{'Content-Type':'application/octet-stream',
+   'X-LDB-Image-Audit':Buffer.from(JSON.stringify({jobId,audit})).toString('base64url')},
+  body:corrected
+ }),{storage:f.storage,env:off,createBackend:()=>{throw Error('should not call')}});
+ assert.equal(staged.status,200);
+ f.map.set('job',{...f.map.get('job'),stop:true});
+ const stopped=await (await handleQualityImport(req('status',REVIEW,'GET'),{
+  storage:f.storage,env:off,createBackend:()=>{throw Error('should not call')}})).json();
+ assert.equal(stopped.status,'IMAGES_NOT_READY');
+ assert.equal(stopped.reviewReady,false);
+ f.map.set('job',{...f.map.get('job'),stop:false});
+ const key=sha('ldb-delivery-image-v1:'+jobId+':HOOK');
+ f.map.set('prepared:'+jobId+':'+key+':0',new Uint8Array(Buffer.from('tampered')));
+ const bad=await handleQualityImport(req('status',REVIEW,'GET'),{
+  storage:f.storage,env:off,createBackend:()=>{throw Error('should not call')}});
+ assert.equal(bad.status,409,'corrupt candidate blocks status, not quietly counted');
+});
