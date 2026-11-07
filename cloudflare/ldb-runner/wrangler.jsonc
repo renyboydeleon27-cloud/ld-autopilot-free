@@ -11,6 +11,7 @@
     "DELIVERY_BRIDGE_ENABLED": "false",
     "BRIDGE_PROBE_ENABLED": "false",
     "QUALITY_IMPORT_ENABLED": "false",
+    "QUALITY_REVIEW_ENABLED": "false",
     "GMAIL_MILESTONES_ENABLED": "false"
   },
   "services": [{"binding":"GOOGLE_VAULT","service":"ner-ldb-google-vault-quality"}],

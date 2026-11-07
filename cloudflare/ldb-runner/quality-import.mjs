@@ -8,6 +8,28 @@ import {submitDurableApprovedDelivery} from '../../lib/ldb/submit-durable-approv
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 export const isQualityImportPath=p=>p==='/internal/quality/image'||p==='/internal/quality/review';
+// Staging and visual approval are independent privileges. Merely possessing
+// the image uploader's secret must NEVER authorize a 69-file Drive delivery.
+// Re-check inside the Durable Object, not only at the public Worker edge.
+export function qualityImportGate(req,env={}){
+ const path=new URL(req.url).pathname;
+ if(!isQualityImportPath(path))return json({status:'NOT_FOUND'},404);
+ const reviewing=path==='/internal/quality/review';
+ const stage=env.QUALITY_IMPORT_SECRET,review=env.QUALITY_REVIEW_SECRET;
+ if(env.RUNNER_ENABLED!=='true'||env.QUALITY_IMPORT_ENABLED!=='true'||
+    typeof stage!=='string'||stage.length<32||stage===env.RUNNER_SECRET)
+  return json({status:'SETUP_REQUIRED'},503);
+ if(reviewing&&(env.QUALITY_REVIEW_ENABLED!=='true'||env.DELIVERY_BRIDGE_ENABLED!=='true'||
+    typeof review!=='string'||review.length<32||review===stage||review===env.RUNNER_SECRET))
+  return json({status:'SETUP_REQUIRED'},503);
+ const expected='Bearer '+(reviewing?review:stage);
+ const presented=req.headers.get('Authorization')||'';
+ if(!timingSafeEqual(Buffer.from(sha(presented)),Buffer.from(sha(expected))))
+  return json({status:'UNAUTHORIZED'},401);
+ if(req.method!=='POST')return json({status:'METHOD_NOT_ALLOWED'},405);
+ return null;
+}
+
 async function read(req,max){
  const reader=req.body?.getReader();if(!reader)throw Error('BODY_REQUIRED');
  let size=0;const parts=[];
@@ -20,13 +42,10 @@ function entry(jobId,audit){
  category:audit.scene==='THUMBNAIL'?'Thumbnail':'Approved reference images',
  mimeType:'image/png',name:audit.scene+'.png',bytes:audit.bytes,sha256:audit.sha256};
 }
-export async function handleQualityImport(req,{storage,enabled=false,secret,createBackend}={}){
+export async function handleQualityImport(req,{storage,env={},createBackend}={}){
+ const denied=qualityImportGate(req,env);
+ if(denied)return denied;
  const path=new URL(req.url).pathname;
- if(!isQualityImportPath(path))return json({status:'NOT_FOUND'},404);
- if(!enabled||typeof secret!=='string'||secret.length<32)return json({status:'SETUP_REQUIRED'},503);
- const auth=req.headers.get('Authorization')||'';
- if(!timingSafeEqual(Buffer.from(sha(auth)),Buffer.from(sha('Bearer '+secret))))return json({status:'UNAUTHORIZED'},401);
- if(req.method!=='POST')return json({status:'METHOD_NOT_ALLOWED'},405);
  try{
   const job=await storage.get('job');
   if(job?.status!=='IMAGES_READY'||job.index!==17||job.stop===true)throw Error('IMAGES_NOT_READY');
