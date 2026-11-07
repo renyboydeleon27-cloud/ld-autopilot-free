@@ -2,6 +2,7 @@
 // Does NOT run in normal builds; requires explicit preview and current free-plan
 // verification. Never touches V4, quality Workers, Drive or production alias.
 import {spawnSync} from 'node:child_process';
+import {recoverV5AuditEvidence} from './ldb-v5-evidence-recovery.mjs';
 if(process.env.VERCEL_ENV!=='preview'||!process.argv.includes('--one-approved-hook-free-only'))
  throw Error('EXPLICIT_PREVIEW_TEST_REQUIRED');
 const now=new Date().toISOString().slice(0,10);
@@ -16,7 +17,18 @@ const commands=[
  // This step runs locally on the existing image. It must never approve or upload.
  ['python3',['-m','scripts.ldb_hook_bw_audit','--input','cloudflare/ldb-runner/public/HOOK.jpg','--output-dir','cloudflare/ldb-runner/public/review-only','--preview-compare']]
 ];
-for(const [command,args] of commands){
+// Earlier steps must fail closed. Only the LAST, offline Python audit may
+// preserve a failed/NOT APPROVED review preview instead of discarding the
+// already generated source image by failing the entire Vercel preview build.
+for(const [index,[command,args]] of commands.entries()){
  const result=spawnSync(command,args,{stdio:'inherit',env:process.env});
- if(result.status!==0)process.exit(result.status||1);
+ if(result.status===0)continue;
+ if(index!==commands.length-1)process.exit(result.status||1);
+ try{
+  const snapshot=await recoverV5AuditEvidence();
+  console.error('V5_AUDIT_FAILED_REVIEW_ONLY: preserved verified source; never approved. '+snapshot.sha256);
+ }catch{
+  console.error('V5_AUDIT_FAILURE_AND_UNVERIFIED_EVIDENCE');
+  process.exit(result.status||1);
+ }
 }
