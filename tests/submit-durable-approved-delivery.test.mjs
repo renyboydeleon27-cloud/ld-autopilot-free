@@ -248,3 +248,38 @@ test('milestone transport is disabled independently of Drive delivery',async()=>
  const response=await handleVaultDeliveryBridge(request,{enabled:true,secret,createBackend:()=>{called=true;}});
  assert.equal(response.status,503);assert.equal(called,false);
 });
+
+test('STOP immediately before atomic 69-file queue blocks handoff and uploads',async()=>{
+ const f=durableFixture(),transaction=f.deliveryStorage.transaction;
+ f.deliveryStorage.transaction=async fn=>{
+  f.images.set('job',{...f.images.get('job'),stop:true});
+  return transaction(fn);
+ };
+ await assert.rejects(submitDurableApprovedDelivery(f),/JOB_STOPPED_OR_CHANGED_BEFORE_DELIVERY_QUEUE/);
+ assert.equal(f.deliveries.has('delivery'),false);
+ assert.equal(f.uploads.size,0);
+ assert.equal(f.images.get('job').stop,true);
+});
+test('single-store Durable Object STOP is rejected within same queue transaction',async()=>{
+ const f=durableFixture(),transaction=f.imageStorage.transaction;
+ f.imageStorage.transaction=async fn=>{
+  f.images.set('job',{...f.images.get('job'),stop:true});
+  return transaction(fn);
+ };
+ f.deliveryStorage=f.imageStorage;
+ await assert.rejects(submitDurableApprovedDelivery(f),/JOB_STOPPED_OR_CHANGED_BEFORE_DELIVERY_QUEUE/);
+ assert.equal(f.images.has('delivery'),false);
+ assert.equal(f.uploads.size,0);
+});
+test('image checkpoint changed after preflight cannot enter delivery queue',async()=>{
+ const f=durableFixture(),transaction=f.deliveryStorage.transaction;
+ f.deliveryStorage.transaction=async fn=>{
+  const latest=f.images.get('job'),outputs=structuredClone(latest.outputs);
+  outputs[0].sha256='f'.repeat(64);
+  f.images.set('job',{...latest,outputs});
+  return transaction(fn);
+ };
+ await assert.rejects(submitDurableApprovedDelivery(f),/JOB_STOPPED_OR_CHANGED_BEFORE_DELIVERY_QUEUE/);
+ assert.equal(f.deliveries.has('delivery'),false);
+ assert.equal(f.uploads.size,0);
+});

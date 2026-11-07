@@ -15,3 +15,12 @@ The delivery-plan validator previously hardcoded `Lake Nyos 1986`, preventing an
 
 ## Automatic 52 text assets from approved source — November 3, 2026
 When an authenticated job is submitted, the runner now persists a SHA-256-checked, chunked copy of its exact storyboard approval and render-scene expansion. The backend-only composer reconstructs exactly 52 text deliverables: original storyboard JSON, 17 image prompts, 16 Flow prompts, 16 narrations, trusted visual audit JSON and a deterministic production manifest. In combination with 17 image files, this forms the 69-asset package. The internal submitDurableApprovedDelivery() automatically derives these text assets if a legacy otherAssets array is not explicitly supplied. Missing/tampered originals block production. A separate reviewer-verified, all-17 checksum-matching visual PASS remains mandatory; the original storyboard approval does not satisfy it. This is development-only and no public visual-review endpoint or cloud deployment was added.
+
+
+## STOP versus review handoff race guard — November 7, 2026
+
+A review handoff could start 69-file preparation before the owner pressed STOP. Earlier code checked stop at request entry but did not re-read it atomically when creating the final delivery checkpoint. A handoff in progress could still create a queued delivery after STOP (the dispatch alarm still checked STOP, but the queue itself would be present).
+
+The trusted submitDurableApprovedDelivery path now passes a fail-closed queueGuard into ProductionDelivery.submit. The guard runs INSIDE the delivery storage transaction before writing any queue checkpoint. It requires the immutable original 17 image identities and hashes, exact job ID, IMAGES_READY, index 17 and the current stop flag not true. On the actual LdbCoordinator, image and delivery records share the same Durable Object storage, providing a common transactional boundary. Synthetic tests with separate stores read the live source but are not claimed to offer cross-store atomicity.
+
+Added race tests for STOP before queue, shared-store Durable Object STOP, and image metadata replacement. Every test must reject without creating a delivery checkpoint or uploading to Google. No inference, deployment, paid service, email or production-flag changes.
