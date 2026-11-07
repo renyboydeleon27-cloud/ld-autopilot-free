@@ -2,7 +2,7 @@
 // It deliberately exposes no OAuth token or public HTTP route.
 // The production runner cannot invoke this directly across Worker boundaries;
 // a separately reviewed private RPC bridge is required before full delivery.
-import {DriveDelivery} from '../../lib/ldb/google-delivery.mjs';
+import {DriveDelivery,GmailMilestones} from '../../lib/ldb/google-delivery.mjs';
 import {storageCapacity} from '../../lib/ldb/production-delivery.mjs';
 
 const fail=code=>{throw Error(code);};
@@ -19,5 +19,6 @@ export function createVaultLocalDriveBackend({vault,storage,enabled=false,fetche
  const options=fetcher?{fetcher}:{};
  const drive=new DriveDelivery(storage,{tokenProvider,...options});
  const capacity=()=>storageCapacity(tokenProvider,fetcher);
- return Object.freeze({drive,capacity});
+ const notifyMilestone=(state,percent)=>new GmailMilestones(storage,{tokenProvider,loadState:async()=>state,...options}).send(percent);
+ return Object.freeze({drive,capacity,notifyMilestone});
 }

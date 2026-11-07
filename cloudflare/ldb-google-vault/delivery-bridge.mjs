@@ -1,5 +1,5 @@
 // Narrow, authenticated transport for the trusted Durable Object runner.
-// No OAuth tokens, Gmail actions, arbitrary endpoints, or browser quality flags.
+// No OAuth tokens, arbitrary recipients/endpoints, or browser quality flags.
 import {Buffer} from 'node:buffer';
 import {createHash,timingSafeEqual} from 'node:crypto';
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -9,7 +9,7 @@ const FOLDER='application/vnd.google-apps.folder';
 const ALLOWED=new Set([FOLDER,'image/png','image/jpeg','text/plain','application/json']);
 const isHash=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
 const isId=x=>typeof x==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test(x);
-export const isDeliveryBridgePath=path=>path==='/internal/drive/capacity'||path==='/internal/drive/put';
+export const isDeliveryBridgePath=path=>path==='/internal/drive/capacity'||path==='/internal/drive/put'||path==='/internal/gmail/milestone';
 
 async function readBounded(req,max){
  const reader=req.body?.getReader();if(!reader)return Buffer.alloc(0);
@@ -37,15 +37,25 @@ function assetMetadata(req){
     (meta.bytes<1||!isHash(meta.sha256)))throw Error('INVALID_METADATA');
  return meta;
 }
-export async function handleVaultDeliveryBridge(req,{enabled=false,secret,createBackend}={}){
+export async function handleVaultDeliveryBridge(req,{enabled=false,notificationsEnabled=false,secret,createBackend}={}){
  const path=new URL(req.url).pathname;
  if(!isDeliveryBridgePath(path))return json({status:'NOT_FOUND'},404);
  if(!enabled||typeof secret!=='string'||secret.length<32||typeof createBackend!=='function')return json({status:'SETUP_REQUIRED'},503);
  const auth=req.headers.get('Authorization')||'';
  if(!timingSafeEqual(hash(auth),hash('Bearer '+secret)))return json({status:'UNAUTHORIZED'},401);
- if(path==='/internal/drive/capacity'&&req.method!=='GET'||path==='/internal/drive/put'&&req.method!=='POST')return json({status:'METHOD_NOT_ALLOWED'},405);
+ if(path==='/internal/gmail/milestone'&&notificationsEnabled!==true)return json({status:'SETUP_REQUIRED'},503);
+ if(path==='/internal/drive/capacity'?req.method!=='GET':req.method!=='POST')return json({status:'METHOD_NOT_ALLOWED'},405);
  try{
   const backend=createBackend();
+  if(path==='/internal/gmail/milestone'){
+   // The independent service secret authenticates the trusted runner snapshot.
+   // GmailMilestones rechecks eligibility and reserves an at-most-once claim.
+   const data=JSON.parse((await readBounded(req,64000)).toString('utf8'));
+   if(typeof backend.notifyMilestone!=='function'||!data||Object.keys(data).sort().join(',')!=='percent,state')throw Error('INVALID_MILESTONE');
+   const result=await backend.notifyMilestone(data.state,data.percent);
+   if(!['SENT','UNCERTAIN','CLAIMED'].includes(result?.status))throw Error('INVALID_MILESTONE_RESULT');
+   return json({status:result.status});
+  }
   if(path==='/internal/drive/capacity'){
    const cap=await backend.capacity();
    if(typeof cap.unlimited!=='boolean'||(!cap.unlimited&&!/^[0-9]+$/.test(cap.remaining||'')))throw Error('BAD_CAPACITY');

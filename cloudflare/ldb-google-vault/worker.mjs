@@ -35,6 +35,7 @@ export class LdbGoogleVault extends DurableObject {
   });
   if(isDeliveryBridgePath(path))return handleVaultDeliveryBridge(req,{
    enabled:this.env.DELIVERY_BRIDGE_ENABLED==='true',secret:this.env.GOOGLE_DELIVERY_BRIDGE_SECRET,
+   notificationsEnabled:this.env.GMAIL_MILESTONES_ENABLED==='true',
    createBackend:()=>createVaultLocalDriveBackend({vault:this.core,storage:this.storage,enabled:true})
   });
   if(req.method==='GET'&&path==='/capacity'){try{return json(await storageCapacity(()=>this.core.accessToken()));}catch{return json({status:'STORAGE_CHECK_UNAVAILABLE'},502);}}

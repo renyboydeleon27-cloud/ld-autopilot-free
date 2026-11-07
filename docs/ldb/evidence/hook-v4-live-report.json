@@ -1,0 +1,25 @@
+{
+  "status": "HOOK_CLOUD_TEST_PASSED",
+  "worker": "ner-ldb-runner-quality-v4",
+  "storyboard_sha256": "75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05",
+  "unauthenticatedBlocked": true,
+  "stopBeforeRender": true,
+  "resumeStartedRender": true,
+  "completedScenes": 1,
+  "totalScenes": 17,
+  "checkpointStatus": "TEST_PAUSED",
+  "output": {
+    "scene": "HOOK",
+    "chunks": 6,
+    "bytes": 368754,
+    "sha256": "0932a8a4e7cfed7c7babd8b354b7facc29debf294d041ef69cb864697a4e1c46",
+    "mimeType": "image/jpeg",
+    "width": 576,
+    "height": 1024,
+    "visualAudit": "PENDING"
+  },
+  "fullAutoProduction": false,
+  "googleConnected": false,
+  "verifiedAt": "2026-11-04T17:21:44.455Z",
+  "runtimeCredentialsRemoved": true
+}

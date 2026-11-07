@@ -1,0 +1,21 @@
+{
+  "status": "NOT_ACCEPTED_FOR_PRODUCTION",
+  "cloudExecution": "PASSED",
+  "imageSha256": "0932a8a4e7cfed7c7babd8b354b7facc29debf294d041ef69cb864697a4e1c46",
+  "checks": {
+    "portrait9x16": true,
+    "jpegDecode": true,
+    "checksumMatches": true,
+    "lanternUnlit": "visible dark chamber; no visible flame or illumination halo",
+    "style": "outlined 2D anime",
+    "textOrWatermark": "none observed",
+    "exactNeutralRgb": false,
+    "maxRgbChannelSpread": 7,
+    "nonNeutralPixelFraction": 0.5605434841579862,
+    "referenceContinuity": "NOT_VERIFIED",
+    "historicalAccuracy": "NOT_VERIFIED",
+    "promptComposition": "moon visible despite request for moonlight source outside frame; shoulder contact not clearly depicted",
+    "handAnatomy": "requires closer review of lantern grip before acceptance"
+  },
+  "productionDeliveryAllowed": false
+}

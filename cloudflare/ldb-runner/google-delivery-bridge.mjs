@@ -39,7 +39,14 @@ export function createGoogleDeliveryBridge(env){
   if(data.status!=='VERIFIED'||!isId(data.id)||data.sha256!==digest)fail();
   return {status:'VERIFIED',id:data.id,sha256:digest,bytes:length};
  }});
- return Object.freeze({drive,capacity:async()=>{
+ return Object.freeze({drive,notifyMilestone:async(state,percent)=>{
+  if(!isHash(state?.jobId)||![30,50,70,100].includes(percent))fail();
+  const body=JSON.stringify({state,percent});
+  if(Buffer.byteLength(body)>64000)fail();
+  const result=await call('/internal/gmail/milestone',{method:'POST',headers:{'Content-Type':'application/json'},body});
+  if(!['SENT','UNCERTAIN','CLAIMED'].includes(result.status))fail();
+  return result;
+ },capacity:async()=>{
   const cap=await call('/internal/drive/capacity');
   if(typeof cap.unlimited!=='boolean'||(cap.unlimited!==true&&(!/^[0-9]+$/.test(cap.remaining||''))))fail();
   return {unlimited:cap.unlimited,remaining:cap.unlimited?null:cap.remaining};

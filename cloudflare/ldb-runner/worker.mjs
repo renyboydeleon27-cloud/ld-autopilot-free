@@ -1,28 +1,33 @@
 import { Buffer } from 'node:buffer';
 import { DurableObject } from 'cloudflare:workers';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash } from 'node:crypto';
+import { ownerAccessGate } from './owner-access.mjs';
 import { Checkpoints, SCENES } from './checkpoints.mjs';
 import { validateRenderJob } from '../../lib/ldb/approved-render-job.mjs';
 import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
 import { deliveryReadiness } from '../../lib/ldb/delivery-readiness.mjs';
+import { productionProgressSnapshot } from '../../lib/ldb/production-progress.mjs';
 import { deliveryNextAction } from '../../lib/ldb/delivery-coordinator-gate.mjs';
 import { dispatchCoordinatorAlarm } from './delivery-alarm.mjs';
 import { createGoogleDeliveryBridge } from './google-delivery-bridge.mjs';
 import { resumeDurableApprovedDelivery } from '../../lib/ldb/resume-durable-approved-delivery.mjs';
 import { stopProduction, resumeProduction } from '../../lib/ldb/production-controls.mjs';
 import { probeGoogleVaultBinding } from './bridge-probe.mjs';
+import { notifyProductionMilestones } from '../../lib/ldb/production-milestones.mjs';
+import {isQualityImportPath,qualityImportGate,handleQualityImport} from './quality-import.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {
  async fetch(request,env) {
+  if(isQualityImportPath(new URL(request.url).pathname)){
+   const denied=qualityImportGate(request,env);
+   if(denied)return denied;
+   return env.LDB_COORDINATOR.getByName('single-owner-v1').fetch(request);
+  }
   const probe=new URL(request.url).pathname==='/delivery-bridge-probe';
-  // A probe is allowed while generation/upload are OFF. It requires an
-  // independent owner secret and the dedicated diagnostic feature flag.
-  if(typeof env.RUNNER_SECRET!=='string'||env.RUNNER_SECRET.length<32 ||
-     (probe?env.BRIDGE_PROBE_ENABLED!=='true':env.RUNNER_ENABLED!=='true'||env.FREE_PLAN_CONFIRMED!=='true'))
-   return json({status:'SETUP_REQUIRED'},503);
-  const provided=request.headers.get('Authorization')||'';
-  const a=createHash('sha256').update(provided).digest(),b=createHash('sha256').update(`Bearer ${env.RUNNER_SECRET}`).digest();
-  if(!timingSafeEqual(a,b))return json({status:'UNAUTHORIZED'},401);
+  // Keep owner safety/read-only routes reachable even when inference or the
+  // daily Free-plan confirmation is OFF. All routes still require owner auth.
+  const denied=ownerAccessGate(request,env);
+  if(denied)return denied;
   if(probe){
    if(request.method!=='GET')return json({status:'METHOD_NOT_ALLOWED'},405);
    try{return json(await probeGoogleVaultBinding(env));}
@@ -49,9 +54,12 @@ export class LdbCoordinator extends DurableObject {
      drive:bridge.drive,capacity:bridge.capacity,jobId
    })}:{})
   });
+  if(bridge&&this.env.GMAIL_MILESTONES_ENABLED==='true')await notifyProductionMilestones({storage:this.ctx.storage,notify:bridge.notifyMilestone});
  }
  async fetch(req) {
   const path=new URL(req.url).pathname;
+  if(isQualityImportPath(path))return handleQualityImport(req,{storage:this.ctx.storage,
+   env:this.env,createBackend:()=>createGoogleDeliveryBridge(this.env)});
   try {
    if(req.method==='GET' && path==='/delivery-next-action') {
     // Trusted server-side records only. Never accept a browser-supplied delivery plan.
@@ -70,7 +78,10 @@ export class LdbCoordinator extends DurableObject {
     return json(deliveryReadiness({job,delivery}));
    }
    if(req.method==='GET' && path==='/status') {
-    const j=await this.core.status();return json({job:j?{id:j.id,status:j.status,completedScenes:j.index,totalScenes:17,outputs:j.outputs,error:j.error,providerCode:j.providerCode}:null,autoProductionReady:false,deliveryConnected:false});
+    // Read-only and owner-authenticated at the edge. Never claim 100% from
+    // just image generation or from untrusted Drive/visual-review metadata.
+    const [job,delivery]=await Promise.all([this.core.status(),this.ctx.storage.get('delivery')]);
+    return json(productionProgressSnapshot({job,delivery}));
    }
    if(req.method==='GET' && /^\/images\/(HOOK|P[1-9]|P1[0-4]|ENDING|THUMBNAIL)$/.test(path)) {
     const scene=path.split('/').at(-1),j=await this.core.status();

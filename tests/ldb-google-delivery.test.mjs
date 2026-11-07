@@ -72,7 +72,7 @@ test('folders are created with stable IDs and verified metadata',async()=>{
  const s=new Storage(),server=driveServer();const result=await makeDrive(s,server).put({key:'b'.repeat(64),name:'Living Disaster Book',mimeType:'application/vnd.google-apps.folder'});assert.equal(result.status,'VERIFIED');assert.equal(server.files.get(result.id).mimeType,'application/vnd.google-apps.folder');
 });
 const scenes=['HOOK',...Array.from({length:14},(_,i)=>`P${i+1}`),'ENDING','THUMBNAIL'];
-function state(count=17){return {jobId:'f'.repeat(64),approvalVerified:true,images:scenes.slice(0,count).map(scene=>({scene,bytes:900,sha256:'c'.repeat(64),visualAudit:'PASS'})),imagePromptCount:17,flowCount:16,narrationCount:16,expectedDeliverables:Array.from({length:68},(_,i)=>({key:String(i),sha256:'d'.repeat(64)})),driveVerified:Array.from({length:68},(_,i)=>({key:String(i),sha256:'d'.repeat(64),status:'VERIFIED'}))};}
+function state(count=17){return {jobId:'f'.repeat(64),approvalVerified:true,images:scenes.slice(0,count).map(scene=>({scene,bytes:900,sha256:'c'.repeat(64),visualAudit:'PASS'})),imagePromptCount:17,flowCount:16,narrationCount:16,expectedDeliverables:Array.from({length:69},(_,i)=>({key:hash(String(i)),sha256:'d'.repeat(64)})),driveVerified:Array.from({length:69},(_,i)=>({key:hash(String(i)),sha256:'d'.repeat(64),id:'drive'+i,status:'VERIFIED'}))};}
 test('milestones require actual image counts, complete QA, texts and every verified file',()=>{
  assert.deepEqual(eligibleMilestones(state(5)),[]);assert.deepEqual(eligibleMilestones(state(6)),[30]);assert.deepEqual(eligibleMilestones(state(12)),[30,50]);assert.deepEqual(eligibleMilestones(state()),[30,50,70,100]);
  const partial=state();partial.driveVerified.pop();assert.deepEqual(eligibleMilestones(partial),[30,50,70]);
@@ -91,3 +91,27 @@ test('ambiguous Gmail result and interrupted claims never auto-resend',async()=>
  await s.put('gmail:'+'f'.repeat(64)+':100',{status:'CLAIMED'});assert.equal((await new GmailMilestones(s,opts).send(100)).status,'CLAIMED');assert.equal(calls,1);
 });
 test('unearned milestones do not access tokens or send',async()=>{const s=new Storage();const g=new GmailMilestones(s,{loadState:async()=>state(0),tokenProvider:async()=>assert.fail('token must not be requested')});await assert.rejects(g.send(100),/NOT_REACHED/);assert.equal(s.data.size,0);});
+
+
+test('100 percent rejects 68 files, extra records, duplicate IDs and invalid identities',()=>{
+ const mutations=[
+  s=>{s.expectedDeliverables.pop();s.driveVerified.pop();},
+  s=>s.driveVerified.push({...s.driveVerified[0]}),
+  s=>{s.driveVerified[1].id=s.driveVerified[0].id;},
+  s=>{s.driveVerified[1]={...s.driveVerified[0]};},
+  s=>{s.expectedDeliverables[1]={...s.expectedDeliverables[0]};},
+  s=>{s.expectedDeliverables[0].key='invalid';s.driveVerified[0].key='invalid';},
+  s=>{delete s.driveVerified[0].id;},
+  s=>{s.driveVerified[0].status='UPLOADING';},
+  s=>{s.driveVerified[0]=null;},
+  s=>{s.expectedDeliverables[0]=null;},
+  s=>{s.driveVerified={};}
+ ];
+ for(const mutate of mutations){const snapshot=state();mutate(snapshot);assert.deepEqual(eligibleMilestones(snapshot),[30,50,70]);}
+ const reordered=state();reordered.driveVerified.reverse();assert.ok(eligibleMilestones(reordered).includes(100));
+});
+test('68-file package never requests Gmail token or submits completion email',async()=>{
+ const snapshot=state();snapshot.expectedDeliverables.pop();snapshot.driveVerified.pop();
+ const g=new GmailMilestones(new Storage(),{loadState:async()=>snapshot,tokenProvider:async()=>assert.fail('no token'),fetcher:async()=>assert.fail('no send')});
+ await assert.rejects(g.send(100),/MILESTONE_NOT_REACHED/);
+});
