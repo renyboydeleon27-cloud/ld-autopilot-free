@@ -5,6 +5,7 @@ import { Checkpoints, SCENES } from './checkpoints.mjs';
 import { validateRenderJob } from '../../lib/ldb/approved-render-job.mjs';
 import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
 import { deliveryReadiness } from '../../lib/ldb/delivery-readiness.mjs';
+import { productionProgressSnapshot } from '../../lib/ldb/production-progress.mjs';
 import { deliveryNextAction } from '../../lib/ldb/delivery-coordinator-gate.mjs';
 import { dispatchCoordinatorAlarm } from './delivery-alarm.mjs';
 import { createGoogleDeliveryBridge } from './google-delivery-bridge.mjs';
@@ -80,7 +81,10 @@ export class LdbCoordinator extends DurableObject {
     return json(deliveryReadiness({job,delivery}));
    }
    if(req.method==='GET' && path==='/status') {
-    const j=await this.core.status();return json({job:j?{id:j.id,status:j.status,completedScenes:j.index,totalScenes:17,outputs:j.outputs,error:j.error,providerCode:j.providerCode}:null,autoProductionReady:false,deliveryConnected:false});
+    // Read-only and owner-authenticated at the edge. Never claim 100% from
+    // just image generation or from untrusted Drive/visual-review metadata.
+    const [job,delivery]=await Promise.all([this.core.status(),this.ctx.storage.get('delivery')]);
+    return json(productionProgressSnapshot({job,delivery}));
    }
    if(req.method==='GET' && /^\/images\/(HOOK|P[1-9]|P1[0-4]|ENDING|THUMBNAIL)$/.test(path)) {
     const scene=path.split('/').at(-1),j=await this.core.status();
