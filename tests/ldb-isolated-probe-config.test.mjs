@@ -47,7 +47,7 @@ const url='https://ner-ldb-runner-binding-probe.account.workers.dev/delivery-bri
 const secret='isolated-fixture-owner-secret-long-enough';
 test('authenticated read-only response never reports production ready',async()=>{
  let calls=0;
- const out=await verifyLiveBindingProbe({url,secret,fetcher:async(u,opts)=>{
+ const out=await verifyLiveBindingProbe({url,secret,verifiedHost:'ner-ldb-runner-binding-probe.account.workers.dev',fetcher:async(u,opts)=>{
   calls++;assert.equal(u,url);assert.equal(opts.redirect,'manual');
   assert.equal(opts.method,'GET');assert.equal(opts.body,undefined);
   assert.equal(opts.headers.Authorization,'Bearer '+secret);
@@ -66,8 +66,17 @@ test('unsafe URLs refuse to send bearer secrets',async()=>{
   url+'?token=oops',
   'https://user:pass@owner.workers.dev/delivery-bridge-probe',
   'https://owner.workers.dev:444/delivery-bridge-probe']){
-   await assert.rejects(verifyLiveBindingProbe({url:bad,secret,fetcher}),/UNSAFE_PROBE_URL/);
+   await assert.rejects(verifyLiveBindingProbe({url:bad,secret,verifiedHost:'ner-ldb-runner-binding-probe.account.workers.dev',fetcher}),/UNSAFE_PROBE_URL/);
  }
+ assert.equal(called,0);
+});
+test('owner Bearer secret cannot go to another account with identically named Worker',async()=>{
+ let called=0;const fetcher=()=>{called++;throw Error('NETWORK_FORBIDDEN')};
+ await assert.rejects(verifyLiveBindingProbe({url,secret,
+  verifiedHost:'ner-ldb-runner-binding-probe.attacker.workers.dev',fetcher}),
+  /UNVERIFIED_PROBE_ACCOUNT_HOST/);
+ await assert.rejects(verifyLiveBindingProbe({url,secret,fetcher}),
+  /UNVERIFIED_PROBE_ACCOUNT_HOST/);
  assert.equal(called,0);
 });
 test('redirect, missing, and forged ready responses fail',async()=>{
@@ -77,7 +86,7 @@ test('redirect, missing, and forged ready responses fail',async()=>{
   Response.json({status:'BRIDGE_AUTHENTICATED',productionReady:false,token:'extra'}),
   Response.json({status:'BRIDGE_AUTHENTICATED'}),
   new Response('bad-json',{status:200})]){
-   await assert.rejects(verifyLiveBindingProbe({url,secret,fetcher:async()=>fake}),/PROBE_(NOT_AUTHENTICATED|RESPONSE_INVALID)/);
+   await assert.rejects(verifyLiveBindingProbe({url,secret,verifiedHost:'ner-ldb-runner-binding-probe.account.workers.dev',fetcher:async()=>fake}),/PROBE_(NOT_AUTHENTICATED|RESPONSE_INVALID)/);
  }
 });
 

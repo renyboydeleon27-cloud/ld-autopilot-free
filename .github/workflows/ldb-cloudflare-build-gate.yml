@@ -9,6 +9,7 @@ on:
       - 'scripts/ldb-cloudflare-isolated-probe-gate.mjs'
       - 'scripts/ldb-live-binding-probe.mjs'
       - 'tests/ldb-isolated-probe-config.test.mjs'
+      - 'tests/ldb-owner-verified-binding-probe.test.mjs'
       - '.github/workflows/ldb-cloudflare-build-gate.yml'
   workflow_dispatch:
 
@@ -30,7 +31,7 @@ jobs:
       - name: Validate isolated read-only probe configs and smoke-test guards
         run: |
           node scripts/ldb-cloudflare-isolated-probe-gate.mjs
-          node --test tests/ldb-isolated-probe-config.test.mjs
+          node --test tests/ldb-isolated-probe-config.test.mjs tests/ldb-owner-verified-binding-probe.test.mjs
       - name: Compile isolated Vault probe without deploying
         run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-google-vault/wrangler.probe.jsonc --outdir /tmp/ldb-vault-probe-build
       - name: Compile isolated Runner probe without deploying
