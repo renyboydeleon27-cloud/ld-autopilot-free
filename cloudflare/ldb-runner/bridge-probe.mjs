@@ -17,9 +17,33 @@ export async function probeGoogleVaultBinding(env,nonce){
   });
  }catch{fail();}
  if(response?.status!==200)fail();
+ // The bridge reply is a tiny, non-cacheable JSON acknowledgment only.
+ // Do not allow an oversized/streaming provider body to reach response.json().
+ const contentType=response.headers?.get?.('content-type')||'';
+ const cacheControl=response.headers?.get?.('cache-control')||'';
+ if(!/^application\\/json(?:\\s*;.*)?$/i.test(contentType)||
+    !/(?:^|,)\\s*no-store(?:\\s*,|$)/i.test(cacheControl))fail();
+ const reader=response.body?.getReader?.();
+ if(!reader)fail();
+ let bytes=0,text='';
+ const decoder=new TextDecoder();
+ try{
+  for(;;){
+   const {done,value}=await reader.read();
+   if(done)break;
+   bytes+=value.byteLength;
+   if(bytes>1024){
+    await reader.cancel().catch(()=>{});
+    fail();
+   }
+   text+=decoder.decode(value,{stream:true});
+  }
+  text+=decoder.decode();
+ }catch{fail();}
  let data;
- try{data=await response.json();}catch{fail();}
- if(!data||data.status!=='BRIDGE_AUTHENTICATED'||data.nonce!==nonce||
-    Object.keys(data).sort().join(',')!=='nonce,status')fail();
+ try{data=JSON.parse(text);}catch{fail();}
+ if(!data||Array.isArray(data)||data.status!=='BRIDGE_AUTHENTICATED'||
+    data.nonce!==nonce||Object.keys(data).sort().join(',')!=='nonce,status')
+  fail();
  return Object.freeze({status:'BRIDGE_AUTHENTICATED',productionReady:false,nonce});
 }
