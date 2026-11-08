@@ -22,6 +22,11 @@ account-scoped Worker Custom Domains listing filtered to the isolated Vault.
 The Vault MUST have enabled=false, previews_enabled=false, and ZERO
 attached Custom Domains (even if a domain appears disabled). Incomplete
 pagination, denied access, malformed results or API errors fail closed.
+Cloudflare may report a nonzero `result_info.total_count` for unrelated
+account Worker domains even when the filtered isolated Vault result is
+empty. The safety check accepts this unfiltered total, while requiring
+no Vault domain rows, an empty filtered `count` (when provided), and no
+unread pages. No other Worker domain or hostname is returned in evidence.
 The list check does not enumerate zone-scoped Worker routes; the owner
 must inspect zone routes in the Cloudflare dashboard separately.
 It rejects unsafe delivery/AI flags and any hostname not owned by that account. It outputs
