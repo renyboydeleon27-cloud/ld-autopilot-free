@@ -259,3 +259,82 @@ test('competing milestone attempts issue no duplicate sends after a durable clai
  assert.equal((await mk().send(100)).status,'SENT');
  assert.equal(providerCalls,1);
 });
+
+
+test('Gmail completion does not overwrite a changed durable milestone receipt',async()=>{
+ const scenarios=[
+  {name:'manually reconciled uncertain',change:(_s,key)=>({status:'UNCERTAIN',percent:100}),
+   expected:'UNCERTAIN'},
+  {name:'competing newer claim',change:(_s,key)=>({status:'CLAIMED',percent:100,claimId:'a'.repeat(32)}),
+   expected:'CLAIMED'},
+  {name:'manually reconciled sent',change:(_s,key)=>({status:'SENT',percent:100}),
+   expected:'SENT'}
+ ];
+ for(const scenario of scenarios){
+  const store=new Storage(),key='gmail:'+'f'.repeat(64)+':100';
+  let calls=0;
+  const make=()=>new GmailMilestones(store,{
+   tokenProvider:async()=>'offline-token',loadState:async()=>state(),
+   fetcher:async()=>{
+    calls++;
+    store.data.set(key,scenario.change(store,key));
+    return {ok:true,json:async()=>({id:'acceptedProviderMessage2026'})};
+   }
+  });
+  const result=await make().send(100);
+  assert.equal(result.status,'UNCERTAIN',scenario.name);
+  assert.deepEqual(await store.get(key),scenario.change(store,key));
+  const next=await make().send(100);
+  assert.equal(next.status,scenario.expected);
+  assert.equal(calls,1,'never retry a Gmail message after an ambiguous response');
+ }
+});
+test('deleted Gmail claim after an acknowledged POST becomes a no-resend tombstone',async()=>{
+ const store=new Storage(),key='gmail:'+'f'.repeat(64)+':100';
+ let sends=0;
+ const mail=new GmailMilestones(store,{
+  tokenProvider:async()=>'offline-token',loadState:async()=>state(),
+  fetcher:async()=>{
+   sends++;
+   store.data.delete(key);
+   return {ok:true,json:async()=>({id:'acceptedProviderMessage2026'})};
+  }
+ });
+ assert.equal((await mail.send(100)).status,'UNCERTAIN');
+ assert.deepEqual(await store.get(key),{status:'UNCERTAIN',percent:100});
+ assert.equal((await mail.send(100)).status,'UNCERTAIN');
+ assert.equal(sends,1);
+});
+test('finalized Gmail receipts discard claim ID and persist only hashed provider ID',async()=>{
+ const store=new Storage(),key='gmail:'+'f'.repeat(64)+':70';
+ let outstanding;
+ const mail=new GmailMilestones(store,{
+  tokenProvider:async()=>'offline-token',loadState:async()=>state(),
+  fetcher:async()=>{
+   outstanding=await store.get(key);
+   return {ok:true,json:async()=>({id:'acceptedProviderMessage2026'})};
+  }
+ });
+ assert.equal((await mail.send(70)).status,'SENT');
+ assert.match(outstanding.claimId,/^[a-f0-9]{32}$/);
+ const saved=await store.get(key);
+ assert.deepEqual(saved,{status:'SENT',percent:70,
+  messageIdSha256:hash('acceptedProviderMessage2026')});
+ assert.ok(!JSON.stringify(saved).includes('acceptedProviderMessage2026'));
+});
+test('corrupt claim during Gmail response is not silently replaced',async()=>{
+ const store=new Storage(),key='gmail:'+'f'.repeat(64)+':100';
+ let posts=0;
+ const mail=new GmailMilestones(store,{
+  tokenProvider:async()=>'offline-token',loadState:async()=>state(),
+  fetcher:async()=>{
+   posts++;
+   store.data.set(key,{status:'CLAIMED',percent:100,claimId:'malformed'});
+   return {ok:true,json:async()=>({id:'acceptedProviderMessage2026'})};
+  }
+ });
+ await assert.rejects(mail.send(100),/GMAIL_RECEIPT_INTEGRITY_FAILED/);
+ assert.equal(posts,1);
+ await assert.rejects(mail.send(100),/GMAIL_RECEIPT_INTEGRITY_FAILED/);
+ assert.equal(posts,1);
+});
