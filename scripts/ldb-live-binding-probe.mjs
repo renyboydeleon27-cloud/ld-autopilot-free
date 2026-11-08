@@ -152,21 +152,60 @@ export async function runOwnerVerifiedBindingProbe({
   inferenceCalled:false,workerModified:false
  });
 }
+// Only allowlisted, non-secret evidence may be copied from an owner-controlled
+// terminal. This is an operator-clock observation, not a signed attestation.
+export function safeOwnerBindingEvidence({mode,result}={}){
+ const preflight=mode==='preflight';
+ const authenticated=mode==='authenticated';
+ if(!preflight&&!authenticated)fail('PROBE_RESPONSE_INVALID');
+ if(result?.status!==(preflight?'OWNER_PREFLIGHT_VERIFIED':'BRIDGE_AUTHENTICATED')||
+    result.hostOwnershipVerified!==true||
+    result.workerMetadataVerified!==true||
+    result.workerModified!==false||
+    result.productionReady!==false||
+    result.googleConnectionVerified!==false||
+    result.gmailConnectionVerified!==false||
+    result.inferenceCalled!==false||
+    (preflight&&result.ownerSecretSent!==false))
+  fail('PROBE_RESPONSE_INVALID');
+ // Do not carry through provider metadata, URLs, nonces, tokens or secrets.
+ return Object.freeze({
+  schema:'LDB_OWNER_PROBE_SAFE_EVIDENCE_V1',
+  mode,
+  observedAtUtc:new Date().toISOString(),
+  hostOwnershipVerified:true,
+  workerMetadataVerified:true,
+  runnerSecretSent:authenticated,
+  bindingAuthenticationVerified:authenticated,
+  googleConnectionVerified:false,
+  gmailConnectionVerified:false,
+  inferenceCalled:false,
+  workerModified:false,
+  productionReady:false
+ });
+}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  // Deliberate opt-in: CI, preinstall hooks and unattended terminals cannot
  // trigger a secret-bearing live request merely by importing this module.
- const full=process.argv.includes('--owner-approved-readonly-probe');
- const metadata=process.argv.includes('--owner-approved-readonly-preflight');
- if(full===metadata){
-  console.error('OWNER_APPROVAL_FLAG_REQUIRED: select exactly one read-only mode; no network request made.');
+ const args=process.argv.slice(2);
+ const allowed=new Set(['--owner-approved-readonly-probe',
+  '--owner-approved-readonly-preflight','--safe-evidence-json']);
+ const full=args.includes('--owner-approved-readonly-probe');
+ const metadata=args.includes('--owner-approved-readonly-preflight');
+ const evidence=args.includes('--safe-evidence-json');
+ if(full===metadata||args.length!==new Set(args).size||
+    args.some(arg=>!allowed.has(arg))){
+  console.error('OWNER_APPROVAL_FLAG_REQUIRED: select exactly one read-only mode and optional safe evidence; no network request made.');
   process.exitCode=1;
  }else try{
   if(metadata){
-   await runOwnerReadOnlyBindingPreflight();
-   console.log('PASS: isolated Cloudflare account/Worker/host metadata verified. Owner authentication NOT tested. No Runner secret sent.');
+   const result=await runOwnerReadOnlyBindingPreflight();
+   if(evidence)console.log(JSON.stringify(safeOwnerBindingEvidence({mode:'preflight',result}),null,2));
+   else console.log('PASS: isolated Cloudflare account/Worker/host metadata verified. Owner authentication NOT tested. No Runner secret sent.');
   }else{
-   await runOwnerVerifiedBindingProbe();
-   console.log('PASS: isolated Worker-to-Worker authentication verified. Google, AI and production remain OFF.');
+   const result=await runOwnerVerifiedBindingProbe();
+   if(evidence)console.log(JSON.stringify(safeOwnerBindingEvidence({mode:'authenticated',result}),null,2));
+   else console.log('PASS: isolated Worker-to-Worker authentication verified. Google, AI and production remain OFF.');
   }
  }catch(e){
   const code=typeof e?.message==='string'&&/^[A-Z_]+$/.test(e.message)?
