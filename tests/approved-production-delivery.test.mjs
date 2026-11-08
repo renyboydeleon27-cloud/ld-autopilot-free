@@ -55,3 +55,24 @@ test('unsafe episode title cannot create a Google Drive delivery plan',()=>{
   assert.throws(()=>prepareApprovedProductionDelivery({...f,episode}),/INVALID_EPISODE_NAME/,episode);
  }
 });
+
+test('reviewed 69-file manifest resists post-audit edits and drops private extras',async()=>{
+ const f=fixture(),privateData='DO_NOT_ECHO_SOURCE_PRIVATE_METADATA';
+ f.otherAssets[0].debugCredentials=privateData;
+ const prepared=prepareApprovedProductionDelivery(f);
+ const asset=prepared.plan.assets[0],digest=prepared.fingerprint;
+ assert.ok(Object.isFrozen(prepared.plan));
+ assert.ok(Object.isFrozen(prepared.plan.assets));
+ assert.ok(prepared.plan.assets.every(Object.isFrozen));
+ assert.throws(()=>{prepared.plan.assets[0].name='unapproved.jpg'},TypeError);
+ assert.throws(()=>prepared.plan.assets.push(asset),TypeError);
+ assert.throws(()=>{prepared.plan.episode='Other Episode'},TypeError);
+ f.otherAssets[0].name='unreviewed.json';
+ f.otherAssets[0].sha256='0'.repeat(64);
+ assert.equal(prepared.plan.assets.find(x=>x.category==='Storyboard').name,'storyboard.json');
+ assert.equal(prepared.plan.assets.length,69);
+ assert.equal(prepared.fingerprint,digest);
+ assert.equal(prepared.fingerprint,validateDeliveryPlan(prepared.plan));
+ assert.ok(!JSON.stringify(prepared.plan).includes(privateData));
+ assert.equal(sha(await prepared.readAsset(asset)),asset.sha256);
+});
