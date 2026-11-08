@@ -2,19 +2,33 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-import {hookCloudTest,assertV5PreviewScope,assertV5InferenceGate} from '../scripts/ldb-hook-cloud-test.mjs';
+import {hookCloudTest,assertV5PreviewScope,assertV5InferenceGate,assertLiveV5ProviderPreflight} from '../scripts/ldb-hook-cloud-test.mjs';
 const TODAY=new Date().toISOString().slice(0,10);
-const env={CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',CLOUDFLARE_API_TOKEN:'private-test-token',LDB_FREE_PLAN_VERIFIED_DATE:TODAY,LDB_FREE_USAGE_VERIFIED_DATE:TODAY,VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance',LDB_WORKERS_PLAN:'free',FREE_PLAN_CONFIRMED:'true'};
+const env={CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',CLOUDFLARE_API_TOKEN:'private-test-token-diagnostic-only-1234',LDB_FREE_PLAN_VERIFIED_DATE:TODAY,LDB_FREE_USAGE_VERIFIED_DATE:TODAY,VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance',LDB_WORKERS_PLAN:'free',FREE_PLAN_CONFIRMED:'true'};
 const NOW=Date.now();
 const USAGE_REPORT={checkedAt:new Date(NOW).toISOString(),inferenceCalled:false,workerListStatus:200,v5:[],graphqlStatus:200,errors:[],usage:{metric:'totalNeurons',limit:100,httpStatus:200,errors:[],data:{viewer:{accounts:[{aiInferenceAdaptiveGroups:[{sum:{totalNeurons:0}}]}]}}}};
-async function harness(failRender=false){
+async function harness(failRender=false,{liveUsage=0,liveWorker=false,billingPaid=false,liveHttpFailure=false}={}){
  const bundle=JSON.parse(await readFile(new URL('../ldb-submissions/lake-nyos-1986-test/approved_bundle.json',import.meta.url),'utf8'));
  bundle.schema='ldb-approved-render-job-v1';bundle.render_scenes=Object.entries(JSON.parse(bundle.storyboard_utf8).scenes).map(([id,s])=>({id,image_prompt:s.visual,narration:'Separate narration.',flow_prompt:'EXACTLY 10 SECONDS 0–2s: Start; 2–6s: move; 6–10s: stop'}));
  let stage='EMPTY',submits=0;const removed=[];const bytes=Buffer.from('image-test-data'),sha=createHash('sha256').update(bytes).digest('hex');
  const fetcher=async(url,opts={})=>{
   const path=new URL(url).pathname;
   if(url.startsWith('https://api.cloudflare.com')){
-   let result={};if(path.endsWith('/scripts')&&!opts.method)result=[];
+   if(path.endsWith('/subscriptions'))return Response.json(billingPaid?
+    {success:true,result_info:{total_count:1},result:[{rate_plan:{public_name:'Workers Paid'},state:'Paid'}]}:
+    {success:false,errors:[{code:9109}]},{status:billingPaid?200:403});
+   if(path.endsWith('/graphql')){
+    if(liveHttpFailure)return Response.json({errors:[{message:'no access'}]},{status:403});
+    const query=JSON.parse(opts.body).query;
+    if(query.includes('__schema'))return Response.json({data:{__schema:{
+     types:[{name:'AiInferenceAdaptiveGroupsSum',fields:[{name:'totalNeurons'}]}]
+    }}});
+    return Response.json({data:{viewer:{accounts:[{aiInferenceAdaptiveGroups:[
+     {sum:{totalNeurons:liveUsage}}
+    ]}]}}});
+   }
+   let result={};if(path.endsWith('/scripts')&&(!opts.method||opts.method==='GET'))
+    result=liveWorker?[{id:'ner-ldb-runner-quality-v5'}]:[];
    if(path.endsWith('/subdomain')&&!opts.method)result={subdomain:'test'};
    if(opts.method==='DELETE')removed.push(path.split('/').at(-1));
    if(opts.method==='PUT'){const meta=JSON.parse(await opts.body.get('metadata').text());assert.equal(meta.bindings.find(x=>x.name==='HOOK_ONLY_TEST').text,'true');}
@@ -165,4 +179,65 @@ test('same-day environment labels alone never count as actual provider telemetry
  assert.equal(result.reportedNeuronsUsed,0);
  assert.equal(result.readyForOperatorTest,true);
  assert.ok(result.note.includes('not independent billing verification'));
+});
+
+test('forged zero-usage file cannot under-report higher live account usage',async()=>{
+ const h=await harness(false,{liveUsage:9001});
+ let writes=0;
+ const real=h.options.fetcher;
+ const fetcher=async(url,opts)=>{
+  if(['PUT','DELETE'].includes(opts?.method)||url.endsWith('/jobs'))writes++;
+  return real(url,opts);
+ };
+ await assert.rejects(hookCloudTest({...h.options,
+  read:async p=>{
+   const raw=await h.options.read(p);
+   if(p.endsWith('render_job.json')){
+    const {prepareHookV5}=await import('../scripts/ldb-prepare-hook-v5.mjs');
+    return JSON.stringify(prepareHookV5(JSON.parse(raw)));
+   }
+   return raw;
+  },
+  fetcher,workerName:'ner-ldb-runner-quality-v5'
+ }),/V5_LIVE_PROVIDER_PREFLIGHT_FAILED/);
+ assert.equal(writes,0);
+ assert.equal(h.getSubmits(),0);
+});
+test('live V5 Worker detected after saved quota snapshot prevents duplicate deploy',async()=>{
+ const h=await harness(false,{liveWorker:true});
+ const read=async p=>{
+  const data=await h.options.read(p);
+  if(p.endsWith('render_job.json')){
+   const {prepareHookV5}=await import('../scripts/ldb-prepare-hook-v5.mjs');
+   return JSON.stringify(prepareHookV5(JSON.parse(data)));
+  }
+  return data;
+ };
+ await assert.rejects(hookCloudTest({...h.options,read,
+  workerName:'ner-ldb-runner-quality-v5'}),/V5_LIVE_PROVIDER_PREFLIGHT_FAILED/);
+ assert.equal(h.getSubmits(),0);
+ assert.deepEqual(h.removed,[]);
+});
+test('actual live Workers Paid evidence blocks V5 before any Worker deployment',async()=>{
+ const h=await harness(false,{billingPaid:true});
+ await assert.rejects(assertLiveV5ProviderPreflight({
+  env,usageReport:structuredClone(USAGE_REPORT),fetcher:h.options.fetcher,now:NOW
+ }),/V5_PAID_WORKERS_PLAN_DETECTED/);
+ assert.equal(h.getSubmits(),0);
+ assert.deepEqual(h.removed,[]);
+});
+test('live GraphQL permission error does not default to a zero neuron balance',async()=>{
+ const h=await harness(false,{liveHttpFailure:true});
+ await assert.rejects(assertLiveV5ProviderPreflight({
+  env,usageReport:structuredClone(USAGE_REPORT),fetcher:h.options.fetcher,now:NOW
+ }),/V5_LIVE_PROVIDER_PREFLIGHT_FAILED/);
+ assert.equal(h.getSubmits(),0);
+ assert.deepEqual(h.removed,[]);
+});
+test('latest live usage may exceed file snapshot but must remain inside conservative ceiling',async()=>{
+ const h=await harness(false,{liveUsage:25});
+ const result=await assertLiveV5ProviderPreflight({env,
+  usageReport:structuredClone(USAGE_REPORT),fetcher:h.options.fetcher,now:NOW});
+ assert.equal(result.reportedNeuronsUsed,25);
+ assert.equal(result.requiresOwnerBillingVerification,true);
 });

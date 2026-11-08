@@ -6,6 +6,7 @@ import {workerModules} from './ldb-worker-module-graph.mjs';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
 import {freeInferenceAllowed} from '../lib/ldb/free-inference-gate.mjs';
 import {verifyOneHookUsageReport} from '../lib/ldb/v5-free-usage-gate.mjs';
+import {cloudflareReadOnlyDiagnostic} from '../lib/ldb/cloudflare-read-only-diagnostic.mjs';
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v4', V5_NAME='ner-ldb-runner-quality-v5';
 export function assertV5PreviewScope({args=[],env={}}={}){
  if(!args.includes('--hook-v5'))return true; // Existing V4 diagnostics unchanged.
@@ -32,6 +33,35 @@ export function assertV5InferenceGate({env={},usageReport,now=Date.now()}={}){
   note:'Operator attestation is not independent billing verification; no inference is authorized by this function alone.'});
 }
 
+// The caller-supplied preflight JSON is never sufficient on its own.
+// Immediately before the first Worker write, independently query the same
+// Cloudflare account with the actual configured token. Billing 403 remains
+// a separate manual dashboard prerequisite, never a Free-plan clearance.
+export async function assertLiveV5ProviderPreflight({
+ env={},usageReport,fetcher=fetch,now=Date.now()
+}={}){
+ const verified=assertV5InferenceGate({env,usageReport,now});
+ const live=await cloudflareReadOnlyDiagnostic({
+  accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN,
+  fetcher,now
+ });
+ if(live.status!=='READ_ONLY_TELEMETRY_CHECKED'||
+    live.existingV5Worker!==false||
+    live.inferenceCalled!==false||live.inferenceAuthorized!==false||
+    live.freePlanIndependentlyVerified!==false||
+    !Number.isFinite(live.reportedNeuronsUsed)||
+    live.reportedNeuronsUsed<verified.reportedNeuronsUsed||
+    live.reportedNeuronsUsed>9000)
+  throw Error('V5_LIVE_PROVIDER_PREFLIGHT_FAILED');
+ if(live.billingReadStatus==='PAID_WORKERS_SUBSCRIPTION_DETECTED')
+  throw Error('V5_PAID_WORKERS_PLAN_DETECTED');
+ if(typeof live.checkedAt!=='string'||live.checkedAt.slice(0,10)!==verified.utcDay)
+  throw Error('V5_LIVE_USAGE_DAY_MISMATCH');
+ return Object.freeze({reportedNeuronsUsed:live.reportedNeuronsUsed,
+  providerCheckedAt:live.checkedAt,requiresOwnerBillingVerification:true,
+  note:'A live usage GET/GraphQL check never authorizes billing or rendering by itself.'});
+}
+
 export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms)),freePlanConfirmed=false,workerName=NAME,usageReport,now=Date.now()}={}) {
  if(workerName!==NAME&&workerName!==V5_NAME)throw Error('UNAPPROVED_TEST_WORKER');
  if(workerName===V5_NAME)assertV5InferenceGate({env,usageReport,now});
@@ -48,6 +78,7 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
      !hook.image_prompt.includes('Moon OUTSIDE frame; NO visible moon disk.')||
      !hook.image_prompt.includes('R=G=B'))throw Error('HOOK_V5_PROMPT_REQUIRED');
  }
+ if(workerName===V5_NAME)await assertLiveV5ProviderPreflight({env,usageReport,fetcher,now});
  const token=env.CLOUDFLARE_API_TOKEN, key=randomBytes(32).toString('hex');
  const base=`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/workers`;
  const api=async(path,options={})=>{
