@@ -25,7 +25,7 @@ const baseEnv={CLOUDFLARE_ACCOUNT_ID:ACCOUNT,CLOUDFLARE_API_TOKEN:TOKEN,
 function mock({subdomain='ownerzone',scriptEnabled=true,
   runnerBindings=runner,vaultBindings=vault,
   accountStatus=200,runnerStatus=200,
-  healthStatus=200,healthBody={status:'BRIDGE_AUTHENTICATED',productionReady:false},
+  healthStatus=200,healthBody=null,
   healthHeaders={'Cache-Control':'no-store'}}={}){
  const calls=[];
  const fetcher=async(url,opts={})=>{
@@ -36,7 +36,11 @@ function mock({subdomain='ownerzone',scriptEnabled=true,
    assert.equal(opts.redirect,'manual');
    assert.equal(opts.cache,'no-store');
    assert.equal(opts.headers['Cache-Control'],'no-store');
-   return Response.json(healthBody,{status:healthStatus,headers:healthHeaders});
+   assert.match(opts.headers['X-LDB-Probe-Nonce'],/^[a-f0-9]{32}$/);
+   const good={status:'BRIDGE_AUTHENTICATED',productionReady:false,
+    nonce:opts.headers['X-LDB-Probe-Nonce']};
+   return Response.json(healthBody===null?good:healthBody,
+    {status:healthStatus,headers:healthHeaders});
   }
   assert.equal(opts.method,'GET');
   assert.equal(opts.redirect,'error');
@@ -105,6 +109,9 @@ test('invalid authenticated response fails; never infers Google or production re
   mock({healthStatus:401}),
   mock({healthBody:{status:'BRIDGE_AUTHENTICATED',productionReady:true}}),
   mock({healthBody:{status:'BRIDGE_AUTHENTICATED',productionReady:false,secret:'hidden'}}),
+  mock({healthBody:{status:'BRIDGE_AUTHENTICATED',productionReady:false}}),
+  mock({healthBody:{status:'BRIDGE_AUTHENTICATED',productionReady:false,
+   nonce:'0'.repeat(32)}}),
   mock({healthStatus:302}),
   mock({healthHeaders:{}}),
   mock({healthHeaders:{'Cache-Control':'public, max-age=3600'}}),
