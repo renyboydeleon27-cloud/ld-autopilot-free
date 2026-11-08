@@ -1,0 +1,2 @@
+# Owner-only LDB image review packages are never repository assets.
+ldb-review-packages/
