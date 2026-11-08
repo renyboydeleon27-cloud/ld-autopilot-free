@@ -6,8 +6,10 @@ on:
       - "scripts/verify_ldb_approval.py"
       - "tests/test_ldb_approval.py"
       - "scripts/ldb*.py"
+      - "scripts/ldb*.mjs"
       - "scripts/ldb_profiles/**"
       - "tests/test_ldb*.py"
+      - "tests/ldb*.test.mjs"
       - "tests/ldb-auto-studio-ui.test.cjs"
       - "tests/*delivery*.test.mjs"
       - "tests/durable-*.test.mjs"
@@ -23,13 +25,17 @@ on:
       - "scripts/verify_ldb_approval.py"
       - "tests/test_ldb_approval.py"
       - "scripts/ldb*.py"
+      - "scripts/ldb*.mjs"
       - "scripts/ldb_profiles/**"
       - "tests/test_ldb*.py"
+      - "tests/ldb*.test.mjs"
       - "tests/ldb-auto-studio-ui.test.cjs"
       - "tests/*delivery*.test.mjs"
       - "tests/durable-*.test.mjs"
       - "tests/ldb-production-controls.test.mjs"
       - "lib/ldb/**"
+      - "cloudflare/ldb-runner/**"
+      - "cloudflare/ldb-google-vault/**"
       - ".github/workflows/ldb-free-production.yml"
       - ".github/workflows/ldb-auto-studio-tests.yml"
 permissions:
@@ -47,7 +53,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/ldb-auto-studio-ui.test.cjs tests/ldb-hook-cloud-test.test.mjs tests/ldb-prepare-hook-v5.test.mjs tests/ldb-worker-module-graph.test.mjs tests/ldb-v5-evidence-recovery.test.mjs tests/ldb-v5-free-usage-gate.test.mjs tests/ldb-free-inference-status.test.mjs
+      - run: node --test tests/ldb-auto-studio-ui.test.cjs tests/ldb-hook-cloud-test.test.mjs tests/ldb-prepare-hook-v5.test.mjs tests/ldb-worker-module-graph.test.mjs tests/ldb-v5-evidence-recovery.test.mjs tests/ldb-v5-free-usage-gate.test.mjs tests/ldb-free-inference-status.test.mjs tests/ldb-one-batch-readiness.test.mjs
       - name: One-batch safety boundary (offline only)
         run: |
           {
