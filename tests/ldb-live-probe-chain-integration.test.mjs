@@ -32,7 +32,8 @@ const vaultBindings=[
 function setup({metadataRunner=runnerBindings,ownerSecret=OWNER_SECRET,
  runnerSecret=OWNER_SECRET,runnerProbeFlag='true',
  runnerBridgeSecret=BRIDGE_SECRET,vaultBridgeSecret=BRIDGE_SECRET,
- vaultProbeFlag='true',vaultPublished=false,vaultPreviewsEnabled=false}={}){
+ vaultProbeFlag='true',vaultPublished=false,vaultPreviewsEnabled=false,
+ vaultDomains=[]}={}){
  const calls={metadata:[],external:[],vault:[],do:0,google:0};
  const ownerEnv={CLOUDFLARE_ACCOUNT_ID:ACCOUNT,CLOUDFLARE_API_TOKEN:TOKEN,
   LDB_PROBE_URL:URL,LDB_RUNNER_SECRET:ownerSecret};
@@ -72,6 +73,9 @@ function setup({metadataRunner=runnerBindings,ownerSecret=OWNER_SECRET,
    return Response.json({success:true,result:{subdomain:'ownerzone'}});
   if(url===API+'/workers/scripts/'+RUNNER+'/subdomain')
    return Response.json({success:true,result:{enabled:true}});
+  if(url===API+'/workers/domains?service='+VAULT)
+   return Response.json({success:true,result:vaultDomains,
+    result_info:{page:1,total_pages:1,total_count:vaultDomains.length}});
   if(url===API+'/workers/scripts/'+VAULT+'/subdomain')
    return Response.json({success:true,result:{enabled:vaultPublished,
     previews_enabled:vaultPreviewsEnabled}});
@@ -90,7 +94,7 @@ test('full owner → Runner → Vault nonce echo passes only isolated read-only 
  const result=await runOwnerVerifiedBindingProbe({env:ownerEnv,fetcher});
  assert.equal(result.status,'BRIDGE_AUTHENTICATED');
  assert.equal(result.productionReady,false);
- assert.equal(calls.metadata.length,5);
+ assert.equal(calls.metadata.length,6);
  assert.equal(calls.external.length,1);
  assert.equal(calls.vault.length,1);
  assert.equal(calls.vault[0].url,'https://ldb-vault.internal/internal/bridge/health');
@@ -114,7 +118,7 @@ test('metadata-only preflight cannot execute the Runner or Vault path',async()=>
  const {calls,ownerEnv,fetcher}=setup();
  const result=await runOwnerReadOnlyBindingPreflight({env:ownerEnv,fetcher});
  assert.equal(result.authenticationVerified,false);
- assert.equal(calls.metadata.length,5);
+ assert.equal(calls.metadata.length,6);
  assert.equal(calls.external.length,0);
  assert.equal(calls.vault.length,0);
  assert.equal(calls.do,0);
@@ -132,7 +136,7 @@ test('wrong Vault shared secret, disabled Vault, and mismatched Runner secret fa
  ]){
   const {calls,ownerEnv,fetcher}=setup(options);
   await assert.rejects(runOwnerVerifiedBindingProbe({env:ownerEnv,fetcher}));
-  assert.equal(calls.metadata.length,5);
+  assert.equal(calls.metadata.length,6);
   assert.equal(calls.external.length,1);
   assert.equal(calls.do,0);
   assert.equal(calls.google,0);
@@ -157,7 +161,7 @@ test('published isolated Vault aborts the entire end-to-end owner probe before s
  const {calls,ownerEnv,fetcher}=setup({vaultPublished:true});
  await assert.rejects(runOwnerVerifiedBindingProbe({env:ownerEnv,fetcher}),
   /PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE/);
- assert.equal(calls.metadata.length,5);
+ assert.equal(calls.metadata.length,6);
  assert.equal(calls.external.length,0);
  assert.equal(calls.vault.length,0);
  assert.equal(calls.do,0);
@@ -168,7 +172,20 @@ test('public Vault preview URLs are refused before owner secret, even if workers
  const {calls,ownerEnv,fetcher}=setup({vaultPreviewsEnabled:true});
  await assert.rejects(runOwnerVerifiedBindingProbe({env:ownerEnv,fetcher}),
   /PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE/);
- assert.equal(calls.metadata.length,5);
+ assert.equal(calls.metadata.length,6);
  assert.equal(calls.external.length,0);
  assert.equal(calls.vault.length,0);
+});
+
+test('Vault custom-domain attachment refuses owner secret even when both workers.dev flags are off',async()=>{
+ const {calls,ownerEnv,fetcher}=setup({vaultDomains:[
+  {service:VAULT,enabled:false,previews_enabled:true,hostname:'private.example.com'}
+ ]});
+ await assert.rejects(runOwnerVerifiedBindingProbe({env:ownerEnv,fetcher}),
+  /PROBE_VAULT_CUSTOM_DOMAIN_UNSAFE/);
+ assert.equal(calls.metadata.length,6);
+ assert.equal(calls.external.length,0);
+ assert.equal(calls.vault.length,0);
+ assert.equal(calls.do,0);
+ assert.equal(calls.google,0);
 });
