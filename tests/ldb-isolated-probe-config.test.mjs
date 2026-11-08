@@ -24,7 +24,23 @@ test('safety contract rejects unsafe config mutations',()=>{
   x=>x.runner.services[0].service=x.liveVault.name,
   x=>x.vault.workers_dev=true,
   x=>x.vault.vars.GOOGLE_SECRET='leaked',
-  x=>x.vault.account_id='b'.repeat(32)
+  x=>x.vault.account_id='b'.repeat(32),
+  x=>x.runner.vars.AI='true',
+  x=>x.runner.vars.GOOGLE_CLIENT_SECRET='forbidden',
+  x=>x.vault.vars.VAULT_KEY='no-plain-credentials',
+  x=>x.runner.ai={binding:'AI'},
+  x=>x.runner.unsafe={bindings:[{type:'ai',name:'AI'}]},
+  x=>x.runner.kv_namespaces=[{binding:'PRIVATE'}],
+  x=>x.vault.r2_buckets=[{binding:'R2'}],
+  x=>x.runner.triggers={crons:['* * * * *']},
+  x=>x.runner.routes=['example.com/*'],
+  x=>x.vault.services=[{binding:'GOOGLE_VAULT',service:'ner-ldb-google-vault-quality'}],
+  x=>x.runner.vars.BRIDGE_PROBE_ENABLED='false',
+  x=>x.runner.compatibility_flags.push('unsafe_eval'),
+  x=>x.vault.durable_objects.bindings.push({name:'EXTRA',class_name:'Other'}),
+  x=>x.runner.migrations.push({tag:'v2',new_classes:['Unreviewed']}),
+  x=>x.runner.account_id='b'.repeat(32),
+  x=>x.runner.compatibility_date='2027-01-01'
  ]){const c=all();change(c);assert.throws(()=>assertProbeSafety(c));}
 });
 const url='https://ner-ldb-runner-binding-probe.account.workers.dev/delivery-bridge-probe';
@@ -63,4 +79,17 @@ test('redirect, missing, and forged ready responses fail',async()=>{
   new Response('bad-json',{status:200})]){
    await assert.rejects(verifyLiveBindingProbe({url,secret,fetcher:async()=>fake}),/PROBE_(NOT_AUTHENTICATED|RESPONSE_INVALID)/);
  }
+});
+
+test('isolated probe config disallows undocumented vars, copied credentials and paid bindings',()=>{
+ const base=all();
+ for(const kind of ['runner','vault']){
+  const extra=structuredClone(base);
+  extra[kind].vars.EXTRA_VALUE='x';
+  assert.throws(()=>assertProbeSafety(extra));
+  const secret=structuredClone(base);
+  secret[kind].vars.API_TOKEN='do-not-publish';
+  assert.throws(()=>assertProbeSafety(secret));
+ }
+ assert.equal(assertProbeSafety(base),true);
 });
