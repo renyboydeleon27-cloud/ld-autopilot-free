@@ -169,3 +169,36 @@ test('missing and malformed probe bindings show fail-closed guidance',async()=>{
   assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
  }
 });
+
+test('Cloudflare account probe host metadata appears without triggering an authenticated request',async()=>{
+ const h=setup({ok:true,json:async()=>result({
+  probeHost:{status:'PROBE_HOST_METADATA_READY',accountSubdomainValid:true,
+   runnerWorkersDevEnabled:true,accountHostMetadataVerified:true,
+   authenticatedProbeCalled:false,ownerSecretSent:false,
+   workerModified:false,productionReady:false}
+ })});
+ await h.click();
+ assert.ok(h.lines().some(s=>/correct account subdomain/.test(s)));
+ assert.ok(h.lines().some(s=>/Owner-authenticated health request NOT made/.test(s)));
+ assert.equal(h.calls.length,1);
+ assert.equal(h.calls[0].opts.method,'GET');
+ assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+});
+test('unpublished or inaccessible Runner domain never claims the owner secret may be sent',async()=>{
+ for(const probeHost of [
+  {status:'PROBE_HOST_METADATA_NOT_VERIFIED',runnerWorkersDevEnabled:false,
+   accountReadHttpStatus:200,scriptReadHttpStatus:200},
+  {status:'PROBE_HOST_METADATA_NOT_VERIFIED',runnerWorkersDevEnabled:null,
+   accountReadHttpStatus:403,scriptReadHttpStatus:404}
+ ]){
+  const h=setup({ok:true,json:async()=>result({probeHost:{
+   ...probeHost,accountHostMetadataVerified:false,
+   authenticatedProbeCalled:false,ownerSecretSent:false,
+   productionReady:false,workerModified:false
+  }})});
+  await h.click();
+  assert.ok(h.lines().some(s=>/domain metadata NOT VERIFIED/.test(s)));
+  assert.ok(h.lines().some(s=>/do not send owner credentials/.test(s)));
+  assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+ }
+});

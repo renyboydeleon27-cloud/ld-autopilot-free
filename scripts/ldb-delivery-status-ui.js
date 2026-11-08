@@ -130,6 +130,27 @@
       return ['Probe authentication bindings: metadata unavailable. Cannot determine whether probe secrets are configured.'];
      return ['Probe authentication bindings: one or more required bindings NOT LISTED in Worker settings. They might be absent or omitted by this API; do not assume credentials exist.'];
     })(),
+    ...(()=>{
+     const host=data.probeHost;
+     if(!host||host.productionReady!==false||
+        host.workerModified!==false||host.ownerSecretSent!==false||
+        host.authenticatedProbeCalled!==false)
+      return ['Isolated Runner domain ownership: metadata not verified.'];
+     if(host.status==='PROBE_HOST_METADATA_READY'&&
+        host.accountSubdomainValid===true&&host.runnerWorkersDevEnabled===true&&
+        host.accountHostMetadataVerified===true)
+      return ['Isolated Runner workers.dev hostname: correct account subdomain and Worker publishing confirmed in Cloudflare metadata. Owner-authenticated health request NOT made.'];
+     if(host.status!=='PROBE_HOST_METADATA_NOT_VERIFIED')
+      return ['Isolated Runner hostname: unexpected diagnostic; no authentication permission.'];
+     const account=host.accountReadHttpStatus;
+     const script=host.scriptReadHttpStatus;
+     return ['Isolated Runner domain metadata NOT VERIFIED (account HTTP '+
+      (Number.isInteger(account)?account:'unavailable')+', Worker HTTP '+
+      (Number.isInteger(script)?script:'unavailable')+').',
+      host.runnerWorkersDevEnabled===false?
+       'Isolated Runner workers.dev endpoint is disabled; do not send owner credentials.':
+       'Hostname metadata incomplete; do not send owner credentials.'];
+    })(),
     'Cloudflare Vault live binding probe, Google OAuth and delivery receipts need separate authenticated checks.',
     'Never paste any secret token, OAuth key or password into GitHub or ChatGPT.'
    ]);

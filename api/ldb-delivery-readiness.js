@@ -18,6 +18,9 @@ module.exports=async function handler(req,res){
   let isolatedProbe={status:'ISOLATED_PROBE_METADATA_NOT_VERIFIED',
    authenticationProbeCalled:false,authenticationVerified:false,
    productionReady:false,workerModified:false};
+  let probeHost={status:'PROBE_HOST_METADATA_NOT_VERIFIED',
+   accountHostMetadataVerified:false,authenticatedProbeCalled:false,
+   ownerSecretSent:false,productionReady:false,workerModified:false};
   if(env.CLOUDFLARE_ACCOUNT_ID&&env.CLOUDFLARE_API_TOKEN){
    try{
     const {inspectLdbCloudflareVaultWiring,inspectLdbIsolatedProbeWiring}=
@@ -28,9 +31,14 @@ module.exports=async function handler(req,res){
     isolatedProbe=await inspectLdbIsolatedProbeWiring({
      accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN
     });
+    // Does not require the Runner's owner credential and never invokes it.
+    const {inspectLdbProbeHost}=await import('../lib/ldb/probe-host-readonly.mjs');
+    probeHost=await inspectLdbProbeHost({
+     accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN
+    });
    }catch{/* Zero provider errors or secret data in client responses. */}
   }
-  return res.status(200).json({...inventory,cloudflareVault,isolatedProbe});
+  return res.status(200).json({...inventory,cloudflareVault,isolatedProbe,probeHost});
  }catch{
   return res.status(503).json({status:'DELIVERY_READINESS_CHECK_UNAVAILABLE',
    productionReady:false,googleApiCalled:false,gmailApiCalled:false});
