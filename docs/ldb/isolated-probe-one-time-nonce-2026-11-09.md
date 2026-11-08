@@ -13,6 +13,11 @@ the *current* request rather than a replayed or synthetic acknowledgment.
   GOOGLE_VAULT service binding with a separate shared secret.
 - The isolated Vault validates owner-independent service authentication, the
   exact GET path/method and the nonce before echoing the nonce in JSON.
+- Runner requests the internal Vault health endpoint with an 8-second
+  abort signal and Accept: application/json. Transport errors, aborts, HTTP
+  non-200 responses, cacheable/non-JSON data and oversized replies fail closed.
+  Abort enforcement depends on the binding honoring the signal; this is not
+  evidence that a live connection has completed.
 - Both Runner and CLI verify an exact echoed nonce plus the expected shape.
   Missing, changed or extra fields fail closed.
 - The operator-facing result deliberately omits the nonce and all secrets.
