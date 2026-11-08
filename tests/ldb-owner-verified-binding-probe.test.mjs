@@ -26,6 +26,7 @@ function mock({subdomain='ownerzone',scriptEnabled=true,
   vaultPublished=false,vaultPreviewsEnabled=false,
   vaultPublishedMissing=false,vaultPreviewMissing=false,vaultSubdomainStatus=200,
   vaultDomains=[],domainStatus=200,domainPages=1,domainTotal=null,
+  domainCount=null,
   runnerBindings=runner,vaultBindings=vault,
   accountStatus=200,runnerStatus=200,
   healthStatus=200,healthBody=null,
@@ -55,6 +56,7 @@ function mock({subdomain='ownerzone',scriptEnabled=true,
   if(url.endsWith('/workers/domains?service='+VAULT))
    return Response.json({success:domainStatus===200,result:vaultDomains,
     result_info:{page:1,total_pages:domainPages,
+     count:domainCount===null?vaultDomains.length:domainCount,
      total_count:domainTotal===null?vaultDomains.length:domainTotal}},
     {status:domainStatus});
   if(url.endsWith('/scripts/'+VAULT+'/subdomain'))
@@ -238,12 +240,22 @@ test('Vault must remain unpublished: true, absent, non-boolean, and inaccessible
  assert.equal(unavailable.secretCalls().length,0);
 });
 
+test('unfiltered account domain total_count may be nonzero when Vault filtered result is empty',async()=>{
+ const f=mock({vaultDomains:[],domainCount:0,domainTotal:42});
+ const out=await runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher});
+ assert.equal(out.status,'BRIDGE_AUTHENTICATED');
+ assert.equal(f.secretCalls().length,1);
+ assert.ok(f.calls.some(c=>c.url.endsWith('/workers/domains?service='+VAULT)));
+});
+
 test('Vault Custom Domain list fails closed on attached domain, unreadable list or incomplete pagination',async()=>{
  for(const options of [
   {vaultDomains:[{service:VAULT,hostname:'private.example.com',enabled:false}]},
   {vaultDomains:[{service:VAULT,hostname:'preview.example.com',previews_enabled:true}]},
   {domainPages:2,domainTotal:20},
-  {domainTotal:1},
+  {domainCount:1,domainTotal:20},
+  {domainCount:-1,domainTotal:20},
+  {domainTotal:-1},
   {domainStatus:401},
   {domainStatus:403},
   {domainStatus:500}
