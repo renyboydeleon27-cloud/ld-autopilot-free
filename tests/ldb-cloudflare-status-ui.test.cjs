@@ -28,7 +28,8 @@ test('one click performs exactly one same-origin GET and shows billing 403 witho
  const h=harness({ok:true,json:async()=>({
   status:'READ_ONLY_TELEMETRY_CHECKED',
   inferenceCalled:false,inferenceAuthorized:false,productionAccepted:false,
-  reportedNeuronsUsed:0,hookV5EstimatedNeurons:104.2,
+  reportedNeuronsUsed:0,isolatedRunnerProbePresent:false,
+  isolatedVaultProbePresent:false,hookV5EstimatedNeurons:104.2,
   hookV5ReservedNeurons:400,hookV5BudgetStatus:'BUDGET_SPACE_ESTIMATED',
   billingReadStatus:'BILLING_READ_PERMISSION_REQUIRED',
   existingV5Worker:false
@@ -43,6 +44,7 @@ test('one click performs exactly one same-origin GET and shows billing 403 witho
  assert.match(h.els.cfStatus.textContent,/NO-GO/);
  assert.ok(h.lines().some(s=>/0.*NOT billing approval/.test(s)));
  assert.ok(h.lines().some(s=>/UNVERIFIED.*403/.test(s)));
+ assert.ok(h.lines().some(s=>/Isolated binding-probe Workers.*Runner NOT LISTED.*Vault NOT LISTED/.test(s)));
  assert.ok(h.lines().some(s=>/104\.2.*400.*NOT permission/.test(s)));
  assert.ok(h.lines().every(s=>!s.includes('READY_FOR_INFERENCE')));
 });
@@ -80,4 +82,18 @@ test('insufficient one-HOOK buffer is clearly blocked on mobile even when teleme
  await h.click();
  assert.ok(h.lines().some(x=>/buffer insufficient.*BLOCKED/.test(x)));
  assert.match(h.els.cfStatus.textContent,/NO-GO/);
+});
+
+test('present isolated probes require owner review and never trigger modifications',async()=>{
+ const h=harness({ok:true,json:async()=>({
+  status:'READ_ONLY_TELEMETRY_CHECKED',
+  inferenceCalled:false,inferenceAuthorized:false,productionAccepted:false,
+  reportedNeuronsUsed:0,billingReadStatus:'BILLING_READ_PERMISSION_REQUIRED',
+  existingV5Worker:false,isolatedRunnerProbePresent:true,isolatedVaultProbePresent:true
+ })});
+ await h.click();
+ assert.ok(h.lines().some(s=>/Runner PRESENT.*Vault PRESENT/.test(s)));
+ assert.match(h.els.cfStatus.textContent,/NO-GO/);
+ assert.equal(h.calls.length,1);
+ assert.equal(h.calls[0].opts.method,'GET');
 });

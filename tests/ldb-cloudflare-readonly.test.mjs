@@ -43,6 +43,8 @@ test('real-provider shape produces a sanitized read-only diagnostic, never infer
  assert.equal(r.inferenceAuthorized,false);
  assert.equal(r.freePlanIndependentlyVerified,false);
  assert.equal(r.existingV5Worker,false);
+ assert.equal(r.isolatedRunnerProbePresent,false);
+ assert.equal(r.isolatedVaultProbePresent,false);
  assert.equal(t.calls.length,4);
  assert.equal(r.billingReadStatus,'BILLING_READ_PERMISSION_REQUIRED');
  assert.equal(r.workersSubscription,'UNVERIFIED');
@@ -115,4 +117,35 @@ test('provider daily usage close to local fence reports NO V5 buffer even if und
  assert.equal(r.status,'READ_ONLY_TELEMETRY_CHECKED');
  assert.equal(r.hookV5BudgetStatus,'INSUFFICIENT_LOCAL_BUFFER');
  assert.equal(r.inferenceAuthorized,false);
+});
+
+test('probe Worker inventory reuses the one existing Cloudflare scripts listing',async()=>{
+ const t=transport();
+ const original=t.fetcher;
+ const fetcher=async(url,opts)=>{
+  if(url.endsWith('/workers/scripts')){
+   t.calls.push({url,options:opts});
+   return Response.json({success:true,result:[
+    {id:'ner-ldb-runner-binding-probe'},
+    {id:'ner-ldb-vault-binding-probe'}
+   ]});
+  }
+  return original(url,opts);
+ };
+ const result=await cloudflareReadOnlyDiagnostic({accountId:ACCOUNT,token,fetcher,now:NOW});
+ assert.equal(result.isolatedRunnerProbePresent,true);
+ assert.equal(result.isolatedVaultProbePresent,true);
+ assert.equal(result.inferenceAuthorized,false);
+ assert.equal(result.productionAccepted,false);
+ assert.equal(t.calls.length,4);
+});
+test('inaccessible scripts listing does not fabricate no existing probes',async()=>{
+ const t=transport();
+ const original=t.fetcher;
+ const fetcher=(url,opts)=>url.endsWith('/workers/scripts')?
+  Response.json({success:false},{status:403}):original(url,opts);
+ const result=await cloudflareReadOnlyDiagnostic({accountId:ACCOUNT,token,fetcher,now:NOW});
+ assert.equal(result.isolatedRunnerProbePresent,null);
+ assert.equal(result.isolatedVaultProbePresent,null);
+ assert.equal(result.status,'READ_ONLY_NO_GO');
 });

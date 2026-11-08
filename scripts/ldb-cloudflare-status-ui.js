@@ -62,6 +62,13 @@
     lines.push('Isolated V5 Worker: none reported.');
    else
     lines.push('V5 Worker inspection: unavailable.');
+   if(typeof data.isolatedRunnerProbePresent==='boolean'&&
+      typeof data.isolatedVaultProbePresent==='boolean'){
+    const runner=data.isolatedRunnerProbePresent?'PRESENT (review before changes)':'NOT LISTED';
+    const vault=data.isolatedVaultProbePresent?'PRESENT (review before changes)':'NOT LISTED';
+    lines.push('Isolated binding-probe Workers: Runner '+runner+'; Vault '+vault+
+     '. Inventory only, NOT a live binding check or deployment permission.');
+   }
    if(typeof data.blocker==='string'&&/^[A-Z_]+$/.test(data.blocker))
     lines.push('Provider telemetry blocker: '+data.blocker);
    lines.push('HOOK V5, 17-image generation, Drive and Gmail remain OFF. This button only reads status.');
