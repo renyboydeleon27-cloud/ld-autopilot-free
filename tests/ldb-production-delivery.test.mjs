@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
-import {ProductionDelivery,validateDeliveryPlan,storageCapacity} from '../lib/ldb/production-delivery.mjs';
+import {ProductionDelivery,validateDeliveryPlan,storageCapacity,assertDeliveryCheckpointIntegrity} from '../lib/ldb/production-delivery.mjs';
 const hash=s=>createHash('sha256').update(s).digest('hex'),bytes=Buffer.from('verified test bytes');
 class Storage{data=new Map();queue=Promise.resolve();async get(k){return structuredClone(this.data.get(k));}async put(k,v){this.data.set(k,structuredClone(v));}async setAlarm(t){this.alarm=t;}async deleteAlarm(){this.alarm=null;}transaction(fn){const p=this.queue.then(()=>fn(this));this.queue=p.catch(()=>{});return p;}}
 function plan(){const scenes=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING'];const assets=[];for(const [category,ids] of [['Storyboard',['story']],['Approved reference images',scenes],['Image prompts',[...scenes,'THUMBNAIL']],['Flow video prompts',scenes],['Narration',scenes],['Thumbnail',['THUMBNAIL']],['Quality audit',['audit']],['Production manifest',['manifest']]])for(const scene of ids)assets.push({key:hash(category+scene),category,scene,name:scene+'.txt',mimeType:['Approved reference images','Thumbnail'].includes(category)?'image/png':'text/plain',bytes:bytes.length,sha256:hash(bytes)});return {jobId:'a'.repeat(64),approvalVerified:true,visualAudit:'PASS',episode:'Lake Nyos 1986',assets};}
@@ -45,4 +45,59 @@ test('uncloneable plans fail closed before any checkpoint or upload',async()=>{
  await assert.rejects(f.core.submit(p),/INVALID_DELIVERY_PLAN/);
  assert.equal(f.s.data.size,0);
  assert.equal(f.puts,0);
+});
+
+test('durable checkpoint must be revalidated BEFORE any Drive request on every alarm',async()=>{
+ const tamper=[
+  j=>{j.plan.assets[0].name='unapproved.txt';},
+  j=>{j.plan.assets[0].sha256='0'.repeat(64);},
+  j=>{j.fingerprint='0'.repeat(64);},
+  j=>{j.index=1;},
+  j=>{j.index=70;},
+  j=>{j.status='COMPLETE';},
+  j=>{j.attempts[0]=-1;},
+  j=>{j.stopped='false';},
+  j=>{j.status='STOPPED';}
+ ];
+ for(const change of tamper){
+  const f=fixture();await f.core.submit(plan());
+  change(f.s.data.get('delivery'));
+  await f.core.tick();
+  const j=await f.s.get('delivery');
+  assert.equal(j.status,'NEEDS_REVIEW');
+  assert.equal(j.stopped,true);
+  assert.equal(j.error,'DELIVERY_CHECKPOINT_INTEGRITY_FAILED');
+  assert.equal(f.puts,0,'no folder creation or Drive upload');
+  assert.equal(j.verified.length,0);
+  await assert.rejects(f.core.resume(),/RESUME_NOT_SAFE/);
+ }
+});
+test('duplicated verified remote ID or mismatched hash blocks next upload',async()=>{
+ for(const change of [
+  j=>{j.verified[1].id=j.verified[0].id;},
+  j=>{j.verified[1].sha256='a'.repeat(64);}
+ ]){
+  const f=fixture();await f.core.submit(plan());await f.core.tick();await f.core.tick();
+  const before=f.puts,j=f.s.data.get('delivery');change(j);
+  assert.throws(()=>assertDeliveryCheckpointIntegrity(j),/DELIVERY_CHECKPOINT_INTEGRITY_FAILED/);
+  await f.core.tick();
+  assert.equal((await f.s.get('delivery')).status,'NEEDS_REVIEW');
+  assert.equal((await f.s.get('delivery')).index,2);
+  assert.equal(f.puts,before,'no provider access after receipt tampering');
+ }
+});
+test('STOPPED snapshot with changed episode cannot resume or request Drive',async()=>{
+ const f=fixture();await f.core.submit(plan());await f.core.stop();
+ f.s.data.get('delivery').plan.episode='Modified Episode';
+ await assert.rejects(f.core.resume(),/DELIVERY_CHECKPOINT_INTEGRITY_FAILED/);
+ assert.equal((await f.s.get('delivery')).status,'STOPPED');
+ assert.equal(f.puts,0);
+});
+test('well-formed in-progress checkpoint still survives restart and STOP/Resume',async()=>{
+ const f=fixture();await f.core.submit(plan());await f.core.tick();
+ assert.equal(assertDeliveryCheckpointIntegrity(await f.s.get('delivery')),true);
+ await f.core.stop();assert.equal(assertDeliveryCheckpointIntegrity(await f.s.get('delivery')),true);
+ await f.core.resume();
+ const second=new ProductionDelivery(f.s,f.deps);await second.tick();
+ assert.equal((await f.s.get('delivery')).index,2);
 });
