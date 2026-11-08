@@ -220,7 +220,7 @@ test('Gmail provider ID is strictly validated and stored as digest, never raw te
    fetcher:async()=>({ok:true,json:async()=>({id})})
   });
   assert.equal((await mail.send(100)).status,'UNCERTAIN');
-  const record=await s.get('gmail:'+'f'.repeat(64)+':100);
+  const record=await s.get('gmail:'+'f'.repeat(64)+':100');
   assert.deepEqual(record,{status:'UNCERTAIN',percent:100});
   assert.equal((await mail.send(100)).status,'UNCERTAIN');
  }
@@ -230,7 +230,7 @@ test('Gmail provider ID is strictly validated and stored as digest, never raw te
   fetcher:async()=>({ok:true,json:async()=>({id:gmailId})})
  });
  assert.equal((await mail.send(100)).status,'SENT');
- const receipt=await s.get('gmail:'+'f'.repeat(64)+':100);
+ const receipt=await s.get('gmail:'+'f'.repeat(64)+':100');
  assert.equal(receipt.status,'SENT');
  assert.equal(receipt.messageIdSha256,hash(gmailId));
  assert.ok(!JSON.stringify(receipt).includes(gmailId));
