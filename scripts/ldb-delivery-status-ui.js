@@ -86,7 +86,10 @@
        p.authenticationProbeCalled!==false||p.workerModified!==false)
       return ['Isolated probe: deployed settings not checked; authentication unverified.'];
      if(p.status==='ISOLATED_PROBE_METADATA_MATCHES_SAFE')
-      return ['Isolated Runner and Vault settings match the safety template. This is metadata only; authenticated binding NOT tested.'];
+      return ['Isolated Runner and Vault settings match the safety template'+
+       (p.serviceEnvironmentState==='PRODUCTION'?
+       ' (Cloudflare production target environment)':'')+
+       '. This is metadata only; authenticated binding NOT tested.'];
      const names=['RUNNER_ENABLED','FREE_PLAN_CONFIRMED',
       'DELIVERY_BRIDGE_ENABLED','BRIDGE_PROBE_ENABLED'];
      const states=['EXPLICIT_FALSE','EXPLICIT_TRUE','MISSING','DUPLICATE',

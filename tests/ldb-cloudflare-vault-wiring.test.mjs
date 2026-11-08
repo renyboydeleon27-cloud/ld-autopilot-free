@@ -92,6 +92,8 @@ test('safe reason codes distinguish a missing Vault binding from a wrong Worker 
  assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'service',service:'other-worker'}]),'WRONG_TARGET');
  assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'secret_text',text:'private'}]),'WRONG_TYPE');
  assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'service',service:vault,environment:'staging'}]),'ENVIRONMENT_SCOPED');
+ assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'service',service:vault,environment:'production'}]),'ENVIRONMENT_SCOPED');
+ assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'service',service:vault,entrypoint:'Other'}]),'NONDEFAULT_ENTRYPOINT');
  assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'service',service:vault}]),'TARGET_MATCH');
  assert.equal(classifyVaultServiceBinding([
   {name:'GOOGLE_VAULT',type:'service',service:vault},

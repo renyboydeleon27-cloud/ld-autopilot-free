@@ -6,7 +6,7 @@ const TOKEN='mock-cloudflare-account-read-only-token-1234';
 const vaultName='ner-ldb-vault-binding-probe';
 const text=(name,text)=>({name,type:'plain_text',text});
 const runner=[
- {name:'GOOGLE_VAULT',type:'service',service:vaultName},
+ {name:'GOOGLE_VAULT',type:'service',service:vaultName,environment:'production'},
  {name:'LDB_COORDINATOR',type:'durable_object_namespace',class_name:'LdbCoordinator'},
  text('CLOUDFLARE_ACCOUNT_ID',ACCOUNT),text('RUNNER_ENABLED','false'),
  text('FREE_PLAN_CONFIRMED','false'),text('DELIVERY_BRIDGE_ENABLED','false'),
@@ -46,6 +46,7 @@ test('deployed isolated settings must match expected offline probe flags, not au
  assert.equal(out.runnerSettingsHttpStatus,200);
  assert.equal(out.vaultSettingsHttpStatus,200);
  assert.equal(out.serviceBindingState,'TARGET_MATCH');
+ assert.equal(out.serviceEnvironmentState,'PRODUCTION');
  assert.equal(out.runnerNamespace,'EXPECTED_CLASS');
  assert.equal(out.vaultNamespace,'EXPECTED_CLASS');
  assert.equal(out.unexpectedRunnerBindings,false);
@@ -62,6 +63,8 @@ test('deployed isolated settings must match expected offline probe flags, not au
 test('wrong service target, disabled probe flag, or an active Vault cannot pass',async()=>{
  const cases=[
   fixture({rb:runner.map(b=>b.name==='GOOGLE_VAULT'?{...b,service:'wrong'}:b)}),
+  fixture({rb:runner.map(b=>b.name==='GOOGLE_VAULT'?{...b,environment:'staging'}:b)}),
+  fixture({rb:runner.map(b=>b.name==='GOOGLE_VAULT'?{...b,entrypoint:'sensitive'}:b)}),
   fixture({rb:runner.map(b=>b.name==='BRIDGE_PROBE_ENABLED'?{...b,text:'false'}:b)}),
   fixture({vb:vault.map(b=>b.name==='VAULT_ENABLED'?{...b,text:'true'}:b)}),
   fixture({rb:runner.filter(b=>b.name!=='FREE_PLAN_CONFIRMED')}),
@@ -99,4 +102,13 @@ test('wrong account or short token fails before even reading Worker metadata',as
  await assert.rejects(inspectLdbIsolatedProbeWiring({accountId:ACCOUNT,
   token:'short',fetcher}),/VAULT_METADATA_READ_UNAVAILABLE/);
  assert.equal(calls,0);
+});
+
+test('optional absent environment remains compatible, but other named environments fail',async()=>{
+ const noScope=fixture({rb:runner.map(x=>x.name==='GOOGLE_VAULT'?
+  {name:x.name,type:x.type,service:x.service}:x)});
+ const out=await inspect(noScope);
+ assert.equal(out.serviceBindingState,'TARGET_MATCH');
+ assert.equal(out.serviceEnvironmentState,'UNSPECIFIED');
+ assert.equal(out.status,'ISOLATED_PROBE_METADATA_MATCHES_SAFE');
 });
