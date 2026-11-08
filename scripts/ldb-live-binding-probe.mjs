@@ -125,7 +125,8 @@ export async function runOwnerReadOnlyBindingPreflight({
  ]);
  if(!validSubdomain(account.subdomain)||script.enabled!==true)
   fail('PROBE_ACCOUNT_HOST_NOT_VERIFIED');
- if(vaultScript.enabled!==false)fail('PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE');
+ if(vaultScript.enabled!==false||vaultScript.previews_enabled!==false)
+  fail('PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE');
  const verifiedHost=RUNNER+'.'+account.subdomain+'.workers.dev';
  if(u.hostname!==verifiedHost)fail('UNVERIFIED_PROBE_ACCOUNT_HOST');
  return Object.freeze({
