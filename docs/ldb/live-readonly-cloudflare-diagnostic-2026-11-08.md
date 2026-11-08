@@ -28,3 +28,17 @@ billing plan or quota available to a future render. The owner must still
 verify account plan/current billing, choose a Free-eligible model, and
 approve one isolated HOOK V5 render; 17 actual images and all 69 Drive and
 Gmail delivery checks remain required before production acceptance.
+
+## Additional safe live billing-permission probe
+
+Cloudflare documents a read-only account Subscriptions GET endpoint which
+requires Billing Read or Billing Write. The preview route adds a fourth
+Cloudflare request: GET /accounts/{account_id}/subscriptions. Its output is
+sanitized to HTTP status, permission status, and (only if unambiguous) a
+Workers Paid subscription indicator. Subscription IDs, rates, invoice
+information and other account data are never returned or logged.
+
+Importantly, a 200 OK with an empty subscriptions list or a Workers Free
+label is **not evidence** that the real Workers Free plan is active. A
+401/403 means the token lacks Billing Read; it does not imply Paid or Free.
+No billing settings, tokens, permissions or Workers AI inference are mutated.

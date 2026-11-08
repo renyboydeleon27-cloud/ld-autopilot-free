@@ -1,15 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cloudflareReadOnlyDiagnostic,previewDiagnosticScope} from '../lib/ldb/cloudflare-read-only-diagnostic.mjs';
+import {cloudflareReadOnlyDiagnostic,previewDiagnosticScope,classifyWorkersBillingRead} from '../lib/ldb/cloudflare-read-only-diagnostic.mjs';
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b';
 const NOW=Date.parse('2026-11-08T18:00:00.000Z');
 const token='test-only-cloudflare-token-that-will-never-be-sent';
-function transport({neuronField=true,used=3,withWorker=false}={}){
+function transport({neuronField=true,used=3,withWorker=false,billingStatus=403,billingBody=null}={}){
  const calls=[];
  const fetcher=async(url,options)=>{
   calls.push({url,options});
   assert.equal(options.redirect,'error');
   assert.equal(options.headers.Authorization,'Bearer '+token);
+  if(url.endsWith('/subscriptions')){
+   assert.equal(options.method,'GET');
+   return Response.json(billingBody??{success:false,errors:[{code:9109}]},{status:billingStatus});
+  }
   if(url.endsWith('/workers/scripts')){
    assert.equal(options.method,'GET');
    return Response.json({success:true,result:withWorker?[{id:'ner-ldb-runner-quality-v5'}]:[]});
@@ -36,7 +40,9 @@ test('real-provider shape produces a sanitized read-only diagnostic, never infer
  assert.equal(r.inferenceAuthorized,false);
  assert.equal(r.freePlanIndependentlyVerified,false);
  assert.equal(r.existingV5Worker,false);
- assert.equal(t.calls.length,3);
+ assert.equal(t.calls.length,4);
+ assert.equal(r.billingReadStatus,'BILLING_READ_PERMISSION_REQUIRED');
+ assert.equal(r.workersSubscription,'UNVERIFIED');
  assert.ok(!JSON.stringify(r).includes(token)&&!JSON.stringify(r).includes(ACCOUNT));
 });
 test('unknown neuron metric cannot claim live quota verification',async()=>{
@@ -44,7 +50,7 @@ test('unknown neuron metric cannot claim live quota verification',async()=>{
  const r=await cloudflareReadOnlyDiagnostic({accountId:ACCOUNT,token,fetcher:t.fetcher,now:NOW});
  assert.equal(r.status,'READ_ONLY_NO_GO');
  assert.equal(r.blocker,'FREE_USAGE_METRIC_NOT_VERIFIED');
- assert.equal(t.calls.length,2);
+ assert.equal(t.calls.length,3);
 });
 test('existing V5 Worker is a blocker while all calls stay read-only',async()=>{
  const t=transport({withWorker:true});
@@ -65,4 +71,37 @@ test('preview restriction requires exact branch and preview environment',()=>{
  assert.equal(previewDiagnosticScope({VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance'}),true);
  assert.equal(previewDiagnosticScope({VERCEL_ENV:'production',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance'}),false);
  assert.equal(previewDiagnosticScope({VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'main'}),false);
+});
+
+test('billing permission denied is explicit, sanitized and read-only',async()=>{
+ const mock=transport({billingStatus:403,billingBody:{success:false,errors:[{message:'private billing error'}]}});
+ const result=await cloudflareReadOnlyDiagnostic({accountId:ACCOUNT,token,fetcher:mock.fetcher,now:NOW});
+ assert.equal(result.billingReadStatus,'BILLING_READ_PERMISSION_REQUIRED');
+ assert.equal(result.billingHttpStatus,403);
+ assert.equal(result.freePlanIndependentlyVerified,false);
+ assert.equal(result.inferenceAuthorized,false);
+ assert.ok(!JSON.stringify(result).includes('private billing error'));
+ assert.equal(mock.calls.filter(c=>c.url.endsWith('/subscriptions')).length,1);
+});
+test('a complete list including Workers Paid still never authorizes generation',async()=>{
+ const billingBody={success:true,result_info:{total_count:2},result:[
+  {rate_plan:{public_name:'Workers Paid'},state:'Paid'},
+  {rate_plan:{public_name:'Free Plan'},state:'Paid'}
+ ]};
+ const m=transport({billingStatus:200,billingBody});
+ const result=await cloudflareReadOnlyDiagnostic({accountId:ACCOUNT,token,fetcher:m.fetcher,now:NOW});
+ assert.equal(result.billingReadStatus,'PAID_WORKERS_SUBSCRIPTION_DETECTED');
+ assert.equal(result.workersSubscription,'PAID_LISTED');
+ assert.equal(result.freePlanIndependentlyVerified,false);
+ assert.equal(result.inferenceAuthorized,false);
+});
+test('empty, generic and incomplete subscription records cannot falsely prove Workers Free',()=>{
+ const examples=[
+  {httpStatus:200,body:{success:true,result_info:{total_count:0},result:[]},wanted:'WORKERS_PLAN_REQUIRES_DASHBOARD_CHECK'},
+  {httpStatus:200,body:{success:true,result_info:{total_count:2},result:[{rate_plan:{public_name:'Workers Paid'},state:'Paid'}]},wanted:'BILLING_SUBSCRIPTIONS_NOT_VERIFIED'},
+  {httpStatus:200,body:{success:true,result_info:{total_count:1},result:[{rate_plan:{public_name:'Workers Free'},state:'Paid'}]},wanted:'WORKERS_PLAN_REQUIRES_DASHBOARD_CHECK'},
+  {httpStatus:200,body:{success:true,result_info:{total_count:1},result:[{rate_plan:{public_name:'Free'},state:'Paid'}]},wanted:'WORKERS_PLAN_REQUIRES_DASHBOARD_CHECK'}
+ ];
+ for(const x of examples){const got=classifyWorkersBillingRead(x);assert.equal(got.status,x.wanted);assert.equal(got.freePlanVerified,false)}
+ assert.equal(classifyWorkersBillingRead({httpStatus:500}).status,'BILLING_SUBSCRIPTIONS_NOT_VERIFIED');
 });
