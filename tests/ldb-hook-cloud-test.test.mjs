@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {hookCloudTest,assertV5PreviewScope} from '../scripts/ldb-hook-cloud-test.mjs';
-const env={CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',CLOUDFLARE_API_TOKEN:'private-test-token'};
+const TODAY=new Date().toISOString().slice(0,10);
+const env={CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',CLOUDFLARE_API_TOKEN:'private-test-token',LDB_FREE_PLAN_VERIFIED_DATE:TODAY,LDB_FREE_USAGE_VERIFIED_DATE:TODAY};
 async function harness(failRender=false){
  const bundle=JSON.parse(await readFile(new URL('../ldb-submissions/lake-nyos-1986-test/approved_bundle.json',import.meta.url),'utf8'));
  bundle.schema='ldb-approved-render-job-v1';bundle.render_scenes=Object.entries(JSON.parse(bundle.storyboard_utf8).scenes).map(([id,s])=>({id,image_prompt:s.visual,narration:'Separate narration.',flow_prompt:'EXACTLY 10 SECONDS 0–2s: Start; 2–6s: move; 6–10s: stop'}));
@@ -119,4 +120,11 @@ test('V5 cleanup deletion failure never returns a success report',async()=>{
  assert.deepEqual(removed,['DELETE_V5_ATTEMPTED']);
  assert.ok(h.removed.includes('RUNNER_SECRET'),'secret must be removed even when delete fails');
  assert.equal(h.getSubmits(),1,'deletion failure must not trigger another render');
+});
+
+test('hook diagnostic refuses stale or absent date before Cloudflare calls',async()=>{
+ const h=await harness();
+ for(const patch of [{LDB_FREE_PLAN_VERIFIED_DATE:'2026-11-07'},{LDB_FREE_USAGE_VERIFIED_DATE:''}]){
+  await assert.rejects(hookCloudTest({...h.options,env:{...env,...patch},fetcher:()=>assert.fail('NO_CLOUDFLARE_CALL')}),/FREE_PLAN_CONFIRMATION_REQUIRED/);
+ }
 });

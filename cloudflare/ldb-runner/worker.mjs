@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { DurableObject } from 'cloudflare:workers';
 import { createHash } from 'node:crypto';
 import { ownerAccessGate } from './owner-access.mjs';
+import { freeInferenceAllowed } from '../../lib/ldb/free-inference-gate.mjs';
 import { Checkpoints, SCENES } from './checkpoints.mjs';
 import { validateRenderJob } from '../../lib/ldb/approved-render-job.mjs';
 import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
@@ -38,7 +39,7 @@ export default {
  }
 };
 export class LdbCoordinator extends DurableObject {
- constructor(ctx,env) {super(ctx,env);this.core=new Checkpoints(ctx.storage,{maxScenes:env.HOOK_ONLY_TEST==='true'?1:17,initialDelay:env.HOOK_ONLY_TEST==='true'?30000:1000,render:prompt=>generateImage({prompt,env,freePlanConfirmed:env.FREE_PLAN_CONFIRMED==='true'})});}
+ constructor(ctx,env) {super(ctx,env);this.core=new Checkpoints(ctx.storage,{maxScenes:env.HOOK_ONLY_TEST==='true'?1:17,initialDelay:env.HOOK_ONLY_TEST==='true'?30000:1000,render:prompt=>generateImage({prompt,env,freePlanConfirmed:freeInferenceAllowed(env)})});}
  async alarm() {
   // Master RUNNER_ENABLED stops all background work. The Free quota flag
   // gates AI generation only, not explicitly reviewed Google delivery.
@@ -51,7 +52,7 @@ export class LdbCoordinator extends DurableObject {
    try{bridge=createGoogleDeliveryBridge(this.env);}catch{/* Stay disabled if configuration is missing. */}
   }
   await dispatchCoordinatorAlarm({storage:this.ctx.storage,imageCore:this.core,
-   imageEnabled:this.env.FREE_PLAN_CONFIRMED==='true',
+   imageEnabled:freeInferenceAllowed(this.env),
    deliveryEnabled:bridge!==null,
    ...(bridge?{createDelivery:({jobId})=>resumeDurableApprovedDelivery({
      deliveryStorage:this.ctx.storage,imageStorage:this.ctx.storage,textStorage:this.ctx.storage,
@@ -106,6 +107,7 @@ export class LdbCoordinator extends DurableObject {
     return json({ok:true,...outcome});
    }
    if(req.method==='POST' && path==='/resume'){
+    if(!freeInferenceAllowed(this.env))return json({status:'FREE_DAILY_VERIFICATION_REQUIRED'},503);
     let connectorReady=false;
     try{createGoogleDeliveryBridge(this.env);connectorReady=true;}catch{/* Fail closed. */}
     const outcome=await resumeProduction({core:this.core,storage:this.ctx.storage,deliveryEnabled:connectorReady});
@@ -123,6 +125,7 @@ export class LdbCoordinator extends DurableObject {
     return json({ok:true,...outcome});
    }
    if(req.method==='POST' && path==='/jobs') {
+    if(!freeInferenceAllowed(this.env))return json({status:'FREE_DAILY_VERIFICATION_REQUIRED'},503);
     // Enforce streaming size limit even if Content-Length is absent or forged.
     const reader=req.body?.getReader();if(!reader)return json({status:'INVALID_BUNDLE'},400);
     let size=0;const chunks=[];for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>100000){await reader.cancel();return json({status:'BUNDLE_TOO_LARGE'},413);}chunks.push(Buffer.from(value));}

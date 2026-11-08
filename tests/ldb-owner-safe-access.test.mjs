@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {ownerAccessGate,isOwnerSafeRoute} from '../cloudflare/ldb-runner/owner-access.mjs';
 const SECRET='separate-owner-runner-secret-1234567890';
 const disabled={RUNNER_SECRET:SECRET,RUNNER_ENABLED:'false',FREE_PLAN_CONFIRMED:'false',BRIDGE_PROBE_ENABLED:'false'};
-const enabled={...disabled,RUNNER_ENABLED:'true',FREE_PLAN_CONFIRMED:'true'};
+const TODAY=new Date().toISOString().slice(0,10);
+const enabled={...disabled,RUNNER_ENABLED:'true',FREE_PLAN_CONFIRMED:'true',LDB_FREE_PLAN_VERIFIED_DATE:TODAY,LDB_FREE_USAGE_VERIFIED_DATE:TODAY};
 const request=(path,method='GET',token=SECRET)=>new Request('https://runner.invalid'+path,{
  method,headers:{Authorization:token===null?'':'Bearer '+token}
 });
@@ -106,5 +107,21 @@ test('delivery Resume requires both master RUNNER switch and private bridge',asy
  ]){
   assert.deepEqual(await code(ownerAccessGate(request(path,method),settings)),
    {http:503,code:'SETUP_REQUIRED'},method+' '+path);
+ }
+});
+
+test('UTC midnight revokes image generation but not STOP, status or delivery-only resume',async()=>{
+ const origin=Date.parse('2026-11-08T23:59:59.000Z'),next=Date.parse('2026-11-09T00:00:00.000Z');
+ const settings={...enabled,LDB_FREE_PLAN_VERIFIED_DATE:'2026-11-08',LDB_FREE_USAGE_VERIFIED_DATE:'2026-11-08',DELIVERY_BRIDGE_ENABLED:'true'};
+ assert.equal(ownerAccessGate(request('/jobs','POST'),settings,origin),null);
+ for(const path of ['/jobs','/resume']){
+  const denied=ownerAccessGate(request(path,'POST'),settings,next);
+  assert.deepEqual(await code(denied),{http:503,code:'SETUP_REQUIRED'});
+ }
+ for(const [path,method] of [['/status','GET'],['/stop','POST'],['/resume-delivery','POST']])
+  assert.equal(ownerAccessGate(request(path,method),settings,next),null);
+ for(const key of ['LDB_FREE_PLAN_VERIFIED_DATE','LDB_FREE_USAGE_VERIFIED_DATE']){
+  const denied=ownerAccessGate(request('/jobs','POST'),{...settings,[key]:''},origin);
+  assert.deepEqual(await code(denied),{http:503,code:'SETUP_REQUIRED'});
  }
 });

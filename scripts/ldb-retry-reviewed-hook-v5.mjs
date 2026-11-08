@@ -11,6 +11,8 @@ run('python3',['-c','from PIL import Image, ImageOps']);
 run('node',['scripts/ldb-live-usage-preflight.mjs','--read-only']);
 const report=JSON.parse(await readFile('cloudflare/ldb-runner/public/live-preflight.json','utf8'));
 verifyOneHookUsageReport(report);
+// Fresh quota telemetry was verified in this preview session.
+process.env.LDB_FREE_USAGE_VERIFIED_DATE=today;
 if(report.v5.length){
  if(report.v5.length!==1||report.v5[0].id!=='ner-ldb-runner-quality-v5'||report.v5[0].modifiedOn!=='2026-11-07T09:34:14.093436Z')throw Error('UNRECOGNIZED_V5_WORKER');
  const base='https://api.cloudflare.com/client/v4/accounts/a437dda5f38ba6b10991684b8388760b/workers/scripts/ner-ldb-runner-quality-v5';

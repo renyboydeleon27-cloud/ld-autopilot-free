@@ -4,6 +4,7 @@ import {createHash,randomBytes} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {workerModules} from './ldb-worker-module-graph.mjs';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
+import {freeInferenceAllowed} from '../lib/ldb/free-inference-gate.mjs';
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v4', V5_NAME='ner-ldb-runner-quality-v5';
 export function assertV5PreviewScope({args=[],env={}}={}){
  if(!args.includes('--hook-v5'))return true; // Existing V4 diagnostics unchanged.
@@ -15,7 +16,7 @@ export function assertV5PreviewScope({args=[],env={}}={}){
 export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms)),freePlanConfirmed=false,workerName=NAME}={}) {
  if(workerName!==NAME&&workerName!==V5_NAME)throw Error('UNAPPROVED_TEST_WORKER');
  if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT || !env.CLOUDFLARE_API_TOKEN || /\s/.test(env.CLOUDFLARE_API_TOKEN))throw Error('CONFIGURATION_REQUIRED');
- if(freePlanConfirmed!==true)throw Error('FREE_PLAN_CONFIRMATION_REQUIRED');
+ if(freePlanConfirmed!==true||!freeInferenceAllowed({...env,FREE_PLAN_CONFIRMED:'true'}))throw Error('FREE_PLAN_CONFIRMATION_REQUIRED');
  const modules=await workerModules('cloudflare/ldb-runner/worker.mjs',{read});
  const bundle=JSON.parse(await read('/tmp/ldb-hook-package/render_job.json','utf8'));
  const validated=validateRenderJob(bundle);
@@ -42,7 +43,7 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
  const endpoint=`https://${workerName}.${sub.subdomain}.workers.dev`;
  const entry='cloudflare/ldb-runner/worker.mjs';
  const bindings=[{name:'LDB_COORDINATOR',type:'durable_object_namespace',class_name:'LdbCoordinator'},
- ...Object.entries({RUNNER_ENABLED:'true',FREE_PLAN_CONFIRMED:'true',HOOK_ONLY_TEST:'true',DELIVERY_BRIDGE_ENABLED:'false',BRIDGE_PROBE_ENABLED:'false',CLOUDFLARE_ACCOUNT_ID:ACCOUNT}).map(([name,text])=>({name,type:'plain_text',text})),
+ ...Object.entries({RUNNER_ENABLED:'true',FREE_PLAN_CONFIRMED:'true',LDB_FREE_PLAN_VERIFIED_DATE:env.LDB_FREE_PLAN_VERIFIED_DATE,LDB_FREE_USAGE_VERIFIED_DATE:env.LDB_FREE_USAGE_VERIFIED_DATE,HOOK_ONLY_TEST:'true',DELIVERY_BRIDGE_ENABLED:'false',BRIDGE_PROBE_ENABLED:'false',CLOUDFLARE_ACCOUNT_ID:ACCOUNT}).map(([name,text])=>({name,type:'plain_text',text})),
  {name:'AI',type:'ai'},{name:'RUNNER_SECRET',type:'secret_text',text:key}];
  const form=new FormData();form.set('metadata',new Blob([JSON.stringify({main_module:entry,compatibility_date:'2026-10-28',compatibility_flags:['nodejs_compat'],bindings,migrations:{new_tag:'v1',new_sqlite_classes:['LdbCoordinator']}})],{type:'application/json'}));
  for(const [path,source] of modules)form.set(path,new Blob([source],{type:'application/javascript+module'}),path);
@@ -107,7 +108,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  try{
   assertV5PreviewScope({args:process.argv,env:process.env});
   const today=new Date().toISOString().slice(0,10);
-  if(process.env.LDB_WORKERS_PLAN!=='free'||process.env.LDB_FREE_PLAN_VERIFIED_DATE!==today)throw Error('CURRENT_FREE_PLAN_VERIFICATION_REQUIRED');
+  if(process.env.LDB_WORKERS_PLAN!=='free'||process.env.LDB_FREE_PLAN_VERIFIED_DATE!==today||process.env.LDB_FREE_USAGE_VERIFIED_DATE!==today)throw Error('CURRENT_FREE_PLAN_VERIFICATION_REQUIRED');
   const {report,bytes}=await hookCloudTest({freePlanConfirmed:true,workerName:process.argv.includes('--hook-v5')?V5_NAME:NAME});const folder='cloudflare/ldb-runner/public';await mkdir(folder,{recursive:true});
   await writeFile(`${folder}/HOOK.jpg`,bytes);await writeFile(`${folder}/report.json`,JSON.stringify(report,null,2));
   await writeFile(`${folder}/index.html`,'<!doctype html><meta name="viewport" content="width=device-width"><title>LDB HOOK test</title><h1>HOOK cloud test</h1><p>One raw image only. Visual QA and full production are not complete.</p><a href="report.json">Test report</a><p><img style="max-width:100%" src="HOOK.jpg"></p>');
