@@ -42,6 +42,26 @@ test('explicit click sends exactly one same-origin GET and shows missing keys',a
  assert.ok(h.lines().some(s=>s.includes('0/4')));
  assert.equal(h.elements.deliveryCheck.disabled,false);
 });
+test('Cloudflare wiring match is correctly distinguished from real Google connection',async()=>{
+ const h=setup({ok:true,json:async()=>result({
+  cloudflareVault:{status:'CLOUDFLARE_WIRING_METADATA_MATCHES_OFF',
+   productionReady:false,googleApiCalled:false,gmailApiCalled:false}
+ })});
+ await h.click();
+ assert.ok(h.lines().some(x=>/expected Vault service binding found/.test(x)));
+ assert.ok(h.lines().some(x=>/NOT a working Google connection/.test(x)));
+ assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+});
+test('Cloudflare metadata permission failures still give no release permission',async()=>{
+ const h=setup({ok:true,json:async()=>result({
+  cloudflareVault:{status:'CLOUDFLARE_WIRING_NOT_VERIFIED',
+   productionReady:false,googleApiCalled:false,gmailApiCalled:false,
+   runnerSettingsHttpStatus:403,vaultSettingsHttpStatus:404}
+ })});
+ await h.click();
+ assert.ok(h.lines().some(x=>/runner HTTP 403, Vault HTTP 404/.test(x)));
+ assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+});
 test('all configuration present still does not imply delivery complete',async()=>{
  const h=setup({ok:true,json:async()=>result({
   status:'PREVIEW_CONFIG_PRESENT_UNVERIFIED',configuredEntries:6,missingKeys:[]

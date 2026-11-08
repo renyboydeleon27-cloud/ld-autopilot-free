@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/ldb-auto-studio-ui.test.cjs tests/ldb-hook-cloud-test.test.mjs tests/ldb-prepare-hook-v5.test.mjs tests/ldb-worker-module-graph.test.mjs tests/ldb-v5-evidence-recovery.test.mjs tests/ldb-v5-free-usage-gate.test.mjs tests/ldb-free-inference-status.test.mjs tests/ldb-one-batch-readiness.test.mjs tests/ldb-review-package.test.mjs tests/ldb-cloudflare-readonly.test.mjs tests/ldb-cloudflare-status-ui.test.cjs tests/ldb-hook-v5-budget.test.mjs tests/ldb-delivery-config.test.mjs tests/ldb-delivery-status-ui.test.cjs
+      - run: node --test tests/ldb-auto-studio-ui.test.cjs tests/ldb-hook-cloud-test.test.mjs tests/ldb-prepare-hook-v5.test.mjs tests/ldb-worker-module-graph.test.mjs tests/ldb-v5-evidence-recovery.test.mjs tests/ldb-v5-free-usage-gate.test.mjs tests/ldb-free-inference-status.test.mjs tests/ldb-one-batch-readiness.test.mjs tests/ldb-review-package.test.mjs tests/ldb-cloudflare-readonly.test.mjs tests/ldb-cloudflare-status-ui.test.cjs tests/ldb-hook-v5-budget.test.mjs tests/ldb-delivery-config.test.mjs tests/ldb-delivery-status-ui.test.cjs tests/ldb-cloudflare-vault-wiring.test.mjs
       - name: One-batch safety boundary (offline only)
         run: |
           {

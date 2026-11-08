@@ -1,5 +1,5 @@
 'use strict';
-// Exact-branch, preview-only Vercel diagnostics. No external calls.
+// Exact-branch, preview-only inventory; optional Cloudflare metadata GET only.
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store, max-age=0');
  res.setHeader('X-Content-Type-Options','nosniff');
@@ -12,7 +12,18 @@ module.exports=async function handler(req,res){
   return res.status(400).json({status:'QUERY_PARAMETERS_NOT_ALLOWED'});
  try{
   const {assessLdbDeliveryConfig}=await import('../lib/ldb/delivery-configuration-check.mjs');
-  return res.status(200).json(assessLdbDeliveryConfig({env}));
+  const inventory=assessLdbDeliveryConfig({env});
+  let cloudflareVault={status:'CLOUDFLARE_WIRING_NOT_VERIFIED',
+   productionReady:false,googleApiCalled:false,gmailApiCalled:false};
+  if(env.CLOUDFLARE_ACCOUNT_ID&&env.CLOUDFLARE_API_TOKEN){
+   try{
+    const {inspectLdbCloudflareVaultWiring}=await import('../lib/ldb/cloudflare-vault-wiring.mjs');
+    cloudflareVault=await inspectLdbCloudflareVaultWiring({
+     accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN
+    });
+   }catch{/* Zero provider errors or secret data in client responses. */}
+  }
+  return res.status(200).json({...inventory,cloudflareVault});
  }catch{
   return res.status(503).json({status:'DELIVERY_READINESS_CHECK_UNAVAILABLE',
    productionReady:false,googleApiCalled:false,gmailApiCalled:false});

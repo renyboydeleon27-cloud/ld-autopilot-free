@@ -47,7 +47,20 @@
     ...(data.missingKeys.length?['Missing variable names: '+data.missingKeys.join(', ')+'.']:[]),
     'Actual Drive receipts: 0/69. No file was uploaded.',
     'Verified Gmail milestones: 0/4. No email was sent.',
-    'Cloudflare Vault binding, Google OAuth and delivery receipts need separate authenticated checks.',
+    ...(()=>{
+     const cf=data.cloudflareVault;
+     if(!cf||!['CLOUDFLARE_WIRING_NOT_VERIFIED','CLOUDFLARE_WIRING_METADATA_MATCHES_OFF'].includes(cf.status)||
+        cf.productionReady!==false||cf.googleApiCalled!==false||cf.gmailApiCalled!==false)
+      return ['Cloudflare Vault settings: unverified. No real service-binding probe performed.'];
+     if(cf.status==='CLOUDFLARE_WIRING_METADATA_MATCHES_OFF')
+      return ['Cloudflare Worker settings: expected Vault service binding found; both delivery gates OFF. Metadata only, NOT a working Google connection.'];
+     const runner=cf.runnerSettingsHttpStatus;
+     const vault=cf.vaultSettingsHttpStatus;
+     return ['Cloudflare Vault settings: not verified (runner HTTP '+
+       (Number.isInteger(runner)?runner:'unavailable')+', Vault HTTP '+
+       (Number.isInteger(vault)?vault:'unavailable')+'). Do not enable delivery.'];
+    })(),
+    'Cloudflare Vault live binding probe, Google OAuth and delivery receipts need separate authenticated checks.',
     'Never paste any secret token, OAuth key or password into GitHub or ChatGPT.'
    ]);
   }catch{
