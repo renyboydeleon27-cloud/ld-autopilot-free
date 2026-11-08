@@ -73,3 +73,39 @@ test('Runner rejects replayed, missing or modified Vault evidence',async()=>{
   await assert.rejects(probeGoogleVaultBinding(env,NONCE),/BRIDGE_PROBE_UNAVAILABLE/);
  }
 });
+
+test('Runner accepts only bounded non-cacheable JSON from the Vault health service',async()=>{
+ const confirmed={status:'BRIDGE_AUTHENTICATED',nonce:NONCE};
+ const cases=[
+  Response.json(confirmed), // no Cache-Control: no-store
+  Response.json(confirmed,{headers:{'Cache-Control':'public, max-age=3600'}}),
+  new Response(JSON.stringify(confirmed),{headers:{
+   'Content-Type':'text/html','Cache-Control':'no-store'}}),
+  Response.json({...confirmed,padding:'X'.repeat(2048)},
+   {headers:{'Cache-Control':'no-store'}}),
+  new Response('not-json',{headers:{
+   'Content-Type':'application/json','Cache-Control':'no-store'}}),
+  Response.json({...confirmed,token:'private-should-not-appear'},
+   {headers:{'Cache-Control':'no-store'}}),
+  Response.json({...confirmed,nonce:'f'.repeat(32)},
+   {headers:{'Cache-Control':'no-store'}})
+ ];
+ let requests=0;
+ for(const response of cases){
+  const env={BRIDGE_PROBE_ENABLED:'true',GOOGLE_BRIDGE_PROBE_SECRET:SECRET,
+   GOOGLE_VAULT:{fetch:async()=>{requests++;return response;}}};
+  await assert.rejects(probeGoogleVaultBinding(env,NONCE),/BRIDGE_PROBE_UNAVAILABLE/);
+ }
+ assert.equal(requests,cases.length);
+});
+
+test('Runner accepts a properly labeled no-store JSON acknowledgment within the byte limit',async()=>{
+ const env={BRIDGE_PROBE_ENABLED:'true',GOOGLE_BRIDGE_PROBE_SECRET:SECRET,
+  GOOGLE_VAULT:{fetch:async()=>Response.json(
+   {status:'BRIDGE_AUTHENTICATED',nonce:NONCE},
+   {headers:{'Cache-Control':'no-store, private',
+    'Content-Type':'application/json; charset=utf-8'}})}};
+ const result=await probeGoogleVaultBinding(env,NONCE);
+ assert.deepEqual(result,{status:'BRIDGE_AUTHENTICATED',productionReady:false,nonce:NONCE});
+ assert.equal(Object.keys(result).length,3);
+});
