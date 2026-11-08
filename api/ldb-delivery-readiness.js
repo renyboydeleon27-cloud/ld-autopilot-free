@@ -1,5 +1,6 @@
 'use strict';
-// Exact-branch, preview-only inventory; optional Cloudflare metadata GET only.
+// Exact-branch preview-only diagnostics. Independently fail closed; no
+// Cloudflare mutations, Google calls, Runner owner secrets or AI inference.
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store, max-age=0');
  res.setHeader('X-Content-Type-Options','nosniff');
@@ -12,33 +13,27 @@ module.exports=async function handler(req,res){
   return res.status(400).json({status:'QUERY_PARAMETERS_NOT_ALLOWED'});
  try{
   const {assessLdbDeliveryConfig}=await import('../lib/ldb/delivery-configuration-check.mjs');
+  const {collectLdbReadOnlyDeliverySnapshot}=await import('../lib/ldb/delivery-readiness-snapshot.mjs');
   const inventory=assessLdbDeliveryConfig({env});
-  let cloudflareVault={status:'CLOUDFLARE_WIRING_NOT_VERIFIED',
-   productionReady:false,googleApiCalled:false,gmailApiCalled:false};
-  let isolatedProbe={status:'ISOLATED_PROBE_METADATA_NOT_VERIFIED',
-   authenticationProbeCalled:false,authenticationVerified:false,
-   productionReady:false,workerModified:false};
-  let probeHost={status:'PROBE_HOST_METADATA_NOT_VERIFIED',
-   accountHostMetadataVerified:false,authenticatedProbeCalled:false,
-   ownerSecretSent:false,productionReady:false,workerModified:false};
-  if(env.CLOUDFLARE_ACCOUNT_ID&&env.CLOUDFLARE_API_TOKEN){
-   try{
-    const {inspectLdbCloudflareVaultWiring,inspectLdbIsolatedProbeWiring}=
-     await import('../lib/ldb/cloudflare-vault-wiring.mjs');
-    cloudflareVault=await inspectLdbCloudflareVaultWiring({
-     accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN
-    });
-    isolatedProbe=await inspectLdbIsolatedProbeWiring({
-     accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN
-    });
-    // Does not require the Runner's owner credential and never invokes it.
-    const {inspectLdbProbeHost}=await import('../lib/ldb/probe-host-readonly.mjs');
-    probeHost=await inspectLdbProbeHost({
-     accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN
-    });
-   }catch{/* Zero provider errors or secret data in client responses. */}
+  const configured=Boolean(env.CLOUDFLARE_ACCOUNT_ID&&env.CLOUDFLARE_API_TOKEN);
+  let inspectQuality,inspectIsolated,inspectHost;
+  if(configured){
+   const [wiring,host]=await Promise.all([
+    import('../lib/ldb/cloudflare-vault-wiring.mjs').catch(()=>null),
+    import('../lib/ldb/probe-host-readonly.mjs').catch(()=>null)
+   ]);
+   const args={accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN};
+   if(wiring){
+    inspectQuality=()=>wiring.inspectLdbCloudflareVaultWiring(args);
+    inspectIsolated=()=>wiring.inspectLdbIsolatedProbeWiring(args);
+   }
+   if(host)inspectHost=()=>host.inspectLdbProbeHost(args);
   }
-  return res.status(200).json({...inventory,cloudflareVault,isolatedProbe,probeHost});
+  const snapshot=await collectLdbReadOnlyDeliverySnapshot({
+   inventory,credentialsConfigured:configured,
+   inspectQuality,inspectIsolated,inspectHost
+  });
+  return res.status(200).json(snapshot);
  }catch{
   return res.status(503).json({status:'DELIVERY_READINESS_CHECK_UNAVAILABLE',
    productionReady:false,googleApiCalled:false,gmailApiCalled:false});

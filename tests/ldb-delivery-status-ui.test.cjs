@@ -202,3 +202,18 @@ test('unpublished or inaccessible Runner domain never claims the owner secret ma
   assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
  }
 });
+
+test('partial Cloudflare diagnostics show per-check status without falsely passing delivery',async()=>{
+ const h=setup({ok:true,json:async()=>result({
+  cloudflareDiagnosticCoverage:{
+   status:'PARTIAL',returned:2,expected:3,
+   checks:{quality:'RETURNED',isolated:'UNAVAILABLE',host:'RETURNED'}
+  }
+ })});
+ await h.click();
+ const lines=h.lines().join('\n');
+ assert.match(lines,/diagnostic coverage: PARTIAL.*2\/3/);
+ assert.match(lines,/Quality Vault RETURNED; isolated probe UNAVAILABLE; Runner hostname RETURNED/);
+ assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+ assert.equal(h.calls.length,1);
+});

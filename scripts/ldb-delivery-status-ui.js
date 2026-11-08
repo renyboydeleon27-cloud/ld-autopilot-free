@@ -44,6 +44,23 @@
     'Configuration exists; real Google Drive/Gmail connection NOT verified. NO-GO.';
    show([
     'Vercel settings found: '+data.configuredEntries+'/'+data.expectedConfigurationEntries+'.',
+    ...(()=>{
+     const c=data.cloudflareDiagnosticCoverage;
+     if(!c||!['ALL_RETURNED','PARTIAL','UNAVAILABLE','NOT_CONFIGURED'].includes(c.status)||
+        !Number.isInteger(c.returned)||c.returned<0||c.returned>3||
+        c.expected!==3)return [];
+     const status=c.status==='ALL_RETURNED'?'All three returned':
+      c.status==='PARTIAL'?'PARTIAL — inspect unavailable checks':
+      c.status==='NOT_CONFIGURED'?'Cloudflare account token not configured':
+      'All Cloudflare checks unavailable';
+     const values=['RETURNED','UNAVAILABLE','NOT_CONFIGURED'];
+     const checks=c.checks||{};
+     const safe=x=>values.includes(x)?x:'UNVERIFIED';
+     return ['Cloudflare diagnostic coverage: '+status+' ('+c.returned+'/3), not production readiness.',
+      'Quality Vault '+safe(checks.quality)+
+      '; isolated probe '+safe(checks.isolated)+
+      '; Runner hostname '+safe(checks.host)+'.'];
+    })(),
     ...(data.missingKeys.length?['Missing variable names: '+data.missingKeys.join(', ')+'.']:[]),
     'Actual Drive receipts: 0/69. No file was uploaded.',
     'Verified Gmail milestones: 0/4. No email was sent.',
