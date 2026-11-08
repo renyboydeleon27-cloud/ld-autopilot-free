@@ -161,7 +161,8 @@ test('published isolated Vault aborts the entire end-to-end owner probe before s
  const {calls,ownerEnv,fetcher}=setup({vaultPublished:true});
  await assert.rejects(runOwnerVerifiedBindingProbe({env:ownerEnv,fetcher}),
   /PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE/);
- assert.equal(calls.metadata.length,6);
+ // Fast rejection on public Vault URLs happens before the extra domains GET.
+ assert.equal(calls.metadata.length,5);
  assert.equal(calls.external.length,0);
  assert.equal(calls.vault.length,0);
  assert.equal(calls.do,0);
@@ -172,7 +173,8 @@ test('public Vault preview URLs are refused before owner secret, even if workers
  const {calls,ownerEnv,fetcher}=setup({vaultPreviewsEnabled:true});
  await assert.rejects(runOwnerVerifiedBindingProbe({env:ownerEnv,fetcher}),
   /PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE/);
- assert.equal(calls.metadata.length,6);
+ // No unnecessary list call after fail-closed URL publishing check.
+ assert.equal(calls.metadata.length,5);
  assert.equal(calls.external.length,0);
  assert.equal(calls.vault.length,0);
 });
