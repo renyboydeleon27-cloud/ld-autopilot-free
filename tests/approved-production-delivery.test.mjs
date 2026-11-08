@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {ALL_SCENES} from '../lib/ldb/verified-image-handoff.mjs';
 import {prepareApprovedProductionDelivery} from '../lib/ldb/approved-production-delivery.mjs';
+import {validateDeliveryPlan} from '../lib/ldb/production-delivery.mjs';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 function fixture(){
  const id='c'.repeat(64);
