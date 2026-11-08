@@ -13,6 +13,9 @@ const commands=[
  ['python3',['-c','from PIL import Image, ImageOps; print("HOOK_REVIEW_DECODER_READY")']],
  ['python3',['-m','scripts.ldb_free_packager','--bundle','ldb-submissions/lake-nyos-1986-test/approved_bundle.json','/tmp/ldb-hook-package']],
  ['node',['scripts/ldb-prepare-hook-v5.mjs']],
+ // A direct V5 wrapper run must always refresh account-scoped usage data;
+ // yesterday's report and manual date flags never suffice for inference.
+ ['node',['scripts/ldb-live-usage-preflight.mjs','--read-only']],
  ['node',['scripts/ldb-hook-cloud-test.mjs','--one-approved-hook-free-only','--hook-v5']],
  // This step runs locally on the existing image. It must never approve or upload.
  ['python3',['-m','scripts.ldb_hook_bw_audit','--input','cloudflare/ldb-runner/public/HOOK.jpg','--output-dir','cloudflare/ldb-runner/public/review-only','--preview-compare']]

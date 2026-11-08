@@ -78,9 +78,10 @@ test('V5 wrapper preflights grayscale decoder before cloud call and publishes re
  const s=await readFile(new URL('../scripts/ldb-run-hook-v5.mjs',import.meta.url),'utf8');
  const decoder=s.indexOf('from PIL import Image, ImageOps');
  const packager=s.indexOf('scripts.ldb_free_packager');
+ const preflight=s.indexOf('scripts/ldb-live-usage-preflight.mjs');
  const cloud=s.indexOf('scripts/ldb-hook-cloud-test.mjs');
  const grayscale=s.indexOf('scripts.ldb_hook_bw_audit');
- assert.ok(decoder>0&&packager>decoder&&cloud>packager&&grayscale>cloud);
+ assert.ok(decoder>0&&packager>decoder&&preflight>packager&&cloud>preflight&&grayscale>cloud);
  assert.ok(s.includes('--preview-compare'));
  assert.ok(s.includes('--hook-v5'));
 });

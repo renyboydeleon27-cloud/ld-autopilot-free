@@ -5,6 +5,7 @@ import {pathToFileURL} from 'node:url';
 import {workerModules} from './ldb-worker-module-graph.mjs';
 import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
 import {freeInferenceAllowed} from '../lib/ldb/free-inference-gate.mjs';
+import {verifyOneHookUsageReport} from '../lib/ldb/v5-free-usage-gate.mjs';
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v4', V5_NAME='ner-ldb-runner-quality-v5';
 export function assertV5PreviewScope({args=[],env={}}={}){
  if(!args.includes('--hook-v5'))return true; // Existing V4 diagnostics unchanged.
@@ -13,8 +14,27 @@ export function assertV5PreviewScope({args=[],env={}}={}){
  return true;
 }
 
-export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms)),freePlanConfirmed=false,workerName=NAME}={}) {
+// This guard lives at the *actual* exported execution boundary, not just
+// in the CLI wrapper. It prevents direct imports or alternate callers from
+// bypassing V5's preview, Free-plan, and fresh telemetry prerequisites.
+export function assertV5InferenceGate({env={},usageReport,now=Date.now()}={}){
+ assertV5PreviewScope({args:['--hook-v5'],env});
+ if(!Number.isFinite(now))throw Error('V5_CLOCK_NOT_VERIFIED');
+ const day=new Date(now).toISOString().slice(0,10);
+ if(env.LDB_WORKERS_PLAN!=='free'||env.FREE_PLAN_CONFIRMED!=='true'||
+    env.LDB_FREE_PLAN_VERIFIED_DATE!==day||env.LDB_FREE_USAGE_VERIFIED_DATE!==day)
+  throw Error('V5_FREE_PLAN_ATTESTATION_REQUIRED');
+ // The read-only account-scoped report must be generated in the same session
+ // and be fresh (5 minutes). Date-only environment flags are insufficient.
+ const verified=verifyOneHookUsageReport(usageReport,{now});
+ if(usageReport.v5.length!==0)throw Error('EXISTING_V5_WORKER_REQUIRES_REVIEW');
+ return Object.freeze({utcDay:day,reportedNeuronsUsed:verified.used,readyForOperatorTest:true,
+  note:'Operator attestation is not independent billing verification; no inference is authorized by this function alone.'});
+}
+
+export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms)),freePlanConfirmed=false,workerName=NAME,usageReport,now=Date.now()}={}) {
  if(workerName!==NAME&&workerName!==V5_NAME)throw Error('UNAPPROVED_TEST_WORKER');
+ if(workerName===V5_NAME)assertV5InferenceGate({env,usageReport,now});
  if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT || !env.CLOUDFLARE_API_TOKEN || /\s/.test(env.CLOUDFLARE_API_TOKEN))throw Error('CONFIGURATION_REQUIRED');
  if(freePlanConfirmed!==true||!freeInferenceAllowed({...env,FREE_PLAN_CONFIRMED:'true'}))throw Error('FREE_PLAN_CONFIRMATION_REQUIRED');
  const modules=await workerModules('cloudflare/ldb-runner/worker.mjs',{read});
@@ -109,7 +129,9 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   assertV5PreviewScope({args:process.argv,env:process.env});
   const today=new Date().toISOString().slice(0,10);
   if(process.env.LDB_WORKERS_PLAN!=='free'||process.env.LDB_FREE_PLAN_VERIFIED_DATE!==today||process.env.LDB_FREE_USAGE_VERIFIED_DATE!==today)throw Error('CURRENT_FREE_PLAN_VERIFICATION_REQUIRED');
-  const {report,bytes}=await hookCloudTest({freePlanConfirmed:true,workerName:process.argv.includes('--hook-v5')?V5_NAME:NAME});const folder='cloudflare/ldb-runner/public';await mkdir(folder,{recursive:true});
+  const v5=process.argv.includes('--hook-v5');
+  const usageReport=v5?JSON.parse(await readFile('cloudflare/ldb-runner/public/live-preflight.json','utf8')):undefined;
+  const {report,bytes}=await hookCloudTest({freePlanConfirmed:true,workerName:v5?V5_NAME:NAME,usageReport});const folder='cloudflare/ldb-runner/public';await mkdir(folder,{recursive:true});
   await writeFile(`${folder}/HOOK.jpg`,bytes);await writeFile(`${folder}/report.json`,JSON.stringify(report,null,2));
   await writeFile(`${folder}/index.html`,'<!doctype html><meta name="viewport" content="width=device-width"><title>LDB HOOK test</title><h1>HOOK cloud test</h1><p>One raw image only. Visual QA and full production are not complete.</p><a href="report.json">Test report</a><p><img style="max-width:100%" src="HOOK.jpg"></p>');
   console.log(JSON.stringify(report));

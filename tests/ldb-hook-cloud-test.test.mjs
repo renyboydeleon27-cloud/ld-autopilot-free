@@ -2,9 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-import {hookCloudTest,assertV5PreviewScope} from '../scripts/ldb-hook-cloud-test.mjs';
+import {hookCloudTest,assertV5PreviewScope,assertV5InferenceGate} from '../scripts/ldb-hook-cloud-test.mjs';
 const TODAY=new Date().toISOString().slice(0,10);
-const env={CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',CLOUDFLARE_API_TOKEN:'private-test-token',LDB_FREE_PLAN_VERIFIED_DATE:TODAY,LDB_FREE_USAGE_VERIFIED_DATE:TODAY};
+const env={CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',CLOUDFLARE_API_TOKEN:'private-test-token',LDB_FREE_PLAN_VERIFIED_DATE:TODAY,LDB_FREE_USAGE_VERIFIED_DATE:TODAY,VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance',LDB_WORKERS_PLAN:'free',FREE_PLAN_CONFIRMED:'true'};
+const NOW=Date.now();
+const USAGE_REPORT={checkedAt:new Date(NOW).toISOString(),inferenceCalled:false,workerListStatus:200,v5:[],graphqlStatus:200,errors:[],usage:{metric:'totalNeurons',limit:100,httpStatus:200,errors:[],data:{viewer:{accounts:[{aiInferenceAdaptiveGroups:[{sum:{totalNeurons:0}}]}]}}}};
 async function harness(failRender=false){
  const bundle=JSON.parse(await readFile(new URL('../ldb-submissions/lake-nyos-1986-test/approved_bundle.json',import.meta.url),'utf8'));
  bundle.schema='ldb-approved-render-job-v1';bundle.render_scenes=Object.entries(JSON.parse(bundle.storyboard_utf8).scenes).map(([id,s])=>({id,image_prompt:s.visual,narration:'Separate narration.',flow_prompt:'EXACTLY 10 SECONDS 0–2s: Start; 2–6s: move; 6–10s: stop'}));
@@ -25,7 +27,7 @@ async function harness(failRender=false){
   if(path==='/images/HOOK')return new Response(bytes,{headers:{'X-LDB-SHA256':sha}});
   return Response.json({job:{id:bundle.approval.storyboard_id,status:stage,completedScenes:stage==='TEST_PAUSED'?1:0,outputs:[{scene:'HOOK',sha256:sha}]}});
  };
- return {options:{env,freePlanConfirmed:true,fetcher,sleep:async()=>{},read:async p=>p.endsWith('render_job.json')?JSON.stringify(bundle):'module'},removed,getSubmits:()=>submits};
+ return {options:{env,freePlanConfirmed:true,fetcher,sleep:async()=>{},usageReport:structuredClone(USAGE_REPORT),now:NOW,read:async p=>p.endsWith('render_job.json')?JSON.stringify(bundle):'module'},removed,getSubmits:()=>submits};
 }
 test('one job only, authenticated STOP/resume, checksum and credential cleanup',async()=>{const h=await harness();const r=await hookCloudTest(h.options);assert.equal(r.report.completedScenes,1);assert.equal(h.getSubmits(),1);assert.deepEqual(h.removed,['RUNNER_SECRET']);assert.ok(!JSON.stringify(r.report).includes(env.CLOUDFLARE_API_TOKEN));});
 test('render failure still removes credentials without resubmission',async()=>{const h=await harness(true);await assert.rejects(hookCloudTest(h.options),/RENDER_NEEDS_REVIEW/);assert.equal(h.getSubmits(),1);assert.equal(h.removed.length,1);});
@@ -127,4 +129,40 @@ test('hook diagnostic refuses stale or absent date before Cloudflare calls',asyn
  for(const patch of [{LDB_FREE_PLAN_VERIFIED_DATE:'2026-11-07'},{LDB_FREE_USAGE_VERIFIED_DATE:''}]){
   await assert.rejects(hookCloudTest({...h.options,env:{...env,...patch},fetcher:()=>assert.fail('NO_CLOUDFLARE_CALL')}),/FREE_PLAN_CONFIRMATION_REQUIRED/);
  }
+});
+
+test('exported V5 runtime API rejects production, wrong branch and no Free operator evidence before network',async()=>{
+ const h=await harness(),bad=[
+  [{...env,VERCEL_ENV:'production'},/V5_PREVIEW_ONLY/],
+  [{...env,VERCEL_GIT_COMMIT_REF:'main'},/V5_APPROVED_BRANCH_REQUIRED/],
+  [{...env,LDB_WORKERS_PLAN:'paid'},/V5_FREE_PLAN_ATTESTATION_REQUIRED/],
+  [{...env,FREE_PLAN_CONFIRMED:'false'},/V5_FREE_PLAN_ATTESTATION_REQUIRED/],
+  [{...env,LDB_FREE_PLAN_VERIFIED_DATE:'2000-01-01'},/V5_FREE_PLAN_ATTESTATION_REQUIRED/],
+  [{...env,LDB_FREE_USAGE_VERIFIED_DATE:'2000-01-01'},/V5_FREE_PLAN_ATTESTATION_REQUIRED/]
+ ];
+ for(const [settings,error] of bad){
+  await assert.rejects(hookCloudTest({...h.options,env:settings,workerName:'ner-ldb-runner-quality-v5',
+   fetcher:()=>assert.fail('PROVIDER_NETWORK_FORBIDDEN')}),error);
+ }
+ assert.equal(h.getSubmits(),0);
+});
+test('V5 direct call blocks stale, missing, truncated and worker-contaminated quota reports',async()=>{
+ const h=await harness();
+ const cases=[
+  [undefined,/READ_ONLY_USAGE_REPORT_REQUIRED/],
+  [{...USAGE_REPORT,checkedAt:'2026-10-01T00:00:00.000Z'},/FRESH_USAGE_REPORT_REQUIRED/],
+  [{...USAGE_REPORT,v5:[{id:'ner-ldb-runner-quality-v5'}]},/EXISTING_V5_WORKER_REQUIRES_REVIEW/],
+  [{...USAGE_REPORT,usage:{...USAGE_REPORT.usage,limit:1}},/FREE_USAGE_QUERY_SCOPE_NOT_VERIFIED/]
+ ];
+ for(const [usageReport,error] of cases)
+  await assert.rejects(hookCloudTest({...h.options,workerName:'ner-ldb-runner-quality-v5',
+   usageReport,fetcher:()=>assert.fail('PROVIDER_NETWORK_FORBIDDEN')}),error);
+ assert.equal(h.getSubmits(),0);
+});
+test('same-day environment labels alone never count as actual provider telemetry',()=>{
+ assert.throws(()=>assertV5InferenceGate({env,now:NOW}),/READ_ONLY_USAGE_REPORT_REQUIRED/);
+ const result=assertV5InferenceGate({env,usageReport:USAGE_REPORT,now:NOW});
+ assert.equal(result.reportedNeuronsUsed,0);
+ assert.equal(result.readyForOperatorTest,true);
+ assert.ok(result.note.includes('not independent billing verification'));
 });
