@@ -63,7 +63,7 @@ test('two overlapping alarms reserve one attempt for each milestone',async()=>{
 });
 test('interrupted CLAIMED record fails closed and blocks following milestones',async()=>{
  const {map,storage}=fixture(),sent=[];
- map.set('milestone-result:'+ID+':30,{status:'CLAIMED',attempts:1});
+ map.set('milestone-result:'+ID+':30',{status:'CLAIMED',attempts:1});
  await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
  assert.deepEqual(sent,[]);
  assert.equal(receipt(map,30).status,'CLAIMED');
