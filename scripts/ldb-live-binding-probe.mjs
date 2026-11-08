@@ -62,7 +62,9 @@ async function readCloudflare({url,token,fetcher}){
 // A Vault can still be externally routable on a Custom Domain even when its
 // workers.dev/Preview URLs are disabled. Request ONLY the fixed Vault service
 // and reject ambiguous pagination or any attached domain, including preview-only
-// domains. Fail closed on denied/malformed responses; never echo hostnames.
+// domains. The API's total_count can include unrelated Worker domains, so
+// never mistake it for the count after the exact Vault service filter.
+// Fail closed on denied/malformed responses; never echo hostnames.
 async function verifyVaultHasNoCustomDomains({token,fetcher}){
  const url=API+'/workers/domains?service='+VAULT;
  let response;
@@ -81,7 +83,9 @@ async function verifyVaultHasNoCustomDomains({token,fetcher}){
     data.result_info.total_pages<0||data.result_info.total_pages>1||
     (data.result_info.page!==undefined&&data.result_info.page!==1)||
     !Number.isInteger(data.result_info.total_count)||
-    data.result_info.total_count!==0||data.result.length!==0)
+    data.result_info.total_count<0||
+    (data.result_info.count!==undefined&&data.result_info.count!==0)||
+    data.result.length!==0)
   fail('PROBE_VAULT_CUSTOM_DOMAIN_UNSAFE');
  return true;
 }
