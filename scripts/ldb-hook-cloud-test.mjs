@@ -8,6 +8,7 @@ import {freeInferenceAllowed} from '../lib/ldb/free-inference-gate.mjs';
 import {verifyOneHookUsageReport} from '../lib/ldb/v5-free-usage-gate.mjs';
 import {cloudflareReadOnlyDiagnostic} from '../lib/ldb/cloudflare-read-only-diagnostic.mjs';
 import {imageMetadata} from '../lib/ldb/cloudflare-image.mjs';
+import {assessOneHookBudget} from '../lib/ldb/hook-v5-budget.mjs';
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v4', V5_NAME='ner-ldb-runner-quality-v5';
 export function assertV5PreviewScope({args=[],env={}}={}){
  if(!args.includes('--hook-v5'))return true; // Existing V4 diagnostics unchanged.
@@ -29,8 +30,12 @@ export function assertV5InferenceGate({env={},usageReport,now=Date.now()}={}){
  // The read-only account-scoped report must be generated in the same session
  // and be fresh (5 minutes). Date-only environment flags are insufficient.
  const verified=verifyOneHookUsageReport(usageReport,{now});
+ const budget=assessOneHookBudget({used:verified.used});
+ if(!budget.withinLocalFence)throw Error('V5_HOOK_BUDGET_BUFFER_REQUIRED');
  if(usageReport.v5.length!==0)throw Error('EXISTING_V5_WORKER_REQUIRES_REVIEW');
- return Object.freeze({utcDay:day,reportedNeuronsUsed:verified.used,readyForOperatorTest:true,
+ return Object.freeze({utcDay:day,reportedNeuronsUsed:verified.used,
+  estimatedHookNeurons:budget.estimatedNeurons,conservativeHookReserve:budget.reservedNeurons,
+  readyForOperatorTest:true,
   note:'Operator attestation is not independent billing verification; no inference is authorized by this function alone.'});
 }
 
@@ -54,11 +59,14 @@ export async function assertLiveV5ProviderPreflight({
     live.reportedNeuronsUsed<verified.reportedNeuronsUsed||
     live.reportedNeuronsUsed>9000)
   throw Error('V5_LIVE_PROVIDER_PREFLIGHT_FAILED');
+ const liveBudget=assessOneHookBudget({used:live.reportedNeuronsUsed});
+ if(!liveBudget.withinLocalFence)throw Error('V5_HOOK_BUDGET_BUFFER_REQUIRED');
  if(live.billingReadStatus==='PAID_WORKERS_SUBSCRIPTION_DETECTED')
   throw Error('V5_PAID_WORKERS_PLAN_DETECTED');
  if(typeof live.checkedAt!=='string'||live.checkedAt.slice(0,10)!==verified.utcDay)
   throw Error('V5_LIVE_USAGE_DAY_MISMATCH');
  return Object.freeze({reportedNeuronsUsed:live.reportedNeuronsUsed,
+  estimatedHookNeurons:liveBudget.estimatedNeurons,conservativeHookReserve:liveBudget.reservedNeurons,
   providerCheckedAt:live.checkedAt,requiresOwnerBillingVerification:true,
   note:'A live usage GET/GraphQL check never authorizes billing or rendering by itself.'});
 }

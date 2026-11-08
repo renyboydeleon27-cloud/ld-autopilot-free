@@ -28,7 +28,9 @@ test('one click performs exactly one same-origin GET and shows billing 403 witho
  const h=harness({ok:true,json:async()=>({
   status:'READ_ONLY_TELEMETRY_CHECKED',
   inferenceCalled:false,inferenceAuthorized:false,productionAccepted:false,
-  reportedNeuronsUsed:0,billingReadStatus:'BILLING_READ_PERMISSION_REQUIRED',
+  reportedNeuronsUsed:0,hookV5EstimatedNeurons:104.2,
+  hookV5ReservedNeurons:400,hookV5BudgetStatus:'BUDGET_SPACE_ESTIMATED',
+  billingReadStatus:'BILLING_READ_PERMISSION_REQUIRED',
   existingV5Worker:false
  })});
  await h.click();
@@ -41,6 +43,7 @@ test('one click performs exactly one same-origin GET and shows billing 403 witho
  assert.match(h.els.cfStatus.textContent,/NO-GO/);
  assert.ok(h.lines().some(s=>/0.*NOT billing approval/.test(s)));
  assert.ok(h.lines().some(s=>/UNVERIFIED.*403/.test(s)));
+ assert.ok(h.lines().some(s=>/104\.2.*400.*NOT permission/.test(s)));
  assert.ok(h.lines().every(s=>!s.includes('READY_FOR_INFERENCE')));
 });
 test('unauthorized or production route never shows a success status',async()=>{
@@ -64,4 +67,17 @@ test('unexpected service errors fail closed and reset button',async()=>{
  assert.match(h.els.cfStatus.textContent,/NO-GO/);
  assert.equal(h.els.cfCheck.disabled,false);
  assert.ok(!h.els.cfStatus.textContent.includes('private Cloudflare message'));
+});
+
+test('insufficient one-HOOK buffer is clearly blocked on mobile even when telemetry succeeds',async()=>{
+ const h=harness({ok:true,json:async()=>({
+  status:'READ_ONLY_TELEMETRY_CHECKED',inferenceCalled:false,
+  inferenceAuthorized:false,productionAccepted:false,
+  reportedNeuronsUsed:8990,hookV5EstimatedNeurons:104.2,
+  hookV5ReservedNeurons:400,hookV5BudgetStatus:'INSUFFICIENT_LOCAL_BUFFER',
+  billingReadStatus:'BILLING_READ_PERMISSION_REQUIRED',existingV5Worker:false
+ })});
+ await h.click();
+ assert.ok(h.lines().some(x=>/buffer insufficient.*BLOCKED/.test(x)));
+ assert.match(h.els.cfStatus.textContent,/NO-GO/);
 });

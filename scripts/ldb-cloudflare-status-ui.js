@@ -41,6 +41,15 @@
    if(verified&&Number.isFinite(data.reportedNeuronsUsed)&&data.reportedNeuronsUsed>=0)
     lines.push('Reported neurons used today: '+data.reportedNeuronsUsed.toLocaleString('en-US')+
      ' (read-only snapshot, NOT billing approval).');
+   if(verified&&Number.isFinite(data.hookV5EstimatedNeurons)&&
+      Number.isFinite(data.hookV5ReservedNeurons)&&
+      ['BUDGET_SPACE_ESTIMATED','INSUFFICIENT_LOCAL_BUFFER'].includes(data.hookV5BudgetStatus)){
+    lines.push('One HOOK V5 image: approximately '+data.hookV5EstimatedNeurons+
+     ' neurons by published tile pricing; local safety reserve '+data.hookV5ReservedNeurons+
+     ' neurons. Estimate only, NOT permission to render.');
+    if(data.hookV5BudgetStatus==='INSUFFICIENT_LOCAL_BUFFER')
+     lines.push('HOOK V5 quota buffer insufficient: live render stays BLOCKED.');
+   }
    if(data.billingReadStatus==='BILLING_READ_PERMISSION_REQUIRED')
     lines.push('Billing plan: UNVERIFIED — Cloudflare subscription access denied (HTTP 403). Confirm Workers Free in your dashboard.');
    else if(data.billingReadStatus==='PAID_WORKERS_SUBSCRIPTION_DETECTED')

@@ -37,6 +37,9 @@ test('real-provider shape produces a sanitized read-only diagnostic, never infer
  const r=await cloudflareReadOnlyDiagnostic({accountId:ACCOUNT,token,fetcher:t.fetcher,now:NOW});
  assert.equal(r.status,'READ_ONLY_TELEMETRY_CHECKED');
  assert.equal(r.reportedNeuronsUsed,3);
+ assert.equal(r.hookV5EstimatedNeurons,104.2);
+ assert.equal(r.hookV5ReservedNeurons,400);
+ assert.equal(r.hookV5BudgetStatus,'BUDGET_SPACE_ESTIMATED');
  assert.equal(r.inferenceAuthorized,false);
  assert.equal(r.freePlanIndependentlyVerified,false);
  assert.equal(r.existingV5Worker,false);
@@ -104,4 +107,12 @@ test('empty, generic and incomplete subscription records cannot falsely prove Wo
  ];
  for(const x of examples){const got=classifyWorkersBillingRead(x);assert.equal(got.status,x.wanted);assert.equal(got.freePlanVerified,false)}
  assert.equal(classifyWorkersBillingRead({httpStatus:500}).status,'BILLING_SUBSCRIPTIONS_NOT_VERIFIED');
+});
+
+test('provider daily usage close to local fence reports NO V5 buffer even if under free allocation',async()=>{
+ const t=transport({used:8990});
+ const r=await cloudflareReadOnlyDiagnostic({accountId:ACCOUNT,token,fetcher:t.fetcher,now:NOW});
+ assert.equal(r.status,'READ_ONLY_TELEMETRY_CHECKED');
+ assert.equal(r.hookV5BudgetStatus,'INSUFFICIENT_LOCAL_BUFFER');
+ assert.equal(r.inferenceAuthorized,false);
 });
