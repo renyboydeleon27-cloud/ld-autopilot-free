@@ -2,6 +2,7 @@
 // Never removes an arbitrary existing Worker or changes the approved storyboard.
 import {readFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
+import {verifyOneHookUsageReport} from '../lib/ldb/v5-free-usage-gate.mjs';
 if(process.env.VERCEL_ENV!=='preview'||process.env.VERCEL_GIT_COMMIT_REF!=='feature/ldb-image-acceptance'||!process.argv.includes('--one-reviewed-hook-free-only'))throw Error('EXPLICIT_PREVIEW_REQUIRED');
 const today=new Date().toISOString().slice(0,10);
 if(process.env.LDB_WORKERS_PLAN!=='free'||process.env.LDB_FREE_PLAN_VERIFIED_DATE!==today)throw Error('CURRENT_FREE_PLAN_VERIFICATION_REQUIRED');
@@ -9,11 +10,7 @@ const run=(command,args)=>{const r=spawnSync(command,args,{stdio:'inherit',env:p
 run('python3',['-c','from PIL import Image, ImageOps']);
 run('node',['scripts/ldb-live-usage-preflight.mjs','--read-only']);
 const report=JSON.parse(await readFile('cloudflare/ldb-runner/public/live-preflight.json','utf8'));
-const accounts=report.usage?.data?.viewer?.accounts;
-const rows=accounts?.[0]?.aiInferenceAdaptiveGroups;
-const used=rows?.[0]?.sum?.totalNeurons;
-if(report.usage?.errors?.length||report.usage?.httpStatus!==200||accounts?.length!==1||rows?.length!==1||!Number.isFinite(used)||used<0||used>9000)throw Error('FREE_USAGE_NOT_VERIFIED');
-if(report.workerListStatus!==200||!Array.isArray(report.v5))throw Error('WORKER_LIST_NOT_VERIFIED');
+verifyOneHookUsageReport(report);
 if(report.v5.length){
  if(report.v5.length!==1||report.v5[0].id!=='ner-ldb-runner-quality-v5'||report.v5[0].modifiedOn!=='2026-11-07T09:34:14.093436Z')throw Error('UNRECOGNIZED_V5_WORKER');
  const base='https://api.cloudflare.com/client/v4/accounts/a437dda5f38ba6b10991684b8388760b/workers/scripts/ner-ldb-runner-quality-v5';
