@@ -25,6 +25,7 @@ const baseEnv={CLOUDFLARE_ACCOUNT_ID:ACCOUNT,CLOUDFLARE_API_TOKEN:TOKEN,
 function mock({subdomain='ownerzone',scriptEnabled=true,
   vaultPublished=false,vaultPreviewsEnabled=false,
   vaultPublishedMissing=false,vaultPreviewMissing=false,vaultSubdomainStatus=200,
+  vaultDomains=[],domainStatus=200,domainPages=1,domainTotal=null,
   runnerBindings=runner,vaultBindings=vault,
   accountStatus=200,runnerStatus=200,
   healthStatus=200,healthBody=null,
@@ -51,6 +52,11 @@ function mock({subdomain='ownerzone',scriptEnabled=true,
    return Response.json({success:true,result:{subdomain}},{status:accountStatus});
   if(url.endsWith('/scripts/'+PROBE+'/subdomain'))
    return Response.json({success:true,result:{enabled:scriptEnabled}});
+  if(url.endsWith('/workers/domains?service='+VAULT))
+   return Response.json({success:domainStatus===200,result:vaultDomains,
+    result_info:{page:1,total_pages:domainPages,
+     total_count:domainTotal===null?vaultDomains.length:domainTotal}},
+    {status:domainStatus});
   if(url.endsWith('/scripts/'+VAULT+'/subdomain'))
    return Response.json({success:vaultSubdomainStatus===200,
     result:{...(vaultPublishedMissing?{}:{enabled:vaultPublished}),
@@ -63,7 +69,7 @@ function mock({subdomain='ownerzone',scriptEnabled=true,
  };
  return {fetcher,calls,secretCalls:()=>calls.filter(c=>c.opts.headers.Authorization==='Bearer '+SECRET)};
 }
-test('5 Cloudflare GET preflights verify Vault stays private before owner-authenticated Worker GET',async()=>{
+test('6 Cloudflare GET preflights verify Vault has no public URLs or domains before owner GET',async()=>{
  const f=mock();
  const result=await runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher});
  assert.deepEqual(result,{
@@ -72,11 +78,12 @@ test('5 Cloudflare GET preflights verify Vault stays private before owner-authen
   googleConnectionVerified:false,gmailConnectionVerified:false,
   inferenceCalled:false,workerModified:false
  });
- assert.equal(f.calls.length,6);
+ assert.equal(f.calls.length,7);
  assert.equal(f.secretCalls().length,1);
- assert.equal(f.calls[5].url,URL);
- assert.ok(f.calls.slice(0,5).every(c=>c.opts.method==='GET'));
- assert.ok(f.calls.slice(0,5).some(c=>c.url.endsWith('/scripts/'+VAULT+'/subdomain')));
+ assert.equal(f.calls[6].url,URL);
+ assert.ok(f.calls.slice(0,6).every(c=>c.opts.method==='GET'));
+ assert.ok(f.calls.slice(0,6).some(c=>c.url.endsWith('/scripts/'+VAULT+'/subdomain')));
+ assert.ok(f.calls.slice(0,6).some(c=>c.url.endsWith('/workers/domains?service='+VAULT)));
  assert.ok(!JSON.stringify(result).includes(TOKEN));
  assert.ok(!JSON.stringify(result).includes(SECRET));
 });
@@ -108,6 +115,8 @@ test('unsafe deployed Worker flags, account subdomain response and API permissio
   mock({vaultPublished:true}),
   mock({vaultPreviewsEnabled:true}),
   mock({vaultSubdomainStatus:403}),
+  mock({vaultDomains:[{service:VAULT,enabled:true,hostname:'test.example.com'}]}),
+  mock({domainStatus:403}),
   mock({subdomain:'not.valid'})
  ]){
   await assert.rejects(runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher}));
@@ -134,7 +143,7 @@ test('invalid authenticated response fails; never infers Google or production re
 });
 
 
-test('owner preflight verifies private Vault with NO Runner secret and five Cloudflare GETs',async()=>{
+test('owner preflight verifies private Vault and custom domains with six Cloudflare GETs',async()=>{
  const f=mock(),env={...baseEnv};
  delete env.LDB_RUNNER_SECRET;
  const result=await runOwnerReadOnlyBindingPreflight({env,fetcher:f.fetcher});
@@ -146,7 +155,7 @@ test('owner preflight verifies private Vault with NO Runner secret and five Clou
   googleConnectionVerified:false,gmailConnectionVerified:false,
   inferenceCalled:false,workerModified:false,productionReady:false
  });
- assert.equal(f.calls.length,5);
+ assert.equal(f.calls.length,6);
  assert.equal(f.secretCalls().length,0);
  assert.ok(f.calls.every(x=>x.opts.method==='GET'&&x.opts.redirect==='error'));
  assert.doesNotMatch(JSON.stringify(result),/cloudflare-readonly-token|operator-runner-secret/);
@@ -155,6 +164,7 @@ test('metadata-only preflight rejects wrong account host without sending owner s
  for(const options of [{subdomain:'attackerzone'},
   {runnerStatus:403},{scriptEnabled:false},{vaultPublished:true},
   {vaultSubdomainStatus:403},{vaultPreviewsEnabled:true},
+  {domainStatus:403},{vaultDomains:[{service:VAULT,enabled:false,previews_enabled:true}]},
   {runnerBindings:runner.map(x=>x.name==='RUNNER_ENABLED'?{...x,text:'true'}:x)}]){
   const f=mock(options),env={...baseEnv};
   delete env.LDB_RUNNER_SECRET;
@@ -226,4 +236,22 @@ test('Vault must remain unpublished: true, absent, non-boolean, and inaccessible
  await assert.rejects(runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:unavailable.fetcher}),
   /PROBE_PROVIDER_PRECHECK_UNAVAILABLE/);
  assert.equal(unavailable.secretCalls().length,0);
+});
+
+test('Vault Custom Domain list fails closed on attached domain, unreadable list or incomplete pagination',async()=>{
+ for(const options of [
+  {vaultDomains:[{service:VAULT,hostname:'private.example.com',enabled:false}]},
+  {vaultDomains:[{service:VAULT,hostname:'preview.example.com',previews_enabled:true}]},
+  {domainPages:2,domainTotal:20},
+  {domainTotal:1},
+  {domainStatus:401},
+  {domainStatus:403},
+  {domainStatus:500}
+ ]){
+  const f=mock(options);
+  await assert.rejects(runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher}),
+   /PROBE_VAULT_(CUSTOM_DOMAIN_UNSAFE|DOMAINS_UNVERIFIED)/);
+  assert.equal(f.secretCalls().length,0);
+  assert.equal(f.calls.filter(c=>c.url===URL).length,0);
+ }
 });
