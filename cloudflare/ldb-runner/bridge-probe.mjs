@@ -14,8 +14,8 @@ export async function probeGoogleVaultBinding(env,nonce){
    headers:{Authorization:'Bearer '+env.GOOGLE_BRIDGE_PROBE_SECRET,
     'X-LDB-Probe-Nonce':nonce,'Cache-Control':'no-store',
     Accept:'application/json'},
-   // Do not keep a background Worker hanging on a stalled internal bridge.
-   // The caller still fails closed if the service binding ignores aborts.
+   // Abort an unresponsive internal fetch when the binding honors the signal.
+   // A timeout is never interpreted as an authenticated response.
    redirect:'manual',signal:AbortSignal.timeout(8000)
   });
  }catch{fail();}
