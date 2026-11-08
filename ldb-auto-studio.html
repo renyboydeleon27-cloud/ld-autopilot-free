@@ -17,8 +17,17 @@
 <p id="cfStatus" role="status" aria-live="polite">Not checked. This preview can read quota telemetry, but only the owner can verify the Workers Free plan in Cloudflare.</p>
 <ul id="cfDetails" class="muted"></ul>
 <p class="notice">Safety lock: 0 neurons used does NOT prove that the billing plan is Free. Even a successful telemetry check never starts HOOK V5 rendering. Production stays NO-GO until real image review and delivery acceptance.</p>
+</section>
+<section class="card" id="delivery-readiness">
+<h2>5 · Google Drive &amp; Gmail setup</h2>
+<p class="muted">Read-only inspection of Vercel preview settings. This does not contact Google, upload files or send Gmail.</p>
+<div class="actions"><button type="button" id="deliveryCheck" class="ghost">Check delivery setup · READ ONLY</button></div>
+<p id="deliveryStatus" role="status" aria-live="polite">Not checked. Real Google Drive delivery and Gmail receipts are unverified.</p>
+<ul id="deliveryDetails" class="muted"></ul>
+<p class="notice">Configured environment variables do NOT prove a connected Cloudflare Vault, verified files, or inbox notifications. Production remains NO-GO.</p>
 </section></main>
 <script src="./scripts/ldb-cloudflare-status-ui.js" defer></script>
+<script src="./scripts/ldb-delivery-status-ui.js" defer></script>
 <script>
 (()=>{'use strict';const N=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING','THUMBNAIL'];let loaded=null,approval=null,rawStoryboard=null;
 const $=id=>document.getElementById(id);const say=s=>$('status').textContent=s;const normalize=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const safeText=x=>typeof x==='string'?x:JSON.stringify(x??'');
