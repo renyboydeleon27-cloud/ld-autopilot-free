@@ -149,3 +149,31 @@ test('preflight requires read-only Cloudflare token, valid fixed host and HTTPS'
   assert.equal(f.calls.length,0);
  }
 });
+
+test('Cloudflare API token accidentally reused as Runner secret fails before any network',async()=>{
+ const f=mock(),env={...baseEnv,LDB_RUNNER_SECRET:TOKEN};
+ await assert.rejects(runOwnerVerifiedBindingProbe({env,fetcher:f.fetcher}),
+  /PROBE_SECRET_REUSE_FORBIDDEN/);
+ assert.equal(f.calls.length,0);
+ assert.equal(f.secretCalls().length,0);
+});
+test('strict workers.dev account label rejects invalid and unsafe labels before owner-secret GET',async()=>{
+ const invalid=['-ownerzone','ownerzone-','ab--.cd','a'.repeat(64)];
+ for(const subdomain of invalid){
+  const env={...baseEnv,LDB_PROBE_URL:
+   'https://'+PROBE+'.'+subdomain+'.workers.dev/delivery-bridge-probe'};
+  const f=mock({subdomain});
+  await assert.rejects(runOwnerReadOnlyBindingPreflight({env,fetcher:f.fetcher}));
+  assert.equal(f.secretCalls().length,0);
+  await assert.rejects(runOwnerVerifiedBindingProbe({env,fetcher:f.fetcher}));
+  assert.equal(f.secretCalls().length,0);
+ }
+});
+test('Cloudflare account metadata with invalid DNS label fails even when candidate host is valid',async()=>{
+ for(const subdomain of ['-ownerzone','ownerzone-','a'.repeat(64)]){
+  const f=mock({subdomain});
+  await assert.rejects(runOwnerReadOnlyBindingPreflight({env:baseEnv,fetcher:f.fetcher}),
+   /PROBE_ACCOUNT_HOST_NOT_VERIFIED/);
+  assert.equal(f.secretCalls().length,0);
+ }
+});

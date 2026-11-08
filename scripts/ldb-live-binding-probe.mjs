@@ -9,10 +9,17 @@ const API='https://api.cloudflare.com/client/v4/accounts/'+ACCOUNT;
 const RUNNER='ner-ldb-runner-binding-probe';
 const fail=code=>{throw Error(code)};
 const MAX_RESPONSE=8192;
+// Match the strict Cloudflare host inspector: one DNS label, 1–63 chars,
+// alphanumeric ends; no empty, leading/trailing hyphen or multi-label input.
+const validSubdomain=x=>typeof x==='string'&&
+ /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(x);
 function parseProbeUrl(url){
  let u;
  try{u=new URL(url);}catch{fail('INVALID_PROBE_URL')}
- if(u.protocol!=='https:'||
+ const suffix='.workers.dev',prefix=RUNNER+'.';
+ const subdomain=u.hostname.startsWith(prefix)&&u.hostname.endsWith(suffix)?
+  u.hostname.slice(prefix.length,-suffix.length):null;
+ if(u.protocol!=='https:'||!validSubdomain(subdomain)||
     !/^ner-ldb-runner-binding-probe\.[a-z0-9-]+\.workers\.dev$/.test(u.hostname)||
     u.pathname!=='/delivery-bridge-probe'||
     u.search||u.hash||u.port||u.username||u.password)fail('UNSAFE_PROBE_URL');
@@ -99,9 +106,7 @@ export async function runOwnerReadOnlyBindingPreflight({
   readCloudflare({url:API+'/workers/scripts/'+RUNNER+'/subdomain',
    token:env.CLOUDFLARE_API_TOKEN,fetcher})
  ]);
- if(typeof account.subdomain!=='string'||
-    !/^[a-z0-9-]+$/.test(account.subdomain)||
-    script.enabled!==true)
+ if(!validSubdomain(account.subdomain)||script.enabled!==true)
   fail('PROBE_ACCOUNT_HOST_NOT_VERIFIED');
  const verifiedHost=RUNNER+'.'+account.subdomain+'.workers.dev';
  if(u.hostname!==verifiedHost)fail('UNVERIFIED_PROBE_ACCOUNT_HOST');
@@ -120,6 +125,11 @@ export async function runOwnerVerifiedBindingProbe({
  const ownerSecret=env?.LDB_RUNNER_SECRET;
  if(typeof ownerSecret!=='string'||ownerSecret.length<32||
     /\r|\n/.test(ownerSecret))fail('PROBE_SECRET_REQUIRED');
+ // The Cloudflare control-plane token must NEVER be passed to a Worker host
+ // as an application-level Bearer credential, even on a verified account.
+ // Fail before the metadata preflight or any owner-secret transmission.
+ if(ownerSecret===env?.CLOUDFLARE_API_TOKEN)
+  fail('PROBE_SECRET_REUSE_FORBIDDEN');
  const preflight=await runOwnerReadOnlyBindingPreflight({env,fetcher});
  const verified=await verifyLiveBindingProbe({
   url:env.LDB_PROBE_URL,secret:ownerSecret,
