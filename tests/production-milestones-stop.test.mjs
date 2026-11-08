@@ -87,15 +87,17 @@ test('STOP between reservation and network call releases unsent claim safely',as
  await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
  assert.deepEqual(sent,[30,50]);
 });
-test('failed send retries with alarm, never skips ahead to later milestone',async()=>{
+test('ambiguous Runner-to-Vault transport fails closed without an automatic resend',async()=>{
  const {map,storage,alarms}=fixture(),sent=[];
- await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);throw Error('transport unavailable');},now:()=>123});
+ await notifyProductionMilestones({storage,notify:async(_s,p)=>{
+  sent.push(p);throw Error('network lost after Gmail accepted message');
+ },now:()=>123});
  assert.deepEqual(sent,[30]);
- assert.deepEqual(receipt(map,30),{status:'RETRY_WAIT',attempts:1});
- assert.deepEqual(alarms,[30123]);
+ assert.deepEqual(receipt(map,30),{status:'UNCERTAIN',attempts:1});
+ assert.deepEqual(alarms,[],'no retry alarm after ambiguous provider call');
  await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
- assert.deepEqual(sent,[30,30,50]);
- assert.equal(receipt(map,30).attempts,2);
+ assert.deepEqual(sent,[30,50],'30 cannot be sent twice; later milestone can proceed');
+ assert.equal(receipt(map,30).status,'UNCERTAIN','not falsely SENT');
 });
 test('uncertain Vault send is not retried and is not reported as sent',async()=>{
  const {map,storage}=fixture(),sent=[];
@@ -108,4 +110,44 @@ test('no transactional storage refuses to send',async()=>{
  const {storage}=fixture();
  delete storage.transaction;
  await assert.rejects(notifyProductionMilestones({storage,notify:async()=>assert.fail('must not send')}),/DURABLE_MILESTONE_STORAGE_REQUIRED/);
+});
+
+test('legacy RETRY_WAIT with prior network attempt is quarantined without notification',async()=>{
+ for(const attempts of [1,2,3]){
+  const {map,storage,alarms}=fixture(),sent=[];
+  map.set('milestone-result:'+ID+':30,{status:'RETRY_WAIT',attempts});
+  await notifyProductionMilestones({storage,notify:async(_state,p)=>{
+   sent.push(p);return {status:'SENT'};
+  }});
+  assert.deepEqual(sent,[],'ambiguous legacy attempt must not be repeated');
+  assert.deepEqual(receipt(map,30),{status:'UNCERTAIN',attempts});
+  assert.deepEqual(alarms,[]);
+  await notifyProductionMilestones({storage,notify:async(_s,p)=>{
+   sent.push(p);return {status:'SENT'};
+  }});
+  assert.deepEqual(sent,[50],'only a distinct later milestone may send');
+ }
+});
+test('legacy STOP-before-network attempt zero can safely resume a single send',async()=>{
+ const {map,storage}=fixture(),calls=[];
+ map.set('milestone-result:'+ID+':30,{status:'RETRY_WAIT',attempts:0});
+ await notifyProductionMilestones({storage,notify:async(_s,p)=>{
+  calls.push(p);return {status:'SENT'};
+ }});
+ assert.deepEqual(calls,[30,50]);
+ assert.deepEqual(receipt(map,30),{status:'SENT',attempts:1});
+});
+test('invalid bridge reply never creates false SENT or a resend alarm',async()=>{
+ const {map,storage,alarms}=fixture();let attempts=0;
+ await notifyProductionMilestones({storage,notify:async()=>{
+  attempts++;return {status:'NO_ACK'};
+ }});
+ assert.equal(attempts,1);
+ assert.deepEqual(receipt(map,30),{status:'UNCERTAIN',attempts:1});
+ assert.deepEqual(alarms,[]);
+ await notifyProductionMilestones({storage,notify:async(_s,p)=>{
+  if(p===30)assert.fail('unsafe automatic retry');
+  return {status:'SENT'};
+ }});
+ assert.equal(attempts,1);
 });
