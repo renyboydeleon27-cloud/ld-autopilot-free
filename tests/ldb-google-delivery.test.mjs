@@ -88,7 +88,7 @@ test('Gmail sends fixed sender/recipient and durable claim prevents repeated sen
 test('ambiguous Gmail result and interrupted claims never auto-resend',async()=>{
  const s=new Storage();let calls=0;const opts={tokenProvider:async()=>'secret',loadState:async()=>state(),fetcher:async()=>{calls++;throw Error('SECRET');}};
  assert.equal((await new GmailMilestones(s,opts).send(70)).status,'UNCERTAIN');await new GmailMilestones(s,opts).send(70);assert.equal(calls,1);
- await s.put('gmail:'+'f'.repeat(64)+':100',{status:'CLAIMED'});assert.equal((await new GmailMilestones(s,opts).send(100)).status,'CLAIMED');assert.equal(calls,1);
+ await s.put('gmail:'+'f'.repeat(64)+':100',{status:'CLAIMED',percent:100});assert.equal((await new GmailMilestones(s,opts).send(100)).status,'CLAIMED');assert.equal(calls,1);
 });
 test('unearned milestones do not access tokens or send',async()=>{const s=new Storage();const g=new GmailMilestones(s,{loadState:async()=>state(0),tokenProvider:async()=>assert.fail('token must not be requested')});await assert.rejects(g.send(100),/NOT_REACHED/);assert.equal(s.data.size,0);});
 
@@ -172,4 +172,90 @@ test('third-attempt upload already present on Drive can reconcile after restart 
  assert.equal(reconciled.id,first.id);
  assert.equal(store.data.get('drive:'+asset.key).status,'VERIFIED');
  assert.equal(provider.calls.filter(c=>c.method==='POST').length,created);
+});
+
+test('Gmail milestone receipts require exact matching percent and safe shape before OAuth',async()=>{
+ const cases=[
+  {status:'SENT',percent:30},
+  {status:'SENT',percent:100,extraSecret:'NEVER_ECHO'},
+  {status:'SENT',percent:100,messageIdSha256:'bad'},
+  {status:'CLAIMED',percent:30},
+  {status:'UNCERTAIN',percent:50},
+  {status:'RETRY_WAIT',percent:100},
+  {status:'DELIVERED',percent:100},
+  {status:'SENT'},
+  {status:'SENT',percent:'100'},
+  'SENT',
+  ['SENT']
+ ];
+ for(const corrupt of cases){
+  const s=new Storage(),key='gmail:'+'f'.repeat(64)+':100;
+  await s.put(key,corrupt);
+  let tokenCalls=0,sendCalls=0;
+  const mail=new GmailMilestones(s,{
+   loadState:async()=>state(),tokenProvider:async()=>{tokenCalls++;return 'sensitive-token'},
+   fetcher:async()=>{sendCalls++;throw Error('FORBIDDEN_NETWORK')}
+  });
+  await assert.rejects(mail.send(100),/GMAIL_RECEIPT_INTEGRITY_FAILED/);
+  assert.equal(tokenCalls,0);
+  assert.equal(sendCalls,0);
+  assert.deepEqual(await s.get(key),corrupt,'corrupt durable records are not overwritten');
+ }
+});
+test('valid older Gmail milestone receipts remain at-most-once and skip token',async()=>{
+ for(const status of ['SENT','UNCERTAIN','CLAIMED']){
+  const s=new Storage();
+  await s.put('gmail:'+'f'.repeat(64)+':70,{status,percent:70});
+  const mail=new GmailMilestones(s,{
+   loadState:async()=>state(),tokenProvider:async()=>assert.fail('no token'),
+   fetcher:async()=>assert.fail('no duplicate send')
+  });
+  assert.equal((await mail.send(70)).status,status);
+ }
+});
+test('Gmail provider ID is strictly validated and stored as digest, never raw text',async()=>{
+ for(const id of [' ', 'short', 'invalid id', 'G'.repeat(201), null]){
+  const s=new Storage(),mail=new GmailMilestones(s,{
+   loadState:async()=>state(),tokenProvider:async()=>'trusted-mock-token',
+   fetcher:async()=>({ok:true,json:async()=>({id})})
+  });
+  assert.equal((await mail.send(100)).status,'UNCERTAIN');
+  const record=await s.get('gmail:'+'f'.repeat(64)+':100);
+  assert.deepEqual(record,{status:'UNCERTAIN',percent:100});
+  assert.equal((await mail.send(100)).status,'UNCERTAIN');
+ }
+ const s=new Storage(),gmailId='validGmailMessageId2026';
+ const mail=new GmailMilestones(s,{
+  loadState:async()=>state(),tokenProvider:async()=>'trusted-mock-token',
+  fetcher:async()=>({ok:true,json:async()=>({id:gmailId})})
+ });
+ assert.equal((await mail.send(100)).status,'SENT');
+ const receipt=await s.get('gmail:'+'f'.repeat(64)+':100);
+ assert.equal(receipt.status,'SENT');
+ assert.equal(receipt.messageIdSha256,hash(gmailId));
+ assert.ok(!JSON.stringify(receipt).includes(gmailId));
+ assert.equal((await mail.send(100)).status,'SENT');
+});
+test('competing milestone attempts issue no duplicate sends after a durable claim',async()=>{
+ const s=new Storage(),ready=state();
+ let release,entered;
+ const started=new Promise(resolve=>{entered=resolve});
+ const pending=new Promise(resolve=>{release=resolve});
+ let providerCalls=0;
+ const mk=()=>new GmailMilestones(s,{
+  loadState:async()=>ready,tokenProvider:async()=>'mock-valid-token',
+  fetcher:async()=>{
+   providerCalls++;entered();await pending;
+   return {ok:true,json:async()=>({id:'gmailAccepted2026'})};
+  }
+ });
+ const first=mk().send(100);
+ await started;
+ const other=await mk().send(100);
+ assert.equal(other.status,'CLAIMED');
+ assert.equal(providerCalls,1);
+ release();
+ assert.equal((await first).status,'SENT');
+ assert.equal((await mk().send(100)).status,'SENT');
+ assert.equal(providerCalls,1);
 });
