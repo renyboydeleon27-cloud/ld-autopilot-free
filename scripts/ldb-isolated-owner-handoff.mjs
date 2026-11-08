@@ -81,7 +81,7 @@ export function ownerIsolatedProbeCommands(inputs){
   '3. OWNER APPROVAL REQUIRED. If both isolated Workers are approved for update, run manually in order:',
   'npx --yes wrangler@4 deploy --config cloudflare/ldb-google-vault/wrangler.probe.jsonc',
   'npx --yes wrangler@4 deploy --config cloudflare/ldb-runner/wrangler.probe.jsonc',
-  '4. Reconfirm deployed bindings and exact owned workers.dev host before ANY Runner secret is sent:',
+  '4. Reconfirm private Vault workers.dev + preview URLs, bindings, and exact owned Runner host before ANY Runner secret is sent:',
   'node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-preflight --safe-evidence-json',
   '5. Only after preflight PASS, and only in trusted owner terminal:',
   'node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-probe --safe-evidence-json',
