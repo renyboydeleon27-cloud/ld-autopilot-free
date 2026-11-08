@@ -15,10 +15,15 @@ Run:
 
 `node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-preflight`
 
-The CLI performs five fixed Cloudflare API GET requests: isolated Runner
+The CLI performs six fixed Cloudflare API GET requests: isolated Runner
 and Vault settings, exact account Workers subdomain, Runner workers.dev
-publishing flag, and Vault workers.dev/Preview URL publishing flags.
-The Vault MUST have both enabled=false and previews_enabled=false.
+publishing flag, Vault workers.dev/Preview URL publishing flags, and the
+account-scoped Worker Custom Domains listing filtered to the isolated Vault.
+The Vault MUST have enabled=false, previews_enabled=false, and ZERO
+attached Custom Domains (even if a domain appears disabled). Incomplete
+pagination, denied access, malformed results or API errors fail closed.
+The list check does not enumerate zone-scoped Worker routes; the owner
+must inspect zone routes in the Cloudflare dashboard separately.
 It rejects unsafe delivery/AI flags and any hostname not owned by that account. It outputs
 PASS/FAIL with a static reason only (no secrets, provider body or
 raw bindings). No request to the isolated Runner Worker is made.
@@ -28,7 +33,7 @@ When the preflight passes, the separate existing opt-in command is:
 `node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-probe`
 
 For this second mode ONLY, LDB_RUNNER_SECRET is also required in the
-trusted environment. It first REPEATS the five GET preflight checks,
+trusted environment. It first REPEATS the six GET preflight checks,
 and sends the owner Bearer secret to the exact verified isolated host
 only after passing them. The CLI rejects missing/both mode flags.
 
