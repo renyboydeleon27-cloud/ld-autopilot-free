@@ -115,3 +115,61 @@ test('68-file package never requests Gmail token or submits completion email',as
  const g=new GmailMilestones(new Storage(),{loadState:async()=>snapshot,tokenProvider:async()=>assert.fail('no token'),fetcher:async()=>assert.fail('no send')});
  await assert.rejects(g.send(100),/MILESTONE_NOT_REACHED/);
 });
+
+
+test('corrupt Drive reservation never requests OAuth token or accesses provider',async()=>{
+ const cases=[
+  r=>{r.id='../other-file';},
+  r=>{r.id='';},
+  r=>{r.attempts=-1;},
+  r=>{r.attempts=4;},
+  r=>{r.attempts='2';},
+  r=>{r.status='DELETED';},
+  r=>{r.name='P1.txt';},
+  r=>{r.parentId='wrong-folder';},
+  r=>{r.sha256='0'.repeat(64);},
+  r=>{r.md5='0'.repeat(32);},
+  r=>{r.bytes=999;},
+  r=>{r.mimeType='application/json';},
+  r=>{delete r.key;},
+  r=>{r.unreviewedPrivateToken='NEVER_EXPORT';}
+ ];
+ for(const mutate of cases){
+  const store=new Storage(),provider=driveServer();
+  await makeDrive(store,provider).put(asset);
+  mutate(store.data.get('drive:'+asset.key));
+  let tokenCalls=0,remoteCalls=0;
+  const drive=new DriveDelivery(store,{
+   tokenProvider:async()=>{tokenCalls++;return 'must-not-be-requested'},
+   fetcher:async()=>{remoteCalls++;throw Error('PROVIDER_MUST_NOT_BE_CALLED')}
+  });
+  await assert.rejects(drive.put(asset),/DRIVE_RESERVATION_INTEGRITY_FAILED/);
+  assert.equal(tokenCalls,0,'invalid reservation must be rejected before token');
+  assert.equal(remoteCalls,0,'invalid reservation must be rejected before provider');
+ }
+});
+test('changed asset cannot reuse reserved file ID or request OAuth token',async()=>{
+ const store=new Storage(),provider=driveServer();
+ await makeDrive(store,provider).put(asset);
+ let tokens=0,calls=0;
+ const drive=new DriveDelivery(store,{
+  tokenProvider:async()=>{tokens++;return 'must-not-use'},
+  fetcher:async()=>{calls++;throw Error('NO_NETWORK')}
+ });
+ await assert.rejects(drive.put({...asset,bytes:Buffer.from('altered')}),
+  /DELIVERY_ASSET_CHANGED/);
+ assert.equal(tokens,0);
+ assert.equal(calls,0);
+});
+test('third-attempt upload already present on Drive can reconcile after restart without recreating',async()=>{
+ const store=new Storage(),provider=driveServer();
+ const first=await makeDrive(store,provider).put(asset);
+ const record=store.data.get('drive:'+asset.key);
+ record.status='UPLOADING';
+ record.attempts=3;
+ const created=provider.calls.filter(c=>c.method==='POST').length;
+ const reconciled=await makeDrive(store,provider).put(asset);
+ assert.equal(reconciled.id,first.id);
+ assert.equal(store.data.get('drive:'+asset.key).status,'VERIFIED');
+ assert.equal(provider.calls.filter(c=>c.method==='POST').length,created);
+});
