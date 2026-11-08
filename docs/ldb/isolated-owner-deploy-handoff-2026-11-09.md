@@ -42,7 +42,12 @@ The isolated probe configurations keep Runner, Free inference, Vault OAuth,
 delivery and production off. The Vault must not be published on
 `workers.dev` or exposed through Preview/Version URLs. The reviewed Vault
 `wrangler.probe.jsonc` explicitly sets both `workers_dev: false` and
-`preview_urls: false`; the live metadata preflight independently checks both. The static review rejects swaps with existing
+`preview_urls: false`; the live metadata preflight checks both and
+verifies that no Vault Custom Domain is attached. Since zone-specific Worker
+routes are a separate Cloudflare control, the owner must also inspect the
+Worker's Custom Domains & Routes panel and all managed zone routes. A token
+without the needed read permission causes the custom-domain check to fail
+closed rather than skipping it. The static review rejects swaps with existing
 `ner-ldb-runner-quality` and `ner-ldb-google-vault-quality`.
 
 No owner test was performed in this batch, and neither Worker was deployed.
