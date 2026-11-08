@@ -7,7 +7,7 @@ const load=p=>JSON.parse(readFileSync(p,'utf8'));
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b';
 const RUNNER_FIELDS=['name','main','account_id','compatibility_date',
  'compatibility_flags','vars','services','durable_objects','migrations','workers_dev'];
-const VAULT_FIELDS=RUNNER_FIELDS.filter(k=>k!=='services');
+const VAULT_FIELDS=[...RUNNER_FIELDS.filter(k=>k!=='services'),'preview_urls'];
 const exactly=(object,keys)=>assert.deepEqual(
  Object.keys(object).sort(),[...keys].sort(),
  'Isolated probe must contain ONLY reviewed configuration fields');
@@ -31,7 +31,10 @@ function assertExactProbeConfig(config,kind){
  assert.deepEqual(config.migrations,[{tag:'v1',new_sqlite_classes:[cls]}]);
  // Excludes unreviewed AI/R2/KV, routes, triggers, privileged variables,
  // extra services, credential copies and configuration drift.
- if(kind==='vault')assert.equal(config.workers_dev,false);
+ if(kind==='vault'){
+  assert.equal(config.workers_dev,false);
+  assert.equal(config.preview_urls,false,'Vault preview URLs must remain OFF');
+ }
  else assert.equal(config.workers_dev,true);
 }
 
@@ -60,6 +63,7 @@ export function assertProbeSafety({runner,vault,liveRunner,liveVault}){
  assert.equal(vault.account_id,liveVault.account_id);
  assert.equal(runner.workers_dev,true);
  assert.equal(vault.workers_dev,false);
+ assert.equal(vault.preview_urls,false);
  assert.deepEqual(runner.services,[{binding:'GOOGLE_VAULT',service:vault.name}]);
  assert.deepEqual(runner.durable_objects,liveRunner.durable_objects);
  assert.deepEqual(vault.durable_objects,liveVault.durable_objects);
