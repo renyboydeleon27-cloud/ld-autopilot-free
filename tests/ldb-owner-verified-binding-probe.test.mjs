@@ -23,7 +23,7 @@ const vault=[
 const baseEnv={CLOUDFLARE_ACCOUNT_ID:ACCOUNT,CLOUDFLARE_API_TOKEN:TOKEN,
  LDB_PROBE_URL:URL,LDB_RUNNER_SECRET:SECRET};
 function mock({subdomain='ownerzone',scriptEnabled=true,
-  vaultPublished=false,vaultSubdomainStatus=200,
+  vaultPublished=false,vaultPreviewsEnabled=false,vaultSubdomainStatus=200,
   runnerBindings=runner,vaultBindings=vault,
   accountStatus=200,runnerStatus=200,
   healthStatus=200,healthBody=null,
@@ -52,7 +52,7 @@ function mock({subdomain='ownerzone',scriptEnabled=true,
    return Response.json({success:true,result:{enabled:scriptEnabled}});
   if(url.endsWith('/scripts/'+VAULT+'/subdomain'))
    return Response.json({success:vaultSubdomainStatus===200,
-    result:{enabled:vaultPublished}},{status:vaultSubdomainStatus});
+    result:{enabled:vaultPublished,previews_enabled:vaultPreviewsEnabled}},{status:vaultSubdomainStatus});
   if(url.endsWith('/scripts/'+PROBE+'/settings'))
    return Response.json({success:true,result:{bindings:runnerBindings}},{status:runnerStatus});
   if(url.endsWith('/scripts/'+VAULT+'/settings'))
@@ -104,6 +104,7 @@ test('unsafe deployed Worker flags, account subdomain response and API permissio
   mock({accountStatus:403}),
   mock({scriptEnabled:false}),
   mock({vaultPublished:true}),
+  mock({vaultPreviewsEnabled:true}),
   mock({vaultSubdomainStatus:403}),
   mock({subdomain:'not.valid'})
  ]){
@@ -151,7 +152,7 @@ test('owner preflight verifies private Vault with NO Runner secret and five Clou
 test('metadata-only preflight rejects wrong account host without sending owner secret',async()=>{
  for(const options of [{subdomain:'attackerzone'},
   {runnerStatus:403},{scriptEnabled:false},{vaultPublished:true},
-  {vaultSubdomainStatus:403},
+  {vaultSubdomainStatus:403},{vaultPreviewsEnabled:true},
   {runnerBindings:runner.map(x=>x.name==='RUNNER_ENABLED'?{...x,text:'true'}:x)}]){
   const f=mock(options),env={...baseEnv};
   delete env.LDB_RUNNER_SECRET;
@@ -203,6 +204,12 @@ test('Cloudflare account metadata with invalid DNS label fails even when candida
 test('Vault must remain unpublished: true, absent, non-boolean, and inaccessible states fail before owner secret',async()=>{
  for(const value of [true,undefined,null,'false',0]){
   const f=mock({vaultPublished:value});
+  await assert.rejects(runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher}),
+   /PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE/);
+  assert.equal(f.secretCalls().length,0);
+ }
+ for(const value of [true,undefined,null,'false',0]){
+  const f=mock({vaultPreviewsEnabled:value});
   await assert.rejects(runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher}),
    /PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE/);
   assert.equal(f.secretCalls().length,0);
