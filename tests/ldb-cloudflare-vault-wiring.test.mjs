@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {inspectLdbCloudflareVaultWiring} from '../lib/ldb/cloudflare-vault-wiring.mjs';
+import {inspectLdbCloudflareVaultWiring,classifyVaultFlag,classifyVaultServiceBinding} from '../lib/ldb/cloudflare-vault-wiring.mjs';
 const account='a437dda5f38ba6b10991684b8388760b';
 const token='mock-read-only-cloudflare-token-12345';
 const vault='ner-ldb-google-vault-quality';
@@ -33,6 +33,10 @@ test('actual quality Worker metadata may match while all production operations s
  assert.equal(result.runnerSettingsHttpStatus,200);
  assert.equal(result.vaultSettingsHttpStatus,200);
  assert.equal(result.serviceBindingMetadataMatches,true);
+ assert.equal(result.serviceBindingState,'TARGET_MATCH');
+ assert.equal(result.runnerDeliveryState,'EXPLICIT_FALSE');
+ assert.equal(result.vaultDeliveryState,'EXPLICIT_FALSE');
+ assert.equal(result.vaultOAuthState,'EXPLICIT_FALSE');
  assert.equal(result.runnerDeliveryDisabled,true);
  assert.equal(result.vaultDeliveryDisabled,true);
  assert.equal(result.vaultOAuthDisabled,true);
@@ -78,4 +82,45 @@ test('huge Cloudflare metadata responses fail closed without leaking raw values'
  assert.equal(out.runnerWorkerFound,false);
  assert.equal(count,2);
  assert.ok(!JSON.stringify(out).includes('secretstuff'));
+});
+
+test('safe reason codes distinguish a missing Vault binding from a wrong Worker target',()=>{
+ assert.equal(classifyVaultServiceBinding(undefined),'METADATA_UNAVAILABLE');
+ assert.equal(classifyVaultServiceBinding([]),'MISSING');
+ assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'service',service:'other-worker'}]),'WRONG_TARGET');
+ assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'secret_text',text:'private'}]),'WRONG_TYPE');
+ assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'service',service:vault,environment:'staging'}]),'ENVIRONMENT_SCOPED');
+ assert.equal(classifyVaultServiceBinding([{name:'GOOGLE_VAULT',type:'service',service:vault}]),'TARGET_MATCH');
+ assert.equal(classifyVaultServiceBinding([
+  {name:'GOOGLE_VAULT',type:'service',service:vault},
+  {name:'GOOGLE_VAULT',type:'service',service:'other'}]),'DUPLICATE');
+});
+test('flag classifier never equates arbitrary non-false values with an enabled flag',()=>{
+ const name='VAULT_ENABLED';
+ assert.equal(classifyVaultFlag(undefined,name),'METADATA_UNAVAILABLE');
+ assert.equal(classifyVaultFlag([],name),'MISSING');
+ assert.equal(classifyVaultFlag([{name,type:'plain_text',text:'false'}],name),'EXPLICIT_FALSE');
+ assert.equal(classifyVaultFlag([{name,type:'plain_text',text:'true'}],name),'EXPLICIT_TRUE');
+ assert.equal(classifyVaultFlag([{name,type:'plain_text',text:'INVALID-DO-NOT-ECHO'}],name),'UNEXPECTED_VALUE');
+ assert.equal(classifyVaultFlag([{name,type:'secret_text',text:'CONFIDENTIAL'}],name),'WRONG_TYPE');
+ assert.equal(classifyVaultFlag([{name,type:'plain_text',text:'false'},{name,type:'plain_text',text:'true'}],name),'DUPLICATE');
+});
+test('live sanitized status identifies unsafe Vault flag without leaking value or target',async()=>{
+ const secret='PROVIDER_PRIVATE_DO_NOT_ECHO';
+ const m=mock({
+  runner:[{name:'GOOGLE_VAULT',type:'service',service:secret},
+   {name:'DELIVERY_BRIDGE_ENABLED',type:'plain_text',text:'false'}],
+  vault:[{name:'DELIVERY_BRIDGE_ENABLED',type:'plain_text',text:'invalid-secret-like-value'},
+   {name:'VAULT_ENABLED',type:'plain_text',text:'true'}]
+ });
+ const out=await inspectLdbCloudflareVaultWiring({accountId:account,token,fetcher:m.fetcher});
+ assert.equal(out.serviceBindingState,'WRONG_TARGET');
+ assert.equal(out.vaultDeliveryState,'UNEXPECTED_VALUE');
+ assert.equal(out.vaultDeliveryDisabled,null);
+ assert.equal(out.vaultOAuthState,'EXPLICIT_TRUE');
+ assert.equal(out.vaultOAuthDisabled,false);
+ assert.equal(out.status,'CLOUDFLARE_WIRING_NOT_VERIFIED');
+ assert.equal(out.productionReady,false);
+ assert.ok(!JSON.stringify(out).includes(secret));
+ assert.ok(!JSON.stringify(out).includes('invalid-secret-like-value'));
 });

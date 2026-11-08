@@ -56,9 +56,25 @@
       return ['Cloudflare Worker settings: expected Vault service binding found; both delivery gates OFF. Metadata only, NOT a working Google connection.'];
      const runner=cf.runnerSettingsHttpStatus;
      const vault=cf.vaultSettingsHttpStatus;
-     return ['Cloudflare Vault settings: not verified (runner HTTP '+
+     const states=['METADATA_UNAVAILABLE','MISSING','DUPLICATE','WRONG_TYPE',
+      'WRONG_TARGET','ENVIRONMENT_SCOPED','TARGET_MATCH','EXPLICIT_FALSE',
+      'EXPLICIT_TRUE','UNEXPECTED_VALUE'];
+     const state=x=>typeof x==='string'&&states.includes(x)?x:'NOT_VERIFIED';
+     const notes=[];
+     if(cf.serviceBindingState!==undefined)
+      notes.push('Runner → Vault service binding: '+state(cf.serviceBindingState)+'.');
+     if(cf.runnerDeliveryState!==undefined)
+      notes.push('Runner delivery flag: '+state(cf.runnerDeliveryState)+'.');
+     if(cf.vaultDeliveryState!==undefined)
+      notes.push('Vault delivery flag: '+state(cf.vaultDeliveryState)+'.');
+     if(cf.vaultOAuthState!==undefined)
+      notes.push('Vault OAuth flag: '+state(cf.vaultOAuthState)+'.');
+     if(cf.vaultOAuthState==='EXPLICIT_TRUE'||cf.runnerDeliveryState==='EXPLICIT_TRUE'||cf.vaultDeliveryState==='EXPLICIT_TRUE')
+      notes.push('WARNING: At least one safety gate is explicitly ON; no production or Google operations permitted.');
+     return ['Cloudflare Vault wiring: not verified (runner HTTP '+
        (Number.isInteger(runner)?runner:'unavailable')+', Vault HTTP '+
-       (Number.isInteger(vault)?vault:'unavailable')+'). Do not enable delivery.'];
+       (Number.isInteger(vault)?vault:'unavailable')+').',...notes,
+       'No changes made. Keep delivery disabled.'];
     })(),
     'Cloudflare Vault live binding probe, Google OAuth and delivery receipts need separate authenticated checks.',
     'Never paste any secret token, OAuth key or password into GitHub or ChatGPT.'

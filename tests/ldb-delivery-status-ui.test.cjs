@@ -83,3 +83,21 @@ test('invalid or unauthorized responses fail closed without showing sensitive da
   assert.ok(!h.elements.deliveryStatus.textContent.includes('very secret'));
  }
 });
+
+test('reasons describe missing or unsafe bindings without revealing Cloudflare response values',async()=>{
+ const h=setup({ok:true,json:async()=>result({cloudflareVault:{
+  status:'CLOUDFLARE_WIRING_NOT_VERIFIED',
+  productionReady:false,googleApiCalled:false,gmailApiCalled:false,
+  serviceBindingState:'WRONG_TARGET',runnerDeliveryState:'MISSING',
+  vaultDeliveryState:'UNEXPECTED_VALUE',vaultOAuthState:'EXPLICIT_TRUE',
+  runnerSettingsHttpStatus:200,vaultSettingsHttpStatus:200
+ }})});
+ await h.click();
+ const lines=h.lines().join('\n');
+ assert.match(lines,/service binding: WRONG_TARGET/);
+ assert.match(lines,/Runner delivery flag: MISSING/);
+ assert.match(lines,/Vault delivery flag: UNEXPECTED_VALUE/);
+ assert.match(lines,/Vault OAuth flag: EXPLICIT_TRUE/);
+ assert.match(lines,/safety gate is explicitly ON/);
+ assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+});
