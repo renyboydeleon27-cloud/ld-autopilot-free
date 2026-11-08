@@ -32,3 +32,18 @@ PR remains development-only; no fresh HOOK V5 has been accepted. No
 new image inference, verified full-episode Drive upload, live milestone
 emails or production merge is claimed by this checkpoint. The final Google
 Flow 10-second image-to-video renders still belong to the human operator.
+
+## November 8 — Runner-side milestone single-flight fix
+The runner previously read a milestone receipt, called Gmail, then wrote the
+receipt. Two overlapping alarms could overwrite the confirmation in either
+order. The runner now reserves an atomic durable CLAIMED checkpoint before
+any notification, rechecks the trusted milestone inside the transaction and
+again immediately before network I/O, and blocks later milestones while an
+earlier send remains in flight. Only explicit retryable failures schedule a
+retry; uncertain/claimed receipts never become invented SENT confirmations.
+New concurrent-alarm, restart, STOP, error and ambiguous-transport tests were
+added. Gmail Vault's independent at-most-once claim remains in force.
+
+This is a development-only safety fix. No Gmail message was sent by these
+tests; live 30/50/70/100 acceptance still requires actual receipts and inbox
+verification. No provider inference, Google upload or production deployment.
