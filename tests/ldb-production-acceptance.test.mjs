@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {ALL_SCENES} from '../lib/ldb/verified-image-handoff.mjs';
 import {validateDeliveryPlan} from '../lib/ldb/production-delivery.mjs';
-import {productionAcceptanceSnapshot,readMilestoneReceipts} from '../lib/ldb/production-acceptance.mjs';
+import {productionAcceptanceSnapshot,readMilestoneReceipts,classifyRunnerMilestoneReceipt} from '../lib/ldb/production-acceptance.mjs';
 const sha=s=>createHash('sha256').update(s).digest('hex'),id='a'.repeat(64);
 const job=(count=0)=>({
  id,stop:false,status:count===17?'IMAGES_READY':'QUEUED',index:count,
@@ -85,11 +85,67 @@ test('STOP and uncertain milestone are explicit and never counted as confirmed',
 });
 test('receipt reader only queries fixed milestone keys for a valid job ID',async()=>{
  const requested=[];
- const storage={get:async key=>{requested.push(key);return key.endsWith(':30')?{status:'SENT'}:{status:'UNCERTAIN'};}};
+ const storage={get:async key=>{requested.push(key);return key.endsWith(':30')?{status:'SENT',attempts:1}:{status:'UNCERTAIN',attempts:1};}};
  assert.deepEqual(await readMilestoneReceipts(storage,'not-a-job'),{});
  const r=await readMilestoneReceipts(storage,id);
  assert.deepEqual(requested,[30,50,70,100].map(p=>'milestone-result:'+id+':'+p));
  assert.equal(r[30],'SENT');
  assert.equal(r[100],'UNCERTAIN');
  assert.equal(productionAcceptanceSnapshot({job:job(6),receipts:r}).gmailVaultAcknowledged,1);
+});
+
+test('Runner milestone status alone is NOT trusted Gmail acknowledgement evidence',async()=>{
+ const cases=[
+  {status:'SENT'},
+  {status:'SENT',attempts:0},
+  {status:'SENT',attempts:4},
+  {status:'SENT',attempts:-1},
+  {status:'SENT',attempts:'1'},
+  {status:'SENT',attempts:1,providerSecret:'NEVER_EXPOSE'},
+  {status:'SENT',attempts:1,percent:100},
+  {status:'INVALID',attempts:1},
+  {status:'CLAIMED',attempts:0},
+  {status:'UNCERTAIN',attempts:0},
+  'SENT',[],false
+ ];
+ for(const record of cases)
+  assert.equal(classifyRunnerMilestoneReceipt(record),'INVALID_RECEIPT');
+ assert.equal(classifyRunnerMilestoneReceipt(undefined),'NOT_RECORDED');
+ for(const status of ['SENT','UNCERTAIN','CLAIMED'])
+  for(const attempts of [1,2,3])
+   assert.equal(classifyRunnerMilestoneReceipt({status,attempts}),status);
+ assert.equal(classifyRunnerMilestoneReceipt({status:'RETRY_WAIT',attempts:0}),'RETRY_WAIT');
+});
+test('acceptance report flags corrupted and unavailable milestone records, never leaks extras',async()=>{
+ const requested=[];
+ const storage={get:async key=>{
+  requested.push(key);
+  if(key.endsWith(':30'))return {status:'SENT',attempts:1};
+  if(key.endsWith(':50'))return {status:'SENT',attempts:1,secret:'NEVER_EXPOSE'};
+  if(key.endsWith(':70'))throw Error('sensitive vault storage error');
+  return {status:'SENT'};
+ }};
+ const receipts=await readMilestoneReceipts(storage,id);
+ assert.equal(requested.length,4);
+ assert.deepEqual(receipts,{
+  30:'SENT',50:'INVALID_RECEIPT',70:'RECEIPT_UNAVAILABLE',100:'INVALID_RECEIPT'
+ });
+ const report=productionAcceptanceSnapshot({job:job(17),delivery:delivery(69),receipts});
+ assert.equal(report.gmailVaultAcknowledged,1);
+ assert.equal(report.gmailReceiptStatuses[50],'INVALID_RECEIPT');
+ assert.equal(report.gmailReceiptStatuses[70],'RECEIPT_UNAVAILABLE');
+ assert.ok(report.blockers.includes('GMAIL_MILESTONE_RECEIPT_INTEGRITY_NOT_VERIFIED'));
+ assert.ok(report.blockers.includes('GMAIL_MILESTONE_RECEIPTS_INCOMPLETE'));
+ assert.equal(report.status,'NO_GO');
+ assert.doesNotMatch(JSON.stringify(report),/NEVER_EXPOSE|sensitive vault storage error/);
+});
+test('all exact 4 durable runner acknowledgements count only as transport evidence',async()=>{
+ const storage={get:async()=>({status:'SENT',attempts:1})};
+ const receipts=await readMilestoneReceipts(storage,id);
+ const report=productionAcceptanceSnapshot({job:job(17),delivery:delivery(69),receipts});
+ assert.equal(report.gmailVaultAcknowledged,4);
+ assert.ok(!report.blockers.includes('GMAIL_MILESTONE_RECEIPT_INTEGRITY_NOT_VERIFIED'));
+ assert.equal(report.gmailInboxVerified,false);
+ assert.equal(report.productionDeployedAndAccepted,false);
+ assert.equal(report.status,'NO_GO');
 });
