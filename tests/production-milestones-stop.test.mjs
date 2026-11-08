@@ -115,7 +115,7 @@ test('no transactional storage refuses to send',async()=>{
 test('legacy RETRY_WAIT with prior network attempt is quarantined without notification',async()=>{
  for(const attempts of [1,2,3]){
   const {map,storage,alarms}=fixture(),sent=[];
-  map.set('milestone-result:'+ID+':30,{status:'RETRY_WAIT',attempts});
+  map.set('milestone-result:'+ID+':30',{status:'RETRY_WAIT',attempts});
   await notifyProductionMilestones({storage,notify:async(_state,p)=>{
    sent.push(p);return {status:'SENT'};
   }});
@@ -130,7 +130,7 @@ test('legacy RETRY_WAIT with prior network attempt is quarantined without notifi
 });
 test('legacy STOP-before-network attempt zero can safely resume a single send',async()=>{
  const {map,storage}=fixture(),calls=[];
- map.set('milestone-result:'+ID+':30,{status:'RETRY_WAIT',attempts:0});
+ map.set('milestone-result:'+ID+':30',{status:'RETRY_WAIT',attempts:0});
  await notifyProductionMilestones({storage,notify:async(_s,p)=>{
   calls.push(p);return {status:'SENT'};
  }});
