@@ -12,8 +12,11 @@ export async function probeGoogleVaultBinding(env,nonce){
   response=await env.GOOGLE_VAULT.fetch('https://ldb-vault.internal/internal/bridge/health',{
    method:'GET',
    headers:{Authorization:'Bearer '+env.GOOGLE_BRIDGE_PROBE_SECRET,
-    'X-LDB-Probe-Nonce':nonce,'Cache-Control':'no-store'},
-   redirect:'manual'
+    'X-LDB-Probe-Nonce':nonce,'Cache-Control':'no-store',
+    Accept:'application/json'},
+   // Do not keep a background Worker hanging on a stalled internal bridge.
+   // The caller still fails closed if the service binding ignores aborts.
+   redirect:'manual',signal:AbortSignal.timeout(8000)
   });
  }catch{fail();}
  if(response?.status!==200)fail();
