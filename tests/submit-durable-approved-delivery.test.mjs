@@ -21,6 +21,7 @@ test('refuses mismatched runner job before delivery queue',async()=>{
 import {createHash} from 'node:crypto';
 import {ALL_SCENES} from '../lib/ldb/verified-image-handoff.mjs';
 import {resumeDurableApprovedDelivery} from '../lib/ldb/resume-durable-approved-delivery.mjs';
+import {makeTestPng} from './helpers/make-test-png.mjs';
 const digest=b=>createHash('sha256').update(b).digest('hex');
 function durableFixture(){
  const images=new Map(),texts=new Map(),deliveries=new Map(),uploads=new Map();
@@ -126,7 +127,7 @@ import {createGoogleDeliveryBridge} from '../cloudflare/ldb-runner/google-delive
 function correctedFixture(){
  const f=durableFixture();
  const originals=f.images.get('job').outputs;
- const assets=ALL_SCENES.map(scene=>({scene,mimeType:'image/png',bytes:Buffer.from('corrected-'+scene)}));
+ const assets=ALL_SCENES.map(scene=>({scene,mimeType:'image/png',bytes:makeTestPng(scene==='THUMBNAIL'?'color':'gray')}));
  const audits=assets.map((a,i)=>({scene:a.scene,source_sha256:originals[i].sha256,sha256:digest(a.bytes),bytes:a.bytes.length,
  width:576,height:1024,structural_check:'PASS',neutral_grayscale:i<16,
  pixel_audit:{scene:a.scene,sha256:digest(a.bytes),bytes:a.bytes.length,width:576,height:1024,

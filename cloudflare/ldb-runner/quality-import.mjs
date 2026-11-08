@@ -5,6 +5,7 @@ import {createHash,timingSafeEqual} from 'node:crypto';
 import {ALL_SCENES} from '../../lib/ldb/verified-image-handoff.mjs';
 import {durablePreparedImages} from '../../lib/ldb/durable-prepared-images.mjs';
 import {submitDurableApprovedDelivery} from '../../lib/ldb/submit-durable-approved-delivery.mjs';
+import {assertPngContainer} from '../../lib/ldb/png-container-gate.mjs';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 const candidatePath=/^\/internal\/quality\/candidate\/(?:HOOK|P(?:[1-9]|1[0-4])|ENDING|THUMBNAIL)$/;
@@ -71,6 +72,7 @@ export async function handleQualityImport(req,{storage,env={},createBackend}={})
      throw Error('PREPARED_SOURCE_CHANGED');
     const bytes=await prepared.readIfPresent(asset);
     if(!bytes)throw Error('PREPARED_BYTES_MISSING');
+    assertPngContainer(bytes);
     items.push({scene,status:'STAGED',sha256:asset.sha256,bytes:asset.bytes,
      sourceSha256:audit.source_sha256});
    }
@@ -94,6 +96,7 @@ export async function handleQualityImport(req,{storage,env={},createBackend}={})
    const asset=entry(job.id,audit);
    const bytes=await durablePreparedImages(storage,{jobId:job.id}).readIfPresent(asset);
    if(!bytes)throw Error('PREPARED_IMAGE_MISSING');
+   assertPngContainer(bytes);
    return new Response(bytes,{headers:{
     'Content-Type':'image/png',
     'Cache-Control':'private, no-store',
@@ -110,6 +113,7 @@ export async function handleQualityImport(req,{storage,env={},createBackend}={})
    const {jobId,audit}=JSON.parse(Buffer.from(encoded,'base64url').toString('utf8'));
    if(jobId!==job.id)throw Error('JOB_MISMATCH');
    const asset=entry(jobId,audit),bytes=await read(req,8000000);
+   assertPngContainer(bytes);
    const auditKey='prepared-audit:'+jobId+':'+audit.scene;
    const existing=await storage.get(auditKey);
    if(existing&&JSON.stringify(existing)!==JSON.stringify(audit))throw Error('AUDIT_CHANGED');
@@ -127,6 +131,7 @@ export async function handleQualityImport(req,{storage,env={},createBackend}={})
    const audit=await storage.get('prepared-audit:'+job.id+':'+scene);
    const asset=entry(job.id,audit),bytes=await store.readIfPresent(asset);
    if(!bytes)throw Error('PREPARED_IMAGE_MISSING');
+   assertPngContainer(bytes);
    audits.push(audit);assets.push({scene,mimeType:'image/png',bytes});
   }
   const backend=createBackend();

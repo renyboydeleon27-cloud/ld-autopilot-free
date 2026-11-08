@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import {Buffer} from 'node:buffer';
 import {ALL_SCENES} from '../lib/ldb/verified-image-handoff.mjs';
 import {qualityImportGate,handleQualityImport} from '../cloudflare/ldb-runner/quality-import.mjs';
+import {makeTestPng} from './helpers/make-test-png.mjs';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const STAGE='stage-test-secret-aaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const REVIEW='review-test-secret-bbbbbbbbbbbbbbbbbbbbbbbbbbb';
@@ -74,7 +75,7 @@ test('one real staged image stays queued for review; staging-only credential can
  let creates=0;
  const createBackend=()=>{creates++;throw Error('backend must never be used')};
  const original=Buffer.from('original provider render HOOK');
- const normalized=Buffer.from('synthetic normalized image for byte-integrity test');
+ const normalized=makeTestPng();
  const audit={scene:'HOOK',bytes:normalized.length,sha256:sha(normalized),
   source_sha256:sha(original),structural_check:'PASS'};
  const header=Buffer.from(JSON.stringify({jobId,audit})).toString('base64url');
@@ -117,7 +118,7 @@ test('17-stage status is a single non-approving overview; missing scenes do not 
  assert.equal(e.reviewReady,false);assert.equal(e.deliveryReady,false);
  for(const [i,scene] of ALL_SCENES.entries()){
   const raw=Buffer.from('original provider render '+scene);
-  const corrected=Buffer.from('corrected candidate for '+scene);
+  const corrected=makeTestPng(scene==='THUMBNAIL'?'color':'gray');
   const audit={scene,bytes:corrected.length,sha256:sha(corrected),source_sha256:sha(raw)};
   const body=Buffer.from(JSON.stringify({jobId,audit})).toString('base64url');
   const staged=await handleQualityImport(req('image',STAGE,'POST',{
@@ -147,7 +148,7 @@ test('17-stage status is a single non-approving overview; missing scenes do not 
 });
 test('STOP and tampered prepared bytes never claim review candidates ready',async()=>{
  const f=storageFixture(),off={...env,DELIVERY_BRIDGE_ENABLED:'false'};
- const corrected=Buffer.from('HOOK corrected candidate');
+ const corrected=makeTestPng();
  const original=Buffer.from('original provider render HOOK');
  const audit={scene:'HOOK',bytes:corrected.length,sha256:sha(corrected),source_sha256:sha(original)};
  const staged=await handleQualityImport(req('image',STAGE,'POST',{
@@ -199,7 +200,7 @@ test('reviewer reads verified staged candidate bytes without creating delivery o
   storage:f.storage,env:off,createBackend});
  assert.equal(before.status,404);
  assert.equal((await before.json()).status,'CANDIDATE_NOT_STAGED');
- const image=Buffer.from('immutable candidate bytes for HOOK');
+ const image=makeTestPng();
  const original=Buffer.from('original provider render HOOK');
  const audit={scene:'HOOK',bytes:image.length,sha256:sha(image),
   source_sha256:sha(original),structural_check:'PASS'};
@@ -226,7 +227,7 @@ test('reviewer reads verified staged candidate bytes without creating delivery o
 test('candidate inspection fails closed on STOP, source drift, or tampered prepared bytes',async()=>{
  const f=storageFixture(),off={...env,DELIVERY_BRIDGE_ENABLED:'false'};
  const original=Buffer.from('original provider render HOOK');
- const image=Buffer.from('review candidate');
+ const image=makeTestPng();
  const audit={scene:'HOOK',bytes:image.length,sha256:sha(image),source_sha256:sha(original)};
  await handleQualityImport(req('image',STAGE,'POST',{
   headers:{'Content-Type':'application/octet-stream',
@@ -243,4 +244,20 @@ test('candidate inspection fails closed on STOP, source drift, or tampered prepa
  const key=sha('ldb-delivery-image-v1:'+jobId+':HOOK');
  f.map.set('prepared:'+jobId+':'+key+':0',new Uint8Array(Buffer.from('tampered bytes')));
  assert.equal((await get()).status,409);
+});
+
+test('stage refuses fake PNG bytes despite matching claimed checksum and structural PASS',async()=>{
+ const f=storageFixture(),raw=Buffer.from('original provider render HOOK'),bad=Buffer.from('<svg>not a PNG</svg>');
+ const audit={scene:'HOOK',bytes:bad.length,sha256:sha(bad),
+  source_sha256:sha(raw),structural_check:'PASS'};
+ let calls=0;
+ const response=await handleQualityImport(req('image',STAGE,'POST',{
+  headers:{'Content-Type':'application/octet-stream',
+   'X-LDB-Image-Audit':Buffer.from(JSON.stringify({jobId,audit})).toString('base64url')},
+  body:bad}),{storage:f.storage,env,createBackend:()=>{calls++;throw Error('NEVER')}});
+ assert.equal(response.status,409);
+ assert.equal(calls,0);
+ assert.equal(f.map.has('prepared-audit:'+jobId+':HOOK'),false);
+ assert.equal([...f.map.keys()].some(k=>k.startsWith('prepared:'+jobId+':')),false);
+ assert.equal(f.map.has('delivery'),false);
 });
