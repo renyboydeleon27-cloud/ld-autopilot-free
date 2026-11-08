@@ -51,7 +51,10 @@ test('authenticated read-only response never reports production ready',async()=>
   calls++;assert.equal(u,url);assert.equal(opts.redirect,'manual');
   assert.equal(opts.method,'GET');assert.equal(opts.body,undefined);
   assert.equal(opts.headers.Authorization,'Bearer '+secret);
-  return Response.json({status:'BRIDGE_AUTHENTICATED',productionReady:false});
+  assert.equal(opts.headers['Cache-Control'],'no-store');
+  assert.equal(opts.cache,'no-store');
+  return Response.json({status:'BRIDGE_AUTHENTICATED',productionReady:false},
+   {headers:{'Cache-Control':'no-store'}});
  }});
  assert.deepEqual(out,{status:'BRIDGE_AUTHENTICATED',productionReady:false});
  assert.equal(calls,1);assert.ok(!JSON.stringify(out).includes(secret));
