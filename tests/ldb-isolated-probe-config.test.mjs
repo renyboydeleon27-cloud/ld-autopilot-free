@@ -23,6 +23,8 @@ test('safety contract rejects unsafe config mutations',()=>{
   x=>x.vault.vars.DELIVERY_BRIDGE_ENABLED='true',
   x=>x.runner.services[0].service=x.liveVault.name,
   x=>x.vault.workers_dev=true,
+  x=>x.vault.preview_urls=true,
+  x=>{delete x.vault.preview_urls;},
   x=>x.vault.vars.GOOGLE_SECRET='leaked',
   x=>x.vault.account_id='b'.repeat(32),
   x=>x.runner.vars.AI='true',
