@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {hookCloudTest,assertV5PreviewScope,assertV5InferenceGate,assertLiveV5ProviderPreflight} from '../scripts/ldb-hook-cloud-test.mjs';
+import {makeTestPng} from './helpers/make-test-png.mjs';
 const TODAY=new Date().toISOString().slice(0,10);
 const env={CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',CLOUDFLARE_API_TOKEN:'private-test-token-diagnostic-only-1234',LDB_FREE_PLAN_VERIFIED_DATE:TODAY,LDB_FREE_USAGE_VERIFIED_DATE:TODAY,VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance',LDB_WORKERS_PLAN:'free',FREE_PLAN_CONFIRMED:'true'};
 const NOW=Date.now();
@@ -10,7 +11,7 @@ const USAGE_REPORT={checkedAt:new Date(NOW).toISOString(),inferenceCalled:false,
 async function harness(failRender=false,{liveUsage=0,liveWorker=false,billingPaid=false,liveHttpFailure=false}={}){
  const bundle=JSON.parse(await readFile(new URL('../ldb-submissions/lake-nyos-1986-test/approved_bundle.json',import.meta.url),'utf8'));
  bundle.schema='ldb-approved-render-job-v1';bundle.render_scenes=Object.entries(JSON.parse(bundle.storyboard_utf8).scenes).map(([id,s])=>({id,image_prompt:s.visual,narration:'Separate narration.',flow_prompt:'EXACTLY 10 SECONDS 0–2s: Start; 2–6s: move; 6–10s: stop'}));
- let stage='EMPTY',submits=0;const removed=[];const bytes=Buffer.from('image-test-data'),sha=createHash('sha256').update(bytes).digest('hex');
+ let stage='EMPTY',submits=0;const removed=[];const bytes=makeTestPng(),sha=createHash('sha256').update(bytes).digest('hex');
  const fetcher=async(url,opts={})=>{
   const path=new URL(url).pathname;
   if(url.startsWith('https://api.cloudflare.com')){
@@ -39,7 +40,7 @@ async function harness(failRender=false,{liveUsage=0,liveWorker=false,billingPai
   if(path==='/stop'){stage='STOPPED';return Response.json({});}
   if(path==='/resume'){stage=failRender?'NEEDS_REVIEW':'TEST_PAUSED';return Response.json({});}
   if(path==='/images/HOOK')return new Response(bytes,{headers:{'X-LDB-SHA256':sha}});
-  return Response.json({job:{id:bundle.approval.storyboard_id,status:stage,completedScenes:stage==='TEST_PAUSED'?1:0,outputs:[{scene:'HOOK',sha256:sha}]}});
+  return Response.json({job:{id:bundle.approval.storyboard_id,status:stage,completedScenes:stage==='TEST_PAUSED'?1:0,outputs:[{scene:'HOOK',sha256:sha,mimeType:'image/png',bytes:bytes.length}]}});
  };
  return {options:{env,freePlanConfirmed:true,fetcher,sleep:async()=>{},usageReport:structuredClone(USAGE_REPORT),now:NOW,read:async p=>p.endsWith('render_job.json')?JSON.stringify(bundle):'module'},removed,getSubmits:()=>submits};
 }
@@ -78,6 +79,7 @@ test('V5 uses a new isolated Worker and preserves original V4 evidence',async()=
  assert.equal(puts,1);
  assert.equal(result.report.worker,'ner-ldb-runner-quality-v5');
  assert.equal(result.report.completedScenes,1);
+ assert.equal(result.report.output.mimeType,'image/png');
  assert.deepEqual(h.removed,['RUNNER_SECRET','ner-ldb-runner-quality-v5']);
  assert.equal(result.report.isolatedWorkerRemoved,true);
  assert.equal(h.getSubmits(),1);

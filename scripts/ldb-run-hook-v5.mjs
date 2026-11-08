@@ -2,7 +2,8 @@
 // Does NOT run in normal builds; requires explicit preview and current free-plan
 // verification. Never touches V4, quality Workers, Drive or production alias.
 import {spawnSync} from 'node:child_process';
-import {recoverV5AuditEvidence} from './ldb-v5-evidence-recovery.mjs';
+import {readFileSync} from 'node:fs';
+import {recoverV5AuditEvidence,resolveV5SourceFile} from './ldb-v5-evidence-recovery.mjs';
 if(process.env.VERCEL_ENV!=='preview'||!process.argv.includes('--one-approved-hook-free-only'))
  throw Error('EXPLICIT_PREVIEW_TEST_REQUIRED');
 const now=new Date().toISOString().slice(0,10);
@@ -18,12 +19,19 @@ const commands=[
  ['node',['scripts/ldb-live-usage-preflight.mjs','--read-only']],
  ['node',['scripts/ldb-hook-cloud-test.mjs','--one-approved-hook-free-only','--hook-v5']],
  // This step runs locally on the existing image. It must never approve or upload.
- ['python3',['-m','scripts.ldb_hook_bw_audit','--input','cloudflare/ldb-runner/public/HOOK.jpg','--output-dir','cloudflare/ldb-runner/public/review-only','--preview-compare']]
+ ['python3',['-m','scripts.ldb_hook_bw_audit','--input','__V5_SOURCE_FILE_FROM_REPORT__','--output-dir','cloudflare/ldb-runner/public/review-only','--preview-compare']]
 ];
 // Earlier steps must fail closed. Only the LAST, offline Python audit may
 // preserve a failed/NOT APPROVED review preview instead of discarding the
 // already generated source image by failing the entire Vercel preview build.
 for(const [index,[command,args]] of commands.entries()){
+ if(index===commands.length-1){
+  // The runner can return image/png OR image/jpeg.
+  let sourceFile;
+  try{sourceFile=resolveV5SourceFile(JSON.parse(readFileSync('cloudflare/ldb-runner/public/report.json','utf8')))}
+  catch{throw Error('V5_SOURCE_REPORT_INVALID')}
+  args[args.indexOf('--input')+1]='cloudflare/ldb-runner/public/'+sourceFile;
+ }
  const result=spawnSync(command,args,{stdio:'inherit',env:process.env});
  if(result.status===0)continue;
  if(index!==commands.length-1)process.exit(result.status||1);

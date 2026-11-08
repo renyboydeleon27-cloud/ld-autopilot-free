@@ -232,5 +232,41 @@ class HookBlackWhiteReviewTests(unittest.TestCase):
             self.assertFalse(self.review.exists())
         self.assertEqual(original, self.raw.read_bytes())
 
+
+    def test_v5_preview_can_audit_real_png_without_relabeling_original(self):
+        self.raw = self.root / "HOOK.png"
+        self.review = self.root / "review-only"
+        Image.new("RGB", (576, 1024), (110, 100, 90)).save(self.raw, format="PNG")
+        original = self.raw.read_bytes()
+        (self.root / "index.html").write_text("<h1>Original PNG</h1>", encoding="utf-8")
+        evidence = {
+            "worker": "ner-ldb-runner-quality-v5",
+            "status": "HOOK_CLOUD_TEST_PASSED",
+            "checkpointStatus": "TEST_PAUSED",
+            "completedScenes": 1,
+            "totalScenes": 17,
+            "runtimeCredentialsRemoved": True,
+            "isolatedWorkerRemoved": True,
+            "fullAutoProduction": False,
+            "googleConnected": False,
+            "storyboard_sha256": "75dde2562c9a9fea831092a4f21ca6706bb568cf5bcc40a5db80b71285afdd05",
+            "sourceFile": "HOOK.png",
+            "output": {
+                "scene": "HOOK",
+                "sha256": hashlib.sha256(original).hexdigest(),
+                "bytes": len(original), "mimeType": "image/png",
+                "visualAudit": "PENDING"
+            }
+        }
+        (self.root / "report.json").write_text(json.dumps(evidence), encoding="utf-8")
+        result = make_review(self.raw, self.review, preview_compare=True)
+        self.assertEqual(self.raw.read_bytes(), original)
+        self.assertFalse(result["productionDeliveryAllowed"])
+        self.assertIn("../HOOK.png", (self.review / "index.html").read_text(encoding="utf-8"))
+        evidence["sourceFile"] = "HOOK.jpg"
+        (self.root / "report.json").write_text(json.dumps(evidence), encoding="utf-8")
+        with self.assertRaisesRegex(ReviewError, "V5_CLOUD_REPORT_MISMATCH"):
+            make_review(self.raw, self.review, preview_compare=True)
+
 if __name__ == "__main__":
     unittest.main()

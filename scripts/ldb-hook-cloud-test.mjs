@@ -7,6 +7,7 @@ import {validateRenderJob} from '../lib/ldb/approved-render-job.mjs';
 import {freeInferenceAllowed} from '../lib/ldb/free-inference-gate.mjs';
 import {verifyOneHookUsageReport} from '../lib/ldb/v5-free-usage-gate.mjs';
 import {cloudflareReadOnlyDiagnostic} from '../lib/ldb/cloudflare-read-only-diagnostic.mjs';
+import {imageMetadata} from '../lib/ldb/cloudflare-image.mjs';
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b', NAME='ner-ldb-runner-quality-v4', V5_NAME='ner-ldb-runner-quality-v5';
 export function assertV5PreviewScope({args=[],env={}}={}){
  if(!args.includes('--hook-v5'))return true; // Existing V4 diagnostics unchanged.
@@ -130,6 +131,12 @@ export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile
   const response=await call('/images/HOOK');bytes=Buffer.from(await response.arrayBuffer());
   const sha256=createHash('sha256').update(bytes).digest('hex');
   if(sha256!==job.outputs[0]?.sha256||sha256!==response.headers.get('X-LDB-SHA256'))throw Error('IMAGE_CHECKSUM_FAILED');
+  // Validate the provider's real format before the V5 report can say PASS.
+  if(workerName===V5_NAME){
+   const actual=imageMetadata(bytes);
+   if(actual.mimeType!==job.outputs[0]?.mimeType||actual.width!==576||actual.height!==1024)
+    throw Error('HOOK_IMAGE_FORMAT_MISMATCH');
+  }
   const persisted=(await (await call('/status')).json()).job;
   if(persisted.id!==validated.id||persisted.completedScenes!==1)throw Error('CHECKPOINT_VERIFICATION_FAILED');
   result={status:'HOOK_CLOUD_TEST_PASSED',worker:workerName,storyboard_sha256:validated.id,unauthenticatedBlocked:true,stopBeforeRender:true,resumeStartedRender:true,completedScenes:1,totalScenes:17,checkpointStatus:job.status,output:job.outputs[0],fullAutoProduction:false,googleConnected:false,verifiedAt:new Date().toISOString()};
@@ -162,10 +169,17 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   if(process.env.LDB_WORKERS_PLAN!=='free'||process.env.LDB_FREE_PLAN_VERIFIED_DATE!==today||process.env.LDB_FREE_USAGE_VERIFIED_DATE!==today)throw Error('CURRENT_FREE_PLAN_VERIFICATION_REQUIRED');
   const v5=process.argv.includes('--hook-v5');
   const usageReport=v5?JSON.parse(await readFile('cloudflare/ldb-runner/public/live-preflight.json','utf8')):undefined;
-  const {report,bytes}=await hookCloudTest({freePlanConfirmed:true,workerName:v5?V5_NAME:NAME,usageReport});const folder='cloudflare/ldb-runner/public';await mkdir(folder,{recursive:true});
-  await writeFile(`${folder}/HOOK.jpg`,bytes);await writeFile(`${folder}/report.json`,JSON.stringify(report,null,2));
-  await writeFile(`${folder}/index.html`,'<!doctype html><meta name="viewport" content="width=device-width"><title>LDB HOOK test</title><h1>HOOK cloud test</h1><p>One raw image only. Visual QA and full production are not complete.</p><a href="report.json">Test report</a><p><img style="max-width:100%" src="HOOK.jpg"></p>');
-  console.log(JSON.stringify(report));
+  const {report,bytes}=await hookCloudTest({freePlanConfirmed:true,workerName:v5?V5_NAME:NAME,usageReport});
+  const meta=imageMetadata(bytes);
+  if(meta.mimeType!==report.output?.mimeType||meta.width!==576||meta.height!==1024)
+   throw Error('HOOK_IMAGE_FORMAT_MISMATCH');
+  const sourceFile='HOOK.'+meta.extension;
+  const published={...report,sourceFile};
+  const folder='cloudflare/ldb-runner/public';await mkdir(folder,{recursive:true});
+  await writeFile(`${folder}/${sourceFile}`,bytes);
+  await writeFile(`${folder}/report.json`,JSON.stringify(published,null,2));
+  await writeFile(`${folder}/index.html`,'<!doctype html><meta name="viewport" content="width=device-width"><title>LDB HOOK test</title><h1>HOOK cloud test</h1><p>One raw image only. Visual QA and full production are not complete.</p><a href="report.json">Test report</a><p><img style="max-width:100%" src="'+sourceFile+'"></p>');
+  console.log(JSON.stringify(published));
  }catch(e){console.error(/^[A-Z0-9_]+$/.test(e.message)?e.message:'HOOK_TEST_FAILED');process.exit(1)}
 }
 

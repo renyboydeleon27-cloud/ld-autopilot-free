@@ -75,7 +75,17 @@ def verify_v5_execution(source, raw):
     except (OSError, ValueError, UnicodeDecodeError) as exc:
         raise ReviewError("V5_CLOUD_REPORT_REQUIRED") from exc
     out = report.get("output") if isinstance(report, dict) else None
-    if not isinstance(out, dict) or any((
+    source_file = report.get("sourceFile", "HOOK.jpg" if isinstance(out, dict) and out.get("mimeType") == "image/jpeg" else None)
+    if source_file not in ("HOOK.jpg", "HOOK.png") or source.name != source_file:
+        raise ReviewError("V5_CLOUD_REPORT_MISMATCH")
+    expected_mime = "image/png" if source_file == "HOOK.png" else "image/jpeg"
+    if not isinstance(out, dict) or out.get("mimeType") != expected_mime:
+        raise ReviewError("V5_CLOUD_REPORT_MISMATCH")
+    if source_file == "HOOK.png" and not raw.startswith(bytes.fromhex("89504e470d0a1a0a")):
+        raise ReviewError("V5_CLOUD_REPORT_MISMATCH")
+    if source_file == "HOOK.jpg" and not raw.startswith(bytes.fromhex("ffd8")):
+        raise ReviewError("V5_CLOUD_REPORT_MISMATCH")
+    if any((
         report.get("worker") != "ner-ldb-runner-quality-v5",
         report.get("status") != "HOOK_CLOUD_TEST_PASSED",
         report.get("checkpointStatus") != "TEST_PAUSED",
@@ -95,7 +105,7 @@ def verify_v5_execution(source, raw):
         # or contradictory dimension pair is an invalid report.
         (("width" in out or "height" in out) and
          (out.get("width") != EXPECTED_SIZE[0] or out.get("height") != EXPECTED_SIZE[1])),
-        out.get("mimeType") != "image/jpeg",
+        out.get("mimeType") != expected_mime,
         out.get("visualAudit") not in (None, "PENDING"),
     )):
         raise ReviewError("V5_CLOUD_REPORT_MISMATCH")
@@ -108,7 +118,7 @@ def make_review(source, output_dir, *, preview_compare=False):
     # A synthetic or mislabeled image must not produce a misleading cloud preview.
     root = Path(output_dir)
     if preview_compare:
-        if source.name != "HOOK.jpg" or root.resolve() != (source.parent / "review-only").resolve():
+        if source.name not in ("HOOK.jpg", "HOOK.png") or root.resolve() != (source.parent / "review-only").resolve():
             raise ReviewError("INVALID_PREVIEW_COMPARISON_LOCATION")
         verify_v5_execution(source, raw)
     before = neutrality(rgb)
@@ -171,7 +181,7 @@ def make_review(source, output_dir, *, preview_compare=False):
             '<h1>HOOK V5: original vs strict grayscale</h1>'
             '<p><strong>NOT APPROVED</strong> — grayscale correction does not verify pose, '
             'anatomy, history, or approved reference continuity.</p>'
-            '<figure><img src="../HOOK.jpg" alt="Original HOOK image"><figcaption>Original (unchanged)</figcaption></figure>'
+            '<figure><img src="../' + escape(source.name, quote=True) + '" alt="Original HOOK image"><figcaption>Original (unchanged)</figcaption></figure>'
             '<figure><img src="' + escape(candidate_name, quote=True) + '" alt="Exact B/W review candidate">'
             '<figcaption>Neutral RGB PNG (review only)</figcaption></figure>'
             '<p><a href="' + escape(report_name, quote=True) + '">Pixel audit and SHA-256 (JSON)</a></p></html>'
