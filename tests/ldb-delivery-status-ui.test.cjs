@@ -138,3 +138,34 @@ test('isolated probe flag mismatch and unreviewed bindings remain blocked',async
  assert.match(lines,/Authenticated Worker-to-Worker probe NOT run/);
  assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
 });
+
+test('secret-binding names visible in metadata never become claimed authentication',async()=>{
+ const h=setup({ok:true,json:async()=>result({isolatedProbe:{
+  status:'ISOLATED_PROBE_METADATA_MATCHES_SAFE',
+  authSetupStatus:'SECRET_BINDINGS_LISTED_UNVERIFIED',
+  authenticationProbeCalled:false,authenticationVerified:false,
+  workerModified:false,productionReady:false
+ }})});
+ await h.click();
+ assert.ok(h.lines().some(s=>/required binding names visible/.test(s)));
+ assert.ok(h.lines().some(s=>/NOT verified/.test(s)));
+ assert.equal(h.calls.length,1);
+ assert.equal(h.calls[0].opts.method,'GET');
+ assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+});
+test('missing and malformed probe bindings show fail-closed guidance',async()=>{
+ for(const setupStatus of [
+  'SECRET_BINDINGS_NOT_LISTED_IN_SETTINGS','INVALID_PROBE_SECRET_BINDINGS',
+  'SECRET_BINDING_METADATA_UNAVAILABLE'
+ ]){
+  const h=setup({ok:true,json:async()=>result({isolatedProbe:{
+   status:'ISOLATED_PROBE_METADATA_NOT_VERIFIED',
+   authSetupStatus:setupStatus,
+   authenticationProbeCalled:false,authenticationVerified:false,
+   workerModified:false,productionReady:false
+  }})});
+  await h.click();
+  assert.ok(h.lines().some(s=>/Probe authentication bindings:/.test(s)));
+  assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+ }
+});

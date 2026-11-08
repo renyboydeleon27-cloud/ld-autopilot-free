@@ -53,6 +53,11 @@ test('deployed isolated settings must match expected offline probe flags, not au
  assert.equal(out.unexpectedVaultBindings,false);
  assert.equal(out.runnerChecks.BRIDGE_PROBE_ENABLED,'EXPLICIT_TRUE');
  assert.equal(out.vaultChecks.VAULT_ENABLED,'EXPLICIT_FALSE');
+ assert.equal(out.authSetupStatus,'SECRET_BINDINGS_NOT_LISTED_IN_SETTINGS');
+ assert.equal(out.authSetupMetadataListed,false);
+ assert.equal(out.secretStates.runnerOwnerSecret,'NOT_LISTED_IN_SETTINGS');
+ assert.equal(out.secretStates.runnerSharedSecret,'NOT_LISTED_IN_SETTINGS');
+ assert.equal(out.secretStates.vaultSharedSecret,'NOT_LISTED_IN_SETTINGS');
  for(const key of ['authenticationVerified','authenticationProbeCalled',
   'googleApiCalled','gmailApiCalled','workerModified','inferenceCalled','productionReady'])
   assert.equal(out[key],false);
@@ -111,4 +116,57 @@ test('optional absent environment remains compatible, but other named environmen
  assert.equal(out.serviceBindingState,'TARGET_MATCH');
  assert.equal(out.serviceEnvironmentState,'UNSPECIFIED');
  assert.equal(out.status,'ISOLATED_PROBE_METADATA_MATCHES_SAFE');
+});
+
+test('read-only settings may list three expected secret_text bindings, not their values',async()=>{
+ const shouldNeverAppear='PRIVATE_VALUE_NEVER_ECHO';
+ const f=fixture({
+  rb:[...runner,
+   {name:'RUNNER_SECRET',type:'secret_text',text:shouldNeverAppear},
+   {name:'GOOGLE_BRIDGE_PROBE_SECRET',type:'secret_text',text:shouldNeverAppear}],
+  vb:[...vault,
+   {name:'GOOGLE_BRIDGE_PROBE_SECRET',type:'secret_text',text:shouldNeverAppear}]
+ });
+ const out=await inspect(f);
+ assert.equal(out.status,'ISOLATED_PROBE_METADATA_MATCHES_SAFE');
+ assert.equal(out.authSetupStatus,'SECRET_BINDINGS_LISTED_UNVERIFIED');
+ assert.equal(out.authSetupMetadataListed,true);
+ assert.equal(out.secretStates.runnerOwnerSecret,'SECRET_BINDING_LISTED');
+ assert.equal(out.secretStates.runnerSharedSecret,'SECRET_BINDING_LISTED');
+ assert.equal(out.secretStates.vaultSharedSecret,'SECRET_BINDING_LISTED');
+ assert.equal(out.authenticationProbeCalled,false);
+ assert.equal(out.authenticationVerified,false);
+ assert.ok(!JSON.stringify(out).includes(shouldNeverAppear));
+ assert.ok(!JSON.stringify(out).includes('GOOGLE_BRIDGE_PROBE_SECRET'));
+ assert.ok(!JSON.stringify(out).includes('RUNNER_SECRET'));
+ assert.equal(f.calls.length,2);
+ assert.ok(f.calls.every(c=>c.url.endsWith('/settings')));
+});
+test('duplicate or wrong-type probe secrets are unsafe, rather than ready',async()=>{
+ const base=[...runner,
+  {name:'RUNNER_SECRET',type:'secret_text'},
+  {name:'GOOGLE_BRIDGE_PROBE_SECRET',type:'secret_text'}];
+ for(const rb of [
+  [...base,{name:'RUNNER_SECRET',type:'secret_text'}],
+  base.map(b=>b.name==='RUNNER_SECRET'?{...b,type:'plain_text',text:'unsafe'}:b)
+ ]){
+  const f=fixture({rb,vb:[...vault,{name:'GOOGLE_BRIDGE_PROBE_SECRET',type:'secret_text'}]});
+  const out=await inspect(f);
+  assert.equal(out.status,'ISOLATED_PROBE_METADATA_NOT_VERIFIED');
+  assert.equal(out.authSetupStatus,'INVALID_PROBE_SECRET_BINDINGS');
+  assert.equal(out.authSetupMetadataListed,false);
+  assert.equal(out.authenticationVerified,false);
+  assert.ok(!JSON.stringify(out).includes('unsafe'));
+ }
+});
+test('one missing shared secret does not claim authenticated readiness',async()=>{
+ const f=fixture({
+  rb:[...runner,{name:'RUNNER_SECRET',type:'secret_text'},
+   {name:'GOOGLE_BRIDGE_PROBE_SECRET',type:'secret_text'}]
+ });
+ const out=await inspect(f);
+ assert.equal(out.status,'ISOLATED_PROBE_METADATA_MATCHES_SAFE');
+ assert.equal(out.authSetupStatus,'SECRET_BINDINGS_NOT_LISTED_IN_SETTINGS');
+ assert.equal(out.authSetupMetadataListed,false);
+ assert.equal(out.authenticationVerified,false);
 });

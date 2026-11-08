@@ -114,6 +114,22 @@
      lines.push('Authenticated Worker-to-Worker probe NOT run. Existing Workers remain untouched.');
      return lines;
     })(),
+    ...(()=>{
+     const p=data.isolatedProbe;
+     if(!p||p.productionReady!==false||p.authenticationVerified!==false||
+        p.authenticationProbeCalled!==false)return [];
+     const good=['SECRET_BINDINGS_LISTED_UNVERIFIED',
+      'SECRET_BINDINGS_NOT_LISTED_IN_SETTINGS',
+      'SECRET_BINDING_METADATA_UNAVAILABLE','INVALID_PROBE_SECRET_BINDINGS'];
+     if(!good.includes(p.authSetupStatus))return [];
+     if(p.authSetupStatus==='SECRET_BINDINGS_LISTED_UNVERIFIED')
+      return ['Probe authentication bindings: required binding names visible in Worker metadata. Their secret values, permissions and matching credentials are NOT verified. No live authentication test.'];
+     if(p.authSetupStatus==='INVALID_PROBE_SECRET_BINDINGS')
+      return ['Probe authentication bindings: wrong type or duplicate detected. Health test BLOCKED. Do not paste secrets or redeploy the existing Workers.'];
+     if(p.authSetupStatus==='SECRET_BINDING_METADATA_UNAVAILABLE')
+      return ['Probe authentication bindings: metadata unavailable. Cannot determine whether probe secrets are configured.'];
+     return ['Probe authentication bindings: one or more required bindings NOT LISTED in Worker settings. They might be absent or omitted by this API; do not assume credentials exist.'];
+    })(),
     'Cloudflare Vault live binding probe, Google OAuth and delivery receipts need separate authenticated checks.',
     'Never paste any secret token, OAuth key or password into GitHub or ChatGPT.'
    ]);
