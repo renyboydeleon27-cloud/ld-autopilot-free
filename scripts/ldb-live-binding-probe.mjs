@@ -8,6 +8,7 @@ import {inspectLdbIsolatedProbeWiring} from '../lib/ldb/cloudflare-vault-wiring.
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b';
 const API='https://api.cloudflare.com/client/v4/accounts/'+ACCOUNT;
 const RUNNER='ner-ldb-runner-binding-probe';
+const VAULT='ner-ldb-vault-binding-probe';
 const fail=code=>{throw Error(code)};
 const MAX_RESPONSE=8192;
 // Match the strict Cloudflare host inspector: one DNS label, 1–63 chars,
@@ -42,7 +43,8 @@ async function parseBoundedJson(response){
 }
 async function readCloudflare({url,token,fetcher}){
  if(url!==API+'/workers/subdomain'&&
-    url!==API+'/workers/scripts/'+RUNNER+'/subdomain')
+    url!==API+'/workers/scripts/'+RUNNER+'/subdomain'&&
+    url!==API+'/workers/scripts/'+VAULT+'/subdomain')
   fail('UNAPPROVED_CLOUDFLARE_URL');
  let response;
  try{response=await fetcher(url,{
@@ -111,14 +113,19 @@ export async function runOwnerReadOnlyBindingPreflight({
     safety.workerModified!==false||
     safety.productionReady!==false)
   fail('PROBE_DEPLOYED_SETTINGS_NOT_SAFE');
- const [account,script]=await Promise.all([
+ // The Runner is the ONLY intentionally public probe Worker. The Vault must
+ // stay private even if its internal probe is guarded by an authentication key.
+ const [account,script,vaultScript]=await Promise.all([
   readCloudflare({url:API+'/workers/subdomain',
    token:env.CLOUDFLARE_API_TOKEN,fetcher}),
   readCloudflare({url:API+'/workers/scripts/'+RUNNER+'/subdomain',
+   token:env.CLOUDFLARE_API_TOKEN,fetcher}),
+  readCloudflare({url:API+'/workers/scripts/'+VAULT+'/subdomain',
    token:env.CLOUDFLARE_API_TOKEN,fetcher})
  ]);
  if(!validSubdomain(account.subdomain)||script.enabled!==true)
   fail('PROBE_ACCOUNT_HOST_NOT_VERIFIED');
+ if(vaultScript.enabled!==false)fail('PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE');
  const verifiedHost=RUNNER+'.'+account.subdomain+'.workers.dev';
  if(u.hostname!==verifiedHost)fail('UNVERIFIED_PROBE_ACCOUNT_HOST');
  return Object.freeze({
