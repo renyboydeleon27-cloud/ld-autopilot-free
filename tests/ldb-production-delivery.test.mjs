@@ -17,3 +17,32 @@ test('duplicate remote file ID blocks completion and preserves the last verified
  const j=await f.s.get('delivery');
  assert.equal(j.status,'NEEDS_REVIEW');assert.equal(j.index,1);assert.equal(j.verified.length,1);
 });
+
+test('queue snapshots approved assets synchronously before awaiting the durable guard',async()=>{
+ let release;const gate=new Promise(resolve=>{release=resolve});
+ const f=fixture({queueGuard:async()=>gate});
+ const original=plan(),expected=structuredClone(original);
+ const pending=f.core.submit(original);
+ original.episode='Unapproved Episode';
+ original.assets[0].name='tampered.jpg';
+ original.assets[0].sha256='f'.repeat(64);
+ original.assets.pop();
+ release();
+ await pending;
+ const saved=await f.s.get('delivery');
+ assert.equal(saved.plan.assets.length,69);
+ assert.equal(saved.plan.episode,expected.episode);
+ assert.equal(saved.plan.assets[0].name,expected.assets[0].name);
+ assert.equal(saved.plan.assets[0].sha256,expected.assets[0].sha256);
+ assert.equal(saved.fingerprint,validateDeliveryPlan(expected));
+ assert.equal(saved.fingerprint,validateDeliveryPlan(saved.plan));
+ assert.equal(saved.index,0);
+ assert.equal(f.puts,0);
+});
+test('uncloneable plans fail closed before any checkpoint or upload',async()=>{
+ const f=fixture(),p=plan();
+ p.unreviewedFunction=()=>true;
+ await assert.rejects(f.core.submit(p),/INVALID_DELIVERY_PLAN/);
+ assert.equal(f.s.data.size,0);
+ assert.equal(f.puts,0);
+});
