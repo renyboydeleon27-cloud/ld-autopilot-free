@@ -40,6 +40,8 @@ test('actual quality Worker metadata may match while all production operations s
  assert.equal(result.runnerDeliveryDisabled,true);
  assert.equal(result.vaultDeliveryDisabled,true);
  assert.equal(result.vaultOAuthDisabled,true);
+ assert.equal(result.vaultUpdateEligibleForReviewedUpdate,false);
+ assert.equal(result.vaultUpdateSafetyStatus,'VAULT_FLAGS_NOT_SAFELY_DISABLED');
  assert.equal(result.liveServiceBindingProbed,false);
  assert.equal(result.productionReady,false);
  assert.equal(result.googleApiCalled,false);

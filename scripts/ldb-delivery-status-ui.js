@@ -69,6 +69,8 @@
       notes.push('Vault delivery flag: '+state(cf.vaultDeliveryState)+'.');
      if(cf.vaultOAuthState!==undefined)
       notes.push('Vault OAuth flag: '+state(cf.vaultOAuthState)+'.');
+     if(cf.vaultUpdateSafetyStatus==='ACTIVE_VAULT_REQUIRES_OWNER_REVIEW')
+      notes.push('Vault code update BLOCKED: active OAuth Vault requires owner review. Never overwrite, disable or rotate keys automatically.');
      if(cf.vaultOAuthState==='EXPLICIT_TRUE'||cf.runnerDeliveryState==='EXPLICIT_TRUE'||cf.vaultDeliveryState==='EXPLICIT_TRUE')
       notes.push('WARNING: At least one safety gate is explicitly ON; no production or Google operations permitted.');
      return ['Cloudflare Vault wiring: not verified (runner HTTP '+
