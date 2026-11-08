@@ -32,7 +32,7 @@ const vaultBindings=[
 function setup({metadataRunner=runnerBindings,ownerSecret=OWNER_SECRET,
  runnerSecret=OWNER_SECRET,runnerProbeFlag='true',
  runnerBridgeSecret=BRIDGE_SECRET,vaultBridgeSecret=BRIDGE_SECRET,
- vaultProbeFlag='true',vaultPublished=false}={}){
+ vaultProbeFlag='true',vaultPublished=false,vaultPreviewsEnabled=false}={}){
  const calls={metadata:[],external:[],vault:[],do:0,google:0};
  const ownerEnv={CLOUDFLARE_ACCOUNT_ID:ACCOUNT,CLOUDFLARE_API_TOKEN:TOKEN,
   LDB_PROBE_URL:URL,LDB_RUNNER_SECRET:ownerSecret};
@@ -73,7 +73,8 @@ function setup({metadataRunner=runnerBindings,ownerSecret=OWNER_SECRET,
   if(url===API+'/workers/scripts/'+RUNNER+'/subdomain')
    return Response.json({success:true,result:{enabled:true}});
   if(url===API+'/workers/scripts/'+VAULT+'/subdomain')
-   return Response.json({success:true,result:{enabled:vaultPublished}});
+   return Response.json({success:true,result:{enabled:vaultPublished,
+    previews_enabled:vaultPreviewsEnabled}});
   if(url===API+'/workers/scripts/'+RUNNER+'/settings')
    return Response.json({success:true,result:{bindings:metadataRunner}});
   if(url===API+'/workers/scripts/'+VAULT+'/settings')
@@ -161,4 +162,13 @@ test('published isolated Vault aborts the entire end-to-end owner probe before s
  assert.equal(calls.vault.length,0);
  assert.equal(calls.do,0);
  assert.equal(calls.google,0);
+});
+
+test('public Vault preview URLs are refused before owner secret, even if workers.dev is disabled',async()=>{
+ const {calls,ownerEnv,fetcher}=setup({vaultPreviewsEnabled:true});
+ await assert.rejects(runOwnerVerifiedBindingProbe({env:ownerEnv,fetcher}),
+  /PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE/);
+ assert.equal(calls.metadata.length,5);
+ assert.equal(calls.external.length,0);
+ assert.equal(calls.vault.length,0);
 });
