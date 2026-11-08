@@ -23,6 +23,7 @@ const vault=[
 const baseEnv={CLOUDFLARE_ACCOUNT_ID:ACCOUNT,CLOUDFLARE_API_TOKEN:TOKEN,
  LDB_PROBE_URL:URL,LDB_RUNNER_SECRET:SECRET};
 function mock({subdomain='ownerzone',scriptEnabled=true,
+  vaultPublished=false,vaultSubdomainStatus=200,
   runnerBindings=runner,vaultBindings=vault,
   accountStatus=200,runnerStatus=200,
   healthStatus=200,healthBody=null,
@@ -49,6 +50,9 @@ function mock({subdomain='ownerzone',scriptEnabled=true,
    return Response.json({success:true,result:{subdomain}},{status:accountStatus});
   if(url.endsWith('/scripts/'+PROBE+'/subdomain'))
    return Response.json({success:true,result:{enabled:scriptEnabled}});
+  if(url.endsWith('/scripts/'+VAULT+'/subdomain'))
+   return Response.json({success:vaultSubdomainStatus===200,
+    result:{enabled:vaultPublished}},{status:vaultSubdomainStatus});
   if(url.endsWith('/scripts/'+PROBE+'/settings'))
    return Response.json({success:true,result:{bindings:runnerBindings}},{status:runnerStatus});
   if(url.endsWith('/scripts/'+VAULT+'/settings'))
@@ -57,7 +61,7 @@ function mock({subdomain='ownerzone',scriptEnabled=true,
  };
  return {fetcher,calls,secretCalls:()=>calls.filter(c=>c.opts.headers.Authorization==='Bearer '+SECRET)};
 }
-test('4 account-verified Cloudflare GET preflights then exactly one authenticated Worker GET',async()=>{
+test('5 Cloudflare GET preflights verify Vault stays private before owner-authenticated Worker GET',async()=>{
  const f=mock();
  const result=await runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher});
  assert.deepEqual(result,{
@@ -66,10 +70,11 @@ test('4 account-verified Cloudflare GET preflights then exactly one authenticate
   googleConnectionVerified:false,gmailConnectionVerified:false,
   inferenceCalled:false,workerModified:false
  });
- assert.equal(f.calls.length,5);
+ assert.equal(f.calls.length,6);
  assert.equal(f.secretCalls().length,1);
- assert.equal(f.calls[4].url,URL);
- assert.ok(f.calls.slice(0,4).every(c=>c.opts.method==='GET'));
+ assert.equal(f.calls[5].url,URL);
+ assert.ok(f.calls.slice(0,5).every(c=>c.opts.method==='GET'));
+ assert.ok(f.calls.slice(0,5).some(c=>c.url.endsWith('/scripts/'+VAULT+'/subdomain')));
  assert.ok(!JSON.stringify(result).includes(TOKEN));
  assert.ok(!JSON.stringify(result).includes(SECRET));
 });
@@ -98,6 +103,8 @@ test('unsafe deployed Worker flags, account subdomain response and API permissio
   mock({runnerStatus:403}),
   mock({accountStatus:403}),
   mock({scriptEnabled:false}),
+  mock({vaultPublished:true}),
+  mock({vaultSubdomainStatus:403}),
   mock({subdomain:'not.valid'})
  ]){
   await assert.rejects(runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher}));
@@ -124,7 +131,7 @@ test('invalid authenticated response fails; never infers Google or production re
 });
 
 
-test('owner preflight verifies isolated metadata with NO Runner secret and only four Cloudflare GETs',async()=>{
+test('owner preflight verifies private Vault with NO Runner secret and five Cloudflare GETs',async()=>{
  const f=mock(),env={...baseEnv};
  delete env.LDB_RUNNER_SECRET;
  const result=await runOwnerReadOnlyBindingPreflight({env,fetcher:f.fetcher});
@@ -136,14 +143,15 @@ test('owner preflight verifies isolated metadata with NO Runner secret and only 
   googleConnectionVerified:false,gmailConnectionVerified:false,
   inferenceCalled:false,workerModified:false,productionReady:false
  });
- assert.equal(f.calls.length,4);
+ assert.equal(f.calls.length,5);
  assert.equal(f.secretCalls().length,0);
  assert.ok(f.calls.every(x=>x.opts.method==='GET'&&x.opts.redirect==='error'));
  assert.doesNotMatch(JSON.stringify(result),/cloudflare-readonly-token|operator-runner-secret/);
 });
 test('metadata-only preflight rejects wrong account host without sending owner secret',async()=>{
  for(const options of [{subdomain:'attackerzone'},
-  {runnerStatus:403},{scriptEnabled:false},
+  {runnerStatus:403},{scriptEnabled:false},{vaultPublished:true},
+  {vaultSubdomainStatus:403},
   {runnerBindings:runner.map(x=>x.name==='RUNNER_ENABLED'?{...x,text:'true'}:x)}]){
   const f=mock(options),env={...baseEnv};
   delete env.LDB_RUNNER_SECRET;
@@ -190,4 +198,17 @@ test('Cloudflare account metadata with invalid DNS label fails even when candida
    /PROBE_ACCOUNT_HOST_NOT_VERIFIED/);
   assert.equal(f.secretCalls().length,0);
  }
+});
+
+test('Vault must remain unpublished: true, absent, non-boolean, and inaccessible states fail before owner secret',async()=>{
+ for(const value of [true,undefined,null,'false',0]){
+  const f=mock({vaultPublished:value});
+  await assert.rejects(runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher}),
+   /PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE/);
+  assert.equal(f.secretCalls().length,0);
+ }
+ const unavailable=mock({vaultSubdomainStatus:404});
+ await assert.rejects(runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:unavailable.fetcher}),
+  /PROBE_PROVIDER_PRECHECK_UNAVAILABLE/);
+ assert.equal(unavailable.secretCalls().length,0);
 });
