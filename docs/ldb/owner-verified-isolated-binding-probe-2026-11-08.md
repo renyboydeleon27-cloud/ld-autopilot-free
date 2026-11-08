@@ -14,12 +14,13 @@ the Runner owner credential:
    production-inference/Google delivery gates to be safely disabled;
 3. GET the fixed account's Workers subdomain, verify it matches the
    proposed HTTPS Runner host exactly, and confirm the exact Runner
-   script has its workers.dev subdomain enabled;
+   script has its workers.dev subdomain enabled, while the isolated Vault
+   has both workers.dev and Preview URLs disabled;
 4. Only then issue one owner-authenticated GET to the isolated
    /delivery-bridge-probe path, rejecting redirects, non-200 status,
    oversized or malformed response, and unexpected fields.
 
-All four preflight requests are read-only; the final Runner GET merely
+All five preflight requests are read-only; the final Runner GET merely
 checks the isolated Worker-to-Worker probe. No Worker deployment,
 Google OAuth, Drive, Gmail, image generation or production toggle occurs.
 
