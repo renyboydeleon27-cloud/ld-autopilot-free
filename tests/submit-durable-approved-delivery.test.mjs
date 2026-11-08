@@ -284,3 +284,55 @@ test('image checkpoint changed after preflight cannot enter delivery queue',asyn
  assert.equal(f.deliveries.has('delivery'),false);
  assert.equal(f.uploads.size,0);
 });
+
+
+test('changing the approved storyboard digest before queue blocks the entire 69-file handoff',async()=>{
+ const f=durableFixture(),original=f.images.get('job');
+ f.images.set('job',{...original,approvedSource:{
+  sha256:digest('original-storyboard'),bytes:100,chunks:1
+ }});
+ const transaction=f.deliveryStorage.transaction;
+ f.deliveryStorage.transaction=async fn=>{
+  const current=f.images.get('job');
+  f.images.set('job',{...current,approvedSource:{
+   ...current.approvedSource,sha256:digest('different-storyboard')
+  }});
+  return transaction(fn);
+ };
+ await assert.rejects(submitDurableApprovedDelivery(f),
+  /JOB_STOPPED_OR_CHANGED_BEFORE_DELIVERY_QUEUE/);
+ assert.equal(f.deliveries.has('delivery'),false);
+ assert.equal(f.uploads.size,0);
+});
+
+test('editing an approved scene prompt during packaging cannot queue stale 69 assets',async()=>{
+ const f=durableFixture(),original=f.images.get('job');
+ f.images.set('job',{...original,scenes:[{
+  id:'HOOK',image_prompt:'original approved camera direction'
+ }]});
+ const transaction=f.deliveryStorage.transaction;
+ f.deliveryStorage.transaction=async fn=>{
+  const current=f.images.get('job');
+  f.images.set('job',{...current,scenes:[{
+   id:'HOOK',image_prompt:'unapproved replacement camera direction'
+  }]});
+  return transaction(fn);
+ };
+ await assert.rejects(submitDurableApprovedDelivery(f),
+  /JOB_STOPPED_OR_CHANGED_BEFORE_DELIVERY_QUEUE/);
+ assert.equal(f.deliveries.has('delivery'),false);
+ assert.equal(f.uploads.size,0);
+});
+
+test('unchanged source approval and render-scene snapshot can queue without uploads',async()=>{
+ const f=durableFixture(),original=f.images.get('job');
+ const approvedSource={sha256:digest('original-storyboard'),bytes:100,chunks:1};
+ const scenes=[{id:'HOOK',image_prompt:'original approved camera direction'}];
+ f.images.set('job',{...original,approvedSource,scenes});
+ const result=await submitDurableApprovedDelivery(f);
+ assert.equal(result.checkpoint.status,'QUEUED');
+ assert.equal(result.checkpoint.plan.assets.length,69);
+ assert.equal(f.uploads.size,0);
+ assert.deepEqual(f.images.get('job').approvedSource,approvedSource);
+ assert.deepEqual(f.images.get('job').scenes,scenes);
+});
