@@ -40,7 +40,9 @@ are read or echoed.
 ## Invariants and limits
 The isolated probe configurations keep Runner, Free inference, Vault OAuth,
 delivery and production off. The Vault must not be published on
-`workers.dev`. The static review rejects swaps with existing
+`workers.dev` or exposed through Preview/Version URLs. The reviewed Vault
+`wrangler.probe.jsonc` explicitly sets both `workers_dev: false` and
+`preview_urls: false`; the live metadata preflight independently checks both. The static review rejects swaps with existing
 `ner-ldb-runner-quality` and `ner-ldb-google-vault-quality`.
 
 No owner test was performed in this batch, and neither Worker was deployed.
