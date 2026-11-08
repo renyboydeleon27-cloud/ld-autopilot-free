@@ -78,6 +78,39 @@
        (Number.isInteger(vault)?vault:'unavailable')+').',...notes,
        'No changes made. Keep delivery disabled.'];
     })(),
+    ...(()=>{
+     const p=data.isolatedProbe;
+     if(!p||!['ISOLATED_PROBE_METADATA_MATCHES_SAFE',
+       'ISOLATED_PROBE_METADATA_NOT_VERIFIED'].includes(p.status)||
+       p.productionReady!==false||p.authenticationVerified!==false||
+       p.authenticationProbeCalled!==false||p.workerModified!==false)
+      return ['Isolated probe: deployed settings not checked; authentication unverified.'];
+     if(p.status==='ISOLATED_PROBE_METADATA_MATCHES_SAFE')
+      return ['Isolated Runner and Vault settings match the safety template. This is metadata only; authenticated binding NOT tested.'];
+     const names=['RUNNER_ENABLED','FREE_PLAN_CONFIRMED',
+      'DELIVERY_BRIDGE_ENABLED','BRIDGE_PROBE_ENABLED'];
+     const states=['EXPLICIT_FALSE','EXPLICIT_TRUE','MISSING','DUPLICATE',
+      'WRONG_TYPE','UNEXPECTED_VALUE','METADATA_UNAVAILABLE'];
+     const allowed=x=>typeof x==='string'&&states.includes(x)?x:'NOT_VERIFIED';
+     const service=['TARGET_MATCH','WRONG_TARGET','MISSING','DUPLICATE',
+      'WRONG_TYPE','ENVIRONMENT_SCOPED','METADATA_UNAVAILABLE'];
+     const reason=service.includes(p.serviceBindingState)?p.serviceBindingState:'NOT_VERIFIED';
+     const lines=['Isolated probe settings: NOT VERIFIED (Runner HTTP '+
+      (Number.isInteger(p.runnerSettingsHttpStatus)?p.runnerSettingsHttpStatus:'unavailable')+
+      ', Vault HTTP '+
+      (Number.isInteger(p.vaultSettingsHttpStatus)?p.vaultSettingsHttpStatus:'unavailable')+
+      ').', 'Isolated Runner → Vault service: '+reason+'.'];
+     for(const name of names)
+      if(p.runnerChecks&&name in p.runnerChecks)
+       lines.push('Probe Runner '+name+': '+allowed(p.runnerChecks[name])+'.');
+     for(const name of ['VAULT_ENABLED','DELIVERY_BRIDGE_ENABLED','BRIDGE_PROBE_ENABLED'])
+      if(p.vaultChecks&&name in p.vaultChecks)
+       lines.push('Probe Vault '+name+': '+allowed(p.vaultChecks[name])+'.');
+     if(p.unexpectedRunnerBindings===true||p.unexpectedVaultBindings===true)
+      lines.push('WARNING: Unreviewed Worker binding detected. No redeployment permitted.');
+     lines.push('Authenticated Worker-to-Worker probe NOT run. Existing Workers remain untouched.');
+     return lines;
+    })(),
     'Cloudflare Vault live binding probe, Google OAuth and delivery receipts need separate authenticated checks.',
     'Never paste any secret token, OAuth key or password into GitHub or ChatGPT.'
    ]);

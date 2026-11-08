@@ -103,3 +103,38 @@ test('reasons describe missing or unsafe bindings without revealing Cloudflare r
  assert.match(lines,/Vault code update BLOCKED/);
  assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
 });
+
+test('separate isolated Workers metadata matches safe defaults but never claims authentication',async()=>{
+ const h=setup({ok:true,json:async()=>result({
+  isolatedProbe:{status:'ISOLATED_PROBE_METADATA_MATCHES_SAFE',
+   authenticationProbeCalled:false,authenticationVerified:false,
+   workerModified:false,productionReady:false}
+ })});
+ await h.click();
+ assert.ok(h.lines().some(s=>/match the safety template/.test(s)));
+ assert.ok(h.lines().some(s=>/authenticated binding NOT tested/.test(s)));
+ assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+ assert.equal(h.calls.length,1);
+ assert.equal(h.calls[0].opts.method,'GET');
+});
+test('isolated probe flag mismatch and unreviewed bindings remain blocked',async()=>{
+ const h=setup({ok:true,json:async()=>result({
+  isolatedProbe:{status:'ISOLATED_PROBE_METADATA_NOT_VERIFIED',
+   runnerSettingsHttpStatus:200,vaultSettingsHttpStatus:200,
+   serviceBindingState:'WRONG_TARGET',
+   runnerChecks:{RUNNER_ENABLED:'EXPLICIT_FALSE',FREE_PLAN_CONFIRMED:'EXPLICIT_FALSE',
+    DELIVERY_BRIDGE_ENABLED:'EXPLICIT_FALSE',BRIDGE_PROBE_ENABLED:'MISSING'},
+   vaultChecks:{VAULT_ENABLED:'EXPLICIT_TRUE',DELIVERY_BRIDGE_ENABLED:'MISSING',
+    BRIDGE_PROBE_ENABLED:'EXPLICIT_TRUE'},
+   unexpectedRunnerBindings:true,unexpectedVaultBindings:false,
+   authenticationProbeCalled:false,authenticationVerified:false,
+   workerModified:false,productionReady:false}
+ })});
+ await h.click();
+ const lines=h.lines().join('\n');
+ assert.match(lines,/Isolated Runner → Vault service: WRONG_TARGET/);
+ assert.match(lines,/Probe Vault VAULT_ENABLED: EXPLICIT_TRUE/);
+ assert.match(lines,/Unreviewed Worker binding detected/);
+ assert.match(lines,/Authenticated Worker-to-Worker probe NOT run/);
+ assert.match(h.elements.deliveryStatus.textContent,/NO-GO/);
+});

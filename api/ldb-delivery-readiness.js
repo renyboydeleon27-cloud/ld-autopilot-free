@@ -15,15 +15,22 @@ module.exports=async function handler(req,res){
   const inventory=assessLdbDeliveryConfig({env});
   let cloudflareVault={status:'CLOUDFLARE_WIRING_NOT_VERIFIED',
    productionReady:false,googleApiCalled:false,gmailApiCalled:false};
+  let isolatedProbe={status:'ISOLATED_PROBE_METADATA_NOT_VERIFIED',
+   authenticationProbeCalled:false,authenticationVerified:false,
+   productionReady:false,workerModified:false};
   if(env.CLOUDFLARE_ACCOUNT_ID&&env.CLOUDFLARE_API_TOKEN){
    try{
-    const {inspectLdbCloudflareVaultWiring}=await import('../lib/ldb/cloudflare-vault-wiring.mjs');
+    const {inspectLdbCloudflareVaultWiring,inspectLdbIsolatedProbeWiring}=
+     await import('../lib/ldb/cloudflare-vault-wiring.mjs');
     cloudflareVault=await inspectLdbCloudflareVaultWiring({
+     accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN
+    });
+    isolatedProbe=await inspectLdbIsolatedProbeWiring({
      accountId:env.CLOUDFLARE_ACCOUNT_ID,token:env.CLOUDFLARE_API_TOKEN
     });
    }catch{/* Zero provider errors or secret data in client responses. */}
   }
-  return res.status(200).json({...inventory,cloudflareVault});
+  return res.status(200).json({...inventory,cloudflareVault,isolatedProbe});
  }catch{
   return res.status(503).json({status:'DELIVERY_READINESS_CHECK_UNAVAILABLE',
    productionReady:false,googleApiCalled:false,gmailApiCalled:false});
