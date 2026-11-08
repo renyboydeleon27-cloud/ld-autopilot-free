@@ -15,12 +15,17 @@ const schema=await graphql('{ __schema { types { name fields { name } } } }');
 const types=schema.data.data?.__schema?.types?.filter(t=>/aiInference/i.test(t.name))||[];
 const now=new Date(),start=now.toISOString().slice(0,10)+'T00:00:00Z';
 const sums=types.filter(t=>/sum$/i.test(t.name));
-const neuronField=sums.flatMap(t=>t.fields||[]).find(f=>/neurons/i.test(f.name))?.name;
+// Only an unambiguous aggregate total is permitted. Per-input/output
+// counters cannot stand in for the complete daily neuron bill.
+const candidates=[...new Set(sums.flatMap(t=>t.fields||[]).map(f=>f.name)
+ .filter(name=>/^(?:totalNeurons|neuronTotal)$/i.test(name)))];
+const neuronField=candidates.length===1?candidates[0]:null;
+const groupLimit=100;
 let usage=null;
 if(neuronField&&/^[A-Za-z_][A-Za-z0-9_]*$/.test(neuronField)){
- const query='{ viewer { accounts(filter: {accountTag: '+JSON.stringify(account)+'}) { aiInferenceAdaptiveGroups(filter: {datetime_geq: '+JSON.stringify(start)+', datetime_leq: '+JSON.stringify(now.toISOString())+'}, limit: 1) { sum { '+neuronField+' } } } } }';
+ const query='{ viewer { accounts(filter: {accountTag: '+JSON.stringify(account)+'}) { aiInferenceAdaptiveGroups(filter: {datetime_geq: '+JSON.stringify(start)+', datetime_leq: '+JSON.stringify(now.toISOString())+'}, limit: '+groupLimit+') { sum { '+neuronField+' } } } } }';
  const result=await graphql(query);
- usage={httpStatus:result.status,errors:result.data.errors?.map(e=>e.message),metric:neuronField,data:result.data.data??null};
+ usage={httpStatus:result.status,errors:result.data.errors?.map(e=>e.message),metric:neuronField,limit:groupLimit,data:result.data.data??null};
 }
 const report={checkedAt:now.toISOString(),inferenceCalled:false,workerListStatus:scripts.status,
  v5:Array.isArray(scripts.data.result)?scripts.data.result.filter(s=>s.id==='ner-ldb-runner-quality-v5').map(s=>({id:s.id,modifiedOn:s.modified_on})):null,

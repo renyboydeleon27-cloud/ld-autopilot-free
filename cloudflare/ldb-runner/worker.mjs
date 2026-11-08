@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 import { DurableObject } from 'cloudflare:workers';
 import { createHash } from 'node:crypto';
 import { ownerAccessGate } from './owner-access.mjs';
-import { freeInferenceAllowed } from '../../lib/ldb/free-inference-gate.mjs';
+import { freeInferenceAllowed, freeInferenceStatus } from '../../lib/ldb/free-inference-gate.mjs';
 import { Checkpoints, SCENES } from './checkpoints.mjs';
 import { validateRenderJob } from '../../lib/ldb/approved-render-job.mjs';
 import { generateImage } from '../../lib/ldb/cloudflare-image.mjs';
@@ -88,6 +88,7 @@ export class LdbCoordinator extends DurableObject {
     const [job,delivery]=await Promise.all([this.core.status(),this.ctx.storage.get('delivery')]);
     const receipts=await readMilestoneReceipts(this.ctx.storage,job?.id);
     return json({...productionProgressSnapshot({job,delivery}),
+     inferenceGate:freeInferenceStatus(this.env),
      acceptance:productionAcceptanceSnapshot({job,delivery,receipts})});
    }
    if(req.method==='GET' && /^\/images\/(HOOK|P[1-9]|P1[0-4]|ENDING|THUMBNAIL)$/.test(path)) {
