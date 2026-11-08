@@ -83,3 +83,44 @@ test('invalid inventory fails before any provider access',async()=>{
  }),/DELIVERY_INVENTORY_INVALID/);
  assert.equal(called,0);
 });
+
+test('output cannot disclose arbitrary inspector fields, raw bindings, or nested secret text',async()=>{
+ const S='SENSITIVE_VALUE_MUST_NOT_APPEAR_IN_RESPONSE';
+ const response=await collectLdbReadOnlyDeliverySnapshot({
+  inventory:inventory(),credentialsConfigured:true,
+  inspectQuality:async()=>({...quality(),untrustedText:S,token:S,
+   bindings:[{name:'VAULT_KEY',text:S}],note:S,
+   vaultUpdateSafetyStatus:S,runnerSettingsHttpStatus:99999}),
+  inspectIsolated:async()=>({...isolated(),runnerChecks:{
+   BRIDGE_PROBE_ENABLED:'EXPLICIT_TRUE',AI:S,VAULT_ENABLED:S
+  },secretStates:{runnerOwnerSecret:S,extra:S},
+   providerPayload:{secrets:[S]},note:S,runnerSettingsHttpStatus:S}),
+  inspectHost:async()=>({...host(),accountSubdomain:S,
+   unexpectedField:S,note:S,accountReadHttpStatus:9999})
+ });
+ assert.equal(response.cloudflareDiagnosticCoverage.status,'ALL_RETURNED');
+ assert.equal(response.cloudflareDiagnosticCoverage.returned,3);
+ assert.equal(response.cloudflareVault.runnerSettingsHttpStatus,null);
+ assert.equal(response.isolatedProbe.runnerSettingsHttpStatus,null);
+ assert.equal(response.probeHost.accountReadHttpStatus,null);
+ assert.equal(response.isolatedProbe.runnerChecks.BRIDGE_PROBE_ENABLED,'EXPLICIT_TRUE');
+ assert.equal(response.isolatedProbe.runnerChecks.AI,undefined);
+ assert.equal(response.isolatedProbe.secretStates.runnerOwnerSecret,null);
+ assert.equal(response.cloudflareVault.bindings,undefined);
+ assert.equal(response.probeHost.accountSubdomain,undefined);
+ assert.ok(!JSON.stringify(response).includes(S));
+ assert.equal(response.productionReady,false);
+});
+test('invalid diagnostic type and unknown status remain unavailable, not leaked',async()=>{
+ const result=await collectLdbReadOnlyDeliverySnapshot({
+  inventory:inventory(),credentialsConfigured:true,
+  inspectQuality:async()=>({...quality(),status:'UNTRUSTED'}),
+  inspectIsolated:async()=>['not a diagnostic'],
+  inspectHost:async()=>host()
+ });
+ assert.equal(result.cloudflareDiagnosticCoverage.status,'PARTIAL');
+ assert.equal(result.cloudflareDiagnosticCoverage.returned,1);
+ assert.equal(result.cloudflareDiagnosticCoverage.checks.quality,'UNAVAILABLE');
+ assert.equal(result.cloudflareDiagnosticCoverage.checks.isolated,'UNAVAILABLE');
+ assert.equal(result.cloudflareDiagnosticCoverage.checks.host,'RETURNED');
+});
