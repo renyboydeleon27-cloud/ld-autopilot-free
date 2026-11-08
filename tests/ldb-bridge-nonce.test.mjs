@@ -50,6 +50,9 @@ test('Runner accepts fresh Vault echo through only the isolated service binding'
    assert.equal(init.redirect,'manual');
    assert.equal(init.headers['X-LDB-Probe-Nonce'],NONCE);
    assert.equal(init.headers.Authorization,'Bearer '+SECRET);
+   assert.equal(init.headers.Accept,'application/json');
+   assert.ok(init.signal instanceof AbortSignal);
+   assert.equal(init.signal.aborted,false);
    return handleVaultBridgeHealth(new Request(url,init),
     {enabled:true,secret:SECRET});
   }}};
@@ -108,4 +111,39 @@ test('Runner accepts a properly labeled no-store JSON acknowledgment within the 
  const result=await probeGoogleVaultBinding(env,NONCE);
  assert.deepEqual(result,{status:'BRIDGE_AUTHENTICATED',productionReady:false,nonce:NONCE});
  assert.equal(Object.keys(result).length,3);
+});
+
+test('Runner health diagnostic fails closed when internal service transport rejects or aborts',async()=>{
+ const reasons=[new Error('SERVICE_BINDING_UNAVAILABLE'),
+  Object.assign(new Error('request interrupted'),{name:'AbortError'}),
+  Object.assign(new Error('request expired'),{name:'TimeoutError'})];
+ let attempts=0;
+ for(const reason of reasons){
+  const env={BRIDGE_PROBE_ENABLED:'true',GOOGLE_BRIDGE_PROBE_SECRET:SECRET,
+   GOOGLE_VAULT:{fetch:async(_url,init)=>{
+    attempts++;
+    assert.equal(init.method,'GET');
+    assert.equal(init.redirect,'manual');
+    assert.equal(init.headers.Accept,'application/json');
+    assert.ok(init.signal instanceof AbortSignal);
+    throw reason;
+   }}};
+  await assert.rejects(probeGoogleVaultBinding(env,NONCE),
+   error=>error.message==='BRIDGE_PROBE_UNAVAILABLE');
+ }
+ assert.equal(attempts,reasons.length);
+});
+
+test('Runner health diagnostic rejects redirect or unavailable response without reading a body',async()=>{
+ for(const status of [301,302,401,403,429,500,503]){
+  let read=false;
+  const env={BRIDGE_PROBE_ENABLED:'true',GOOGLE_BRIDGE_PROBE_SECRET:SECRET,
+   GOOGLE_VAULT:{fetch:async()=>({
+    status,headers:new Headers({'Content-Type':'application/json',
+     'Cache-Control':'no-store'}),
+    body:{getReader(){read=true;throw Error('should not read');}}
+   })}};
+  await assert.rejects(probeGoogleVaultBinding(env,NONCE),/BRIDGE_PROBE_UNAVAILABLE/);
+  assert.equal(read,false);
+ }
 });
