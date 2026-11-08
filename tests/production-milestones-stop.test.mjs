@@ -71,9 +71,13 @@ test('interrupted CLAIMED record fails closed and blocks following milestones',a
 test('STOP between reservation and network call releases unsent claim safely',async()=>{
  const {map,storage}=fixture(),sent=[];
  const transaction=storage.transaction;
+ let stopInjected=false;
  storage.transaction=async fn=>{
   const result=await transaction(fn);
-  if(result?.status==='SEND')map.get('job').stop=true;
+  if(result?.status==='SEND'&&!stopInjected){
+   stopInjected=true;
+   map.get('job').stop=true;
+  }
   return result;
  };
  await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
