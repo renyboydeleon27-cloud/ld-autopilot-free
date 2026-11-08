@@ -69,10 +69,19 @@ export async function verifyLiveBindingProbe({
  let response,body;
  try{response=await fetcher(u.toString(),{
   method:'GET',redirect:'manual',
-  headers:{Authorization:'Bearer '+secret,Accept:'application/json'},
+  headers:{Authorization:'Bearer '+secret,Accept:'application/json',
+   'Cache-Control':'no-store'},cache:'no-store',
   signal:AbortSignal.timeout(12000)
  });}catch{fail('PROBE_TRANSPORT_UNAVAILABLE')}
  if(response?.status!==200)fail('PROBE_NOT_AUTHENTICATED');
+ // A reused/cached JSON acknowledgement is not acceptable as a fresh
+ // owner-authorized service-binding check. The isolated Worker returns
+ // Response.json with Cache-Control: no-store by contract.
+ const headers=response.headers;
+ if(!headers||typeof headers.get!=='function'||
+    !/^application\/json(?:\s*;.*)?$/i.test(headers.get('content-type')||'')||
+    !/(?:^|,)\s*no-store(?:\s*,|$)/i.test(headers.get('cache-control')||''))
+  fail('PROBE_RESPONSE_INVALID');
  body=await parseBoundedJson(response);
  if(!body||body.status!=='BRIDGE_AUTHENTICATED'||
     body.productionReady!==false||
