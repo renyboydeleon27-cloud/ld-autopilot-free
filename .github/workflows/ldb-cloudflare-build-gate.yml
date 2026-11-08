@@ -16,6 +16,7 @@ on:
       - 'tests/ldb-owner-safe-evidence.test.mjs'
       - 'tests/ldb-isolated-owner-handoff.test.mjs'
       - 'tests/ldb-bridge-nonce.test.mjs'
+      - 'tests/ldb-live-probe-chain-integration.test.mjs'
       - 'tests/ldb-compiled-probe.test.mjs'
       - 'tests/ldb-google-delivery-bridge.test.mjs'
       - 'tests/ldb-owner-safe-access.test.mjs'
@@ -40,7 +41,7 @@ jobs:
       - name: Validate isolated read-only probe configs and smoke-test guards
         run: |
           node scripts/ldb-cloudflare-isolated-probe-gate.mjs
-          node --test tests/ldb-isolated-probe-config.test.mjs tests/ldb-isolated-probe-wiring.test.mjs tests/ldb-owner-verified-binding-probe.test.mjs tests/ldb-owner-safe-evidence.test.mjs tests/ldb-isolated-owner-handoff.test.mjs tests/ldb-bridge-nonce.test.mjs tests/ldb-compiled-probe.test.mjs tests/ldb-google-delivery-bridge.test.mjs tests/ldb-owner-safe-access.test.mjs
+          node --test tests/ldb-isolated-probe-config.test.mjs tests/ldb-isolated-probe-wiring.test.mjs tests/ldb-owner-verified-binding-probe.test.mjs tests/ldb-owner-safe-evidence.test.mjs tests/ldb-isolated-owner-handoff.test.mjs tests/ldb-bridge-nonce.test.mjs tests/ldb-live-probe-chain-integration.test.mjs tests/ldb-compiled-probe.test.mjs tests/ldb-google-delivery-bridge.test.mjs tests/ldb-owner-safe-access.test.mjs
           node scripts/ldb-isolated-owner-handoff.mjs --print-owner-steps > /tmp/ldb-owner-handoff-review.txt
       - name: Compile isolated Vault probe without deploying
         run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-google-vault/wrangler.probe.jsonc --outdir /tmp/ldb-vault-probe-build
