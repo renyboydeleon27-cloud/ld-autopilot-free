@@ -31,6 +31,25 @@ trusted environment. It first REPEATS the four GET preflight checks,
 and sends the owner Bearer secret to the exact verified isolated host
 only after passing them. The CLI rejects missing/both mode flags.
 
+Both modes also accept the optional flag `--safe-evidence-json` after the
+explicit owner approval mode. On success, the CLI prints **only** an
+allowlisted JSON report (mode, operator UTC time, host/settings checks,
+authentication result, and explicit Google/production OFF values). It never
+copies the Cloudflare token, Runner secret, probe nonce, provider response,
+raw bindings or host URL. On failure it prints only a static reason code.
+
+Example after reviewed isolated Workers are deployed and local variables
+have been configured:
+
+`node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-preflight --safe-evidence-json`
+
+`node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-probe --safe-evidence-json`
+
+The JSON is an **operator-observed report**, not a signed or independently
+verified attestation. Its local timestamp does not establish deployment
+identity or freshness of Cloudflare state beyond the actual successful probe.
+Never share environment variables, terminal history or raw response logs.
+
 Neither mode deploys Workers, enables production, consumes inference
 quota, or calls Google Drive/Gmail. Read-only verification alone
 DOES NOT establish billing quota, images, Gmail inbox receipt,
