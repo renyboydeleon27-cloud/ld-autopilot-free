@@ -1,6 +1,7 @@
 // Operator-only authenticated GET. Before ANY runner Bearer secret is sent,
 // prove the workers.dev host belongs to the fixed Cloudflare account, and
 // check isolated Runner/Vault deployment safety using GET-only metadata.
+import {randomBytes} from 'node:crypto';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {inspectLdbIsolatedProbeWiring} from '../lib/ldb/cloudflare-vault-wiring.mjs';
@@ -66,11 +67,12 @@ export async function verifyLiveBindingProbe({
   fail('UNVERIFIED_PROBE_ACCOUNT_HOST');
  if(typeof secret!=='string'||secret.length<32||/\r|\n/.test(secret))
   fail('PROBE_SECRET_REQUIRED');
+ const nonce=randomBytes(16).toString('hex');
  let response,body;
  try{response=await fetcher(u.toString(),{
   method:'GET',redirect:'manual',
   headers:{Authorization:'Bearer '+secret,Accept:'application/json',
-   'Cache-Control':'no-store'},cache:'no-store',
+   'Cache-Control':'no-store','X-LDB-Probe-Nonce':nonce},cache:'no-store',
   signal:AbortSignal.timeout(12000)
  });}catch{fail('PROBE_TRANSPORT_UNAVAILABLE')}
  if(response?.status!==200)fail('PROBE_NOT_AUTHENTICATED');
@@ -84,8 +86,8 @@ export async function verifyLiveBindingProbe({
   fail('PROBE_RESPONSE_INVALID');
  body=await parseBoundedJson(response);
  if(!body||body.status!=='BRIDGE_AUTHENTICATED'||
-    body.productionReady!==false||
-    Object.keys(body).sort().join(',')!=='productionReady,status')
+    body.productionReady!==false||body.nonce!==nonce||
+    Object.keys(body).sort().join(',')!=='nonce,productionReady,status')
   fail('PROBE_RESPONSE_INVALID');
  return Object.freeze({status:'BRIDGE_AUTHENTICATED',productionReady:false});
 }
