@@ -32,7 +32,8 @@ export default {
   if(denied)return denied;
   if(probe){
    if(request.method!=='GET')return json({status:'METHOD_NOT_ALLOWED'},405);
-   try{return json(await probeGoogleVaultBinding(env));}
+   try{return json(await probeGoogleVaultBinding(env,
+    request.headers.get('X-LDB-Probe-Nonce')));}
    catch{return json({status:'BRIDGE_PROBE_UNAVAILABLE',productionReady:false},503);}
   }
   return env.LDB_COORDINATOR.getByName('single-owner-v1').fetch(request);
