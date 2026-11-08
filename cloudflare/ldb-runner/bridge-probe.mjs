@@ -21,8 +21,8 @@ export async function probeGoogleVaultBinding(env,nonce){
  // Do not allow an oversized/streaming provider body to reach response.json().
  const contentType=response.headers?.get?.('content-type')||'';
  const cacheControl=response.headers?.get?.('cache-control')||'';
- if(!/^application\\/json(?:\\s*;.*)?$/i.test(contentType)||
-    !/(?:^|,)\\s*no-store(?:\\s*,|$)/i.test(cacheControl))fail();
+ if(!/^application\/json(?:\s*;.*)?$/i.test(contentType)||
+    !/(?:^|,)\s*no-store(?:\s*,|$)/i.test(cacheControl))fail();
  const reader=response.body?.getReader?.();
  if(!reader)fail();
  let bytes=0,text='';
