@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runOwnerVerifiedBindingProbe} from '../scripts/ldb-live-binding-probe.mjs';
+import {runOwnerVerifiedBindingProbe,runOwnerReadOnlyBindingPreflight} from '../scripts/ldb-live-binding-probe.mjs';
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b';
 const TOKEN='cloudflare-readonly-token-with-ample-test-length';
 const SECRET='long-operator-runner-secret-not-for-production';
@@ -106,5 +106,46 @@ test('invalid authenticated response fails; never infers Google or production re
  ]){
   await assert.rejects(runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher}));
   assert.equal(f.secretCalls().length,1);
+ }
+});
+
+
+test('owner preflight verifies isolated metadata with NO Runner secret and only four Cloudflare GETs',async()=>{
+ const f=mock(),env={...baseEnv};
+ delete env.LDB_RUNNER_SECRET;
+ const result=await runOwnerReadOnlyBindingPreflight({env,fetcher:f.fetcher});
+ assert.deepEqual(result,{
+  status:'OWNER_PREFLIGHT_VERIFIED',
+  verifiedHost:PROBE+'.ownerzone.workers.dev',
+  hostOwnershipVerified:true,workerMetadataVerified:true,
+  ownerSecretSent:false,authenticationVerified:false,
+  googleConnectionVerified:false,gmailConnectionVerified:false,
+  inferenceCalled:false,workerModified:false,productionReady:false
+ });
+ assert.equal(f.calls.length,4);
+ assert.equal(f.secretCalls().length,0);
+ assert.ok(f.calls.every(x=>x.opts.method==='GET'&&x.opts.redirect==='error'));
+ assert.doesNotMatch(JSON.stringify(result),/cloudflare-readonly-token|operator-runner-secret/);
+});
+test('metadata-only preflight rejects wrong account host without sending owner secret',async()=>{
+ for(const options of [{subdomain:'attackerzone'},
+  {runnerStatus:403},{scriptEnabled:false},
+  {runnerBindings:runner.map(x=>x.name==='RUNNER_ENABLED'?{...x,text:'true'}:x)}]){
+  const f=mock(options),env={...baseEnv};
+  delete env.LDB_RUNNER_SECRET;
+  await assert.rejects(runOwnerReadOnlyBindingPreflight({env,fetcher:f.fetcher}));
+  assert.equal(f.secretCalls().length,0);
+ }
+});
+test('preflight requires read-only Cloudflare token, valid fixed host and HTTPS',async()=>{
+ for(const env of [
+  {...baseEnv,CLOUDFLARE_API_TOKEN:undefined},
+  {...baseEnv,CLOUDFLARE_ACCOUNT_ID:'another-account'},
+  {...baseEnv,LDB_PROBE_URL:'http://'+PROBE+'.ownerzone.workers.dev/delivery-bridge-probe'},
+  {...baseEnv,LDB_PROBE_URL:'https://'+PROBE+'.ownerzone.workers.dev/delivery-bridge-probe?redirect=1'}
+ ]){
+  const f=mock();
+  await assert.rejects(runOwnerReadOnlyBindingPreflight({env,fetcher:f.fetcher}));
+  assert.equal(f.calls.length,0);
  }
 });

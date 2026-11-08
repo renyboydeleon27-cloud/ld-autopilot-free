@@ -73,21 +73,18 @@ export async function verifyLiveBindingProbe({
   fail('PROBE_RESPONSE_INVALID');
  return Object.freeze({status:'BRIDGE_AUTHENTICATED',productionReady:false});
 }
-export async function runOwnerVerifiedBindingProbe({
+// Metadata-only opt-in step. Does NOT read LDB_RUNNER_SECRET, issue an
+// authenticated Runner request, use Google OAuth or activate any Worker.
+// Keep the exact account/hostname preflight shared with the full owner probe.
+export async function runOwnerReadOnlyBindingPreflight({
  env=process.env,fetcher=globalThis.fetch
 }={}){
- // This CLI does not run in Vercel, public Studio, GitHub CI or any
- // job without independently provisioned, trusted local credentials.
  if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT||
     typeof env.CLOUDFLARE_API_TOKEN!=='string'||
     env.CLOUDFLARE_API_TOKEN.length<20||
     /\s/.test(env.CLOUDFLARE_API_TOKEN)||typeof fetcher!=='function')
   fail('PROBE_CLOUDFLARE_READ_TOKEN_REQUIRED');
  const u=parseProbeUrl(env.LDB_PROBE_URL);
- const ownerSecret=env.LDB_RUNNER_SECRET;
- if(typeof ownerSecret!=='string'||ownerSecret.length<32||
-    /\r|\n/.test(ownerSecret))fail('PROBE_SECRET_REQUIRED');
- // Metadata is verified BEFORE a secret-bearing request to the Worker.
  const safety=await inspectLdbIsolatedProbeWiring({
   accountId:ACCOUNT,token:env.CLOUDFLARE_API_TOKEN,fetcher
  });
@@ -106,10 +103,27 @@ export async function runOwnerVerifiedBindingProbe({
     !/^[a-z0-9-]+$/.test(account.subdomain)||
     script.enabled!==true)
   fail('PROBE_ACCOUNT_HOST_NOT_VERIFIED');
- const expectedHost=RUNNER+'.'+account.subdomain+'.workers.dev';
- if(u.hostname!==expectedHost)fail('UNVERIFIED_PROBE_ACCOUNT_HOST');
+ const verifiedHost=RUNNER+'.'+account.subdomain+'.workers.dev';
+ if(u.hostname!==verifiedHost)fail('UNVERIFIED_PROBE_ACCOUNT_HOST');
+ return Object.freeze({
+  status:'OWNER_PREFLIGHT_VERIFIED',
+  verifiedHost,hostOwnershipVerified:true,workerMetadataVerified:true,
+  ownerSecretSent:false,authenticationVerified:false,
+  googleConnectionVerified:false,gmailConnectionVerified:false,
+  inferenceCalled:false,workerModified:false,productionReady:false
+ });
+}
+export async function runOwnerVerifiedBindingProbe({
+ env=process.env,fetcher=globalThis.fetch
+}={}){
+ // A missing owner secret must not result in any authenticated request.
+ const ownerSecret=env?.LDB_RUNNER_SECRET;
+ if(typeof ownerSecret!=='string'||ownerSecret.length<32||
+    /\r|\n/.test(ownerSecret))fail('PROBE_SECRET_REQUIRED');
+ const preflight=await runOwnerReadOnlyBindingPreflight({env,fetcher});
  const verified=await verifyLiveBindingProbe({
-  url:u.toString(),secret:ownerSecret,verifiedHost:expectedHost,fetcher
+  url:env.LDB_PROBE_URL,secret:ownerSecret,
+  verifiedHost:preflight.verifiedHost,fetcher
  });
  return Object.freeze({
   ...verified,hostOwnershipVerified:true,workerMetadataVerified:true,
@@ -120,12 +134,19 @@ export async function runOwnerVerifiedBindingProbe({
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  // Deliberate opt-in: CI, preinstall hooks and unattended terminals cannot
  // trigger a secret-bearing live request merely by importing this module.
- if(!process.argv.includes('--owner-approved-readonly-probe')){
-  console.error('OWNER_APPROVAL_FLAG_REQUIRED: no network request made.');
+ const full=process.argv.includes('--owner-approved-readonly-probe');
+ const metadata=process.argv.includes('--owner-approved-readonly-preflight');
+ if(full===metadata){
+  console.error('OWNER_APPROVAL_FLAG_REQUIRED: select exactly one read-only mode; no network request made.');
   process.exitCode=1;
  }else try{
-  await runOwnerVerifiedBindingProbe();
-  console.log('PASS: isolated Worker-to-Worker authentication verified. Google, AI and production remain OFF.');
+  if(metadata){
+   await runOwnerReadOnlyBindingPreflight();
+   console.log('PASS: isolated Cloudflare account/Worker/host metadata verified. Owner authentication NOT tested. No Runner secret sent.');
+  }else{
+   await runOwnerVerifiedBindingProbe();
+   console.log('PASS: isolated Worker-to-Worker authentication verified. Google, AI and production remain OFF.');
+  }
  }catch(e){
   const code=typeof e?.message==='string'&&/^[A-Z_]+$/.test(e.message)?
    e.message:'PROBE_VERIFICATION_FAILED';
