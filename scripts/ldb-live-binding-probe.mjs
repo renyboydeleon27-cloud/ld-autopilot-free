@@ -59,6 +59,33 @@ async function readCloudflare({url,token,fetcher}){
   fail('PROBE_PROVIDER_PRECHECK_UNAVAILABLE');
  return data.result;
 }
+// A Vault can still be externally routable on a Custom Domain even when its
+// workers.dev/Preview URLs are disabled. Request ONLY the fixed Vault service
+// and reject ambiguous pagination or any attached domain, including preview-only
+// domains. Fail closed on denied/malformed responses; never echo hostnames.
+async function verifyVaultHasNoCustomDomains({token,fetcher}){
+ const url=API+'/workers/domains?service='+VAULT;
+ let response;
+ try{
+  response=await fetcher(url,{
+   method:'GET',redirect:'error',
+   headers:{Authorization:'Bearer '+token,Accept:'application/json'},
+   signal:AbortSignal.timeout(12000)
+  });
+ }catch{fail('PROBE_VAULT_DOMAINS_UNVERIFIED');}
+ if(response?.status!==200)fail('PROBE_VAULT_DOMAINS_UNVERIFIED');
+ const data=await parseBoundedJson(response);
+ if(data?.success!==true||!Array.isArray(data.result)||
+    !data.result_info||typeof data.result_info!=='object'||
+    !Number.isInteger(data.result_info.total_pages)||
+    data.result_info.total_pages<0||data.result_info.total_pages>1||
+    (data.result_info.page!==undefined&&data.result_info.page!==1)||
+    !Number.isInteger(data.result_info.total_count)||
+    data.result_info.total_count!==0||data.result.length!==0)
+  fail('PROBE_VAULT_CUSTOM_DOMAIN_UNSAFE');
+ return true;
+}
+
 export async function verifyLiveBindingProbe({
  url,secret,verifiedHost,fetcher=globalThis.fetch
 }={}){
@@ -129,6 +156,7 @@ export async function runOwnerReadOnlyBindingPreflight({
   fail('PROBE_VAULT_PUBLIC_ENDPOINT_UNSAFE');
  const verifiedHost=RUNNER+'.'+account.subdomain+'.workers.dev';
  if(u.hostname!==verifiedHost)fail('UNVERIFIED_PROBE_ACCOUNT_HOST');
+ await verifyVaultHasNoCustomDomains({token:env.CLOUDFLARE_API_TOKEN,fetcher});
  return Object.freeze({
   status:'OWNER_PREFLIGHT_VERIFIED',
   verifiedHost,hostOwnershipVerified:true,workerMetadataVerified:true,
