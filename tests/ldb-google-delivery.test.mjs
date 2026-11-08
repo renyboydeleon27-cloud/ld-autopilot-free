@@ -189,7 +189,7 @@ test('Gmail milestone receipts require exact matching percent and safe shape bef
   ['SENT']
  ];
  for(const corrupt of cases){
-  const s=new Storage(),key='gmail:'+'f'.repeat(64)+':100;
+  const s=new Storage(),key='gmail:'+'f'.repeat(64)+':100';
   await s.put(key,corrupt);
   let tokenCalls=0,sendCalls=0;
   const mail=new GmailMilestones(s,{
@@ -205,7 +205,7 @@ test('Gmail milestone receipts require exact matching percent and safe shape bef
 test('valid older Gmail milestone receipts remain at-most-once and skip token',async()=>{
  for(const status of ['SENT','UNCERTAIN','CLAIMED']){
   const s=new Storage();
-  await s.put('gmail:'+'f'.repeat(64)+':70,{status,percent:70});
+  await s.put('gmail:'+'f'.repeat(64)+':70',{status,percent:70});
   const mail=new GmailMilestones(s,{
    loadState:async()=>state(),tokenProvider:async()=>assert.fail('no token'),
    fetcher:async()=>assert.fail('no duplicate send')
