@@ -168,3 +168,79 @@ test('STOP and tampered prepared bytes never claim review candidates ready',asyn
   storage:f.storage,env:off,createBackend:()=>{throw Error('should not call')}});
  assert.equal(bad.status,409,'corrupt candidate blocks status, not quietly counted');
 });
+
+test('review-only candidate route is exact, isolated from stage secret and available with Drive OFF',async()=>{
+ const off={...env,DELIVERY_BRIDGE_ENABLED:'false'};
+ assert.deepEqual(await check(req('candidate/HOOK',REVIEW,'GET'),off),{status:200});
+ assert.deepEqual(await check(req('candidate/P14',REVIEW,'GET'),off),{status:200});
+ assert.deepEqual(await check(req('candidate/ENDING',REVIEW,'GET'),off),{status:200});
+ assert.deepEqual(await check(req('candidate/THUMBNAIL',REVIEW,'GET'),off),{status:200});
+ for(const invalid of ['candidate/P0','candidate/P15','candidate/P01',
+  'candidate/Hook','candidate/HOOK/','candidate/P1/extra','candidate/P1%2Fstatus']){
+  assert.deepEqual(await check(req(invalid,REVIEW,'GET'),off),
+   {status:404,code:'NOT_FOUND'},invalid);
+ }
+ assert.deepEqual(await check(req('candidate/HOOK',STAGE,'GET'),off),
+  {status:401,code:'UNAUTHORIZED'});
+ assert.deepEqual(await check(req('candidate/HOOK',RUNNER,'GET'),off),
+  {status:401,code:'UNAUTHORIZED'});
+ assert.deepEqual(await check(req('candidate/HOOK',REVIEW,'POST'),off),
+  {status:405,code:'METHOD_NOT_ALLOWED'});
+ assert.deepEqual(await check(req('candidate/HOOK',REVIEW,'GET',
+  { })),{status:200});
+ assert.deepEqual(await check(req('candidate/HOOK',REVIEW,'GET'),
+  {...off,QUALITY_REVIEW_ENABLED:'false'}),{status:503,code:'SETUP_REQUIRED'});
+});
+test('reviewer reads verified staged candidate bytes without creating delivery or granting visual approval',async()=>{
+ const f=storageFixture(),off={...env,DELIVERY_BRIDGE_ENABLED:'false'};
+ let backendCalls=0;
+ const createBackend=()=>{backendCalls++;throw Error('GOOGLE_MUST_NOT_BE_CALLED')};
+ const before=await handleQualityImport(req('candidate/HOOK',REVIEW,'GET'),{
+  storage:f.storage,env:off,createBackend});
+ assert.equal(before.status,404);
+ assert.equal((await before.json()).status,'CANDIDATE_NOT_STAGED');
+ const image=Buffer.from('immutable candidate bytes for HOOK');
+ const original=Buffer.from('original provider render HOOK');
+ const audit={scene:'HOOK',bytes:image.length,sha256:sha(image),
+  source_sha256:sha(original),structural_check:'PASS'};
+ const staged=await handleQualityImport(req('image',STAGE,'POST',{
+  headers:{'Content-Type':'application/octet-stream',
+   'X-LDB-Image-Audit':Buffer.from(JSON.stringify({jobId,audit})).toString('base64url')},
+  body:image
+ }),{storage:f.storage,env:off,createBackend});
+ assert.equal(staged.status,200);
+ const result=await handleQualityImport(req('candidate/HOOK',REVIEW,'GET'),{
+  storage:f.storage,env:off,createBackend});
+ assert.equal(result.status,200);
+ assert.equal(result.headers.get('content-type'),'image/png');
+ assert.equal(result.headers.get('x-content-type-options'),'nosniff');
+ assert.equal(result.headers.get('x-ldb-sha256'),sha(image));
+ assert.equal(result.headers.get('x-ldb-visual-audit'),'PENDING');
+ assert.equal(result.headers.get('cache-control'),'private, no-store');
+ assert.equal(result.headers.get('access-control-allow-origin'),null);
+ assert.deepEqual(Buffer.from(await result.arrayBuffer()),image);
+ assert.equal(backendCalls,0);
+ assert.equal(f.map.has('delivery'),false);
+ assert.equal(f.map.has('milestone-result:'+jobId+':30'),false);
+});
+test('candidate inspection fails closed on STOP, source drift, or tampered prepared bytes',async()=>{
+ const f=storageFixture(),off={...env,DELIVERY_BRIDGE_ENABLED:'false'};
+ const original=Buffer.from('original provider render HOOK');
+ const image=Buffer.from('review candidate');
+ const audit={scene:'HOOK',bytes:image.length,sha256:sha(image),source_sha256:sha(original)};
+ await handleQualityImport(req('image',STAGE,'POST',{
+  headers:{'Content-Type':'application/octet-stream',
+   'X-LDB-Image-Audit':Buffer.from(JSON.stringify({jobId,audit})).toString('base64url')},
+  body:image}),{storage:f.storage,env:off,createBackend:()=>{throw Error('network')}});
+ const get=()=>handleQualityImport(req('candidate/HOOK',REVIEW,'GET'),{
+  storage:f.storage,env:off,createBackend:()=>{throw Error('network')}});
+ f.map.get('job').stop=true;
+ assert.equal((await get()).status,409);
+ f.map.get('job').stop=false;
+ f.map.get('job').outputs[0].sha256=sha('drift');
+ assert.equal((await get()).status,409);
+ f.map.get('job').outputs[0].sha256=sha(original);
+ const key=sha('ldb-delivery-image-v1:'+jobId+':HOOK');
+ f.map.set('prepared:'+jobId+':'+key+':0',new Uint8Array(Buffer.from('tampered bytes')));
+ assert.equal((await get()).status,409);
+});

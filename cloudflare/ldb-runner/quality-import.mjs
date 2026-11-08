@@ -7,7 +7,8 @@ import {durablePreparedImages} from '../../lib/ldb/durable-prepared-images.mjs';
 import {submitDurableApprovedDelivery} from '../../lib/ldb/submit-durable-approved-delivery.mjs';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
-export const isQualityImportPath=p=>p==='/internal/quality/image'||p==='/internal/quality/review'||p==='/internal/quality/status';
+const candidatePath=/^\/internal\/quality\/candidate\/(?:HOOK|P(?:[1-9]|1[0-4])|ENDING|THUMBNAIL)$/;
+export const isQualityImportPath=p=>p==='/internal/quality/image'||p==='/internal/quality/review'||p==='/internal/quality/status'||candidatePath.test(p);
 // Staging and visual approval are independent privileges. Merely possessing
 // the image uploader's secret must NEVER authorize a 69-file Drive delivery.
 // Re-check inside the Durable Object, not only at the public Worker edge.
@@ -15,7 +16,7 @@ export function qualityImportGate(req,env={}){
  const path=new URL(req.url).pathname;
  if(!isQualityImportPath(path))return json({status:'NOT_FOUND'},404);
  const reviewing=path==='/internal/quality/review';
- const inspecting=path==='/internal/quality/status';
+ const inspecting=path==='/internal/quality/status'||candidatePath.test(path);
  const stage=env.QUALITY_IMPORT_SECRET,review=env.QUALITY_REVIEW_SECRET;
  if(env.RUNNER_ENABLED!=='true'||env.QUALITY_IMPORT_ENABLED!=='true'||
     typeof stage!=='string'||stage.length<32||stage===env.RUNNER_SECRET)
@@ -80,6 +81,28 @@ export async function handleQualityImport(req,{storage,env={},createBackend}={})
     deliveryReady:false,googleUploadsStarted:false});
   }
   if(job?.status!=='IMAGES_READY'||job.index!==17||job.stop===true)throw Error('IMAGES_NOT_READY');
+  if(candidatePath.test(path)){
+   // Only the independent reviewer secret can view an immutable, staged
+   // corrected candidate. Never auto-approve or reveal the source images.
+   const scene=path.slice('/internal/quality/candidate/'.length);
+   const audit=await storage.get('prepared-audit:'+job.id+':'+scene);
+   if(!audit)return json({status:'CANDIDATE_NOT_STAGED'},404);
+   const index=ALL_SCENES.indexOf(scene);
+   if(audit.scene!==scene||
+      audit.source_sha256!==job.outputs?.[index]?.sha256)
+    throw Error('PREPARED_SOURCE_CHANGED');
+   const asset=entry(job.id,audit);
+   const bytes=await durablePreparedImages(storage,{jobId:job.id}).readIfPresent(asset);
+   if(!bytes)throw Error('PREPARED_IMAGE_MISSING');
+   return new Response(bytes,{headers:{
+    'Content-Type':'image/png',
+    'Cache-Control':'private, no-store',
+    'X-Content-Type-Options':'nosniff',
+    'X-LDB-SHA256':asset.sha256,
+    'X-LDB-Scene':scene,
+    'X-LDB-Visual-Audit':'PENDING'
+   }});
+  }
   if(path==='/internal/quality/image'){
    if(req.headers.get('Content-Type')!=='application/octet-stream')return json({status:'INVALID_BODY'},415);
    const encoded=req.headers.get('X-LDB-Image-Audit')||'';
