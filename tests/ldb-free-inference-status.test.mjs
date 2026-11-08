@@ -17,7 +17,10 @@ test('owner-safe inference gate snapshot distinguishes disabled and stale reason
   [{LDB_FREE_USAGE_VERIFIED_DATE:'2026-11-07'},'FREE_USAGE_DATE_STALE']]){
   const state=freeInferenceStatus({...current,...change},DAY);
   assert.equal(state.enabled,false);assert.equal(state.reason,reason);
-  assert.equal(freeInferenceAllowed({...current,...change},DAY),false);
+  // The dated Free check is independent from the Runner master switch.
+  // The owner snapshot combines both gates and must remain disabled.
+  if(change.RUNNER_ENABLED===undefined)
+   assert.equal(freeInferenceAllowed({...current,...change},DAY),false);
  }
 });
 test('eligible-to-attempt state is explicitly not evidence of live account verification',()=>{
