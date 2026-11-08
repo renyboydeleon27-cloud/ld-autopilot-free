@@ -82,12 +82,13 @@ export function ownerIsolatedProbeCommands(inputs){
   'npx --yes wrangler@4 deploy --config cloudflare/ldb-google-vault/wrangler.probe.jsonc',
   'npx --yes wrangler@4 deploy --config cloudflare/ldb-runner/wrangler.probe.jsonc',
   '4. Reconfirm deployed bindings and exact owned workers.dev host before ANY Runner secret is sent:',
-  'node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-preflight',
+  'node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-preflight --safe-evidence-json',
   '5. Only after preflight PASS, and only in trusted owner terminal:',
-  'node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-probe',
+  'node scripts/ldb-live-binding-probe.mjs --owner-approved-readonly-probe --safe-evidence-json',
   'Keep CLOUDFLARE_API_TOKEN and LDB_RUNNER_SECRET in private environment storage, never command arguments, GitHub or ChatGPT.',
   'Do not deploy quality/production Workers. Do not enable inference, OAuth, Drive, Gmail or production.',
   'The two Workers must have independently configured probe credentials. CLI cannot verify their presence or equality.',
+  'Safe evidence JSON contains no host, token, nonce or provider payload; its timestamp is operator-clock, not signed provider proof.',
   'Real auth, Drive 69/69, Gmail 4/4 and production readiness remain UNVERIFIED.'
  ].join('\n');
 }
