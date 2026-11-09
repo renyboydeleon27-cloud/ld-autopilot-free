@@ -27,7 +27,7 @@ function plan(){
  return {jobId:id,approvalVerified:true,visualAudit:'PASS',episode:'Lake Nyos 1986',assets};
 }
 function checkpoint(){const p=plan();return {plan:p,fingerprint:validateDeliveryPlan(p),
- index:0,status:'QUEUED',stopped:false,verified:[]};}
+ index:0,status:'QUEUED',stopped:false,verified:[],attempts:{}};}
 function withRecords(d,n){
  d.index=n;d.verified=d.plan.assets.slice(0,n).map((a,i)=>({
   key:a.key,sha256:a.sha256,id:'drive-file-'+i,status:'VERIFIED'
