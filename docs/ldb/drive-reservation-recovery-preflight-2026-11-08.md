@@ -86,3 +86,23 @@ then normal delivery resumes on the next asset. The private
 Runner→Vault RPC is still disabled without the production delivery gate.
 Tests use only in-memory Google mocks; they do not establish live delivery
 or Cloudflare production readiness.
+
+## Durable one-shot recovery marker — November 9, 2026
+
+A final read-only recovery pass now writes `RECONCILING` to the coordinator
+checkpoint **before** its first provider GET. A subsequent alarm or Worker
+restart that finds this incomplete marker enters `NEEDS_REVIEW` with the
+static code `DRIVE_READONLY_RECOVERY_INTERRUPTED`, without retrying that
+recovery automatically. This closes an unlimited-replay gap if a Worker
+restarts during a GET or before the verified checkpoint is saved.
+
+The marker is legal only with an exhausted three-attempt budget. STOP during
+an active reconciliation remains a user pause: no additional folder/file
+requests start after STOP, and an explicit owner Resume can restart a fresh
+read-only check without writing a fourth upload. Normal success advances
+the verified asset index and exits `RECONCILING`. The owner-only read-only
+progress route treats this transient state as an active checkpoint, not as
+proof of actual Google Drive delivery.
+
+Offline tests exercise normal recovery, a persisted interrupted marker,
+forged premature status, and STOP/Resume. No live Worker or Google call.
