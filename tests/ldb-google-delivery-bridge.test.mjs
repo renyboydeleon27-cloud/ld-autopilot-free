@@ -14,6 +14,11 @@ function setup(){
   if(previous){assert.equal(sha(a.bytes),previous.sha);return {id:previous.id,status:'VERIFIED',sha256:previous.sha};}
   const saved={id:'googlefile'+calls,sha:a.bytes?sha(a.bytes):null};uploaded.set(a.key,saved);
   return {id:saved.id,status:'VERIFIED',sha256:saved.sha};
+ },reconcile:async a=>{
+  const previous=uploaded.get(a.key);
+  if(!previous)throw Error('DRIVE_RECOVERY_NOT_FOUND');
+  if((a.bytes?sha(a.bytes):null)!==previous.sha)throw Error('DRIVE_CONTENT_MISMATCH');
+  return {id:previous.id,status:'VERIFIED',sha256:previous.sha};
  }}});
  const service={fetch:async(url,options)=>handleVaultDeliveryBridge(new Request(url,options),{enabled:true,secret:SECRET,createBackend})};
  const env={DELIVERY_BRIDGE_ENABLED:'true',GOOGLE_DELIVERY_BRIDGE_SECRET:SECRET,GOOGLE_VAULT:service};
@@ -24,6 +29,7 @@ test('client is fail closed until dedicated service binding, enable flag and sec
  for(const env of [{...f.env,DELIVERY_BRIDGE_ENABLED:'false'},{...f.env,GOOGLE_VAULT:null},{...f.env,GOOGLE_DELIVERY_BRIDGE_SECRET:'short'}])
   assert.throws(()=>createGoogleDeliveryBridge(env),/DELIVERY_BRIDGE_UNAVAILABLE/);
  assert.equal(isDeliveryBridgePath('/internal/drive/put'),true);
+ assert.equal(isDeliveryBridgePath('/internal/drive/reconcile'),true);
  assert.equal(isDeliveryBridgePath('/internal/credentials'),false);
 });
 test('authenticated service-bound request delivers hashed bytes and capacity without tokens',async()=>{
@@ -39,6 +45,34 @@ test('authenticated service-bound request delivers hashed bytes and capacity wit
  assert.equal(f.uploaded.size,2);
  assert.ok(!JSON.stringify(result).includes(SECRET));
 });
+test('service-bound read-only recovery rechecks existing hashes without allocating or uploading',async()=>{
+ const f=setup(),bridge=createGoogleDeliveryBridge(f.env);
+ const value=await bridge.drive.put(base);
+ const before=f.calls;
+ assert.deepEqual(await bridge.drive.reconcile(base),value);
+ assert.equal(f.calls,before,'no additional drive.put on recovery');
+ assert.equal(f.uploaded.size,1);
+ await assert.rejects(bridge.drive.reconcile({...base,key:'b'.repeat(64)}),
+  /DELIVERY_BRIDGE_UNAVAILABLE/);
+ assert.equal(f.uploaded.size,1,'missing reservation must not be created');
+});
+
+test('recovery route refuses unauthenticated requests and forged metadata before backend',async()=>{
+ const f=setup();
+ const url='https://ldb-vault.internal/internal/drive/reconcile';
+ assert.equal((await f.service.fetch(url,{method:'POST'})).status,401);
+ const digest=sha(base.bytes);
+ const meta=Buffer.from(JSON.stringify({key:base.key,name:base.name,parentId:base.parentId,
+  mimeType:base.mimeType,bytes:base.bytes.length,sha256:digest})).toString('base64url');
+ const response=await f.service.fetch(url,{method:'POST',
+  headers:{Authorization:'Bearer '+SECRET,'X-LDB-Asset-Info':meta,
+   'Content-Type':'application/octet-stream'},
+  body:Buffer.from('tampered')});
+ assert.equal(response.status,422);
+ assert.equal(f.calls,0);
+ assert.equal(f.uploaded.size,0);
+});
+
 test('bridge never accepts unauthenticated or mismatched service secret',async()=>{
  const f=setup();
  const r=await f.service.fetch('https://ldb-vault.internal/internal/drive/capacity',{method:'GET'});
