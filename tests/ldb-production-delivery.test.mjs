@@ -28,7 +28,12 @@ test('concurrent ticks single-flight and all 69 assets must verify',async()=>{co
 test('storage quota parser handles over-quota and rejects unknown data',async()=>{assert.deepEqual(await storageCapacity(async()=>'token',async()=>({ok:true,json:async()=>({storageQuota:{limit:'100',usage:'101'}})})),{remaining:'0',unlimited:false});await assert.rejects(storageCapacity(async()=>'token',async()=>({ok:true,json:async()=>({})})));});
 
 test('duplicate remote file ID blocks completion and preserves the last verified checkpoint',async()=>{
- const f=fixture({drive:{put:async a=>({id:'same-remote-id',status:'VERIFIED',sha256:a.sha256})}});
+ const f=fixture({drive:{put:async a=>({
+  // Distinct folders are valid; only the FILE identity is duplicated.
+  id:a.mimeType==='application/vnd.google-apps.folder'?
+   hash('folder-id:'+a.name):'same-remote-id',
+  status:'VERIFIED',sha256:a.sha256
+ })}});
  await f.core.submit(plan());await f.core.tick();await f.core.tick();
  const j=await f.s.get('delivery');
  assert.equal(j.status,'NEEDS_REVIEW');assert.equal(j.index,1);assert.equal(j.verified.length,1);
