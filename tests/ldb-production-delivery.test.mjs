@@ -375,3 +375,86 @@ test('folder ID cannot alias an already verified file on restart',async()=>{
  assert.equal(state.error,'DELIVERY_FOLDER_VERIFY_FAILED');
  assert.equal(assetUploads,1,'no new asset uploaded under aliased folder');
 });
+
+test('coordinator third retry recovers a delivered asset read-only without any fourth write',async()=>{
+ let uploads=0,reconciles=0,remoteSaved=false;
+ const f=fixture({drive:{
+  put:async asset=>{
+   if(asset.mimeType==='application/vnd.google-apps.folder')
+    return {id:asset.key,status:'VERIFIED',sha256:null};
+   uploads++;
+   if(uploads===3)remoteSaved=true;
+   throw Error('DRIVE_UPLOAD_UNCONFIRMED');
+  },
+  reconcile:async asset=>{
+   reconciles++;
+   if(!remoteSaved)throw Error('DRIVE_RECOVERY_NOT_FOUND');
+   return {id:asset.key,status:'VERIFIED',sha256:asset.sha256??null};
+  }
+ }});
+ await f.core.submit(plan());
+ for(let i=0;i<3;i++)await f.core.tick();
+ const before=await f.s.get('delivery');
+ assert.equal(before.status,'RETRY_WAIT');
+ assert.equal(before.attempts[0],3);
+ assert.equal(before.index,0);
+ const restarted=new ProductionDelivery(f.s,f.deps);
+ await restarted.tick();
+ const after=await f.s.get('delivery');
+ assert.equal(after.index,1);
+ assert.equal(after.verified.length,1);
+ assert.equal(after.status,'QUEUED');
+ assert.equal(after.attempts[0],3,'read-only verification does not increment upload attempts');
+ assert.equal(uploads,3,'no fourth file write');
+ assert.equal(reconciles,4,'root, episode, category, file inspected via existing IDs');
+ assert.equal(f.s.alarm!==null,true);
+});
+
+test('failed final read-only recovery blocks further attempts and requires owner review',async()=>{
+ let uploads=0,reconciles=0;
+ const f=fixture({drive:{
+  put:async asset=>{
+   if(asset.mimeType==='application/vnd.google-apps.folder')
+    return {id:asset.key,status:'VERIFIED',sha256:null};
+   uploads++;
+   throw Error('DRIVE_UPLOAD_UNCONFIRMED');
+  },
+  reconcile:async()=>{
+   reconciles++;
+   throw Error('DRIVE_RECOVERY_NOT_FOUND');
+  }
+ }});
+ await f.core.submit(plan());
+ for(let i=0;i<3;i++)await f.core.tick();
+ const recovery=new ProductionDelivery(f.s,f.deps);
+ await recovery.tick();
+ const checkpoint=await f.s.get('delivery');
+ assert.equal(checkpoint.index,0);
+ assert.equal(checkpoint.status,'NEEDS_REVIEW');
+ assert.equal(checkpoint.error,'DRIVE_READONLY_RECOVERY_FAILED');
+ assert.equal(checkpoint.attempts[0],3);
+ assert.equal(uploads,3);
+ assert.equal(reconciles,1,'fail closed on first missing reserved folder');
+ assert.equal(f.s.alarm,null);
+ await new ProductionDelivery(f.s,f.deps).tick();
+ assert.equal(uploads,3);
+ assert.equal(reconciles,1);
+ await assert.rejects(recovery.resume(),/RESUME_NOT_SAFE/);
+});
+
+test('third coordinator attempt without an explicit read-only adapter still stops',async()=>{
+ let uploads=0;
+ const f=fixture({drive:{put:async asset=>{
+  if(asset.mimeType==='application/vnd.google-apps.folder')
+   return {id:asset.key,status:'VERIFIED',sha256:null};
+  uploads++;throw Error('DRIVE_UPLOAD_UNCONFIRMED');
+ }}});
+ await f.core.submit(plan());
+ for(let i=0;i<3;i++)await f.core.tick();
+ await new ProductionDelivery(f.s,f.deps).tick();
+ const j=await f.s.get('delivery');
+ assert.equal(j.status,'NEEDS_REVIEW');
+ assert.equal(j.error,'DELIVERY_RETRY_LIMIT');
+ assert.equal(uploads,3);
+ assert.equal(f.s.alarm,null);
+});
