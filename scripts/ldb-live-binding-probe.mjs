@@ -77,15 +77,19 @@ async function verifyVaultHasNoCustomDomains({token,fetcher}){
  }catch{fail('PROBE_VAULT_DOMAINS_UNVERIFIED');}
  if(response?.status!==200)fail('PROBE_VAULT_DOMAINS_UNVERIFIED');
  const data=await parseBoundedJson(response);
+ // Cloudflare documents total_pages and total_count as account-wide and
+ // optional, even when the service= filter returns ZERO matching domains.
+ // Requiring total_pages<=1 rejected private Vaults on accounts with other
+ // unrelated domains. The filter-specific count MUST be exactly zero and the
+ // first page MUST be empty. Refuse missing count/page or malformed metadata.
+ const info=data?.result_info;
  if(data?.success!==true||!Array.isArray(data.result)||
-    !data.result_info||typeof data.result_info!=='object'||
-    !Number.isInteger(data.result_info.total_pages)||
-    data.result_info.total_pages<0||data.result_info.total_pages>1||
-    (data.result_info.page!==undefined&&data.result_info.page!==1)||
-    !Number.isInteger(data.result_info.total_count)||
-    data.result_info.total_count<0||
-    (data.result_info.count!==undefined&&data.result_info.count!==0)||
-    data.result.length!==0)
+    !info||typeof info!=='object'||Array.isArray(info)||
+    info.page!==1||info.count!==0||data.result.length!==0||
+    (info.total_pages!==undefined&&
+     (!Number.isInteger(info.total_pages)||info.total_pages<0))||
+    (info.total_count!==undefined&&
+     (!Number.isInteger(info.total_count)||info.total_count<0)))
   fail('PROBE_VAULT_CUSTOM_DOMAIN_UNSAFE');
  return true;
 }
