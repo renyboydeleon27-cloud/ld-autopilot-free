@@ -9,7 +9,7 @@ const FOLDER='application/vnd.google-apps.folder';
 const ALLOWED=new Set([FOLDER,'image/png','image/jpeg','text/plain','application/json']);
 const isHash=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
 const isId=x=>typeof x==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test(x);
-export const isDeliveryBridgePath=path=>path==='/internal/drive/capacity'||path==='/internal/drive/put'||path==='/internal/gmail/milestone';
+export const isDeliveryBridgePath=path=>path==='/internal/drive/capacity'||path==='/internal/drive/put'||path==='/internal/drive/reconcile'||path==='/internal/gmail/milestone';
 
 async function readBounded(req,max){
  const reader=req.body?.getReader();if(!reader)return Buffer.alloc(0);
@@ -65,7 +65,11 @@ export async function handleVaultDeliveryBridge(req,{enabled=false,notifications
   if(meta.mimeType!==FOLDER&&req.headers.get('Content-Type')!=='application/octet-stream')return json({status:'INVALID_BODY'},415);
   const body=await readBounded(req,8_000_000);
   if(body.length!==meta.bytes||(meta.mimeType!==FOLDER&&sha(body)!==meta.sha256))return json({status:'ASSET_INTEGRITY_FAILED'},422);
-  const result=await backend.drive.put({key:meta.key,name:meta.name,parentId:meta.parentId,mimeType:meta.mimeType,bytes:meta.mimeType===FOLDER?null:body});
+  // Reconciliation is provider GET-only: the backend method must never
+  // generate a new Drive ID or POST an upload.
+  const method=path==='/internal/drive/reconcile'?'reconcile':'put';
+  if(typeof backend.drive?.[method]!=='function')throw Error('DRIVE_BACKEND_NOT_CONFIGURED');
+  const result=await backend.drive[method]({key:meta.key,name:meta.name,parentId:meta.parentId,mimeType:meta.mimeType,bytes:meta.mimeType===FOLDER?null:body});
   if(result?.status!=='VERIFIED'||!isId(result.id)||result.sha256!==meta.sha256)throw Error('BAD_VERIFICATION');
   return json({status:'VERIFIED',id:result.id,sha256:meta.sha256});
  }catch{return json({status:'DELIVERY_OPERATION_FAILED'},502);}
