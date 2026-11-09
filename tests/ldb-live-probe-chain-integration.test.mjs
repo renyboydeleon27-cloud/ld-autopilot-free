@@ -75,7 +75,7 @@ function setup({metadataRunner=runnerBindings,ownerSecret=OWNER_SECRET,
    return Response.json({success:true,result:{enabled:true}});
   if(url===API+'/workers/domains?service='+VAULT)
    return Response.json({success:true,result:vaultDomains,
-    result_info:{page:1,total_pages:1,total_count:vaultDomains.length}});
+    result_info:{page:1,total_pages:1,total_count:vaultDomains.length,count:vaultDomains.length}});
   if(url===API+'/workers/scripts/'+VAULT+'/subdomain')
    return Response.json({success:true,result:{enabled:vaultPublished,
     previews_enabled:vaultPreviewsEnabled}});
