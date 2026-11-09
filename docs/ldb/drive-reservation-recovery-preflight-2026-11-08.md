@@ -44,3 +44,18 @@ Offline tests cover full 69-asset runs for multiple colliding episode names,
 identity and parent checks, plus unchanged legacy keys during restart. This
 does not perform a Google upload, migrate existing provider files, or
 establish production readiness.
+
+## Folder identity guard — November 9, 2026
+
+The production delivery coordinator now checks each result from its root,
+episode and category Drive folder operations before passing that folder ID
+to another provider request. Empty, malformed, non-string, explicitly
+unverified or repeated directory IDs are fatal. A directory may not reuse
+an ID previously verified as an uploaded file in the same 69-asset job.
+
+An invalid parent folder identity puts the delivery checkpoint into
+`NEEDS_REVIEW` without starting the child asset upload or another automatic
+retry. This protects the intended root → episode → category hierarchy;
+it does not assert that any real Google Drive folder has been created.
+New offline regression tests check missing IDs, malformed IDs, aliasing
+between parent/child folders, and aliasing with already verified files.
