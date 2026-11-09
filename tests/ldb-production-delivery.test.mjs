@@ -101,3 +101,39 @@ test('well-formed in-progress checkpoint still survives restart and STOP/Resume'
  const second=new ProductionDelivery(f.s,f.deps);await second.tick();
  assert.equal((await f.s.get('delivery')).index,2);
 });
+
+test('corrupt Drive reservation and exhausted file attempts require immediate owner review',async()=>{
+ for(const code of ['DRIVE_RESERVATION_INTEGRITY_FAILED','DRIVE_RETRY_LIMIT']){
+  let calls=0;
+  const f=fixture({drive:{put:async()=>{calls++;throw Error(code);}}});
+  await f.core.submit(plan());
+  await f.core.tick();
+  const checkpoint=await f.s.get('delivery');
+  assert.equal(checkpoint.status,'NEEDS_REVIEW',code);
+  assert.equal(checkpoint.error,code);
+  assert.equal(checkpoint.index,0);
+  assert.equal(checkpoint.verified.length,0);
+  assert.equal(checkpoint.attempts[0],1);
+  assert.equal(calls,1);
+  await f.core.tick();
+  assert.equal(calls,1,'no repeated automatic provider request');
+  await assert.rejects(f.core.resume(),/RESUME_NOT_SAFE/);
+ }
+});
+
+test('transient Drive upload uncertainty still follows bounded automatic retry path',async()=>{
+ let calls=0;
+ const f=fixture({drive:{put:async()=>{
+  calls++;
+  throw Error('DRIVE_UPLOAD_UNCONFIRMED');
+ }}});
+ await f.core.submit(plan());
+ await f.core.tick();
+ const first=await f.s.get('delivery');
+ assert.equal(first.status,'RETRY_WAIT');
+ assert.equal(first.error,'DELIVERY_RETRY_REQUIRED');
+ assert.equal(first.attempts[0],1);
+ await f.core.tick();
+ assert.equal(calls,2);
+ assert.equal((await f.s.get('delivery')).status,'RETRY_WAIT');
+});
