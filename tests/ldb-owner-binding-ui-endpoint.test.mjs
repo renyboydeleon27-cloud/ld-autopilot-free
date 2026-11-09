@@ -110,6 +110,17 @@ test('wrong Runner secret fails without claiming verified',async()=>{
   assert.equal(f.calls.filter(x=>x.url===URL).length,1);
  },{fetcher:f.fetcher});
 });
+test('internal bridge unavailable is reported separately from an invalid Runner password',async()=>{
+ const f=mock({bridgeUnavailable:true});
+ await withEnv(async()=>{
+  const res=responder();await handler(request(),res);
+  assert.equal(res.code,503);
+  assert.equal(res.body.status,'RUNNER_OR_VAULT_UNAVAILABLE');
+  assert.equal(res.body.authenticationVerified,false);
+  assert.equal(res.body.productionReady,false);
+  assert.equal(f.calls.filter(x=>x.url===URL).length,1);
+ },{fetcher:f.fetcher});
+});
 test('unsafe Vault or wrong service target blocks before sending owner secret',async()=>{
  for(const options of [{unsafeVault:true},{wrongTarget:true}]){
   const f=mock(options);
