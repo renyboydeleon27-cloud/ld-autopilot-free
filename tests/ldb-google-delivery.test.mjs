@@ -338,3 +338,52 @@ test('corrupt claim during Gmail response is not silently replaced',async()=>{
  await assert.rejects(mail.send(100),/GMAIL_RECEIPT_INTEGRITY_FAILED/);
  assert.equal(posts,1);
 });
+
+test('read-only reconciliation after third reserved attempt validates existing file without POST',async()=>{
+ const store=new Storage(),server=driveServer(),drive=makeDrive(store,server);
+ const first=await drive.put(asset);
+ const reservation=store.data.get('drive:'+asset.key);
+ reservation.status='UPLOADING';reservation.attempts=3;
+ const writesBefore=server.calls.filter(c=>c.method==='POST').length;
+ const requestsBefore=server.calls.length;
+ const result=await makeDrive(store,server).reconcile(asset);
+ assert.deepEqual(result,first);
+ assert.equal((await store.get('drive:'+asset.key)).status,'VERIFIED');
+ assert.equal(server.calls.filter(c=>c.method==='POST').length,writesBefore);
+ assert.ok(server.calls.slice(requestsBefore).every(c=>c.method==='GET'));
+ assert.equal(server.calls.filter(c=>c.url.includes('generateIds')).length,1);
+});
+
+test('read-only reconciliation refuses missing or corrupt reservations before OAuth',async()=>{
+ let tokens=0,remoteCalls=0;
+ const store=new Storage();
+ const drive=new DriveDelivery(store,{
+  tokenProvider:async()=>{tokens++;return 'not-allowed';},
+  fetcher:async()=>{remoteCalls++;throw Error('PROVIDER_MUST_STAY_OFF');}
+ });
+ await assert.rejects(drive.reconcile(asset),/DRIVE_RECOVERY_NOT_FOUND/);
+ assert.equal(tokens,0);assert.equal(remoteCalls,0);
+ await store.put('drive:'+asset.key,{id:'forged'});
+ await assert.rejects(drive.reconcile(asset),/DELIVERY_ASSET_CHANGED|DRIVE_RESERVATION_INTEGRITY_FAILED/);
+ assert.equal(tokens,0);assert.equal(remoteCalls,0);
+});
+
+test('read-only reconciliation refuses missing remote file with no new upload attempts',async()=>{
+ const store=new Storage(),server=driveServer({missing:true}),drive=makeDrive(store,server);
+ await assert.rejects(drive.put(asset),/DRIVE_UPLOAD_UNCONFIRMED/);
+ const before=server.calls.length,posts=server.calls.filter(c=>c.method==='POST').length;
+ await assert.rejects(drive.reconcile(asset),/DRIVE_RECOVERY_NOT_FOUND/);
+ assert.equal(server.calls.filter(c=>c.method==='POST').length,posts);
+ assert.ok(server.calls.slice(before).every(c=>c.method==='GET'));
+ assert.equal(server.calls.filter(c=>c.url.includes('generateIds')).length,1);
+});
+
+test('read-only reconciliation still hashes downloaded bytes when provider SHA-256 is missing',async()=>{
+ const store=new Storage(),server=driveServer({omitSha:true});
+ await makeDrive(store,server).put(asset);
+ const before=server.calls.length;
+ const good=await makeDrive(store,server).reconcile(asset);
+ assert.equal(good.status,'VERIFIED');
+ assert.ok(server.calls.slice(before).some(c=>c.url.includes('?alt=media')));
+ assert.ok(server.calls.slice(before).every(c=>c.method==='GET'));
+});
