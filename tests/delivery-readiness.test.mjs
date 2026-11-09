@@ -93,3 +93,60 @@ test('wrong image hash and duplicate scene prevent approval even with correct de
  j.outputs[16]={...job().outputs[16],sha256:'bad'};
  assert.equal(deliveryReadiness({job:j,delivery:d}).approvedDeliveryPlanPresent,false);
 });
+
+test('readiness rejects invalid retry counters and forged recovery markers',()=>{
+ const changes=[
+  d=>{delete d.attempts;},
+  d=>{d.attempts={0:-1};},
+  d=>{d.attempts={0:4};},
+  d=>{d.attempts={'01':1};},
+  d=>{d.attempts={'69':1};},
+  d=>{d.attempts={0:'3'};},
+  d=>{d.status='RECONCILING';d.attempts={0:2};},
+  d=>{d.status='RECONCILING';d.attempts={0:3};d.stopped=true;},
+  d=>{d.status='RECONCILING';d.attempts={0:3};d.index=69;
+   d.verified=d.plan.assets.map((_,i)=>verified(d.plan,i));}
+ ];
+ for(const change of changes){
+  const d=delivery();change(d);
+  assertNotApproved(d);
+ }
+ const d=delivery();d.attempts={0:3};d.status='RECONCILING';
+ const safe=deliveryReadiness({job:job(),delivery:d});
+ assert.equal(safe.deliveryCheckpointPresent,true,
+  'real durable recovery checkpoint remains recognized');
+ assert.equal(safe.autoProductionReady,false);
+ assert.equal(safe.deliveryConnected,false);
+});
+
+test('readiness rejects fake verified Drive IDs and inconsistent stopped checkpoint',()=>{
+ const p=plan(),d=delivery(p);
+ d.index=2;d.verified=[verified(p,0),verified(p,1)];
+ for(const bad of ['', 'not an id', '../escape','a'.repeat(201),42]){
+  const snapshot=structuredClone(d);
+  snapshot.verified[1].id=bad;
+  assertNotApproved(snapshot);
+ }
+ for(const status of ['QUEUED','RETRY_WAIT','WAITING_STORAGE','RECONCILING']){
+  const snapshot=delivery();
+  snapshot.status=status;
+  snapshot.stopped=true;
+  if(status==='RECONCILING')snapshot.attempts={0:3};
+  assertNotApproved(snapshot);
+ }
+});
+
+test('readiness uses fail-closed integrity rules before alarm can create provider connector',async()=>{
+ const {dispatchCoordinatorAlarm}=await import('../cloudflare/ldb-runner/delivery-alarm.mjs');
+ const j=job(),checkpoint=delivery();
+ checkpoint.attempts={0:-1};
+ let creates=0;
+ const result=await dispatchCoordinatorAlarm({
+  storage:{get:async()=>checkpoint},
+  imageCore:{status:async()=>j,tick:async()=>assert.fail('already ready')},
+  deliveryEnabled:true,
+  createDelivery:()=>{creates++;throw Error('CONNECTOR_MUST_NOT_BE_CREATED');}
+ });
+ assert.equal(result.status,'DELIVERY_BLOCKED');
+ assert.equal(creates,0);
+});
