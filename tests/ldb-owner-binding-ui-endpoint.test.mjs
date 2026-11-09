@@ -104,7 +104,7 @@ test('wrong Runner secret fails without claiming verified',async()=>{
  await withEnv(async()=>{
   const res=responder();await handler(request(),res);
   assert.equal(res.code,401);
-  assert.equal(res.body.status,'RUNNER_AUTH_NOT_VERIFIED');
+  assert.equal(res.body.status,'RUNNER_SECRET_REJECTED');
   assert.equal(res.body.authenticationVerified,false);
   assert.equal(f.calls.filter(x=>x.url===URL).length,1);
  },{fetcher:f.fetcher});
