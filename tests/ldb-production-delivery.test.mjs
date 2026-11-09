@@ -569,3 +569,159 @@ test('STOP during final read-only recovery remains a pause, not a fatal claim mi
  assert.equal(assetWrites,3);
  assert.equal(reconcileCalls,5);
 });
+
+test('late successful reconciliation cannot overturn a newer interrupted-recovery review',async()=>{
+ let release,signal;
+ const gate=new Promise(resolve=>{release=resolve});
+ const reached=new Promise(resolve=>{signal=resolve});
+ let writes=0,reconciles=0;
+ const f=fixture({drive:{
+  put:async asset=>{
+   if(asset.mimeType==='application/vnd.google-apps.folder')
+    return {id:asset.key,status:'VERIFIED',sha256:null};
+   writes++;throw Error('DRIVE_UPLOAD_UNCONFIRMED');
+  },
+  reconcile:async asset=>{
+   reconciles++;
+   if(asset.mimeType!=='application/vnd.google-apps.folder'){
+    signal();await gate;
+   }
+   return {id:asset.key,status:'VERIFIED',sha256:asset.sha256??null};
+  }
+ }});
+ await f.core.submit(plan());
+ for(let i=0;i<3;i++)await f.core.tick();
+ const original=new ProductionDelivery(f.s,f.deps);
+ const inflight=original.tick();
+ await reached;
+ assert.equal((await f.s.get('delivery')).status,'RECONCILING');
+ // Simulate a new Worker alarm during the old Vault GET.
+ await new ProductionDelivery(f.s,f.deps).tick();
+ const review=await f.s.get('delivery');
+ assert.equal(review.status,'NEEDS_REVIEW');
+ assert.equal(review.error,'DRIVE_READONLY_RECOVERY_INTERRUPTED');
+ assert.equal(review.index,0);
+ release();
+ await inflight;
+ const after=await f.s.get('delivery');
+ assert.deepEqual(after,review,
+  'late success must not overwrite a committed review decision');
+ assert.equal(writes,3,'no fourth Drive upload');
+ assert.equal(reconciles,4,'in-flight requests already started, no new replay');
+ assert.equal(f.s.alarm,null);
+});
+
+test('late reconciliation failure cannot erase owner STOP or restart review',async()=>{
+ let release,signal;
+ const gate=new Promise(resolve=>{release=resolve});
+ const reached=new Promise(resolve=>{signal=resolve});
+ let writes=0,reconciles=0;
+ const f=fixture({drive:{
+  put:async asset=>{
+   if(asset.mimeType==='application/vnd.google-apps.folder')
+    return {id:asset.key,status:'VERIFIED',sha256:null};
+   writes++;throw Error('DRIVE_UPLOAD_UNCONFIRMED');
+  },
+  reconcile:async()=>{
+   reconciles++;signal();await gate;
+   throw Error('DRIVE_VERIFY_UNAVAILABLE');
+  }
+ }});
+ await f.core.submit(plan());
+ for(let i=0;i<3;i++)await f.core.tick();
+ const inflight=new ProductionDelivery(f.s,f.deps).tick();
+ await reached;
+ await f.core.stop();
+ const paused=await f.s.get('delivery');
+ assert.equal(paused.status,'STOPPED');
+ assert.equal(paused.stopped,true);
+ release();
+ await inflight;
+ assert.deepEqual(await f.s.get('delivery'),paused,
+  'late failed reconciliation must not overwrite STOP with NEEDS_REVIEW');
+ assert.equal(reconciles,1);
+ assert.equal(writes,3);
+ assert.equal(f.s.alarm,null);
+});
+
+test('superseded upload attempt cannot write a file receipt for the same asset index',async()=>{
+ let releaseFirst,startedFirst,releaseSecond,startedSecond;
+ const firstGate=new Promise(resolve=>{releaseFirst=resolve});
+ const firstReady=new Promise(resolve=>{startedFirst=resolve});
+ const secondGate=new Promise(resolve=>{releaseSecond=resolve});
+ const secondReady=new Promise(resolve=>{startedSecond=resolve});
+ let capacityCalls=0,fileCalls=0;
+ const f=fixture({
+  capacity:async()=>{
+   capacityCalls++;
+   if(capacityCalls===1){startedFirst();await firstGate;}
+   return {unlimited:true};
+  },
+  drive:{put:async asset=>{
+   if(asset.mimeType==='application/vnd.google-apps.folder')
+    return {id:asset.key,status:'VERIFIED',sha256:null};
+   fileCalls++;
+   if(fileCalls===1){startedSecond();await secondGate;}
+   return {id:asset.key,status:'VERIFIED',sha256:asset.sha256};
+  }}
+ });
+ await f.core.submit(plan());
+ const old=new ProductionDelivery(f.s,f.deps);
+ const oldTick=old.tick();await firstReady;
+ const newer=new ProductionDelivery(f.s,f.deps);
+ const newTick=newer.tick();await secondReady;
+ const claimed=await f.s.get('delivery');
+ assert.equal(claimed.status,'UPLOADING');
+ assert.equal(claimed.index,0);
+ assert.equal(claimed.attempts[0],2);
+ releaseFirst();
+ await oldTick;
+ const waiting=await f.s.get('delivery');
+ assert.equal(waiting.status,'UPLOADING',
+  'stale first attempt must not turn newer active attempt into review');
+ assert.equal(waiting.attempts[0],2);
+ assert.equal(waiting.index,0);
+ releaseSecond();
+ await newTick;
+ const after=await f.s.get('delivery');
+ assert.equal(after.status,'QUEUED');
+ assert.equal(after.index,1);
+ assert.equal(after.attempts[0],2);
+ assert.equal(after.verified.length,1);
+ assert.equal(fileCalls,1,'old attempt never issued a second asset POST');
+});
+
+test('superseded upload failure cannot override the newer active attempt',async()=>{
+ let releaseFirst,signalFirst,releaseSecond,signalSecond;
+ const firstGate=new Promise(resolve=>{releaseFirst=resolve});
+ const firstReady=new Promise(resolve=>{signalFirst=resolve});
+ const secondGate=new Promise(resolve=>{releaseSecond=resolve});
+ const secondReady=new Promise(resolve=>{signalSecond=resolve});
+ let fileCalls=0;
+ const f=fixture({drive:{put:async asset=>{
+  if(asset.mimeType==='application/vnd.google-apps.folder')
+   return {id:asset.key,status:'VERIFIED',sha256:null};
+  fileCalls++;
+  if(fileCalls===1){signalFirst();await firstGate;throw Error('DRIVE_CONTENT_MISMATCH');}
+  signalSecond();await secondGate;
+  return {id:asset.key,status:'VERIFIED',sha256:asset.sha256};
+ }}});
+ await f.core.submit(plan());
+ const oldTick=new ProductionDelivery(f.s,f.deps).tick();
+ await firstReady;
+ const newerTick=new ProductionDelivery(f.s,f.deps).tick();
+ await secondReady;
+ releaseFirst();
+ await oldTick;
+ const midpoint=await f.s.get('delivery');
+ assert.equal(midpoint.status,'UPLOADING');
+ assert.equal(midpoint.attempts[0],2);
+ assert.equal(midpoint.index,0);
+ releaseSecond();
+ await newerTick;
+ const after=await f.s.get('delivery');
+ assert.equal(after.index,1);
+ assert.equal(after.status,'QUEUED');
+ assert.equal(after.verified.length,1);
+ assert.equal(fileCalls,2);
+});
