@@ -41,7 +41,20 @@ module.exports=async function handler(req,res){
    inventory,credentialsConfigured:configured,
    inspectQuality,inspectIsolated,inspectHost
   });
-  return res.status(200).json(snapshot);
+  // Safe, GET-only diagnosis of the exact isolated Vault domain filter.
+  // No hostnames, secrets, metadata objects, or provider payloads returned.
+  let isolatedVaultDomains={status:'UNAVAILABLE',httpStatus:null,
+   secretRead:false,runnerInvoked:false,workerModified:false};
+  if(configured){
+   try{
+    const mod=await import('../lib/ldb/isolated-vault-domain-diagnostic.mjs');
+    isolatedVaultDomains=await mod.inspectIsolatedVaultDomainDiagnostic({
+     accountId:env.CLOUDFLARE_ACCOUNT_ID,
+     token:env.CLOUDFLARE_API_TOKEN
+    });
+   }catch{/* Preserve fail-closed read-only results. */}
+  }
+  return res.status(200).json({...snapshot,isolatedVaultDomains});
  }catch{
   return res.status(503).json({status:'DELIVERY_READINESS_CHECK_UNAVAILABLE',
    productionReady:false,googleApiCalled:false,gmailApiCalled:false});
