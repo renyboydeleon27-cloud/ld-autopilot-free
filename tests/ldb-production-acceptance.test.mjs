@@ -30,7 +30,7 @@ function plan(){
 }
 function delivery(n){
  const p=plan();return {plan:p,fingerprint:validateDeliveryPlan(p),
-  index:n,status:n===69?'COMPLETE':'QUEUED',stopped:false,
+  index:n,status:n===69?'COMPLETE':'QUEUED',stopped:false,attempts:{},
   verified:p.assets.slice(0,n).map((a,i)=>({key:a.key,sha256:a.sha256,id:'drive-'+i,status:'VERIFIED'}))};
 }
 test('one report remains NO_GO with zero renders and no real approvals',()=>{
