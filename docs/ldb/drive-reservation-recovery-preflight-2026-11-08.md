@@ -59,3 +59,30 @@ retry. This protects the intended root → episode → category hierarchy;
 it does not assert that any real Google Drive folder has been created.
 New offline regression tests check missing IDs, malformed IDs, aliasing
 between parent/child folders, and aliasing with already verified files.
+
+## Final-attempt GET-only reconciliation — November 9, 2026
+
+Previously, a coordinator checkpoint whose upload-attempt count reached
+three entered `NEEDS_REVIEW` before its Google Drive adapter could inspect
+a file successfully uploaded during the third attempt, but not durably
+acknowledged. The Drive adapter's per-file reservation could recover it,
+yet the outer coordinator refused any further inspection.
+
+The coordinator now allows ONE final **read-only** recovery pass only if the
+trusted Drive backend explicitly exposes `reconcile`. The method requires
+the exact matching durable file reservation and checksum-bound asset,
+refuses missing/corrupt reservations before OAuth, performs provider GETs
+only, validates the existing file's identity, parent and content, and
+persists a local `VERIFIED` checkpoint. It does not issue Google Drive
+`generateIds`, POST, PATCH, or DELETE. Root, episode, category and asset
+must all reconcile through already reserved IDs before the next asset
+can be marked complete.
+
+Recovery does NOT refresh the failed attempt budget. On any missing folder,
+missing remote file, checksum mismatch, unsupported backend or ambiguous
+recovery result, it stops with `NEEDS_REVIEW` and no automatic replay.
+A successfully recovered asset advances its 69-file checkpoint once,
+then normal delivery resumes on the next asset. The private
+Runner→Vault RPC is still disabled without the production delivery gate.
+Tests use only in-memory Google mocks; they do not establish live delivery
+or Cloudflare production readiness.
