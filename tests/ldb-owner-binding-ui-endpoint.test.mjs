@@ -34,7 +34,7 @@ function responder(){
   status(k){this.code=k;return this;},
   json(x){this.body=x;return this;}};
 }
-function mock({wrongSecret=false,unsafeVault=false,wrongTarget=false}={}){
+function mock({wrongSecret=false,bridgeUnavailable=false,unsafeVault=false,wrongTarget=false}={}){
  const calls=[];
  const fetcher=async(url,opts={})=>{
   calls.push({url,opts});
@@ -43,6 +43,7 @@ function mock({wrongSecret=false,unsafeVault=false,wrongTarget=false}={}){
    assert.equal(opts.headers.Authorization,'Bearer '+SECRET);
    assert.match(opts.headers['X-LDB-Probe-Nonce'],/^[a-f0-9]{32}$/);
    if(wrongSecret)return Response.json({status:'UNAUTHORIZED'},{status:401});
+   if(bridgeUnavailable)return Response.json({status:'BRIDGE_PROBE_UNAVAILABLE'},{status:503});
    return Response.json({status:'BRIDGE_AUTHENTICATED',productionReady:false,
     nonce:opts.headers['X-LDB-Probe-Nonce']},
     {headers:{'Cache-Control':'no-store'}});
