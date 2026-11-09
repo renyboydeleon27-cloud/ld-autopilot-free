@@ -19,7 +19,7 @@ function plan(){
 function setup({imageStatus='IMAGES_READY',deliveryStatus='QUEUED',withDelivery=true}={}){
  const p=plan(),job={id:p.jobId,status:imageStatus,index:17,stop:false,outputs:scenes.concat('THUMBNAIL').map(scene=>({scene,sha256:hash(scene),mimeType:'image/jpeg',bytes:50,chunks:1}))};
  const data=new Map([['job',job]]);
- if(withDelivery)data.set('delivery',{plan:p,fingerprint:validateDeliveryPlan(p),status:deliveryStatus,index:0,verified:[],stopped:false});
+ if(withDelivery)data.set('delivery',{plan:p,fingerprint:validateDeliveryPlan(p),status:deliveryStatus,index:0,verified:[],stopped:false,attempts:{}});
  let alarmCount=0,deleteCount=0,coreStop=0,coreResume=0;
  const clone=v=>v===undefined?undefined:structuredClone(v);
  const tx={get:async k=>clone(data.get(k)),put:async(k,v)=>data.set(k,clone(v)),deleteAlarm:async()=>{deleteCount++;},setAlarm:async()=>{alarmCount++;}};
