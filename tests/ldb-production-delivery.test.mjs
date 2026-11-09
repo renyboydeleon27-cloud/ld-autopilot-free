@@ -6,7 +6,23 @@ function plan(){const scenes=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1))
 function fixture(options={}){const s=new Storage();let puts=0;const deps={drive:{put:async a=>{puts++;return {id:a.key||hash(a.name),status:'VERIFIED',sha256:a.sha256};}},capacity:async()=>({unlimited:false,remaining:'999999999'}),readAsset:async()=>bytes,...options};return {s,deps,get puts(){return puts;},core:new ProductionDelivery(s,deps)};}
 test('incomplete or unaudited plans cannot schedule delivery',async()=>{const f=fixture();await assert.rejects(f.core.submit({...plan(),visualAudit:'PENDING'}));const p=plan();p.assets.pop();assert.throws(()=>validateDeliveryPlan(p));assert.equal(f.s.data.size,0);});
 test('quota check blocks every upload and supports resume',async()=>{const f=fixture({capacity:async()=>({remaining:'0',unlimited:false})});await f.core.submit(plan());await f.core.tick();assert.equal(f.puts,0);assert.equal((await f.s.get('delivery')).status,'WAITING_STORAGE');await f.core.resume();});
-test('STOP during upload preserves checkpoint and restart resumes',async()=>{const f=fixture();await f.core.submit(plan());f.deps.readAsset=async()=>{await f.core.stop();return bytes;};f.core.readAsset=f.deps.readAsset;await f.core.tick();const j=await f.s.get('delivery');assert.equal(j.status,'STOPPED');assert.equal(j.index,1);const restarted=new ProductionDelivery(f.s,{...f.deps,readAsset:async()=>bytes});await restarted.resume();await restarted.tick();assert.equal((await f.s.get('delivery')).index,2);});
+test('STOP during asset read pauses before asset upload; restart resumes same checkpoint',async()=>{
+ const f=fixture();
+ await f.core.submit(plan());
+ f.core.readAsset=async()=>{await f.core.stop();return bytes;};
+ await f.core.tick();
+ const checkpoint=await f.s.get('delivery');
+ assert.equal(checkpoint.status,'STOPPED');
+ assert.equal(checkpoint.stopped,true);
+ assert.equal(checkpoint.index,0);
+ assert.equal(checkpoint.verified.length,0);
+ assert.equal(f.puts,3,'three idempotent folder operations, no asset upload');
+ assert.equal(f.s.alarm,null);
+ const restarted=new ProductionDelivery(f.s,{...f.deps,readAsset:async()=>bytes});
+ await restarted.resume();
+ await restarted.tick();
+ assert.equal((await f.s.get('delivery')).index,1);
+});
 test('changed bytes fail closed before file upload',async()=>{const f=fixture({readAsset:async()=>Buffer.from('wrong')});await f.core.submit(plan());await f.core.tick();assert.equal((await f.s.get('delivery')).status,'NEEDS_REVIEW');assert.equal((await f.s.get('delivery')).verified.length,0);});
 test('concurrent ticks single-flight and all 69 assets must verify',async()=>{const f=fixture();await f.core.submit(plan());await Promise.all([f.core.tick(),f.core.tick()]);assert.equal((await f.s.get('delivery')).index,1);for(let i=1;i<69;i++)await f.core.tick();const j=await f.s.get('delivery');assert.equal(j.status,'COMPLETE');assert.equal(j.verified.length,69);});
 test('storage quota parser handles over-quota and rejects unknown data',async()=>{assert.deepEqual(await storageCapacity(async()=>'token',async()=>({ok:true,json:async()=>({storageQuota:{limit:'100',usage:'101'}})})),{remaining:'0',unlimited:false});await assert.rejects(storageCapacity(async()=>'token',async()=>({ok:true,json:async()=>({})})));});
@@ -136,4 +152,79 @@ test('transient Drive upload uncertainty still follows bounded automatic retry p
  await f.core.tick();
  assert.equal(calls,2);
  assert.equal((await f.s.get('delivery')).status,'RETRY_WAIT');
+});
+
+test('STOP during Drive quota query wins over insufficient-storage status and makes zero provider calls',async()=>{
+ let f;
+ f=fixture({capacity:async()=>{
+  await f.core.stop();
+  return {remaining:'0',unlimited:false};
+ }});
+ await f.core.submit(plan());
+ await f.core.tick();
+ const j=await f.s.get('delivery');
+ assert.equal(j.status,'STOPPED');
+ assert.equal(j.stopped,true);
+ assert.equal(j.index,0);
+ assert.equal(f.puts,0);
+ assert.equal(f.s.alarm,null);
+ await f.core.tick();
+ assert.equal(f.puts,0);
+});
+
+test('STOP during a folder request prevents all subsequent folder and asset uploads',async()=>{
+ for(const stopAfter of ['Living Disaster Book','Lake Nyos 1986','Storyboard']){
+  let f;
+  const calls=[];
+  f=fixture({drive:{put:async asset=>{
+   calls.push(asset.name);
+   if(asset.name===stopAfter)await f.core.stop();
+   return {id:asset.key||hash(asset.name),status:'VERIFIED',sha256:asset.sha256};
+  }}});
+  await f.core.submit(plan());
+  await f.core.tick();
+  const j=await f.s.get('delivery');
+  const expected=['Living Disaster Book','Lake Nyos 1986','Storyboard'];
+  const last=expected.indexOf(stopAfter);
+  assert.deepEqual(calls,expected.slice(0,last+1));
+  assert.equal(j.status,'STOPPED');
+  assert.equal(j.index,0);
+  assert.equal(j.verified.length,0);
+  assert.equal(f.s.alarm,null);
+  await f.core.tick();
+  assert.equal(calls.length,last+1,'STOPPED tick makes no new provider calls');
+  await f.core.resume();
+  await f.core.tick();
+  assert.equal((await f.s.get('delivery')).index,1);
+ }
+});
+
+test('STOP cannot undo the one asset upload already in flight; verified receipt checkpoints safely',async()=>{
+ let f,assetCalls=0;
+ f=fixture({drive:{put:async asset=>{
+  if(asset.mimeType!=='application/vnd.google-apps.folder'){
+   assetCalls++;
+   await f.core.stop();
+  }
+  return {id:asset.key||hash(asset.name),status:'VERIFIED',sha256:asset.sha256};
+ }}});
+ await f.core.submit(plan());
+ await f.core.tick();
+ const j=await f.s.get('delivery');
+ assert.equal(assetCalls,1);
+ assert.equal(j.index,1,'acknowledged in-flight upload must be checkpointed');
+ assert.equal(j.status,'STOPPED','no next-asset alarm');
+ assert.equal(j.stopped,true);
+ assert.equal(f.s.alarm,null);
+ await f.core.tick();
+ assert.equal(assetCalls,1);
+ // A restarted coordinator may resume, but does not repeat already verified
+ // asset 0; the next checkpoint begins at index 1.
+ const restarted=new ProductionDelivery(f.s,{...f.deps});
+ await restarted.resume();
+ await restarted.tick();
+ const next=await f.s.get('delivery');
+ assert.equal(next.index,2);
+ assert.equal(assetCalls,2);
+ assert.equal(next.verified.length,2);
 });
