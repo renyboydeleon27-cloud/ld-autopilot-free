@@ -16,9 +16,9 @@
   button.disabled=true;
   status.textContent='Checking the existing Runner → Vault connection (no uploads)…';
   try{
-   const response=await fetch('/api/ldb-owner-binding-probe',{
+   const response=await fetch('/api/ldb-delivery-readiness',{
     method:'POST',credentials:'same-origin',redirect:'error',cache:'no-store',
-    headers:{'Content-Type':'application/json',Accept:'application/json'},
+    headers:{'Content-Type':'application/json',Accept:'application/json','X-LDB-Owner-Test':'1'},
     body:JSON.stringify({secret})
    });
    const data=await response.json();
