@@ -303,3 +303,70 @@ test('normal episode folder keys preserve legacy reservation identity after rest
    .map(name=>hash('folder:'+p.jobId+':'+name)));
  assert.equal((await f.s.get('delivery')).index,2);
 });
+
+test('bad folder identity must not authorize a child Drive operation or automatic retry',async()=>{
+ const cases=[
+  {label:'root id absent',onFolder:(name,id)=>name==='Living Disaster Book'?undefined:id},
+  {label:'root id malformed',onFolder:(name,id)=>name==='Living Disaster Book'?'../bad':id},
+  {label:'root id not a string',onFolder:(name,id)=>name==='Living Disaster Book'?42:id},
+  {label:'episode reuses root id',onFolder:(name,id)=>name==='Lake Nyos 1986'?'root_folder':id},
+  {label:'category reuses episode id',onFolder:(name,id)=>name==='Storyboard'?'episode_folder':id},
+  {label:'folder status not verified',onFolder:(name,id)=>id,status:'PENDING'}
+ ];
+ for(const scenario of cases){
+  const requests=[];let assetUploads=0;
+  const f=fixture({drive:{put:async asset=>{
+   requests.push(asset.name);
+   const folder=asset.mimeType==='application/vnd.google-apps.folder';
+   if(folder){
+    const id=asset.name==='Living Disaster Book'?'root_folder':
+     asset.name==='Lake Nyos 1986'?'episode_folder':'category_folder';
+    return {id:scenario.onFolder(asset.name,id),
+     status:scenario.status??'VERIFIED',sha256:null};
+   }
+   assetUploads++;
+   return {id:asset.key,status:'VERIFIED',sha256:asset.sha256};
+  }}});
+  await f.core.submit(plan());
+  await f.core.tick();
+  const state=await f.s.get('delivery');
+  assert.equal(state.status,'NEEDS_REVIEW',scenario.label);
+  assert.equal(state.error,'DELIVERY_FOLDER_VERIFY_FAILED',scenario.label);
+  assert.equal(state.index,0,scenario.label);
+  assert.equal(state.verified.length,0,scenario.label);
+  assert.equal(assetUploads,0,scenario.label);
+  const before=requests.length;
+  await f.core.tick();
+  assert.equal(requests.length,before,'unsafe folder must not retry automatically');
+  await assert.rejects(f.core.resume(),/RESUME_NOT_SAFE/);
+ }
+});
+
+test('folder ID cannot alias an already verified file on restart',async()=>{
+ let rootRequests=0,assetUploads=0;
+ const f=fixture({drive:{put:async asset=>{
+  const folder=asset.mimeType==='application/vnd.google-apps.folder';
+  if(folder){
+   if(asset.name==='Living Disaster Book'){
+    rootRequests++;
+    return {id:rootRequests===1?'root_folder':hash('Storyboardstory'),
+     status:'VERIFIED',sha256:null};
+   }
+   return {id:asset.name==='Lake Nyos 1986'?'episode_folder':
+    'category_folder',status:'VERIFIED',sha256:null};
+  }
+  assetUploads++;
+  return {id:asset.key,status:'VERIFIED',sha256:asset.sha256};
+ }}});
+ await f.core.submit(plan());
+ await f.core.tick();
+ assert.equal((await f.s.get('delivery')).index,1);
+ assert.equal(assetUploads,1);
+ const restarted=new ProductionDelivery(f.s,f.deps);
+ await restarted.tick();
+ const state=await f.s.get('delivery');
+ assert.equal(state.index,1);
+ assert.equal(state.status,'NEEDS_REVIEW');
+ assert.equal(state.error,'DELIVERY_FOLDER_VERIFY_FAILED');
+ assert.equal(assetUploads,1,'no new asset uploaded under aliased folder');
+});
