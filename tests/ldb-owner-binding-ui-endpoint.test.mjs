@@ -34,7 +34,7 @@ function responder(){
   status(k){this.code=k;return this;},
   json(x){this.body=x;return this;}};
 }
-function mock({wrongSecret=false,bridgeUnavailable=false,unsafeVault=false,wrongTarget=false}={}){
+function mock({wrongSecret=false,bridgeUnavailable=false,invalidAcknowledge=false,routeNotFound=false,unsafeVault=false,wrongTarget=false}={}){
  const calls=[];
  const fetcher=async(url,opts={})=>{
   calls.push({url,opts});
@@ -44,6 +44,9 @@ function mock({wrongSecret=false,bridgeUnavailable=false,unsafeVault=false,wrong
    assert.match(opts.headers['X-LDB-Probe-Nonce'],/^[a-f0-9]{32}$/);
    if(wrongSecret)return Response.json({status:'UNAUTHORIZED'},{status:401});
    if(bridgeUnavailable)return Response.json({status:'BRIDGE_PROBE_UNAVAILABLE'},{status:503});
+   if(routeNotFound)return Response.json({status:'NOT_FOUND'},{status:404});
+   if(invalidAcknowledge)return Response.json({status:'BRIDGE_AUTHENTICATED',productionReady:false,nonce:'0'.repeat(32)},
+    {headers:{'Cache-Control':'no-store'}});
    return Response.json({status:'BRIDGE_AUTHENTICATED',productionReady:false,
     nonce:opts.headers['X-LDB-Probe-Nonce']},
     {headers:{'Cache-Control':'no-store'}});
@@ -120,6 +123,21 @@ test('internal bridge unavailable is reported separately from an invalid Runner 
   assert.equal(res.body.productionReady,false);
   assert.equal(f.calls.filter(x=>x.url===URL).length,1);
  },{fetcher:f.fetcher});
+});
+test('HTTP 404 and invalid nonce acknowledgement give safe, distinct failure codes',async()=>{
+ for(const [mode,expected] of [['routeNotFound','RUNNER_ROUTE_NOT_FOUND'],['invalidAcknowledge','RUNNER_ACK_INVALID']]){
+  const f=mock({[mode]:true});
+  await withEnv(async()=>{
+   const res=responder();await handler(request(),res);
+   assert.equal(res.code,503);
+   assert.equal(res.body.status,expected);
+   assert.equal(res.body.authenticationVerified,false);
+   assert.equal(res.body.productionReady,false);
+   assert.equal(f.calls.filter(x=>x.url===URL).length,1);
+   assert.ok(!JSON.stringify(res.body).includes(SECRET));
+   assert.ok(!JSON.stringify(res.body).includes(TOKEN));
+  },{fetcher:f.fetcher});
+ }
 });
 test('unsafe Vault or wrong service target blocks before sending owner secret',async()=>{
  for(const options of [{unsafeVault:true},{wrongTarget:true}]){
