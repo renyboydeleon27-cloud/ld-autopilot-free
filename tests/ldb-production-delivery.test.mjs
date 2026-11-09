@@ -231,3 +231,75 @@ test('STOP cannot undo the one asset upload already in flight; verified receipt 
  assert.equal(assetCalls,2);
  assert.equal(next.verified.length,2);
 });
+
+test('episode titles colliding with root or category folder names keep distinct Drive reservations',async()=>{
+ for(const episode of ['Living Disaster Book','Storyboard','Narration',
+  'Approved reference images','Thumbnail','Quality audit','Production manifest']){
+  const p=plan();p.episode=episode;
+  const storage=new Storage(),reservations=new Map();
+  let duplicateAttempts=0;
+  const deps={
+   capacity:async()=>({unlimited:true}),
+   readAsset:async()=>bytes,
+   drive:{put:async asset=>{
+    const signature={name:asset.name,parentId:asset.parentId??null,
+     mimeType:asset.mimeType};
+    const existing=reservations.get(asset.key);
+    if(existing){
+     if(JSON.stringify(existing.signature)!==JSON.stringify(signature)){
+      duplicateAttempts++;
+      throw Error('DELIVERY_ASSET_CHANGED');
+     }
+     return {id:asset.key,status:'VERIFIED',sha256:asset.sha256??null};
+    }
+    reservations.set(asset.key,{signature});
+    return {id:asset.key,status:'VERIFIED',sha256:asset.sha256??null};
+   }}
+  };
+  await new ProductionDelivery(storage,deps).submit(p);
+  // Reconstruct on every tick as a Durable Object alarm would after restart.
+  for(let i=0;i<69;i++)await new ProductionDelivery(storage,deps).tick();
+  const done=await storage.get('delivery');
+  assert.equal(done.status,'COMPLETE',episode);
+  assert.equal(done.index,69,episode);
+  assert.equal(done.verified.length,69,episode);
+  assert.equal(duplicateAttempts,0,episode);
+  const root=hash('folder:'+p.jobId+':Living Disaster Book');
+  const episodeKey=hash('folder:'+p.jobId+':'+episode+
+   (episode==='Living Disaster Book'?':episode':''));
+  assert.notEqual(root,episodeKey,'root and episode require unique identities');
+  assert.deepEqual(reservations.get(root)?.signature,{
+   name:'Living Disaster Book',parentId:null,
+   mimeType:'application/vnd.google-apps.folder'
+  });
+  assert.equal(reservations.get(episodeKey)?.signature.parentId,root);
+  if(['Storyboard','Narration','Approved reference images','Thumbnail',
+   'Quality audit','Production manifest'].includes(episode)){
+   const categoryKey=hash('folder:'+p.jobId+':'+episode+':category');
+   assert.notEqual(episodeKey,categoryKey);
+   assert.equal(reservations.get(categoryKey)?.signature.parentId,episodeKey);
+  }
+ }
+});
+
+test('normal episode folder keys preserve legacy reservation identity after restart',async()=>{
+ const p=plan(),folderCalls=[];
+ const f=fixture({drive:{put:async asset=>{
+  if(asset.mimeType==='application/vnd.google-apps.folder')
+   folderCalls.push({name:asset.name,key:asset.key,parentId:asset.parentId??null});
+  return {id:asset.key,status:'VERIFIED',sha256:asset.sha256??null};
+ }}});
+ await f.core.submit(p);
+ await f.core.tick();
+ const expected=['Living Disaster Book',p.episode,'Storyboard'];
+ assert.deepEqual(folderCalls.map(x=>x.name),expected);
+ assert.deepEqual(folderCalls.map(x=>x.key),
+  expected.map(name=>hash('folder:'+p.jobId+':'+name)));
+ const restarted=new ProductionDelivery(f.s,f.deps);
+ await restarted.tick();
+ const second=folderCalls.slice(3);
+ assert.deepEqual(second.map(x=>x.key),
+  ['Living Disaster Book',p.episode,'Approved reference images']
+   .map(name=>hash('folder:'+p.jobId+':'+name)));
+ assert.equal((await f.s.get('delivery')).index,2);
+});
