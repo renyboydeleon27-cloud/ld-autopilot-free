@@ -44,7 +44,7 @@ test('read permission and unsafe domain row return sanitized blockers',async()=>
  assert.ok(!JSON.stringify(out).includes('example.test'));
 });
 test('empty row with missing pagination or count is not claimed safe',async()=>{
- for(const info of [{}, {page:1,total_pages:0},{page:1,total_pages:2,total_count:0,count:0},
+ for(const info of [{}, {page:1,total_pages:0},
   {page:2,total_pages:1,total_count:0,count:0},
   {page:1,total_pages:1,total_count:0,count:1}]){
   const f=fixture({info});
@@ -57,4 +57,18 @@ test('reject wrong account/token before network',async()=>{
  const fetcher=()=>{called++;throw Error('unexpected')};
  const out=await inspect({accountId:'not-owner',token:TOKEN,fetcher});
  assert.equal(out.status,'NOT_CONFIGURED');assert.equal(called,0);
+});
+
+test('Cloudflare account-wide pagination may be more than one page or omitted',async()=>{
+ for(const info of [
+  {page:1,count:0,total_count:20,total_pages:20},
+  {page:1,count:0,total_count:20},
+  {page:1,count:0}
+ ]){
+  const f=fixture({info});
+  const out=await inspect({accountId:ACCOUNT,token:TOKEN,fetcher:f.fetcher});
+  assert.equal(out.status,'ISOLATED_VAULT_CUSTOM_DOMAIN_CHECK_PASSED');
+  assert.equal(out.firstPage,true);
+  assert.equal(out.filteredCountZero,true);
+ }
 });
