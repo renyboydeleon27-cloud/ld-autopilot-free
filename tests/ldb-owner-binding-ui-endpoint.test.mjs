@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
-const handler=require('../api/ldb-owner-binding-probe.js');
+const handler=require('../lib/ldb/owner-binding-probe.cjs');
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b';
 const BASE='https://api.cloudflare.com/client/v4/accounts/'+ACCOUNT;
 const PROBE='ner-ldb-runner-binding-probe';
@@ -24,7 +24,7 @@ const vault=[
  plain('BRIDGE_PROBE_ENABLED','true')
 ];
 function request({method='POST',secret=SECRET,origin='https://my-preview.vercel.app',
- host='my-preview.vercel.app',url='/api/ldb-owner-binding-probe',extra={}}={}){
+ host='my-preview.vercel.app',url='/api/ldb-delivery-readiness',extra={}}={}){
  return {method,url,headers:{host,origin,'sec-fetch-site':'same-origin',
   'content-type':'application/json',...extra},body:{secret}};
 }
@@ -124,7 +124,7 @@ test('production, GET, cross-site, query params and bad inputs refuse requests w
  const cases=[
   {method:'GET'},{origin:'https://evil.example'},
   {host:'hostile.example',origin:'https://hostile.example'},
-  {url:'/api/ldb-owner-binding-probe?url=evil.example'},
+  {url:'/api/ldb-delivery-readiness?url=evil.example'},
   {secret:'short'},
   {extra:{'content-type':'text/plain'}},
   {extra:{'sec-fetch-site':'cross-site'}}
