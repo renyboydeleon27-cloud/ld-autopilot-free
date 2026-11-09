@@ -458,3 +458,114 @@ test('third coordinator attempt without an explicit read-only adapter still stop
  assert.equal(uploads,3);
  assert.equal(f.s.alarm,null);
 });
+
+test('final read-only recovery writes a durable RECONCILING marker before its first remote GET',async()=>{
+ let release,seen;const gate=new Promise(resolve=>{release=resolve});
+ const started=new Promise(resolve=>{seen=resolve});
+ let assetWrites=0,reconcileCalls=0;
+ const f=fixture({drive:{
+  put:async asset=>{
+   if(asset.mimeType==='application/vnd.google-apps.folder')
+    return {id:asset.key,status:'VERIFIED',sha256:null};
+   assetWrites++;throw Error('DRIVE_UPLOAD_UNCONFIRMED');
+  },
+  reconcile:async asset=>{
+   reconcileCalls++;if(reconcileCalls===1){seen();await gate;}
+   return {id:asset.key,status:'VERIFIED',sha256:asset.sha256??null};
+  }
+ }});
+ await f.core.submit(plan());
+ for(let i=0;i<3;i++)await f.core.tick();
+ const running=new ProductionDelivery(f.s,f.deps).tick();
+ await started;
+ const checkpoint=await f.s.get('delivery');
+ assert.equal(checkpoint.status,'RECONCILING');
+ assert.equal(checkpoint.index,0);
+ assert.equal(checkpoint.attempts[0],3);
+ assert.equal(assertDeliveryCheckpointIntegrity(checkpoint),true);
+ release();
+ await running;
+ const after=await f.s.get('delivery');
+ assert.equal(after.index,1);
+ assert.equal(after.status,'QUEUED');
+ assert.equal(assetWrites,3);
+ assert.equal(reconcileCalls,4);
+});
+
+test('a Worker restart with an interrupted recovery marker refuses replay or extra provider requests',async()=>{
+ let calls=0;
+ const f=fixture({drive:{
+  put:async asset=>{
+   calls++;
+   if(asset.mimeType==='application/vnd.google-apps.folder')
+    return {id:asset.key,status:'VERIFIED',sha256:null};
+   throw Error('DRIVE_UPLOAD_UNCONFIRMED');
+  },
+  reconcile:async()=>{calls++;throw Error('REMOTE_RECOVERY_MUST_NOT_RUN');}
+ }});
+ await f.core.submit(plan());
+ for(let i=0;i<3;i++)await f.core.tick();
+ const checkpoint=f.s.data.get('delivery');
+ checkpoint.status='RECONCILING'; // persist a simulated crash just after the claim
+ assert.equal(assertDeliveryCheckpointIntegrity(checkpoint),true);
+ const before=calls;
+ await new ProductionDelivery(f.s,f.deps).tick();
+ const after=await f.s.get('delivery');
+ assert.equal(after.status,'NEEDS_REVIEW');
+ assert.equal(after.error,'DRIVE_READONLY_RECOVERY_INTERRUPTED');
+ assert.equal(after.index,0);
+ assert.equal(after.attempts[0],3);
+ assert.equal(calls,before,'no folder GET, file GET or new upload on restart');
+ assert.equal(f.s.alarm,null);
+ await new ProductionDelivery(f.s,f.deps).tick();
+ assert.equal(calls,before,'future alarms remain inert');
+ await assert.rejects(f.core.resume(),/RESUME_NOT_SAFE/);
+});
+
+test('a forged or premature RECONCILING status fails checkpoint integrity before Drive requests',async()=>{
+ const f=fixture();
+ await f.core.submit(plan());
+ const checkpoint=f.s.data.get('delivery');
+ checkpoint.status='RECONCILING';
+ assert.throws(()=>assertDeliveryCheckpointIntegrity(checkpoint),
+  /DELIVERY_CHECKPOINT_INTEGRITY_FAILED/);
+ await f.core.tick();
+ const after=await f.s.get('delivery');
+ assert.equal(after.status,'NEEDS_REVIEW');
+ assert.equal(after.error,'DELIVERY_CHECKPOINT_INTEGRITY_FAILED');
+ assert.equal(f.puts,0);
+});
+
+test('STOP during final read-only recovery remains a pause, not a fatal claim mismatch',async()=>{
+ let f,assetWrites=0,reconcileCalls=0,stoppedOnce=false;
+ f=fixture({drive:{
+  put:async asset=>{
+   if(asset.mimeType==='application/vnd.google-apps.folder')
+    return {id:asset.key,status:'VERIFIED',sha256:null};
+   assetWrites++;throw Error('DRIVE_UPLOAD_UNCONFIRMED');
+  },
+  reconcile:async asset=>{
+   reconcileCalls++;
+   if(!stoppedOnce){stoppedOnce=true;await f.core.stop();}
+   return {id:asset.key,status:'VERIFIED',sha256:asset.sha256??null};
+  }
+ }});
+ await f.core.submit(plan());
+ for(let i=0;i<3;i++)await f.core.tick();
+ await f.core.tick();
+ const paused=await f.s.get('delivery');
+ assert.equal(paused.status,'STOPPED');
+ assert.equal(paused.stopped,true);
+ assert.equal(paused.index,0);
+ assert.equal(assetWrites,3);
+ assert.equal(reconcileCalls,1);
+ assert.equal(f.s.alarm,null);
+ await f.core.tick();
+ assert.equal(reconcileCalls,1);
+ // Explicit owner Resume allows another read-only check, not a fresh upload.
+ await f.core.resume();
+ await new ProductionDelivery(f.s,f.deps).tick();
+ assert.equal((await f.s.get('delivery')).index,1);
+ assert.equal(assetWrites,3);
+ assert.equal(reconcileCalls,5);
+});
