@@ -27,8 +27,10 @@
       data.googleApiCalled===false&&data.gmailApiCalled===false&&
       data.inferenceCalled===false){
     status.textContent='PASS: Runner → Vault authentication verified. Production, AI, Drive and Gmail remain OFF.';
-   }else if(data?.status==='RUNNER_AUTH_NOT_VERIFIED'){
-    status.textContent='Authentication not verified. Confirm you used RUNNER_SECRET (not the Cloudflare API token or the shared Vault secret).';
+   }else if(data?.status==='RUNNER_SECRET_REJECTED'){
+    status.textContent='Cloudflare Runner returned 401: the RUNNER_SECRET entered was rejected. This is NOT the API token or the shared Vault secret. No other settings were changed.';
+   }else if(data?.status==='RUNNER_OR_VAULT_UNAVAILABLE'){
+    status.textContent='Cloudflare Runner returned 503: its configuration or private Vault connection is unavailable. This does NOT prove your RUNNER_SECRET is wrong. No production changes.';
    }else if(data?.status==='CLOUDFLARE_SAFETY_PREFLIGHT_BLOCKED'){
     status.textContent='Cloudflare safety preflight blocked the test. No secret was sent to the Runner.';
    }else{
