@@ -31,6 +31,22 @@
     status.textContent='Cloudflare Runner returned 401: the RUNNER_SECRET entered was rejected. This is NOT the API token or the shared Vault secret. No other settings were changed.';
    }else if(data?.status==='RUNNER_OR_VAULT_UNAVAILABLE'){
     status.textContent='Cloudflare Runner returned 503: its configuration or private Vault connection is unavailable. This does NOT prove your RUNNER_SECRET is wrong. No production changes.';
+   }else if(data?.status==='RUNNER_ROUTE_NOT_FOUND'){
+    status.textContent='Runner returned HTTP 404: deployed endpoint not found after authentication. This needs a code/deployment fix, not a password change.';
+   }else if(data?.status==='RUNNER_ACCESS_FORBIDDEN'){
+    status.textContent='Runner returned HTTP 403: access blocked by Cloudflare. No password changes yet.';
+   }else if(data?.status==='RUNNER_RATE_LIMITED'){
+    status.textContent='Cloudflare returned HTTP 429: temporary rate limit. No secret changes.';
+   }else if(data?.status==='RUNNER_ACK_INVALID'){
+    status.textContent='Runner returned an invalid authentication acknowledgement. The server reply requires a code/configuration fix.';
+   }else if(data?.status==='RUNNER_TRANSPORT_UNAVAILABLE'){
+    status.textContent='The protected preview could not reach the authenticated Runner request. No Cloudflare changes.';
+   }else if(data?.status==='CLOUDFLARE_PREFLIGHT_UNAVAILABLE'){
+    status.textContent='Cloudflare preflight API unavailable. The owner secret was not sent to the Runner.';
+   }else if(data?.status==='RUNNER_SECRET_MUST_NOT_BE_API_TOKEN'){
+    status.textContent='Cloudflare API token cannot be used as RUNNER_SECRET. Do not paste the API token here.';
+   }else if(data?.status==='RUNNER_UNEXPECTED_HTTP_RESPONSE'){
+    status.textContent='Runner returned an unexpected HTTP response. Connection not verified.';
    }else if(data?.status==='CLOUDFLARE_SAFETY_PREFLIGHT_BLOCKED'){
     status.textContent='Cloudflare safety preflight blocked the test. No secret was sent to the Runner.';
    }else{
