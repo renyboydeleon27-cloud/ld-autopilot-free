@@ -248,11 +248,10 @@ test('unfiltered account domain total_count may be nonzero when Vault filtered r
  assert.ok(f.calls.some(c=>c.url.endsWith('/workers/domains?service='+VAULT)));
 });
 
-test('Vault Custom Domain list fails closed on attached domain, unreadable list or incomplete pagination',async()=>{
+test('Vault Custom Domain list fails closed on attached domain, unreadable list or nonzero filtered count',async()=>{
  for(const options of [
   {vaultDomains:[{service:VAULT,hostname:'private.example.com',enabled:false}]},
   {vaultDomains:[{service:VAULT,hostname:'preview.example.com',previews_enabled:true}]},
-  {domainPages:2,domainTotal:20},
   {domainCount:1,domainTotal:20},
   {domainCount:-1,domainTotal:20},
   {domainTotal:-1},
@@ -266,4 +265,11 @@ test('Vault Custom Domain list fails closed on attached domain, unreadable list 
   assert.equal(f.secretCalls().length,0);
   assert.equal(f.calls.filter(c=>c.url===URL).length,0);
  }
+});
+
+test('unrelated account-wide total_pages may exceed one with zero filtered Vault domains',async()=>{
+ const f=mock({vaultDomains:[],domainCount:0,domainTotal:200,domainPages:10});
+ const outcome=await runOwnerVerifiedBindingProbe({env:baseEnv,fetcher:f.fetcher});
+ assert.equal(outcome.status,'BRIDGE_AUTHENTICATED');
+ assert.equal(f.secretCalls().length,1);
 });
