@@ -8,6 +8,14 @@ module.exports=async function handler(req,res){
  const env=process.env;
  if(env.VERCEL_ENV!=='preview'||env.VERCEL_GIT_COMMIT_REF!=='feature/ldb-image-acceptance')
   return res.status(404).json({status:'PREVIEW_ONLY'});
+ // Reuse the existing protected Vercel Function; Hobby limits this project
+ // to 12 Functions. Only a deliberate same-origin POST with a fixed header
+ // can enter the isolated owner authentication test. Ordinary GET remains
+ // the existing read-only delivery status and all other methods stay closed.
+ if(req.method==='POST'&&req.headers['x-ldb-owner-test']==='1'){
+  const test=require('../lib/ldb/owner-binding-probe.cjs');
+  return test(req,res);
+ }
  if(req.method!=='GET')return res.status(405).json({status:'METHOD_NOT_ALLOWED'});
  if(req.url!=='/api/ldb-delivery-readiness')
   return res.status(400).json({status:'QUERY_PARAMETERS_NOT_ALLOWED'});
