@@ -25,9 +25,17 @@
 <p id="deliveryStatus" role="status" aria-live="polite">Not checked. Real Google Drive delivery and Gmail receipts are unverified.</p>
 <ul id="deliveryDetails" class="muted"></ul>
 <p class="notice">Configured environment variables do NOT prove a connected Cloudflare Vault, verified files, or inbox notifications. Production remains NO-GO.</p>
+</section>
+<section class="card" id="owner-bridge-test">
+<h2>6 · Test Runner → Vault connection</h2>
+<p class="muted">One-time, owner-only verification on the protected development preview. No coding, image generation, Google access, uploads or Worker deployments. Your RUNNER_SECRET is sent over HTTPS only to this protected preview, then to your verified Cloudflare Runner; it is not saved, logged or sent to ChatGPT.</p>
+<p><label for="ownerBridgeSecret">Private RUNNER_SECRET (from your password manager)</label><input id="ownerBridgeSecret" type="password" autocomplete="off" minlength="32" maxlength="128" spellcheck="false" placeholder="Paste the secret you created in Cloudflare"></p>
+<div class="actions"><button type="button" id="ownerBridgeCheck">Test Runner → Vault</button></div>
+<p id="ownerBridgeStatus" role="status" aria-live="polite">Not tested. This checks only the existing isolated Workers' authentication; it does not activate production.</p>
 </section></main>
 <script src="./scripts/ldb-cloudflare-status-ui.js" defer></script>
 <script src="./scripts/ldb-delivery-status-ui.js" defer></script>
+<script src="./scripts/ldb-owner-binding-ui.js" defer></script>
 <script>
 (()=>{'use strict';const N=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING','THUMBNAIL'];let loaded=null,approval=null,rawStoryboard=null;
 const $=id=>document.getElementById(id);const say=s=>$('status').textContent=s;const normalize=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const safeText=x=>typeof x==='string'?x:JSON.stringify(x??'');
