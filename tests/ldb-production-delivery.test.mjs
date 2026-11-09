@@ -174,11 +174,14 @@ test('STOP during Drive quota query wins over insufficient-storage status and ma
 
 test('STOP during a folder request prevents all subsequent folder and asset uploads',async()=>{
  for(const stopAfter of ['Living Disaster Book','Lake Nyos 1986','Storyboard']){
-  let f;
+  let f,stoppedOnce=false;
   const calls=[];
   f=fixture({drive:{put:async asset=>{
    calls.push(asset.name);
-   if(asset.name===stopAfter)await f.core.stop();
+   if(asset.name===stopAfter&&!stoppedOnce){
+    stoppedOnce=true;
+    await f.core.stop();
+   }
    return {id:asset.key||hash(asset.name),status:'VERIFIED',sha256:asset.sha256};
   }}});
   await f.core.submit(plan());
