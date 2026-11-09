@@ -150,3 +150,22 @@ test('readiness uses fail-closed integrity rules before alarm can create provide
  assert.equal(result.status,'DELIVERY_BLOCKED');
  assert.equal(creates,0);
 });
+
+test('owner progress never claims 69 verified Drive files from a corrupt COMPLETE checkpoint',async()=>{
+ const {productionProgressSnapshot}=await import('../lib/ldb/production-progress.mjs');
+ const p=plan(),d=delivery(p);
+ d.index=69;d.status='COMPLETE';d.verified=p.assets.map((_,i)=>verified(p,i));
+ const valid=productionProgressSnapshot({job:job(),delivery:d});
+ assert.equal(valid.production.verifiedDriveFiles,69);
+ assert.equal(valid.production.deliveryComplete,true);
+ const bad=structuredClone(d);
+ bad.attempts={0:4};
+ const unsafe=productionProgressSnapshot({job:job(),delivery:bad});
+ assert.equal(unsafe.production.approvedDeliveryPlanPresent,false);
+ assert.equal(unsafe.production.deliveryStatus,'NOT_APPROVED');
+ assert.equal(unsafe.production.verifiedDriveFiles,0);
+ assert.equal(unsafe.production.deliveryComplete,false);
+ assert.equal(unsafe.production.reviewRequired,true);
+ assert.equal(unsafe.deliveryConnected,false);
+ assert.equal(unsafe.autoProductionReady,false);
+});
