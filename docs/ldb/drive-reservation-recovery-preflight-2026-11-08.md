@@ -106,3 +106,23 @@ proof of actual Google Drive delivery.
 
 Offline tests exercise normal recovery, a persisted interrupted marker,
 forged premature status, and STOP/Resume. No live Worker or Google call.
+
+## Shared delivery checkpoint integrity in owner readiness — November 9, 2026
+
+Previously, the read-only delivery readiness and owner progress views used
+a weaker, duplicate checkpoint validator than the actual 69-asset Drive
+coordinator. Some forged or damaged records could look approved in the
+owner UI (and pass the preliminary alarm dispatch check) even though the
+coordinator would reject them when it next ticked. Examples include
+missing/invalid retry counters, illegal `RECONCILING` combinations and
+malformed verified Drive IDs.
+
+Both paths now call `assertDeliveryCheckpointIntegrity`, the same
+fail-closed validator the backend uses before provider access. The
+read-only view does not create files, approve imagery or contact Google.
+An invalid checkpoint reports no approved delivery plan, no trusted
+verified-file count and no completion claim. Alarm routing also refuses
+to instantiate the trusted Drive connector when the checkpoint fails.
+Regression tests cover valid checkpoints, corrupted retry counters,
+premature recovery markers, forged IDs and a simulated 69-file COMPLETE
+claim. This is offline consistency work, not proof of cloud readiness.
