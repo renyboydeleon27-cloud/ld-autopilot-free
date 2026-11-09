@@ -54,7 +54,20 @@ module.exports=async function handler(req,res){
     });
    }catch{/* Preserve fail-closed read-only results. */}
   }
-  return res.status(200).json({...snapshot,isolatedVaultDomains});
+  let isolatedRunnerReachability={status:'NOT_CHECKED',
+   ownerSecretSent:false,authVerified:false,productionReady:false,
+   workerModified:false};
+  if(configured){
+   try{
+    const m=await import('../lib/ldb/runner-reachability-diagnostic.mjs');
+    isolatedRunnerReachability=await m.inspectIsolatedRunnerAnonymousGate({
+     accountId:env.CLOUDFLARE_ACCOUNT_ID,
+     token:env.CLOUDFLARE_API_TOKEN
+    });
+   }catch{/* No side effects: report unavailable, never success. */}
+  }
+  return res.status(200).json({...snapshot,isolatedVaultDomains,
+   isolatedRunnerReachability});
  }catch{
   return res.status(503).json({status:'DELIVERY_READINESS_CHECK_UNAVAILABLE',
    productionReady:false,googleApiCalled:false,gmailApiCalled:false});
