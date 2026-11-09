@@ -136,7 +136,7 @@ test('checkpoint write failure after a confirmed upload is recovered without a d
  assert.equal(f.uploaded.size,count,'replayed COMPLETE job makes no more files');
 });
 
-test('STOP during third asset preserves three verified files across a restart',async()=>{
+test('STOP during third asset read preserves two verified files and resumes safely',async()=>{
  const f=fixture();
  const initial=new ProductionDelivery(f.storage,f.opts);
  await initial.submit(f.plan);
@@ -153,18 +153,19 @@ test('STOP during third asset preserves three verified files across a restart',a
  });
  await current.tick();
  assert.equal(f.state.get('delivery').status,'STOPPED');
- assert.equal(f.state.get('delivery').index,3);
- assert.equal(f.state.get('delivery').verified.length,3);
+ assert.equal(f.state.get('delivery').index,2,
+  'STOP during read must prevent third asset upload');
+ assert.equal(f.state.get('delivery').verified.length,2);
  const uploadCount=f.uploaded.size;
  const reconstructed=new ProductionDelivery(f.storage,f.opts);
  await reconstructed.tick();
- assert.equal(f.state.get('delivery').index,3,'STOP blocks replayed alarms');
+ assert.equal(f.state.get('delivery').index,2,'STOP blocks replayed alarms');
  assert.equal(f.uploaded.size,uploadCount,'STOP creates no additional file');
  await reconstructed.resume();
  await reconstructed.tick();
- assert.equal(f.state.get('delivery').index,4);
- assert.equal(f.state.get('delivery').verified.length,4);
- assert.equal(new Set(f.state.get('delivery').verified.map(x=>x.key)).size,4);
+ assert.equal(f.state.get('delivery').index,3);
+ assert.equal(f.state.get('delivery').verified.length,3);
+ assert.equal(new Set(f.state.get('delivery').verified.map(x=>x.key)).size,3);
 });
 
 test('actual DriveDelivery adapter recovers 69 files after ambiguous upload and lost checkpoint',async()=>{
