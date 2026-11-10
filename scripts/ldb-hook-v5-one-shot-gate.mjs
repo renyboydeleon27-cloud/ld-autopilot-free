@@ -28,9 +28,10 @@ export function inspectOneShotEnvironment(env={},now=Date.now()){
  if(env.LDB_HOOK_V5_ENV_REVIEW_APPROVED!=='true'||
     env.LDB_WORKERS_PLAN!=='free'||env.FREE_PLAN_CONFIRMED!=='true')
   fail('FREE_ONLY_ENVIRONMENT_APPROVAL_REQUIRED');
- if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT||typeof env.CLOUDFLARE_API_TOKEN!=='string'||
-    env.CLOUDFLARE_API_TOKEN.length<20||/\s/.test(env.CLOUDFLARE_API_TOKEN))
-  fail('ISOLATED_ACCOUNT_CREDENTIALS_REQUIRED');
+ // An account identifier is public metadata; do NOT provide the Cloudflare
+ // token to this step. Only the final V5 render step may receive that secret.
+ if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT)
+  fail('ISOLATED_ACCOUNT_REQUIRED');
  if(typeof env.GITHUB_TOKEN!=='string'||env.GITHUB_TOKEN.length<10||
     /\s/.test(env.GITHUB_TOKEN))fail('ACTIONS_READ_TOKEN_REQUIRED');
  return Object.freeze({day,runId:Number(env.GITHUB_RUN_ID)});
