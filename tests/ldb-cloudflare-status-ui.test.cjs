@@ -97,3 +97,50 @@ test('present isolated probes require owner review and never trigger modificatio
  assert.equal(h.calls.length,1);
  assert.equal(h.calls[0].opts.method,'GET');
 });
+
+
+test('one-tap HOOK V5 preflight reports candidate without POST, inference or billing approval',async()=>{
+ const h=harness({ok:true,json:async()=>({
+  status:'READ_ONLY_TELEMETRY_CHECKED',inferenceCalled:false,
+  inferenceAuthorized:false,productionAccepted:false,
+  workersListHttpStatus:200,graphqlSchemaHttpStatus:200,usageHttpStatus:200,
+  reportedNeuronsUsed:0,hookV5EstimatedNeurons:104.2,
+  hookV5ReservedNeurons:400,hookV5BudgetStatus:'BUDGET_SPACE_ESTIMATED',
+  existingV5Worker:false,billingReadStatus:'BILLING_READ_PERMISSION_REQUIRED',
+  isolatedRunnerProbePresent:true,isolatedVaultProbePresent:true
+ })});
+ assert.match(page,/Prepare HOOK V5 test · READ ONLY/);
+ assert.equal(h.calls.length,0,'do not make a request on page load');
+ await h.click();
+ assert.equal(h.calls.length,1,'exactly one GET only');
+ assert.equal(h.calls[0].url,'/api/ldb-cloudflare-readiness');
+ assert.equal(h.calls[0].opts.method,'GET');
+ assert.match(h.els.cfStatus.textContent,/Image NOT generated.*Production NO-GO/);
+ assert.ok(h.lines().some(x=>/candidate.*does NOT confirm Workers Free/.test(x)));
+ assert.ok(h.lines().some(x=>/fresh same-day attestation.*trusted cloud executor/.test(x)));
+});
+
+test('preflight blocks unsafe usage evidence, insufficient buffer and existing Worker',async()=>{
+ const baseline={status:'READ_ONLY_TELEMETRY_CHECKED',
+  inferenceCalled:false,inferenceAuthorized:false,productionAccepted:false,
+  workersListHttpStatus:200,graphqlSchemaHttpStatus:200,usageHttpStatus:200,
+  reportedNeuronsUsed:0,hookV5EstimatedNeurons:104.2,
+  hookV5ReservedNeurons:400,hookV5BudgetStatus:'BUDGET_SPACE_ESTIMATED',
+  existingV5Worker:false,billingReadStatus:'BILLING_READ_PERMISSION_REQUIRED'};
+ for(const variation of [
+  {workersListHttpStatus:401},
+  {usageHttpStatus:403},
+  {reportedNeuronsUsed:undefined},
+  {hookV5BudgetStatus:'INSUFFICIENT_LOCAL_BUFFER'},
+  {existingV5Worker:true},
+  {existingV5Worker:null},
+  {billingReadStatus:'PAID_WORKERS_SUBSCRIPTION_DETECTED'}
+ ]){
+  const h=harness({ok:true,json:async()=>({...baseline,...variation})});
+  await h.click();
+  assert.match(h.els.cfStatus.textContent,/incomplete or blocked.*NO-GO/,
+   'variation '+JSON.stringify(variation)+' must fail closed');
+  assert.equal(h.calls.length,1);
+  assert.equal(h.calls[0].opts.method,'GET');
+ }
+});
