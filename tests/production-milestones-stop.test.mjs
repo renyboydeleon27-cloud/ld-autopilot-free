@@ -165,15 +165,20 @@ test('malformed, incomplete and unknown runner receipts never trigger notificati
  }
 });
 test('missing claim after provider response becomes UNCERTAIN tombstone, preventing resend',async()=>{
- const {map,storage}=fixture();let sends=0;
- await notifyProductionMilestones({storage,notify:async()=>{
-  sends++;
-  map.delete('milestone-result:'+ID+':30');
+ const {map,storage}=fixture();let thirtySends=0;
+ await notifyProductionMilestones({storage,notify:async(_state,percent)=>{
+  if(percent===30){
+   thirtySends++;
+   map.delete('milestone-result:'+ID+':30');
+  }
   return {status:'SENT'};
  }});
  assert.deepEqual(receipt(map,30),{status:'UNCERTAIN',attempts:1});
- await notifyProductionMilestones({storage,notify:async()=>{sends++;return {status:'SENT'};}});
- assert.equal(sends,1);
+ await notifyProductionMilestones({storage,notify:async(_state,percent)=>{
+  if(percent===30)thirtySends++;
+  return {status:'SENT'};
+ }});
+ assert.equal(thirtySends,1,'30% milestone must not be sent twice');
 });
 test('missing earlier receipt with later milestone evidence blocks unsafe resend',async()=>{
  const {map,storage}=fixture(),sent=[];
