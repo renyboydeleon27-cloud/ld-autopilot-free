@@ -48,8 +48,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The registered workflow on default branch exposes this branch-only mode
+  # in its manual Run workflow entry point. Never invokes provider services.
+  hook-v5-background-preflight:
+    name: Prove secret-free GitHub background execution
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.actor == 'renyboydeleon27-cloud' &&
+      github.ref == 'refs/heads/feature/ldb-hook-v5-cloud-executor' &&
+      inputs.episode_folder == 'hook-v5-free-preflight'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Confirm owner and branch without secrets or API calls
+        run: |
+          set -eu
+          test "$GITHUB_REPOSITORY" = "renyboydeleon27-cloud/ld-autopilot-free"
+          test "$GITHUB_REF" = "refs/heads/feature/ldb-hook-v5-cloud-executor"
+          test "$GITHUB_ACTOR" = "renyboydeleon27-cloud"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          {
+            echo "### LDB AUTO STUDIO — Background preflight"
+            echo "GitHub Actions job executed independently of a phone session."
+            echo "Read-only, no code checkout, no API request, no secret, no image generation, no Drive, no Gmail."
+            echo "HOOK V5 generation: NOT AUTHORIZED. Production: NO-GO."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   verified-storyboard-package:
     name: Validate approval and export free prompt package
+    # The special preflight must never run the packaging workflow.
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.episode_folder != 'hook-v5-free-preflight'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
