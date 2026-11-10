@@ -1,18 +1,27 @@
 name: LDB V5 one-HOOK owner-approved cloud executor
 
 # Never runs on push/PR. Must exist on GitHub's default branch before GitHub
-# can dispatch it; the job itself is restricted to the acceptance branch.
+# can dispatch it. The preflight job is limited to main; the render job is
+# limited to the explicitly reviewed acceptance branch.
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "preflight_only = no secrets, no image generation; render_one_hook requires owner approval"
+        type: choice
+        options:
+          - preflight_only
+          - render_one_hook
+        required: true
+        default: preflight_only
       utc_day:
-        description: "Verified Workers Free UTC day (YYYY-MM-DD)"
+        description: "Required ONLY for render_one_hook: same-day Workers Free UTC date (YYYY-MM-DD)"
         type: string
-        required: true
+        required: false
       public_review_artifact:
-        description: "I accept that review image artifacts in this PUBLIC repo may be accessible to others"
+        description: "Required ONLY for render_one_hook: accept PUBLIC repo review-artifact visibility"
         type: boolean
-        required: true
+        required: false
         default: false
 
 permissions:
@@ -25,10 +34,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # A safe manual background-work check. Never checkout unreviewed code,
+  # access secrets, invoke Cloudflare or upload any image.
+  preflight-only:
+    if: >-
+      github.actor == 'renyboydeleon27-cloud' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.mode == 'preflight_only'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify GitHub background execution without credentials
+        run: |
+          test "$GITHUB_REPOSITORY" = "renyboydeleon27-cloud/ld-autopilot-free"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_ACTOR" = "renyboydeleon27-cloud"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          {
+            echo "### NER AUTO STUDIO · Free-only background execution"
+            echo "Manual GitHub Actions job completed; the phone may be closed."
+            echo "Mode: preflight_only; no code checkout, Cloudflare requests, secret access, inference, Google Drive or Gmail."
+            echo "HOOK V5 render remains OFF until the separate, owner-approved render mode passes all daily safety gates."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   one-hook-v5:
     if: >-
       github.actor == 'renyboydeleon27-cloud' &&
       github.ref == 'refs/heads/feature/ldb-image-acceptance' &&
+      inputs.mode == 'render_one_hook' &&
       inputs.public_review_artifact == true
     runs-on: ubuntu-latest
     timeout-minutes: 15
