@@ -138,3 +138,19 @@ test('same-day no-secret main-branch preflight does not consume isolated HOOK at
   fetcher:async()=>okResult(rows([preflight]))});
  assert.equal(result.status,'ONE_SHOT_GATE_PASSED');
 });
+
+test('already-registered manual prompt workflow provides branch-only zero-secret dry run',()=>{
+ const workflow=readFileSync('.github/workflows/ldb-free-production.yml','utf8');
+ assert.match(workflow,/workflow_dispatch:/);
+ assert.match(workflow,/episode_folder:/);
+ const a=workflow.indexOf('  hook-v5-background-preflight:');
+ const b=workflow.indexOf('  verified-storyboard-package:',a);
+ assert.ok(a>0&&b>a,'separate preflight and package jobs');
+ const safe=workflow.slice(a,b),pack=workflow.slice(b);
+ assert.match(safe,/github\.actor == 'renyboydeleon27-cloud'/);
+ assert.match(safe,/github\.ref == 'refs\/heads\/feature\/ldb-hook-v5-cloud-executor'/);
+ assert.match(safe,/inputs\.episode_folder == 'hook-v5-free-preflight'/);
+ assert.doesNotMatch(safe,/^\s+uses:|^\s+env:|secrets\.|CLOUDFLARE_API_TOKEN|https?:\/\/|ldb-retry-reviewed-hook-v5/m);
+ assert.match(pack,/inputs\.episode_folder != 'hook-v5-free-preflight'/);
+ assert.doesNotMatch(safe,/python -m|pip install|fetch\(|curl |wrangler |git push/);
+});
