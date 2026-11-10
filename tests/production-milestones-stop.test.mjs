@@ -168,7 +168,7 @@ test('missing claim after provider response becomes UNCERTAIN tombstone, prevent
  const {map,storage}=fixture();let sends=0;
  await notifyProductionMilestones({storage,notify:async()=>{
   sends++;
-  map.delete('milestone-result:'+ID+':30);
+  map.delete('milestone-result:'+ID+':30');
   return {status:'SENT'};
  }});
  assert.deepEqual(receipt(map,30),{status:'UNCERTAIN',attempts:1});
