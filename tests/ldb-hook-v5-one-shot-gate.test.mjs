@@ -111,3 +111,30 @@ test('workflow is manual, owner branch locked, free only, and requires public ar
  assert.match(workflow,/actions\/upload-artifact@[a-f0-9]{40}/);
 
 });
+
+test('default manual run is an isolated secret-free background preflight, never a render',()=>{
+ const workflow=readFileSync('.github/workflows/ldb-hook-v5-one-shot.yml','utf8');
+ assert.match(workflow,/default: preflight_only/);
+ assert.match(workflow,/inputs\.mode == 'render_one_hook'/);
+ const start=workflow.indexOf('  preflight-only:');
+ const end=workflow.indexOf('  one-hook-v5:',start);
+ assert.ok(start>0&&end>start,'separate read-only and image-render jobs required');
+ const safeJob=workflow.slice(start,end);
+ const renderJob=workflow.slice(end);
+ assert.match(safeJob,/github\.ref == 'refs\/heads\/main'/);
+ assert.match(safeJob,/inputs\.mode == 'preflight_only'/);
+ assert.match(safeJob,/GITHUB_EVENT_NAME.*workflow_dispatch|GITHUB_EVENT_NAME.*"workflow_dispatch"/);
+ assert.doesNotMatch(safeJob,/secrets\.|CLOUDFLARE_API_TOKEN:|GITHUB_TOKEN:|^\s+uses:|^\s+env:|ldb-retry-reviewed-hook-v5/m);
+ assert.match(renderJob,/github\.ref == 'refs\/heads\/feature\/ldb-image-acceptance'/);
+ assert.match(renderJob,/inputs\.mode == 'render_one_hook'/);
+ assert.match(renderJob,/inputs\.public_review_artifact == true/);
+ assert.match(renderJob,/environment: ldb-hook-v5-free/);
+ assert.match(renderJob,/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.LDB_HOOK_V5_CLOUDFLARE_API_TOKEN \}\}/);
+});
+
+test('same-day no-secret main-branch preflight does not consume isolated HOOK attempt',async()=>{
+ const preflight={id:106,head_branch:'main',created_at:DATE+'T18:00:00Z',conclusion:'success'};
+ const result=await oneShotGate({env:env(),now:NOW,
+  fetcher:async()=>okResult(rows([preflight]))});
+ assert.equal(result.status,'ONE_SHOT_GATE_PASSED');
+});
