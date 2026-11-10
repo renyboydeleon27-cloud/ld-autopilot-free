@@ -128,6 +128,7 @@ test('legacy STOP-before-network attempt zero can safely resume a single send',a
  map.set('milestone-result:'+ID+':30',{status:'RETRY_WAIT',attempts:0});
  await notifyProductionMilestones({storage,notify:async(_s,p)=>{calls.push(p);return {status:'SENT'};}});
  assert.deepEqual(calls,[30,50]);
+ assert.equal(receipt(map,30).status,'SENT');
  assert.deepEqual(receipt(map,30),{status:'SENT',attempts:1});
 });
 test('invalid bridge reply never creates false SENT or a resend alarm',async()=>{
@@ -174,6 +175,20 @@ test('missing claim after provider response becomes UNCERTAIN tombstone, prevent
  await notifyProductionMilestones({storage,notify:async()=>{sends++;return {status:'SENT'};}});
  assert.equal(sends,1);
 });
+test('missing earlier receipt with later milestone evidence blocks unsafe resend',async()=>{
+ const {map,storage}=fixture(),sent=[];
+ map.set('milestone-result:'+ID+':50',{status:'SENT',attempts:1});
+ await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
+ assert.deepEqual(sent,[],'missing 30 receipt plus later evidence is an integrity gap');
+ assert.equal(receipt(map,50).status,'SENT');
+});
+test('first-time milestone sends remain ordered when all receipts are absent',async()=>{
+ const {map,storage}=fixture(),sent=[];
+ await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
+ assert.deepEqual(sent,[30,50]);
+ assert.equal(receipt(map,30).status,'SENT');
+ assert.equal(receipt(map,50).status,'SENT');
+});
 test('mutated or deleted earlier receipt blocks later milestones',async()=>{
  for(const prior of [
   {status:'CLAIMED',attempts:1},
@@ -184,9 +199,11 @@ test('mutated or deleted earlier receipt blocks later milestones',async()=>{
   const {map,storage}=fixture(),sent=[];
   map.set('milestone-result:'+ID+':30',{status:'SENT',attempts:1});
   await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
-  assert.deepEqual(sent,[30,50],'initial run sends earned milestones');
+  assert.deepEqual(sent,[50],'first send processes 30 and then 50');
+  assert.deepEqual(receipt(map,30),{status:'SENT',attempts:1});
+  assert.deepEqual(receipt(map,50),{status:'SENT',attempts:1});
   map.set('milestone-result:'+ID+':30',prior);
   await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
-  assert.deepEqual(sent,[30,50],'a later milestone must not hide missing/corrupt earlier delivery evidence');
+  assert.deepEqual(sent,[50],'existing 50 receipt prevents unsafe replay or later notification');
  }
 });
