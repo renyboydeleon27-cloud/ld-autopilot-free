@@ -7,12 +7,21 @@
 1. `preflight_only` (default) runs on `main` only, with no secret access, repository checkout, Cloudflare API, image generation, or project changes. Its sole purpose is to prove that a manual GitHub Actions job runs in the cloud and writes a step summary after the phone is closed.
 2. `render_one_hook` can run only from `feature/ldb-image-acceptance`, only when explicitly selected by repository owner `renyboydeleon27-cloud`, only with explicit PUBLIC artifact consent, and only after GitHub Environment review. The one-shot gate validates the current UTC day, Free-plan attestation, job identity, and same-day prior-run inventory. The existing HOOK V5 script rechecks live Cloudflare usage, Worker state and quota before any Worker mutation or inference. One image is *not* visual approval.
 
-## Before an owner can test `preflight_only`
+## Safe first background test WITHOUT modifying main
 
-- This workflow file must exist on GitHub's default branch (`main`) for `workflow_dispatch` registration. GitHub's Actions tab will not show it as a runnable workflow while it exists only on a draft feature branch.
-- Follow the repository review/release process before deciding to register it on `main`. The read-only mode makes no Cloudflare calls, but **a merge into `main` is still a code change**. Never merge PR #61/#65/#66 merely to force registration without review.
-- After a reviewed registration, visit **Actions → LDB V5 one-HOOK owner-approved cloud executor → Run workflow**. Select `main` and leave `mode=preflight_only`. The date and public artifact consent are not needed. The Actions run summary, not a chat/browser tab, records the result.
-- The manual background run continues in GitHub's infrastructure if the mobile app closes, subject to normal GitHub Actions limits.
+A **separate**, already-registered workflow exists on the default branch: `LDB approved FREE prompt production` (`.github/workflows/ldb-free-production.yml`). The **development-branch revision** adds a special isolated dry-run job; ordinary packaging is skipped for that value. This is **not** a cloud inference test and does not prove the V5 render executor is operational.
+
+1. Open https://github.com/renyboydeleon27-cloud/ld-autopilot-free/actions/workflows/ldb-free-production.yml while signed into the repository-owner GitHub account.
+2. Select **Run workflow**. Choose **Branch: `feature/ldb-hook-v5-cloud-executor`** — not `main`.
+3. Set the existing **episode_folder** input to the exact text `hook-v5-free-preflight`.
+4. Confirm **Run workflow**. Only the preflight job should run; package generation should be skipped. The run summary will state NO-GO for HOOK V5 rendering.
+5. A GitHub Actions job can continue independently of the phone/browser, subject to GitHub service limits. This is not a ChatGPT background task.
+
+This path does not create, merge or push any file on `main`. If GitHub doesn't display the branch/run inputs or the run is blocked, **stop**; do not use the default branch with an altered value as a workaround. Current ChatGPT GitHub connector can inspect workflow results but cannot dispatch a fresh run directly.
+
+## Separate, not-yet-registered V5 workflow
+
+`.github/workflows/ldb-hook-v5-one-shot.yml` remains a **Draft** on the development branch. GitHub requires a new `workflow_dispatch` workflow file to exist on the default branch before it becomes independently selectable in Actions. We have **not** registered this standalone executor on `main`, because a push to `main` could also trigger a Vercel production build. The safe preflight above avoids that risk. No render execution or production release is authorized.
 
 ## Additional requirements BEFORE `render_one_hook` is enabled
 
