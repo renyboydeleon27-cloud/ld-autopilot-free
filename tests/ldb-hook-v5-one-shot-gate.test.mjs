@@ -15,7 +15,6 @@ const env=()=>({
  LDB_HOOK_V5_ENV_REVIEW_APPROVED:'true',
  LDB_WORKERS_PLAN:'free',FREE_PLAN_CONFIRMED:'true',
  CLOUDFLARE_ACCOUNT_ID:'a437dda5f38ba6b10991684b8388760b',
- CLOUDFLARE_API_TOKEN:'c'.repeat(40),
  GITHUB_TOKEN:'g'.repeat(40)
 });
 const rows=(other=[])=>({total_count:other.length+1,workflow_runs:[
@@ -47,7 +46,7 @@ test('untrusted owner, branch, rerun, stale date, plan or missing credential alw
   {LDB_FREE_PLAN_VERIFIED_DATE:'2026-11-09'},
   {LDB_HOOK_V5_ENV_REVIEW_APPROVED:'false'},
   {LDB_WORKERS_PLAN:'paid'}, {FREE_PLAN_CONFIRMED:'false'},
-  {CLOUDFLARE_API_TOKEN:''}, {CLOUDFLARE_ACCOUNT_ID:'wrong'},
+  {CLOUDFLARE_ACCOUNT_ID:'wrong'},
   {GITHUB_TOKEN:''}
  ];
  for(const patch of bad){
@@ -100,4 +99,15 @@ test('workflow is manual, owner branch locked, free only, and requires public ar
  assert.match(workflow,/scripts\/ldb-hook-v5-one-shot-gate\.mjs/);
  assert.match(workflow,/scripts\/ldb-retry-reviewed-hook-v5\.mjs --one-reviewed-hook-free-only/);
  assert.doesNotMatch(workflow,/\n\s+VERCEL_ENV: production|\/api\/ai\/run|GMAIL_MILESTONES_ENABLED: true/);
+ // Secrets may NOT be declared at job scope or passed to pip/install steps.
+ assert.doesNotMatch(workflow,/^      CLOUDFLARE_API_TOKEN:/m);
+ assert.doesNotMatch(workflow,/^      GITHUB_TOKEN:/m);
+ assert.match(workflow,/^          GITHUB_TOKEN: \$\{\{ github.token \}\}/m);
+ assert.match(workflow,/^          CLOUDFLARE_API_TOKEN: \$\{\{ secrets.LDB_HOOK_V5_CLOUDFLARE_API_TOKEN \}\}/m);
+ // Pinned actions constrain what third-party code receives during setup.
+ assert.match(workflow,/actions\/checkout@[a-f0-9]{40}/);
+ assert.match(workflow,/actions\/setup-node@[a-f0-9]{40}/);
+ assert.match(workflow,/actions\/setup-python@[a-f0-9]{40}/);
+ assert.match(workflow,/actions\/upload-artifact@[a-f0-9]{40}/);
+
 });
