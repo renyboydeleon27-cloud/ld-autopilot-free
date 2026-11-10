@@ -154,3 +154,15 @@ test('already-registered manual prompt workflow provides branch-only zero-secret
  assert.match(pack,/inputs\.episode_folder != 'hook-v5-free-preflight'/);
  assert.doesNotMatch(safe,/python -m|pip install|fetch\(|curl |wrangler |git push/);
 });
+
+test('mobile UI links to existing manual workflow and never injects a dispatch token',()=>{
+ const page=readFileSync('ldb-auto-studio.html','utf8');
+ assert.match(page,/id="github-background-preflight"/);
+ assert.match(page,/actions\/workflows\/ldb-free-production\.yml/);
+ assert.match(page,/feature\/ldb-hook-v5-cloud-executor/);
+ assert.match(page,/hook-v5-free-preflight/);
+ const a=page.indexOf('<section class="card" id="github-background-preflight">');
+ const b=page.indexOf('</section>',a);
+ const section=page.slice(a,b);
+ assert.doesNotMatch(section,/fetch\(|api\.github\.com|Bearer|CLOUDFLARE_API_TOKEN|<script|auto-dispatch/);
+});
