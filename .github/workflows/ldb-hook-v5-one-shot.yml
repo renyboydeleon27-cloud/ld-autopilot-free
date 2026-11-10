@@ -1,0 +1,76 @@
+name: LDB V5 one-HOOK owner-approved cloud executor
+
+# Never runs on push/PR. Must exist on GitHub's default branch before GitHub
+# can dispatch it; the job itself is restricted to the acceptance branch.
+on:
+  workflow_dispatch:
+    inputs:
+      utc_day:
+        description: "Verified Workers Free UTC day (YYYY-MM-DD)"
+        type: string
+        required: true
+      public_review_artifact:
+        description: "I accept that review image artifacts in this PUBLIC repo may be accessible to others"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+# Serialize attempts; second runs also fail the daily-inventory gate.
+concurrency:
+  group: ldb-hook-v5-one-shot-global
+  cancel-in-progress: false
+
+jobs:
+  one-hook-v5:
+    if: >-
+      github.actor == 'renyboydeleon27-cloud' &&
+      github.ref == 'refs/heads/feature/ldb-image-acceptance' &&
+      inputs.public_review_artifact == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Configure required reviewers and variables on this GitHub Environment
+    # before dispatching. The script also requires the dated approval variable.
+    environment: ldb-hook-v5-free
+    env:
+      VERCEL_ENV: preview
+      VERCEL_GIT_COMMIT_REF: feature/ldb-image-acceptance
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.LDB_HOOK_V5_CLOUDFLARE_API_TOKEN }}
+      LDB_HOOK_V5_ENV_REVIEW_APPROVED: ${{ vars.LDB_HOOK_V5_ENV_REVIEW_APPROVED }}
+      LDB_WORKERS_PLAN: ${{ vars.LDB_WORKERS_PLAN }}
+      LDB_FREE_PLAN_VERIFIED_DATE: ${{ vars.LDB_FREE_PLAN_VERIFIED_DATE }}
+      LDB_HOOK_REQUEST_UTC_DATE: ${{ inputs.utc_day }}
+      FREE_PLAN_CONFIRMED: "true"
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate owner, dated Free attestation, and one-shot inventory
+        run: node scripts/ldb-hook-v5-one-shot-gate.mjs
+      - name: Install local image audit decoder
+        run: python -m pip install Pillow==12.3.0
+      - name: Run exactly one isolated reviewed HOOK V5
+        # Never set live generation flags in this workflow without the owner
+        # Environment review and same-day Cloudflare gate above.
+        run: node scripts/ldb-retry-reviewed-hook-v5.mjs --one-reviewed-hook-free-only
+      - name: Publish review candidate for ONE DAY (public repository warning)
+        if: ${{ success() && inputs.public_review_artifact }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: hook-v5-owner-review-only
+          path: |
+            cloudflare/ldb-runner/public/review-only/**
+            cloudflare/ldb-runner/public/report.json
+          if-no-files-found: error
+          retention-days: 1
