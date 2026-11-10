@@ -34,9 +34,21 @@
    if(!data||data.inferenceCalled!==false||data.inferenceAuthorized!==false||
       data.productionAccepted!==false)throw Error('UNTRUSTED_DIAGNOSTIC');
    const verified=data.status==='READ_ONLY_TELEMETRY_CHECKED';
-   status.textContent=verified?
-    'Cloudflare usage telemetry checked. Production remains NO-GO.':
-    'Cloudflare telemetry cannot be verified. Production remains NO-GO.';
+   // The client only reports preflight evidence; it MUST NOT turn operator
+   // screenshots or public quota estimates into permission to render.
+   const usageEvidence=verified&&data.workersListHttpStatus===200&&
+    data.graphqlSchemaHttpStatus===200&&data.usageHttpStatus===200&&
+    Number.isFinite(data.reportedNeuronsUsed)&&data.reportedNeuronsUsed>=0;
+   const bufferOk=data.hookV5BudgetStatus==='BUDGET_SPACE_ESTIMATED'&&
+    Number.isFinite(data.hookV5EstimatedNeurons)&&data.hookV5EstimatedNeurons>0&&
+    Number.isFinite(data.hookV5ReservedNeurons)&&
+    data.hookV5ReservedNeurons>=data.hookV5EstimatedNeurons;
+   const noOldWorker=data.existingV5Worker===false;
+   const planNotKnownPaid=data.billingReadStatus!=='PAID_WORKERS_SUBSCRIPTION_DETECTED';
+   const candidate=usageEvidence&&bufferOk&&noOldWorker&&planNotKnownPaid;
+   status.textContent=candidate?
+    'HOOK V5 read-only preflight checked. Image NOT generated. Owner plan confirmation and authenticated executor still required. Production NO-GO.':
+    'HOOK V5 preflight incomplete or blocked. Image NOT generated. Production NO-GO.';
    const lines=[];
    if(verified&&Number.isFinite(data.reportedNeuronsUsed)&&data.reportedNeuronsUsed>=0)
     lines.push('Reported neurons used today: '+data.reportedNeuronsUsed.toLocaleString('en-US')+
@@ -71,7 +83,16 @@
    }
    if(typeof data.blocker==='string'&&/^[A-Z_]+$/.test(data.blocker))
     lines.push('Provider telemetry blocker: '+data.blocker);
-   lines.push('HOOK V5, 17-image generation, Drive and Gmail remain OFF. This button only reads status.');
+   if(candidate){
+    lines.push('Single HOOK V5 candidate: read-only usage and local buffer checks passed. This does NOT confirm Workers Free billing or authorize inference.');
+    lines.push('NEXT: Owner-verified Workers Free plan, fresh same-day attestation and trusted cloud executor required before any image test.');
+   }else{
+    if(!usageEvidence)lines.push('BLOCKED: Complete, current account usage evidence unavailable.');
+    if(!bufferOk)lines.push('BLOCKED: Safe local budget buffer not established.');
+    if(!noOldWorker)lines.push('BLOCKED: Existing or unknown V5 Worker needs owner review.');
+    if(!planNotKnownPaid)lines.push('BLOCKED: Workers Paid plan detected.');
+   }
+   lines.push('HOOK V5 generation, 17-image production, Google Drive and Gmail remain OFF. This button only reads status.');
    show(lines);
   }catch{
    status.textContent='Read-only diagnostic unavailable or invalid. Production remains NO-GO.';
