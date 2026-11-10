@@ -164,5 +164,5 @@ test('mobile UI links to existing manual workflow and never injects a dispatch t
  const a=page.indexOf('<section class="card" id="github-background-preflight">');
  const b=page.indexOf('</section>',a);
  const section=page.slice(a,b);
- assert.doesNotMatch(section,/fetch\(|api\.github\.com|Bearer|CLOUDFLARE_API_TOKEN|<script|auto-dispatch/);
+ assert.doesNotMatch(section,/fetch\(|api\.github\.com|Bearer|CLOUDFLARE_API_TOKEN|<script|<button/);
 });
