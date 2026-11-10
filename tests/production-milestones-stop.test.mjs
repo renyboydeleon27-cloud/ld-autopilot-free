@@ -111,43 +111,82 @@ test('no transactional storage refuses to send',async()=>{
  delete storage.transaction;
  await assert.rejects(notifyProductionMilestones({storage,notify:async()=>assert.fail('must not send')}),/DURABLE_MILESTONE_STORAGE_REQUIRED/);
 });
-
 test('legacy RETRY_WAIT with prior network attempt is quarantined without notification',async()=>{
  for(const attempts of [1,2,3]){
   const {map,storage,alarms}=fixture(),sent=[];
   map.set('milestone-result:'+ID+':30',{status:'RETRY_WAIT',attempts});
-  await notifyProductionMilestones({storage,notify:async(_state,p)=>{
-   sent.push(p);return {status:'SENT'};
-  }});
+  await notifyProductionMilestones({storage,notify:async(_state,p)=>{sent.push(p);return {status:'SENT'};}});
   assert.deepEqual(sent,[],'ambiguous legacy attempt must not be repeated');
   assert.deepEqual(receipt(map,30),{status:'UNCERTAIN',attempts});
   assert.deepEqual(alarms,[]);
-  await notifyProductionMilestones({storage,notify:async(_s,p)=>{
-   sent.push(p);return {status:'SENT'};
-  }});
+  await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
   assert.deepEqual(sent,[50],'only a distinct later milestone may send');
  }
 });
 test('legacy STOP-before-network attempt zero can safely resume a single send',async()=>{
  const {map,storage}=fixture(),calls=[];
  map.set('milestone-result:'+ID+':30',{status:'RETRY_WAIT',attempts:0});
- await notifyProductionMilestones({storage,notify:async(_s,p)=>{
-  calls.push(p);return {status:'SENT'};
- }});
+ await notifyProductionMilestones({storage,notify:async(_s,p)=>{calls.push(p);return {status:'SENT'};}});
  assert.deepEqual(calls,[30,50]);
  assert.deepEqual(receipt(map,30),{status:'SENT',attempts:1});
 });
 test('invalid bridge reply never creates false SENT or a resend alarm',async()=>{
  const {map,storage,alarms}=fixture();let attempts=0;
- await notifyProductionMilestones({storage,notify:async()=>{
-  attempts++;return {status:'NO_ACK'};
- }});
+ await notifyProductionMilestones({storage,notify:async()=>{attempts++;return {status:'NO_ACK'};}});
  assert.equal(attempts,1);
  assert.deepEqual(receipt(map,30),{status:'UNCERTAIN',attempts:1});
  assert.deepEqual(alarms,[]);
- await notifyProductionMilestones({storage,notify:async(_s,p)=>{
-  if(p===30)assert.fail('unsafe automatic retry');
+ await notifyProductionMilestones({storage,notify:async(_s,p)=>{if(p===30)assert.fail('unsafe automatic retry');return {status:'SENT'};}});
+ assert.equal(attempts,1);
+});
+
+test('malformed, incomplete and unknown runner receipts never trigger notification',async()=>{
+ const invalid=[
+  {status:'SENT'},
+  {status:'SENT',attempts:0},
+  {status:'SENT',attempts:1,debug:'private'},
+  {status:'CLAIMED',attempts:0},
+  {status:'CLAIMED',attempts:4},
+  {status:'UNCERTAIN',attempts:-1},
+  {status:'RETRY_WAIT',attempts:-1},
+  {status:'RETRY_WAIT',attempts:1.5},
+  {status:'RETRY_WAIT',attempts:4},
+  {status:'DELIVERED',attempts:1},
+  'SENT',
+  ['SENT']
+ ];
+ for(const record of invalid){
+  const {map,storage}=fixture(),calls=[];
+  map.set('milestone-result:'+ID+':30',record);
+  await notifyProductionMilestones({storage,notify:async(_s,p)=>{calls.push(p);return {status:'SENT'};}});
+  assert.deepEqual(calls,[],`invalid receipt ${JSON.stringify(record)} must block all notifications`);
+  assert.deepEqual(receipt(map,30),record,'invalid evidence is preserved for owner reconciliation');
+ }
+});
+test('missing claim after provider response becomes UNCERTAIN tombstone, preventing resend',async()=>{
+ const {map,storage}=fixture();let sends=0;
+ await notifyProductionMilestones({storage,notify:async()=>{
+  sends++;
+  map.delete('milestone-result:'+ID+':30);
   return {status:'SENT'};
  }});
- assert.equal(attempts,1);
+ assert.deepEqual(receipt(map,30),{status:'UNCERTAIN',attempts:1});
+ await notifyProductionMilestones({storage,notify:async()=>{sends++;return {status:'SENT'};}});
+ assert.equal(sends,1);
+});
+test('mutated or deleted earlier receipt blocks later milestones',async()=>{
+ for(const prior of [
+  {status:'CLAIMED',attempts:1},
+  {status:'RETRY_WAIT',attempts:0},
+  {status:'CORRUPT',attempts:1},
+  undefined
+ ]){
+  const {map,storage}=fixture(),sent=[];
+  map.set('milestone-result:'+ID+':30',{status:'SENT',attempts:1});
+  await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
+  assert.deepEqual(sent,[30,50],'initial run sends earned milestones');
+  map.set('milestone-result:'+ID+':30',prior);
+  await notifyProductionMilestones({storage,notify:async(_s,p)=>{sent.push(p);return {status:'SENT'};}});
+  assert.deepEqual(sent,[30,50],'a later milestone must not hide missing/corrupt earlier delivery evidence');
+ }
 });
