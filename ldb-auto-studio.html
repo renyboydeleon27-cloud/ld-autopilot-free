@@ -23,7 +23,8 @@
 <p class="muted">Background execution already passed <a href="https://github.com/renyboydeleon27-cloud/ld-autopilot-free/actions/runs/42927267109" target="_blank" rel="noopener noreferrer">run #111</a>. Next: verify the real approved HOOK V5 package, storyboard checksum and prompt limits in the cloud. This is NOT image generation.</p>
 <p><a href="https://github.com/renyboydeleon27-cloud/ld-autopilot-free/actions/workflows/ldb-free-production.yml" rel="noopener noreferrer" target="_blank">Open HOOK V5 offline package test in GitHub Actions</a></p>
 <p class="muted">Choose <strong>Run workflow</strong> → Branch <code>feature/ldb-hook-v5-cloud-executor</code> → set <strong>episode_folder</strong> to <code>hook-v5-offline-readiness</code>. Do not choose main. This test packages approved Lake Nyos scenes without any Cloudflare inference, Google upload or Gmail.</p>
-<p class="notice">Safety: navigation only. The old <code>hook-v5-free-preflight</code> background test remains available. Real image rendering requires a separately protected, manually approved executor.</p>
+<p class="muted"><strong>Protected executor security check:</strong> in the same GitHub workflow, choose the development branch and enter <code>hook-v5-environment-audit</code> as <strong>episode_folder</strong>. This uses GitHub's read-only metadata API only. It may report UNVERIFIED if GitHub denies environment-settings access, which does not mean the account is unsafe.</p>
+<p class="notice">Safety: navigation only. Both the original <code>hook-v5-free-preflight</code> and the new environment audit remain separate from rendering. No secrets should ever be pasted into this app or chat.</p>
 </section>
 <section class="card" id="delivery-readiness">
 <h2>5 · Google Drive &amp; Gmail setup</h2>
