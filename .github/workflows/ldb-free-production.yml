@@ -110,6 +110,11 @@ jobs:
   # Environment (which could auto-create an unprotected environment).
   hook-v5-environment-audit:
     name: Inspect V5 protected GitHub Environment without secrets
+    # Both Environment GET endpoints require Actions read access. Keep this
+    # permission local to the audit; no write/admin/provider access is needed.
+    permissions:
+      contents: read
+      actions: read
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.actor == 'renyboydeleon27-cloud' &&

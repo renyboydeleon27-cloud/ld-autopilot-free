@@ -46,13 +46,17 @@ export async function auditHookV5Environment({env=process.env,fetcher=fetch}={})
  // the deployment initiator, a self-review restriction would deadlock.
  const logins=reviews.reviewers.map(r=>r?.reviewer?.login).filter(Boolean);
  if(logins.length===0)deny('REVIEWER_IDENTITIES_UNVERIFIED');
- if(details.prevent_self_review===true&&
+ // GitHub returns this flag on the required_reviewers rule, not the
+ // environment root. Missing metadata must not imply self-review is allowed.
+ if(typeof reviews.prevent_self_review!=='boolean')deny('SELF_REVIEW_POLICY_UNVERIFIED');
+ if(reviews.prevent_self_review===true&&
     logins.every(x=>x==='renyboydeleon27-cloud'))deny('SELF_REVIEW_DEADLOCK');
  const policy=await getGitHub(API+'/deployment-branch-policies?per_page=100',
   env.GITHUB_TOKEN,fetcher);
  if(!Number.isSafeInteger(policy?.total_count)||policy.total_count!==1||
     !Array.isArray(policy.branch_policies)||policy.branch_policies.length!==1||
-    policy.branch_policies[0]?.name!==ACCEPTANCE)
+    policy.branch_policies[0]?.name!==ACCEPTANCE||
+    policy.branch_policies[0]?.type!=='branch')
   deny('EXACT_BRANCH_POLICY_REQUIRED');
  return Object.freeze({
   status:'GITHUB_ENV_REVIEW_CONFIGURED',

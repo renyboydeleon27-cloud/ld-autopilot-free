@@ -35,7 +35,15 @@ An additional branch-only job is now available on the **already-registered** `LD
 
 This audit does **not attach** the `ldb-hook-v5-free` environment: attaching a previously nonexistent environment may automatically create an **unprotected** one. Instead it makes two read-only GitHub API requests to inspect existing configuration. It verifies: exact environment name, explicit required reviewer(s), explicit custom branch restriction **only** for `feature/ldb-image-acceptance`, and absence of a self-review deadlock where applicable. No Cloudflare API token or image-generation capability is available to the job.
 
-**Important:** GitHub's default `GITHUB_TOKEN` may be unable to read repository environment settings. If the endpoint returns 401/403/404, the job deliberately fails with `HOOK_V5_ENV_METADATA_UNVERIFIED`. This means **unverified**, not necessarily missing. Do not increase token permissions or paste secrets into chat simply to make the audit green.
+**November 11 diagnosis:** run #112's setup log shows only `Contents: read` and `Metadata: read`. Both Environment metadata GET endpoints require `Actions: read`, which was omitted. The audit job now explicitly grants only `contents: read` and `actions: read`; no administrative/write permission or personal token is required. This repairs a documented permission mismatch, but a fresh successful audit is still required. The old error suppressed HTTP status, so its exact server response cannot be reconstructed from those logs. A 401/403/404 still fails closed as `HOOK_V5_ENV_METADATA_UNVERIFIED`, never as proof that the Environment is absent.
+
+The audit now reads `prevent_self_review` from the `required_reviewers` protection rule, matching GitHub's REST response. A sole initiating owner with self-review prevention is rejected, as is missing self-review metadata. The one allowed deployment policy must explicitly be a **branch**, not a same-name tag. Do not disable existing protections to pass these checks; use a separately authorized reviewer if self-review prevention is configured.
+
+GitHub supports Environment protection rules in public repositories on current Free plans. This repository is public; no paid upgrade is needed for that design. Actual account configuration remains unverified until the authenticated settings/audit succeeds.
+
+References: [Environment API](https://docs.github.com/en/rest/deployments/environments), [branch policy API](https://docs.github.com/en/rest/deployments/branch-policies), [plan eligibility](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
+
+The executor development branch also incorporates PR #64's Gmail receipt integrity changes. PR #61 and #65 are already ancestors of this branch. This consolidation does not merge any PR into `main` or activate rendering, delivery, or notifications.
 
 If the environment is absent or the API cannot inspect it, the owner needs to use GitHub repository **Settings → Environments** to configure and visually verify `ldb-hook-v5-free` with its review gate and branch restrictions. Do not enable real V5 image generation until the current plan, quota, environment gate, and actual one-shot runner all pass independent checks.
 
