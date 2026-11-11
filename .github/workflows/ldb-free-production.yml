@@ -106,13 +106,38 @@ jobs:
             echo "Real rendering remains NO-GO pending protected execution environment and fresh Free-plan attestation."
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # GitHub Environment metadata check only. It does NOT attach the
+  # Environment (which could auto-create an unprotected environment).
+  hook-v5-environment-audit:
+    name: Inspect V5 protected GitHub Environment without secrets
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.actor == 'renyboydeleon27-cloud' &&
+      github.ref == 'refs/heads/feature/ldb-hook-v5-cloud-executor' &&
+      inputs.episode_folder == 'hook-v5-environment-audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Read existing review and branch policies (no provider tokens)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          LDB_AUDIT_REQUEST: hook-v5-environment-audit
+        run: node scripts/ldb-hook-v5-environment-audit.mjs
+
   verified-storyboard-package:
     name: Validate approval and export free prompt package
-    # Never run the normal packager for the two diagnostic sentinel inputs.
+    # Never run normal packaging for any V5 readiness/audit sentinel.
     if: >-
       github.event_name != 'workflow_dispatch' ||
       (inputs.episode_folder != 'hook-v5-free-preflight' &&
-       inputs.episode_folder != 'hook-v5-offline-readiness')
+       inputs.episode_folder != 'hook-v5-offline-readiness' &&
+       inputs.episode_folder != 'hook-v5-environment-audit')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
