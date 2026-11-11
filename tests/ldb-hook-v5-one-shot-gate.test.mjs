@@ -144,7 +144,7 @@ test('already-registered manual prompt workflow provides branch-only zero-secret
  assert.match(workflow,/workflow_dispatch:/);
  assert.match(workflow,/episode_folder:/);
  const a=workflow.indexOf('  hook-v5-background-preflight:');
- const b=workflow.indexOf('  verified-storyboard-package:',a);
+ const b=workflow.indexOf('  hook-v5-package-readiness:',a);
  assert.ok(a>0&&b>a,'separate preflight and package jobs');
  const safe=workflow.slice(a,b),pack=workflow.slice(b);
  assert.match(safe,/github\.actor == 'renyboydeleon27-cloud'/);
