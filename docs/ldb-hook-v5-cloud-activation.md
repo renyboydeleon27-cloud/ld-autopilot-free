@@ -29,6 +29,16 @@ The offline job checks the actual approved 17-scene Lake Nyos render package, it
 
 Passing this job is **a necessary readiness check, not permission to run inference**. For live generation, the standalone protected workflow still requires reviewed branch registration, GitHub Environment safeguards, same-day Workers Free plan verification, and an owner-authorized one-image test.
 
+## Protected GitHub Environment — read-only audit (no credentials)
+
+An additional branch-only job is now available on the **already-registered** `LDB approved FREE prompt production` workflow. Select branch `feature/ldb-hook-v5-cloud-executor` and type `hook-v5-environment-audit` in the existing `episode_folder` input.
+
+This audit does **not attach** the `ldb-hook-v5-free` environment: attaching a previously nonexistent environment may automatically create an **unprotected** one. Instead it makes two read-only GitHub API requests to inspect existing configuration. It verifies: exact environment name, explicit required reviewer(s), explicit custom branch restriction **only** for `feature/ldb-image-acceptance`, and absence of a self-review deadlock where applicable. No Cloudflare API token or image-generation capability is available to the job.
+
+**Important:** GitHub's default `GITHUB_TOKEN` may be unable to read repository environment settings. If the endpoint returns 401/403/404, the job deliberately fails with `HOOK_V5_ENV_METADATA_UNVERIFIED`. This means **unverified**, not necessarily missing. Do not increase token permissions or paste secrets into chat simply to make the audit green.
+
+If the environment is absent or the API cannot inspect it, the owner needs to use GitHub repository **Settings → Environments** to configure and visually verify `ldb-hook-v5-free` with its review gate and branch restrictions. Do not enable real V5 image generation until the current plan, quota, environment gate, and actual one-shot runner all pass independent checks.
+
 ## Separate, not-yet-registered V5 workflow
 
 `.github/workflows/ldb-hook-v5-one-shot.yml` remains a **Draft** on the development branch. GitHub requires a new `workflow_dispatch` workflow file to exist on the default branch before it becomes independently selectable in Actions. We have **not** registered this standalone executor on `main`, because a push to `main` could also trigger a Vercel production build. The safe preflight above avoids that risk. No render execution or production release is authorized.
