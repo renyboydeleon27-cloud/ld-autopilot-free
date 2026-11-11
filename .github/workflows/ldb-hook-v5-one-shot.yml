@@ -100,13 +100,20 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.LDB_HOOK_V5_CLOUDFLARE_API_TOKEN }}
         run: node scripts/ldb-retry-reviewed-hook-v5.mjs --one-reviewed-hook-free-only
-      - name: Publish review candidate for ONE DAY (public repository warning)
+      - name: Validate original HOOK and review-only artifact checksums
+        # Read local evidence only. Fail closed rather than claim successful
+        # visual delivery of a render whose original source was omitted.
+        run: node scripts/ldb-v5-review-artifact-gate.mjs
+      - name: Publish original and review evidence for ONE DAY (PUBLIC repo)
         if: ${{ success() && inputs.public_review_artifact }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: hook-v5-owner-review-only
           path: |
-            cloudflare/ldb-runner/public/review-only/**
+            cloudflare/ldb-runner/public/HOOK.png
+            cloudflare/ldb-runner/public/HOOK.jpg
             cloudflare/ldb-runner/public/report.json
+            cloudflare/ldb-runner/public/index.html
+            cloudflare/ldb-runner/public/review-only/**
           if-no-files-found: error
           retention-days: 1
