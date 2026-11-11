@@ -19,6 +19,16 @@ A **separate**, already-registered workflow exists on the default branch: `LDB a
 
 This path does not create, merge or push any file on `main`. If GitHub doesn't display the branch/run inputs or the run is blocked, **stop**; do not use the default branch with an altered value as a workaround. Current ChatGPT GitHub connector can inspect workflow results but cannot dispatch a fresh run directly.
 
+## Next: verify the real HOOK V5 package without spending credits
+
+Background-run #111 completed successfully on the registered workflow. To rehearse the **actual Lake Nyos approved package** in the same GitHub cloud environment, use the exact same registered workflow at https://github.com/renyboydeleon27-cloud/ld-autopilot-free/actions/workflows/ldb-free-production.yml.
+
+Select branch `feature/ldb-hook-v5-cloud-executor` and set the existing `episode_folder` input to `hook-v5-offline-readiness`. This selects a separate, owner-only job added to that development branch. The normal prompt-packaging job is explicitly skipped for that sentinel, and the already-tested `hook-v5-free-preflight` input is unchanged.
+
+The offline job checks the actual approved 17-scene Lake Nyos render package, its original storyboard SHA-256, the revised HOOK V5 prompt length/visual locks, and preservation of narration, Flow prompts and all other scenes. It only calls local Python and Node; it receives no Cloudflare/Google credentials, sends no provider requests, generates no image, and never asserts visual approval or 69-file delivery success.
+
+Passing this job is **a necessary readiness check, not permission to run inference**. For live generation, the standalone protected workflow still requires reviewed branch registration, GitHub Environment safeguards, same-day Workers Free plan verification, and an owner-authorized one-image test.
+
 ## Separate, not-yet-registered V5 workflow
 
 `.github/workflows/ldb-hook-v5-one-shot.yml` remains a **Draft** on the development branch. GitHub requires a new `workflow_dispatch` workflow file to exist on the default branch before it becomes independently selectable in Actions. We have **not** registered this standalone executor on `main`, because a push to `main` could also trigger a Vercel production build. The safe preflight above avoids that risk. No render execution or production release is authorized.
