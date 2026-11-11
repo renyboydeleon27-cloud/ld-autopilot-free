@@ -57,6 +57,20 @@ export async function oneShotGate({env=process.env,now=Date.now(),fetcher=fetch}
     body.workflow_runs.length!==body.total_count)
   fail('RUN_INVENTORY_INCOMPLETE');
  const runs=body.workflow_runs;
+ // A malformed row must never disappear from the duplicate check. Require
+ // unique run IDs and complete branch/date evidence before trusting inventory.
+ const ids=new Set();
+ for(const row of runs){
+  if(!row||!Number.isSafeInteger(row.id)||row.id<1||ids.has(row.id)||
+     typeof row.head_branch!=='string'||!row.head_branch.trim()||
+     typeof row.created_at!=='string'||
+     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(row.created_at)||
+     !Number.isFinite(Date.parse(row.created_at))||
+     new Date(row.created_at).toISOString()!==row.created_at.replace('Z','.000Z')||
+     row.created_at.slice(0,10)!==day)
+   fail('RUN_INVENTORY_INCOMPLETE');
+  ids.add(row.id);
+ }
  if(!runs.some(r=>r&&r.id===runId&&r.head_branch===REF.slice('refs/heads/'.length)&&
    typeof r.created_at==='string'&&r.created_at.slice(0,10)===day))
   fail('CURRENT_RUN_NOT_IN_INVENTORY');

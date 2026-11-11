@@ -79,6 +79,17 @@ test('prior same-day V5 run blocks duplicate generation even if previous run fai
    fetcher:async()=>okResult(rows([previous]))}),/HOOK_V5_GATE_EARLIER_ONE_SHOT_ALREADY_REQUESTED/);
  }
 });
+test('malformed or duplicate inventory rows cannot hide an earlier attempt',async()=>{
+ const valid={id:106,head_branch:'feature/ldb-image-acceptance',created_at:DATE+'T18:00:00Z'};
+ for(const row of [null,{}, {...valid,id:107}, {...valid,id:0},
+  {...valid,id:'106'}, {...valid,head_branch:null}, {...valid,head_branch:''},
+  {...valid,created_at:null}, {...valid,created_at:DATE},
+  {...valid,created_at:DATE+'T25:00:00Z'},
+  {...valid,created_at:'2026-11-09T18:00:00Z'}]){
+  await assert.rejects(oneShotGate({env:env(),now:NOW,
+   fetcher:async()=>okResult(rows([row]))}),/HOOK_V5_GATE_RUN_INVENTORY_INCOMPLETE/);
+ }
+});
 test('unrelated or older workflow run is not mistaken for same-day V5 duplicate',async()=>{
  const unrelated={id:106,head_branch:'feature/another-branch',created_at:DATE+'T18:00:00Z'};
  const result=await oneShotGate({env:env(),now:NOW,
