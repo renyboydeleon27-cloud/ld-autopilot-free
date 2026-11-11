@@ -1,3 +1,46 @@
+# November 12 — continue development while owner login is pending
+
+**Cloudflare verification: OWNER AUTHENTICATION REQUIRED.**
+This is an owner-reported sign-in blocker, not a new provider verification result.
+Do not wait on this blocker to run offline development checks. Do not use cached
+credentials or stale quota reports to infer that provider access is ready.
+
+The approval CI now runs the complete selected offline LDB/Drive/Gmail suite,
+including private cross-worker 69-file delivery, OAuth/Vault acceptance, durable
+image handoff, STOP/Resume and notification receipt integrity. Workflow and CJS
+regression changes now trigger the same suite. The actual approved HOOK package
+rehearsal also runs in CI without provider access. No provider secrets are supplied.
+
+Local batch validation: 535 JavaScript tests and 55 Python tests passed. These
+are simulated/local checks, not actual image generation, Drive delivery or Gmail
+inbox verification. The existing development preview at `4a43f69` was READY;
+that observation does not establish the status of any later commit.
+
+## Exact owner login action
+
+1. On Android, open https://dash.cloudflare.com/login in Chrome. Sign in to the
+   existing Cloudflare account used for NER AUTO STUDIO, with its original sign-in
+   method; finish any email or two-factor challenge yourself.
+2. Select the existing account for this project and confirm that its dashboard
+   opens. If Chrome signs in successfully but Work still shows a login page,
+   complete sign-in in Work's offered browser handoff as well: sessions in the
+   phone's Chrome and the Work browser are separate.
+3. Tell Work that the account dashboard is open. Do not send a password, token,
+   recovery code or one-time code in chat. Successful login only clears the login
+   blocker; fresh Workers Free plan/quota and restricted token scope still need
+   verification before any separately approved image test.
+
+## Remaining live gates
+
+- Cloudflare login, current Free plan/quota, restricted Environment credential.
+- Verify integration on the protected acceptance branch before any dispatch.
+- One explicitly approved HOOK render and human visual review; then 17 approved images.
+- Real 69-file Drive delivery and verified Gmail milestone receipts/inbox.
+- Separate production release decision. No main merge or production activation
+  is authorized by passing these offline tests.
+
+---
+
 # November 12 integration update — registered development entry
 
 The registered `ldb-free-production.yml` now calls `ldb-hook-v5-one-shot.yml`
