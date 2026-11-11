@@ -10,7 +10,7 @@ const API='https://api.github.com/repos/'+REPO+'/environments/'+ENV;
 const deny=code=>{throw Error('HOOK_V5_ENV_'+code);};
 
 function validateIdentity(env){
- if(env.GITHUB_REPOSITORY!==REPO||env.GITHUB_REF!==AUDIT_BRANCH||
+ if(env.GITHUB_REPOSITORY!==REPO||![AUDIT_BRANCH,'refs/heads/'+ACCEPTANCE].includes(env.GITHUB_REF)||
     env.GITHUB_ACTOR!=='renyboydeleon27-cloud'||
     env.GITHUB_EVENT_NAME!=='workflow_dispatch'||
     env.LDB_AUDIT_REQUEST!=='hook-v5-environment-audit')deny('OWNER_BRANCH_OR_MODE_REQUIRED');

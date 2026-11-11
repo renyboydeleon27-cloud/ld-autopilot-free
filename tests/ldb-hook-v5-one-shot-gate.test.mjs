@@ -9,6 +9,7 @@ const env=()=>({
  GITHUB_REF:'refs/heads/feature/ldb-image-acceptance',
  GITHUB_ACTOR:'renyboydeleon27-cloud',
  GITHUB_EVENT_NAME:'workflow_dispatch',
+ GITHUB_WORKFLOW_REF:'renyboydeleon27-cloud/ld-autopilot-free/.github/workflows/ldb-free-production.yml@refs/heads/feature/ldb-image-acceptance',
  VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'feature/ldb-image-acceptance',
  GITHUB_RUN_ATTEMPT:'1',GITHUB_RUN_ID:'107',
  LDB_HOOK_REQUEST_UTC_DATE:DATE,LDB_FREE_PLAN_VERIFIED_DATE:DATE,
@@ -18,8 +19,8 @@ const env=()=>({
  GITHUB_TOKEN:'g'.repeat(40)
 });
 const rows=(other=[])=>({total_count:other.length+1,workflow_runs:[
- {id:107,head_branch:'feature/ldb-image-acceptance',created_at:DATE+'T19:00:00Z'},
- ...other
+ {id:107,display_title:'LDB hook-v5-executor-render-public-review-'+DATE,head_branch:'feature/ldb-image-acceptance',created_at:DATE+'T19:00:00Z'},
+ ...other.map(r=>r&&({display_title:'LDB hook-v5-executor-render-public-review-'+DATE,...r}))
 ]});
 const okResult=data=>({status:200,json:async()=>data});
 
@@ -38,7 +39,7 @@ test('valid owner, same-day Free attestation and first run allow ONLY entering V
 });
 test('untrusted owner, branch, rerun, stale date, plan or missing credential always fails before network',async()=>{
  const bad=[
-  {GITHUB_ACTOR:'other'}, {GITHUB_REF:'refs/heads/main'},
+  {GITHUB_WORKFLOW_REF:'other'}, {GITHUB_ACTOR:'other'}, {GITHUB_REF:'refs/heads/main'},
   {GITHUB_REPOSITORY:'other/repo'}, {GITHUB_EVENT_NAME:'push'},
   {VERCEL_ENV:'production'}, {VERCEL_GIT_COMMIT_REF:'main'},
   {GITHUB_RUN_ATTEMPT:'2'}, {GITHUB_RUN_ID:'0'},
@@ -130,7 +131,7 @@ test('default manual run is an isolated secret-free background preflight, never 
  const start=workflow.indexOf('  preflight-only:');
  const end=workflow.indexOf('  one-hook-v5:',start);
  assert.ok(start>0&&end>start,'separate read-only and image-render jobs required');
- const safeJob=workflow.slice(start,end);
+ const safeJob=workflow.slice(start,workflow.indexOf('  configuration-only:',start));
  const renderJob=workflow.slice(end);
  assert.match(safeJob,/github\.ref == 'refs\/heads\/main'/);
  assert.match(safeJob,/inputs\.mode == 'preflight_only'/);
@@ -177,3 +178,9 @@ test('mobile UI links to existing manual workflow and never injects a dispatch t
  const section=page.slice(a,b);
  assert.doesNotMatch(section,/fetch\(|api\.github\.com|Bearer|CLOUDFLARE_API_TOKEN|<script|<button/);
 });
+
+ test('same-day acceptance configuration checks do not consume image attempts',async()=>{
+ const prior={id:106,head_branch:'feature/ldb-image-acceptance',created_at:DATE+'T18:00:00Z',display_title:'LDB hook-v5-executor-check'};
+ const r=await oneShotGate({env:env(),now:NOW,fetcher:async()=>okResult(rows([prior]))});
+ assert.equal(r.status,'ONE_SHOT_GATE_PASSED');
+ });

@@ -6,7 +6,7 @@ import {pathToFileURL} from 'node:url';
 const OWNER='renyboydeleon27-cloud';
 const REPO=OWNER+'/ld-autopilot-free';
 const REF='refs/heads/feature/ldb-image-acceptance';
-const WORKFLOW='ldb-hook-v5-one-shot.yml';
+const WORKFLOW='ldb-free-production.yml';
 const ACCOUNT='a437dda5f38ba6b10991684b8388760b';
 const DAY=/^\d{4}-\d{2}-\d{2}$/;
 const fail=message=>{throw Error('HOOK_V5_GATE_'+message)};
@@ -14,6 +14,8 @@ const fail=message=>{throw Error('HOOK_V5_GATE_'+message)};
 export function inspectOneShotEnvironment(env={},now=Date.now()){
  if(!Number.isFinite(now))fail('CLOCK_INVALID');
  const day=new Date(now).toISOString().slice(0,10);
+ if(env.GITHUB_WORKFLOW_REF!==REPO+'/.github/workflows/'+WORKFLOW+'@'+REF)
+  fail('REGISTERED_WORKFLOW_REQUIRED');
  if(env.GITHUB_REPOSITORY!==REPO||env.GITHUB_REF!==REF||
     env.GITHUB_ACTOR!==OWNER||env.GITHUB_EVENT_NAME!=='workflow_dispatch')
   fail('OWNER_OR_BRANCH_MISMATCH');
@@ -62,6 +64,7 @@ export async function oneShotGate({env=process.env,now=Date.now(),fetcher=fetch}
  const ids=new Set();
  for(const row of runs){
   if(!row||!Number.isSafeInteger(row.id)||row.id<1||ids.has(row.id)||
+     typeof row.display_title!=='string'||!row.display_title||
      typeof row.head_branch!=='string'||!row.head_branch.trim()||
      typeof row.created_at!=='string'||
      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(row.created_at)||
@@ -71,10 +74,12 @@ export async function oneShotGate({env=process.env,now=Date.now(),fetcher=fetch}
    fail('RUN_INVENTORY_INCOMPLETE');
   ids.add(row.id);
  }
- if(!runs.some(r=>r&&r.id===runId&&r.head_branch===REF.slice('refs/heads/'.length)&&
+ const renderTitle='LDB hook-v5-executor-render-public-review-'+day;
+ const renderRuns=runs.filter(r=>r.display_title===renderTitle);
+ if(!renderRuns.some(r=>r&&r.id===runId&&r.head_branch===REF.slice('refs/heads/'.length)&&
    typeof r.created_at==='string'&&r.created_at.slice(0,10)===day))
   fail('CURRENT_RUN_NOT_IN_INVENTORY');
- if(runs.some(r=>r&&r.id!==runId&&
+ if(renderRuns.some(r=>r&&r.id!==runId&&
     r.head_branch===REF.slice('refs/heads/'.length)&&
     typeof r.created_at==='string'&&r.created_at.slice(0,10)===day))
   fail('EARLIER_ONE_SHOT_ALREADY_REQUESTED');

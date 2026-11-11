@@ -133,3 +133,9 @@ test('independent reviewer permits self-review protection without a deadlock',as
  assert.equal(result.reviewerCount,2);
  assert.equal(result.inferenceCalled,false);
 });
+
+test('registered acceptance entry can audit before attaching the protected Environment',async()=>{
+ let calls=0;
+ const result=await auditHookV5Environment({env:{...env(),GITHUB_REF:'refs/heads/feature/ldb-image-acceptance'},fetcher:async()=>ok(++calls===1?configured():branch())});
+ assert.equal(calls,2);assert.equal(result.inferenceCalled,false);
+});

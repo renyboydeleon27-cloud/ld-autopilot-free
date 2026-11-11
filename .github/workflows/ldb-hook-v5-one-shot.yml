@@ -1,9 +1,21 @@
 name: LDB V5 one-HOOK owner-approved cloud executor
 
-# Never runs on push/PR. Must exist on GitHub's default branch before GitHub
-# can dispatch it. The preflight job is limited to main; the render job is
-# limited to the explicitly reviewed acceptance branch.
+# Called at the same commit by the already registered prompt workflow.
+# No default-branch registration or production release is required.
 on:
+  workflow_call:
+    inputs:
+      mode:
+        type: string
+        required: true
+      utc_day:
+        type: string
+        required: false
+        default: ""
+      public_review_artifact:
+        type: boolean
+        required: false
+        default: false
   workflow_dispatch:
     inputs:
       mode:
@@ -57,10 +69,37 @@ jobs:
             echo "HOOK V5 render remains OFF until the separate, owner-approved render mode passes all daily safety gates."
           } >> "$GITHUB_STEP_SUMMARY"
 
+  configuration-only:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.actor == 'renyboydeleon27-cloud' &&
+      github.ref == 'refs/heads/feature/ldb-image-acceptance' &&
+      inputs.mode == 'configuration_only'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: ldb-hook-v5-free
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Check configuration presence without exposing or using credentials
+        env:
+          LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID: ${{ vars.LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID }}
+          LDB_WORKERS_PLAN: ${{ vars.LDB_WORKERS_PLAN }}
+          LDB_FREE_PLAN_VERIFIED_DATE: ${{ vars.LDB_FREE_PLAN_VERIFIED_DATE }}
+          LDB_HOOK_V5_ENV_REVIEW_APPROVED: ${{ vars.LDB_HOOK_V5_ENV_REVIEW_APPROVED }}
+          LDB_TOKEN_PRESENT: ${{ secrets.LDB_HOOK_V5_CLOUDFLARE_API_TOKEN != '' }}
+        run: node scripts/ldb-hook-v5-executor-request.mjs --configuration-only
+
   one-hook-v5:
     if: >-
       github.actor == 'renyboydeleon27-cloud' &&
       github.ref == 'refs/heads/feature/ldb-image-acceptance' &&
+      github.event_name == 'workflow_dispatch' &&
+      startsWith(github.workflow_ref, 'renyboydeleon27-cloud/ld-autopilot-free/.github/workflows/ldb-free-production.yml@') &&
       inputs.mode == 'render_one_hook' &&
       inputs.public_review_artifact == true
     runs-on: ubuntu-latest

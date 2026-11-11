@@ -1,3 +1,42 @@
+# November 12 integration update — registered development entry
+
+The registered `ldb-free-production.yml` now calls `ldb-hook-v5-one-shot.yml`
+from the **same commit** via `workflow_call`. No main merge is needed.
+Run only from `feature/ldb-image-acceptance`, the existing exact Environment branch.
+The integration must be fast-forwarded onto that development branch before dispatch.
+
+In the existing `episode_folder` field:
+- `hook-v5-executor-check`: metadata audit then protected configuration-only job.
+  Requires Environment review; prints missing configuration names only, never token
+  values; performs no Cloudflare request, inference, upload or notification.
+- `hook-v5-executor-render-public-review-YYYY-MM-DD`: separately authorized one-image
+  request with explicit public-artifact consent and current UTC day. **Do not run
+  until the owner explicitly approves real generation and public review evidence.**
+
+The metadata audit runs before the Environment is attached. Configuration checking
+cannot consume the daily image attempt. Render inventory uses the registered caller
+and exact render title; direct standalone rendering is blocked. The called render
+job still requires owner identity, exact branch, protected Environment review,
+current Free attestation, live provider preflight, one-image cap, cleanup and original
+checksum validation. No `secrets: inherit` is used.
+
+Live settings inspection on November 12: reviewer and exact branch remain configured,
+admin bypass remains disabled; the Environment has **no secrets or variables**.
+Cloudflare dashboard requires login. Therefore neither credentials nor Free quota
+are verified and actual rendering remains **NO-GO**.
+
+Required Environment configuration remains:
+`LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID`, `LDB_WORKERS_PLAN`,
+`LDB_FREE_PLAN_VERIFIED_DATE`, `LDB_HOOK_V5_ENV_REVIEW_APPROVED`, and secret
+`LDB_HOOK_V5_CLOUDFLARE_API_TOKEN`. Do not set attestation variables until verified.
+Token presence is not verification of permission scope or provider readiness.
+
+Reference: https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows
+
+---
+
+Earlier implementation history (registration notes below are superseded by the update above):
+
 # HOOK V5 background execution — activation gate
 
 **Status:** Development-only Draft PR #66. It does **not** authorize inference, Cloudflare billing, deployment to production, Google Drive delivery, Gmail, or merging into `main`.

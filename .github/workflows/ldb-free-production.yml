@@ -1,4 +1,5 @@
 name: LDB approved FREE prompt production
+run-name: LDB ${{ inputs.episode_folder || 'prompt-package' }}
 
 on:
   push:
@@ -135,6 +136,52 @@ jobs:
           LDB_AUDIT_REQUEST: hook-v5-environment-audit
         run: node scripts/ldb-hook-v5-environment-audit.mjs
 
+  hook-v5-executor-request:
+    name: Validate protected executor request without provider credentials
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.actor == 'renyboydeleon27-cloud' &&
+      github.ref == 'refs/heads/feature/ldb-image-acceptance' &&
+      startsWith(inputs.episode_folder, 'hook-v5-executor-')
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    outputs:
+      mode: ${{ steps.request.outputs.mode }}
+      utc_day: ${{ steps.request.outputs.utc_day }}
+      public_review_artifact: ${{ steps.request.outputs.public_review_artifact }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Parse exact request (no shell interpolation)
+        id: request
+        env:
+          LDB_EXECUTOR_REQUEST: ${{ inputs.episode_folder }}
+        run: node scripts/ldb-hook-v5-executor-request.mjs
+      - name: Verify existing Environment before attaching it
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          LDB_AUDIT_REQUEST: hook-v5-environment-audit
+        run: node scripts/ldb-hook-v5-environment-audit.mjs
+
+  hook-v5-protected-executor:
+    needs: hook-v5-executor-request
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/ldb-hook-v5-one-shot.yml
+    with:
+      mode: ${{ needs.hook-v5-executor-request.outputs.mode }}
+      utc_day: ${{ needs.hook-v5-executor-request.outputs.utc_day }}
+      public_review_artifact: ${{ needs.hook-v5-executor-request.outputs.public_review_artifact == 'true' }}
+    # No secrets: inherit. Only the called job's protected Environment is used.
+
   verified-storyboard-package:
     name: Validate approval and export free prompt package
     # Never run normal packaging for any V5 readiness/audit sentinel.
@@ -142,7 +189,8 @@ jobs:
       github.event_name != 'workflow_dispatch' ||
       (inputs.episode_folder != 'hook-v5-free-preflight' &&
        inputs.episode_folder != 'hook-v5-offline-readiness' &&
-       inputs.episode_folder != 'hook-v5-environment-audit')
+       inputs.episode_folder != 'hook-v5-environment-audit' &&
+       !startsWith(inputs.episode_folder, 'hook-v5-executor-'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
