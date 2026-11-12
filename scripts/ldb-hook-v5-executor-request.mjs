@@ -12,11 +12,11 @@ export function parseExecutorRequest(value,now=Date.now()){
 
 export function checkExecutorConfiguration(env={},now=Date.now()){
  const missing=[];
- if(env.LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID!=='a437dda5f38ba6b10991684b8388760b')missing.push('ACCOUNT_ID');
- if(env.LDB_WORKERS_PLAN!=='free')missing.push('VERIFIED_FREE_PLAN');
- if(!Number.isFinite(now)||env.LDB_FREE_PLAN_VERIFIED_DATE!==new Date(now).toISOString().slice(0,10))missing.push('CURRENT_UTC_PLAN_DATE');
- if(env.LDB_HOOK_V5_ENV_REVIEW_APPROVED!=='true')missing.push('ENVIRONMENT_ATTESTATION');
- if(env.LDB_TOKEN_PRESENT!=='true')missing.push('RESTRICTED_ENVIRONMENT_SECRET');
+ if(env.LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID!=='a437dda5f38ba6b10991684b8388760b')missing.push('LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID');
+ if(env.LDB_WORKERS_PLAN!=='free')missing.push('LDB_WORKERS_PLAN');
+ if(!Number.isFinite(now)||env.LDB_FREE_PLAN_VERIFIED_DATE!==new Date(now).toISOString().slice(0,10))missing.push('LDB_FREE_PLAN_VERIFIED_DATE');
+ if(env.LDB_HOOK_V5_ENV_REVIEW_APPROVED!=='true')missing.push('LDB_HOOK_V5_ENV_REVIEW_APPROVED');
+ if(env.LDB_TOKEN_PRESENT!=='true')missing.push('LDB_HOOK_V5_CLOUDFLARE_API_TOKEN');
  return {status:missing.length?'CONFIGURATION_INCOMPLETE':'CONFIGURATION_PRESENT',missing,
   credentialScopeVerified:false,cloudflareChecked:false,inferenceCalled:false,readyToGenerate:false};
 }
