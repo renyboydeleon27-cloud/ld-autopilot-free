@@ -74,7 +74,7 @@ export async function assertLiveV5ProviderPreflight({
 export async function hookCloudTest({env=process.env,fetcher=fetch,read=readFile,sleep=ms=>new Promise(r=>setTimeout(r,ms)),freePlanConfirmed=false,workerName=NAME,usageReport,now=Date.now()}={}) {
  if(workerName!==NAME&&workerName!==V5_NAME)throw Error('UNAPPROVED_TEST_WORKER');
  if(workerName===V5_NAME)assertV5InferenceGate({env,usageReport,now});
- if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT || !env.CLOUDFLARE_API_TOKEN || /\s/.test(env.CLOUDFLARE_API_TOKEN))throw Error('CONFIGURATION_REQUIRED');
+ if(env.CLOUDFLARE_ACCOUNT_ID!==ACCOUNT || typeof env.CLOUDFLARE_API_TOKEN!=='string' || !env.CLOUDFLARE_API_TOKEN || /\s/.test(env.CLOUDFLARE_API_TOKEN))throw Error('CONFIGURATION_REQUIRED');
  if(freePlanConfirmed!==true||!freeInferenceAllowed({...env,FREE_PLAN_CONFIRMED:'true'}))throw Error('FREE_PLAN_CONFIRMATION_REQUIRED');
  const modules=await workerModules('cloudflare/ldb-runner/worker.mjs',{read});
  const bundle=JSON.parse(await read('/tmp/ldb-hook-package/render_job.json','utf8'));

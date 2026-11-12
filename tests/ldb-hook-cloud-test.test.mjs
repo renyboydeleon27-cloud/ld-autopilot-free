@@ -243,3 +243,29 @@ test('latest live usage may exceed file snapshot but must remain inside conserva
  assert.equal(result.reportedNeuronsUsed,25);
  assert.equal(result.requiresOwnerBillingVerification,true);
 });
+
+test('non-string and whitespace credentials are rejected before any provider access',async()=>{
+ for(const token of [undefined,null,1,{},[],true,'','bad token','bad\ntoken']){
+  await assert.rejects(hookCloudTest({env:{...env,CLOUDFLARE_API_TOKEN:token},freePlanConfirmed:true,fetcher:()=>assert.fail('network')}),/CONFIGURATION_REQUIRED/);
+ }
+});
+test('rejected provider credentials never deploy a Worker or submit inference',async()=>{
+ const h=await harness();let calls=0;
+ await assert.rejects(hookCloudTest({...h.options,fetcher:async(url,o={})=>{
+  calls++;assert.ok(!o.method||o.method==='GET');
+  return Response.json({success:false,errors:[{message:'private-token-value'}]},{status:401});
+ }}),/CLOUDFLARE/);
+ assert.equal(calls,1);assert.equal(h.getSubmits(),0);assert.deepEqual(h.removed,[]);
+});
+
+test('timeout or cancellation after job submission still cleans the isolated V5 Worker without retry',async()=>{
+ for(const name of ['TimeoutError','AbortError']){
+  const h=await harness(),original=h.options.fetcher,originalRead=h.options.read;
+  const {prepareHookV5}=await import('../scripts/ldb-prepare-hook-v5.mjs');
+  await assert.rejects(hookCloudTest({...h.options,workerName:'ner-ldb-runner-quality-v5',
+   read:async path=>{const raw=await originalRead(path);return path.endsWith('render_job.json')?JSON.stringify(prepareHookV5(JSON.parse(raw))):raw;},
+   fetcher:async(url,o)=>{if(url.endsWith('/stop'))throw new DOMException('simulated interruption',name);return original(url,o);}
+  }),e=>e.name===name);
+  assert.equal(h.getSubmits(),1);assert.deepEqual(h.removed,['RUNNER_SECRET','ner-ldb-runner-quality-v5']);
+ }
+});

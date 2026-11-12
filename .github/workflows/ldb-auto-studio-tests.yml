@@ -10,9 +10,14 @@ on:
       - "scripts/ldb*.js"
       - "api/ldb-*.js"
       - "scripts/ldb_profiles/**"
-      - "tests/test_ldb*.py"
+      - "tests/test*.py"
+      - "tests/*.test.mjs"
+      - "tests/*.test.cjs"
       - "tests/ldb*.test.mjs"
-      - "tests/ldb-auto-studio-ui.test.cjs"
+      - "tests/ldb*.test.cjs"
+      - "tests/production-milestones-stop.test.mjs"
+      - "tests/verified-image-handoff.test.mjs"
+      - "tests/persisted-runner-images.test.mjs"
       - "tests/*delivery*.test.mjs"
       - "tests/durable-*.test.mjs"
       - "tests/ldb-production-controls.test.mjs"
@@ -20,6 +25,7 @@ on:
       - "cloudflare/ldb-runner/**"
       - "cloudflare/ldb-google-vault/**"
       - ".github/workflows/ldb-free-production.yml"
+      - ".github/workflows/ldb-hook-v5-one-shot.yml"
       - ".github/workflows/ldb-auto-studio-tests.yml"
   pull_request:
     paths:
@@ -31,9 +37,14 @@ on:
       - "scripts/ldb*.js"
       - "api/ldb-*.js"
       - "scripts/ldb_profiles/**"
-      - "tests/test_ldb*.py"
+      - "tests/test*.py"
+      - "tests/*.test.mjs"
+      - "tests/*.test.cjs"
       - "tests/ldb*.test.mjs"
-      - "tests/ldb-auto-studio-ui.test.cjs"
+      - "tests/ldb*.test.cjs"
+      - "tests/production-milestones-stop.test.mjs"
+      - "tests/verified-image-handoff.test.mjs"
+      - "tests/persisted-runner-images.test.mjs"
       - "tests/*delivery*.test.mjs"
       - "tests/durable-*.test.mjs"
       - "tests/ldb-production-controls.test.mjs"
@@ -41,23 +52,28 @@ on:
       - "cloudflare/ldb-runner/**"
       - "cloudflare/ldb-google-vault/**"
       - ".github/workflows/ldb-free-production.yml"
+      - ".github/workflows/ldb-hook-v5-one-shot.yml"
       - ".github/workflows/ldb-auto-studio-tests.yml"
 permissions:
   contents: read
 jobs:
   approval-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: python -m pip install Pillow==12.3.0
-      - run: python -m unittest discover -s tests -p 'test_ldb*py' -v
+      - run: python -m unittest discover -s tests -p 'test*.py' -v
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/ldb-auto-studio-ui.test.cjs tests/ldb-hook-cloud-test.test.mjs tests/ldb-prepare-hook-v5.test.mjs tests/ldb-worker-module-graph.test.mjs tests/ldb-v5-evidence-recovery.test.mjs tests/ldb-v5-free-usage-gate.test.mjs tests/ldb-free-inference-status.test.mjs tests/ldb-one-batch-readiness.test.mjs tests/ldb-review-package.test.mjs tests/ldb-cloudflare-readonly.test.mjs tests/ldb-cloudflare-status-ui.test.cjs tests/ldb-hook-v5-budget.test.mjs tests/ldb-delivery-config.test.mjs tests/ldb-delivery-status-ui.test.cjs tests/ldb-cloudflare-vault-wiring.test.mjs tests/ldb-vault-update-safety.test.mjs tests/ldb-isolated-probe-wiring.test.mjs tests/ldb-owner-verified-binding-probe.test.mjs tests/ldb-probe-host-readonly.test.mjs tests/ldb-delivery-readiness-snapshot.test.mjs
+      - name: Verify complete offline JavaScript regression suite
+        run: node --test tests/*.test.mjs tests/*.test.cjs
+      - name: Rehearse approved HOOK package without provider access
+        run: node scripts/ldb-hook-v5-offline-readiness.mjs
       - name: One-batch safety boundary (offline only)
         run: |
           {
@@ -65,5 +81,3 @@ jobs:
             echo 'Offline test pass does not authorize Cloudflare inference, visual approval, 69-file Google delivery, Gmail milestones, or production release.'
             echo 'Release status: NO-GO pending fresh Free plan/quota check and actual end-to-end acceptance.'
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Verify 69-file offline delivery and durable storage
-        run: node --test tests/production-delivery-69-offline.test.mjs tests/ldb-production-delivery.test.mjs tests/durable-text-assets.test.mjs tests/durable-delivery-asset-reader.test.mjs tests/resume-durable-approved-delivery.test.mjs tests/delivery-readiness.test.mjs tests/submit-durable-approved-delivery.test.mjs tests/ldb-google-delivery-bridge.test.mjs tests/ldb-production-controls.test.mjs tests/production-milestones-stop.test.mjs tests/ldb-google-delivery.test.mjs tests/ldb-quality-import-auth.test.mjs tests/ldb-owner-safe-access.test.mjs tests/ldb-production-acceptance.test.mjs

@@ -1,0 +1,158 @@
+name: LDB V5 one-HOOK owner-approved cloud executor
+
+# Called at the same commit by the already registered prompt workflow.
+# No default-branch registration or production release is required.
+on:
+  workflow_call:
+    inputs:
+      mode:
+        type: string
+        required: true
+      utc_day:
+        type: string
+        required: false
+        default: ""
+      public_review_artifact:
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "preflight_only = no secrets, no image generation; render_one_hook requires owner approval"
+        type: choice
+        options:
+          - preflight_only
+          - render_one_hook
+        required: true
+        default: preflight_only
+      utc_day:
+        description: "Required ONLY for render_one_hook: same-day Workers Free UTC date (YYYY-MM-DD)"
+        type: string
+        required: false
+      public_review_artifact:
+        description: "Required ONLY for render_one_hook: accept PUBLIC repo review-artifact visibility"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+# Serialize attempts; second runs also fail the daily-inventory gate.
+concurrency:
+  group: ldb-hook-v5-one-shot-global
+  cancel-in-progress: false
+
+jobs:
+  # A safe manual background-work check. Never checkout unreviewed code,
+  # access secrets, invoke Cloudflare or upload any image.
+  preflight-only:
+    if: >-
+      github.actor == 'renyboydeleon27-cloud' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.mode == 'preflight_only'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify GitHub background execution without credentials
+        run: |
+          test "$GITHUB_REPOSITORY" = "renyboydeleon27-cloud/ld-autopilot-free"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_ACTOR" = "renyboydeleon27-cloud"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          {
+            echo "### NER AUTO STUDIO · Free-only background execution"
+            echo "Manual GitHub Actions job completed; the phone may be closed."
+            echo "Mode: preflight_only; no code checkout, Cloudflare requests, secret access, inference, Google Drive or Gmail."
+            echo "HOOK V5 render remains OFF until the separate, owner-approved render mode passes all daily safety gates."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  configuration-only:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.actor == 'renyboydeleon27-cloud' &&
+      github.ref == 'refs/heads/feature/ldb-image-acceptance' &&
+      inputs.mode == 'configuration_only'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: ldb-hook-v5-free
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Check configuration presence without exposing or using credentials
+        env:
+          LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID: ${{ vars.LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID }}
+          LDB_WORKERS_PLAN: ${{ vars.LDB_WORKERS_PLAN }}
+          LDB_FREE_PLAN_VERIFIED_DATE: ${{ vars.LDB_FREE_PLAN_VERIFIED_DATE }}
+          LDB_HOOK_V5_ENV_REVIEW_APPROVED: ${{ vars.LDB_HOOK_V5_ENV_REVIEW_APPROVED }}
+          LDB_TOKEN_PRESENT: ${{ secrets.LDB_HOOK_V5_CLOUDFLARE_API_TOKEN != '' }}
+        run: node scripts/ldb-hook-v5-executor-request.mjs --configuration-only
+
+  one-hook-v5:
+    if: >-
+      github.actor == 'renyboydeleon27-cloud' &&
+      github.ref == 'refs/heads/feature/ldb-image-acceptance' &&
+      github.event_name == 'workflow_dispatch' &&
+      startsWith(github.workflow_ref, 'renyboydeleon27-cloud/ld-autopilot-free/.github/workflows/ldb-free-production.yml@') &&
+      inputs.mode == 'render_one_hook' &&
+      inputs.public_review_artifact == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Configure required reviewers and variables on this GitHub Environment
+    # before dispatching. The script also requires the dated approval variable.
+    environment: ldb-hook-v5-free
+    env:
+      VERCEL_ENV: preview
+      VERCEL_GIT_COMMIT_REF: feature/ldb-image-acceptance
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID }}
+      LDB_HOOK_V5_ENV_REVIEW_APPROVED: ${{ vars.LDB_HOOK_V5_ENV_REVIEW_APPROVED }}
+      LDB_WORKERS_PLAN: ${{ vars.LDB_WORKERS_PLAN }}
+      LDB_FREE_PLAN_VERIFIED_DATE: ${{ vars.LDB_FREE_PLAN_VERIFIED_DATE }}
+      LDB_HOOK_REQUEST_UTC_DATE: ${{ inputs.utc_day }}
+      FREE_PLAN_CONFIRMED: "true"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: Validate owner, dated Free attestation, and one-shot inventory
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ldb-hook-v5-one-shot-gate.mjs
+      - name: Install local image audit decoder
+        run: python -m pip install Pillow==12.3.0
+      - name: Run exactly one isolated reviewed HOOK V5
+        # Secrets are unavailable to code checkout, package installation,
+        # image artifact uploads, or the GitHub inventory preflight.
+        # Owner-reviewed free-plan/usage gates still run before inference.
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.LDB_HOOK_V5_CLOUDFLARE_API_TOKEN }}
+        run: node scripts/ldb-retry-reviewed-hook-v5.mjs --one-reviewed-hook-free-only
+      - name: Validate original HOOK and review-only artifact checksums
+        # Read local evidence only. Fail closed rather than claim successful
+        # visual delivery of a render whose original source was omitted.
+        run: node scripts/ldb-v5-review-artifact-gate.mjs
+      - name: Publish original and review evidence for ONE DAY (PUBLIC repo)
+        if: ${{ success() && inputs.public_review_artifact }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: hook-v5-owner-review-only
+          path: |
+            cloudflare/ldb-runner/public/HOOK.png
+            cloudflare/ldb-runner/public/HOOK.jpg
+            cloudflare/ldb-runner/public/report.json
+            cloudflare/ldb-runner/public/index.html
+            cloudflare/ldb-runner/public/review-only/**
+          if-no-files-found: error
+          retention-days: 1

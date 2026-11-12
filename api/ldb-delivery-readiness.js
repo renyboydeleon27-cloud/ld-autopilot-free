@@ -6,6 +6,20 @@ module.exports=async function handler(req,res){
  res.setHeader('X-Content-Type-Options','nosniff');
  res.setHeader('Access-Control-Allow-Origin','none');
  const env=process.env;
+ // The active executor development branch can inspect LOCAL configuration
+ // only. Return before provider imports or owner-probe handling, even when
+ // inherited credentials exist. Acceptance-branch live diagnostics stay gated.
+ if(env.VERCEL_ENV==='preview'&&env.VERCEL_GIT_COMMIT_REF==='feature/ldb-hook-v5-cloud-executor'){
+  if(req.method!=='GET')return res.status(405).json({status:'METHOD_NOT_ALLOWED'});
+  if(req.url!=='/api/ldb-delivery-readiness')
+   return res.status(400).json({status:'QUERY_PARAMETERS_NOT_ALLOWED'});
+  try{
+   const {assessLdbDeliveryConfig}=await import('../lib/ldb/delivery-configuration-check.mjs');
+   return res.status(200).json({...assessLdbDeliveryConfig({env}),
+    diagnosticMode:'LOCAL_CONFIGURATION_ONLY',cloudflareApiCalled:false,
+    cloudflareExecutionStatus:'OWNER AUTHENTICATION / TOKEN VALIDATION REQUIRED'});
+  }catch{return res.status(503).json({status:'DELIVERY_DIAGNOSTIC_UNAVAILABLE'});}
+ }
  if(env.VERCEL_ENV!=='preview'||env.VERCEL_GIT_COMMIT_REF!=='feature/ldb-image-acceptance')
   return res.status(404).json({status:'PREVIEW_ONLY'});
  // Reuse the existing protected Vercel Function; Hobby limits this project
