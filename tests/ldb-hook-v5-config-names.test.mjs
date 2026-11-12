@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
 import {checkExecutorConfiguration} from '../scripts/ldb-hook-v5-executor-request.mjs';
 
 const TIME=Date.parse('2026-11-12T09:00:00Z');
@@ -18,6 +19,27 @@ const VALID={
  LDB_HOOK_V5_ENV_REVIEW_APPROVED:'true',
  LDB_TOKEN_PRESENT:'true'
 };
+test('configuration CLI fails closed without settings and never echoes credential values',()=>{
+ const sentinel='SIMULATED_TOKEN_NEVER_PRINT';
+ const run=spawnSync(process.execPath,['scripts/ldb-hook-v5-executor-request.mjs','--configuration-only'],{
+  encoding:'utf8',env:{LDB_HOOK_V5_CLOUDFLARE_API_TOKEN:sentinel,CLOUDFLARE_API_TOKEN:sentinel},timeout:5000
+ });
+ assert.equal(run.status,1);
+ for(const name of NAMES)assert.ok(run.stdout.includes(name));
+ assert.ok(!(`${run.stdout}${run.stderr}`).includes(sentinel));
+ assert.match(run.stdout,/"cloudflareChecked": false/);
+ assert.match(run.stdout,/"readyToGenerate": false/);
+});
+test('configuration CLI presence success does not certify token validity or authorize rendering',()=>{
+ const run=spawnSync(process.execPath,['scripts/ldb-hook-v5-executor-request.mjs','--configuration-only'],{
+  encoding:'utf8',env:{...VALID,LDB_FREE_PLAN_VERIFIED_DATE:new Date().toISOString().slice(0,10)},timeout:5000
+ });
+ assert.equal(run.status,0);
+ assert.match(run.stdout,/CONFIGURATION_PRESENT/);
+ assert.match(run.stdout,/"credentialScopeVerified": false/);
+ assert.match(run.stdout,/"inferenceCalled": false/);
+ assert.match(run.stdout,/"readyToGenerate": false/);
+});
 test('offline configuration missing list uses exact GitHub Environment names only',()=>{
  const empty=checkExecutorConfiguration({},TIME);
  assert.equal(empty.status,'CONFIGURATION_INCOMPLETE');

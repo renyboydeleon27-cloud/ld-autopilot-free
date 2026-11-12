@@ -10,7 +10,9 @@ on:
       - "scripts/ldb*.js"
       - "api/ldb-*.js"
       - "scripts/ldb_profiles/**"
-      - "tests/test_ldb*.py"
+      - "tests/test*.py"
+      - "tests/*.test.mjs"
+      - "tests/*.test.cjs"
       - "tests/ldb*.test.mjs"
       - "tests/ldb*.test.cjs"
       - "tests/production-milestones-stop.test.mjs"
@@ -35,7 +37,9 @@ on:
       - "scripts/ldb*.js"
       - "api/ldb-*.js"
       - "scripts/ldb_profiles/**"
-      - "tests/test_ldb*.py"
+      - "tests/test*.py"
+      - "tests/*.test.mjs"
+      - "tests/*.test.cjs"
       - "tests/ldb*.test.mjs"
       - "tests/ldb*.test.cjs"
       - "tests/production-milestones-stop.test.mjs"
@@ -62,12 +66,12 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install Pillow==12.3.0
-      - run: python -m unittest discover -s tests -p 'test_ldb*py' -v
+      - run: python -m unittest discover -s tests -p 'test*.py' -v
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify complete offline LDB, Drive and Gmail regression suite
-        run: node --test tests/ldb*.test.mjs tests/ldb*.test.cjs tests/*delivery*.test.mjs tests/durable-*.test.mjs tests/production-milestones-stop.test.mjs tests/verified-image-handoff.test.mjs tests/persisted-runner-images.test.mjs
+      - name: Verify complete offline JavaScript regression suite
+        run: node --test tests/*.test.mjs tests/*.test.cjs
       - name: Rehearse approved HOOK package without provider access
         run: node scripts/ldb-hook-v5-offline-readiness.mjs
       - name: One-batch safety boundary (offline only)
