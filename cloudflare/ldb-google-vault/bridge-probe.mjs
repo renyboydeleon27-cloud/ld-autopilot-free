@@ -3,6 +3,7 @@
 import {createHash,timingSafeEqual} from 'node:crypto';
 const json=(x,status=200)=>Response.json(x,{status,headers:{'Cache-Control':'no-store'}});
 const hash=s=>createHash('sha256').update(s).digest();
+const validNonce=x=>typeof x==='string'&&/^[a-f0-9]{32}$/.test(x);
 export const isBridgeHealthPath=path=>path==='/internal/bridge/health';
 // This read-only route MUST run at the Worker edge, before any Google Vault
 // credential gate or Durable Object construction. It authenticates the private
@@ -19,6 +20,8 @@ export function handleVaultBridgeHealth(request,{enabled=false,secret}={}){
  if(enabled!==true||typeof secret!=='string'||secret.length<32)return json({status:'SETUP_REQUIRED'},503);
  if(!timingSafeEqual(hash(request.headers.get('Authorization')||''),hash('Bearer '+secret)))return json({status:'UNAUTHORIZED'},401);
  if(request.method!=='GET')return json({status:'METHOD_NOT_ALLOWED'},405);
+ const nonce=request.headers.get('X-LDB-Probe-Nonce');
+ if(!validNonce(nonce))return json({status:'INVALID_PROBE_NONCE'},400);
  // No vault.core, accessToken, storage or Google API calls.
- return json({status:'BRIDGE_AUTHENTICATED'});
+ return json({status:'BRIDGE_AUTHENTICATED',nonce});
 }

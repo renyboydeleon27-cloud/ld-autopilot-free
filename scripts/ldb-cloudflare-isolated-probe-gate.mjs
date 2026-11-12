@@ -4,7 +4,43 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const load=p=>JSON.parse(readFileSync(p,'utf8'));
+const ACCOUNT='a437dda5f38ba6b10991684b8388760b';
+const RUNNER_FIELDS=['name','main','account_id','compatibility_date',
+ 'compatibility_flags','vars','services','durable_objects','migrations','workers_dev'];
+const VAULT_FIELDS=[...RUNNER_FIELDS.filter(k=>k!=='services'),'preview_urls'];
+const exactly=(object,keys)=>assert.deepEqual(
+ Object.keys(object).sort(),[...keys].sort(),
+ 'Isolated probe must contain ONLY reviewed configuration fields');
+const exactRunnerVars=Object.freeze({
+ CLOUDFLARE_ACCOUNT_ID:ACCOUNT,RUNNER_ENABLED:'false',
+ FREE_PLAN_CONFIRMED:'false',DELIVERY_BRIDGE_ENABLED:'false',
+ BRIDGE_PROBE_ENABLED:'true'
+});
+const exactVaultVars=Object.freeze({
+ VAULT_ENABLED:'false',DELIVERY_BRIDGE_ENABLED:'false',BRIDGE_PROBE_ENABLED:'true'
+});
+function assertExactProbeConfig(config,kind){
+ exactly(config,kind==='runner'?RUNNER_FIELDS:VAULT_FIELDS);
+ assert.equal(config.account_id,ACCOUNT,'Unapproved Cloudflare account');
+ assert.equal(config.compatibility_date,'2026-10-28');
+ assert.deepEqual(config.compatibility_flags,['nodejs_compat']);
+ assert.deepEqual(config.vars,kind==='runner'?exactRunnerVars:exactVaultVars);
+ const cls=kind==='runner'?'LdbCoordinator':'LdbGoogleVault';
+ const binding=kind==='runner'?'LDB_COORDINATOR':'GOOGLE_VAULT';
+ assert.deepEqual(config.durable_objects,{bindings:[{name:binding,class_name:cls}]});
+ assert.deepEqual(config.migrations,[{tag:'v1',new_sqlite_classes:[cls]}]);
+ // Excludes unreviewed AI/R2/KV, routes, triggers, privileged variables,
+ // extra services, credential copies and configuration drift.
+ if(kind==='vault'){
+  assert.equal(config.workers_dev,false);
+  assert.equal(config.preview_urls,false,'Vault preview URLs must remain OFF');
+ }
+ else assert.equal(config.workers_dev,true);
+}
+
 export function assertProbeSafety({runner,vault,liveRunner,liveVault}){
+ assertExactProbeConfig(runner,'runner');
+ assertExactProbeConfig(vault,'vault');
  for(const c of [runner,vault]){
   assert.match(c.account_id,/^[a-f0-9]{32}$/);
   assert.equal(c.main,'worker.mjs');
@@ -27,6 +63,7 @@ export function assertProbeSafety({runner,vault,liveRunner,liveVault}){
  assert.equal(vault.account_id,liveVault.account_id);
  assert.equal(runner.workers_dev,true);
  assert.equal(vault.workers_dev,false);
+ assert.equal(vault.preview_urls,false);
  assert.deepEqual(runner.services,[{binding:'GOOGLE_VAULT',service:vault.name}]);
  assert.deepEqual(runner.durable_objects,liveRunner.durable_objects);
  assert.deepEqual(vault.durable_objects,liveVault.durable_objects);

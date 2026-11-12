@@ -8,7 +8,42 @@
 <p><label for="file">Storyboard JSON</label><input id="file" type="file" accept=".json,application/json"></p><div class="actions"><button id="load">Load storyboard</button><button id="reset" class="ghost">Clear</button></div><p id="status" role="status" class="muted">Waiting for storyboard JSON.</p></section>
 <section class="card"><h2>2 · Review 17 scenes</h2><div id="scenes" class="grid"></div><p><label for="notes">Director's revision notes</label><textarea id="notes" rows="4" placeholder="e.g. P7: inside city, between two burning buildings; different from P6"></textarea></p>
 <div class="actions"><button id="revise" class="ghost" disabled>Export revision request</button><button id="approve" disabled>Approve storyboard</button></div></section>
-<section class="card"><h2>3 · FREE prompt package handoff</h2><p id="gate" class="muted">Locked. Import and approve a complete storyboard first.</p><div class="actions"><button id="exportBundle" disabled>Export approved_bundle.json · 1 file</button><button id="exportApproval" class="ghost" disabled>Approval file · legacy</button><button id="exportStory" class="ghost" disabled>Original storyboard · legacy</button></div><p class="notice"><strong>PRIVACY:</strong> This NER STUDIO GitHub repository is PUBLIC. A committed episode storyboard can be seen by other people. Do not upload unpublished/private content there unless you accept this. A private authenticated submission backend is NOT connected.</p><p class="muted">For public-safe episodes, upload the single <code>approved_bundle.json</code> inside a unique episode folder under <code>ldb-submissions/</code> on the GitHub branch with the workflow. GitHub Actions will generate and store a PROMPTS-ONLY artifact. No second per-panel approval, paid APIs, actual renders, Drive upload, or Gmail send.</p><p><a href="https://github.com/renyboydeleon27-cloud/ld-autopilot-free/tree/feature/ldb-auto-studio-ui/ldb-submissions">Submission instructions</a> · <a href="https://github.com/renyboydeleon27-cloud/ld-autopilot-free/actions/workflows/ldb-free-production.yml">View GitHub workflow</a></p></section></main>
+<section class="card"><h2>3 · FREE prompt package handoff</h2><p id="gate" class="muted">Locked. Import and approve a complete storyboard first.</p><div class="actions"><button id="exportBundle" disabled>Export approved_bundle.json · 1 file</button><button id="exportApproval" class="ghost" disabled>Approval file · legacy</button><button id="exportStory" class="ghost" disabled>Original storyboard · legacy</button></div><p class="notice"><strong>PRIVACY:</strong> This NER STUDIO GitHub repository is PUBLIC. A committed episode storyboard can be seen by other people. Do not upload unpublished/private content there unless you accept this. A private authenticated submission backend is NOT connected.</p><p class="muted">For public-safe episodes, upload the single <code>approved_bundle.json</code> inside a unique episode folder under <code>ldb-submissions/</code> on the GitHub branch with the workflow. GitHub Actions will generate and store a PROMPTS-ONLY artifact. No second per-panel approval, paid APIs, actual renders, Drive upload, or Gmail send.</p><p><a href="https://github.com/renyboydeleon27-cloud/ld-autopilot-free/tree/feature/ldb-auto-studio-ui/ldb-submissions">Submission instructions</a> · <a href="https://github.com/renyboydeleon27-cloud/ld-autopilot-free/actions/workflows/ldb-free-production.yml">View GitHub workflow</a></p></section>
+<section class="card" id="cloudflare-readiness">
+<h2>4 · Cloudflare Free-plan readiness</h2>
+<p class="muted">One tap checks current Cloudflare telemetry, a local HOOK V5 neuron buffer, and whether an old V5 test Worker is present. This is a <strong>preflight only</strong>, not an image-generation button. No image generation, billing changes or production activation.</p>
+<div class="actions"><button type="button" id="cfCheck" class="ghost">Prepare HOOK V5 test · READ ONLY</button>
+<a href="https://dash.cloudflare.com/" rel="noopener noreferrer" target="_blank">Open Cloudflare dashboard</a></div>
+<p id="cfStatus" role="status" aria-live="polite">Not checked. This preview can read quota telemetry, but only the owner can verify the Workers Free plan in Cloudflare.</p>
+<ul id="cfDetails" class="muted"></ul>
+<p class="notice">Safety lock: 0 neurons used does NOT prove that the billing plan is Free. Even a successful telemetry check never starts HOOK V5 rendering. Production stays NO-GO until real image review and delivery acceptance.</p>
+</section>
+<section class="card" id="github-background-preflight">
+<h2>4A · HOOK V5 package rehearsal · FREE</h2>
+<p class="muted">Background execution already passed <a href="https://github.com/renyboydeleon27-cloud/ld-autopilot-free/actions/runs/42927267109" target="_blank" rel="noopener noreferrer">run #111</a>. Next: verify the real approved HOOK V5 package, storyboard checksum and prompt limits in the cloud. This is NOT image generation.</p>
+<p><a href="https://github.com/renyboydeleon27-cloud/ld-autopilot-free/actions/workflows/ldb-free-production.yml" rel="noopener noreferrer" target="_blank">Open HOOK V5 offline package test in GitHub Actions</a></p>
+<p class="muted">Choose <strong>Run workflow</strong> → Branch <code>feature/ldb-hook-v5-cloud-executor</code> → set <strong>episode_folder</strong> to <code>hook-v5-offline-readiness</code>. Do not choose main. This test packages approved Lake Nyos scenes without any Cloudflare inference, Google upload or Gmail.</p>
+<p class="muted"><strong>Protected executor security check:</strong> in the same GitHub workflow, choose the development branch and enter <code>hook-v5-environment-audit</code> as <strong>episode_folder</strong>. This uses GitHub's read-only metadata API only. It may report UNVERIFIED if GitHub denies environment-settings access, which does not mean the account is unsafe.</p>
+<p class="notice">Safety: navigation only. Both the original <code>hook-v5-free-preflight</code> and the new environment audit remain separate from rendering. No secrets should ever be pasted into this app or chat.</p>
+</section>
+<section class="card" id="delivery-readiness">
+<h2>5 · Google Drive &amp; Gmail setup</h2>
+<p class="muted">Read-only inspection of Vercel preview settings. This does not contact Google, upload files or send Gmail.</p>
+<div class="actions"><button type="button" id="deliveryCheck" class="ghost">Check delivery setup · READ ONLY</button></div>
+<p id="deliveryStatus" role="status" aria-live="polite">Not checked. Real Google Drive delivery and Gmail receipts are unverified.</p>
+<ul id="deliveryDetails" class="muted"></ul>
+<p class="notice">Configured environment variables do NOT prove a connected Cloudflare Vault, verified files, or inbox notifications. Production remains NO-GO.</p>
+</section>
+<section class="card" id="owner-bridge-test">
+<h2>6 · Test Runner → Vault connection</h2>
+<p class="muted">One-time, owner-only verification on the protected development preview. No coding, image generation, Google access, uploads or Worker deployments. Your RUNNER_SECRET is sent over HTTPS only to this protected preview, then to your verified Cloudflare Runner; it is not saved, logged or sent to ChatGPT.</p>
+<p><label for="ownerBridgeSecret">Private RUNNER_SECRET (from your password manager)</label><input id="ownerBridgeSecret" type="password" autocomplete="off" minlength="32" maxlength="128" spellcheck="false" placeholder="Paste the secret you created in Cloudflare"></p>
+<div class="actions"><button type="button" id="ownerBridgeCheck">Test Runner → Vault</button></div>
+<p id="ownerBridgeStatus" role="status" aria-live="polite">Not tested. This checks only the existing isolated Workers' authentication; it does not activate production.</p>
+</section></main>
+<script src="./scripts/ldb-cloudflare-status-ui.js" defer></script>
+<script src="./scripts/ldb-delivery-status-ui.js" defer></script>
+<script src="./scripts/ldb-owner-binding-ui.js" defer></script>
 <script>
 (()=>{'use strict';const N=['HOOK',...Array.from({length:14},(_,i)=>'P'+(i+1)),'ENDING','THUMBNAIL'];let loaded=null,approval=null,rawStoryboard=null;
 const $=id=>document.getElementById(id);const say=s=>$('status').textContent=s;const normalize=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');const safeText=x=>typeof x==='string'?x:JSON.stringify(x??'');

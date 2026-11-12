@@ -23,7 +23,8 @@ export function createGoogleDeliveryBridge(env){
   if(!data||typeof data!=='object'||Array.isArray(data))fail();
   return data;
  };
- const drive=Object.freeze({put:async asset=>{
+ const sendAsset=async(mode,asset)=>{
+  if(mode!=='put'&&mode!=='reconcile')fail();
   const {key,name,parentId=null,mimeType,bytes=null}=asset||{};
   const folder=mimeType===FOLDER;
   if(!isHash(key)||typeof name!=='string'||!name.trim()||name.length>180||/[\x00-\x1f/\\]/.test(name)||
@@ -34,12 +35,23 @@ export function createGoogleDeliveryBridge(env){
   const metadata={key,name,parentId,mimeType,bytes:length,sha256:digest};
   const encoded=Buffer.from(JSON.stringify(metadata)).toString('base64url');
   if(encoded.length>1200)fail();
-  const data=await call('/internal/drive/put',{method:'POST',headers:{'X-LDB-Asset-Info':encoded,
+  const data=await call('/internal/drive/'+mode,{method:'POST',headers:{'X-LDB-Asset-Info':encoded,
     ...(!folder?{'Content-Type':'application/octet-stream'}:{})},...(!folder?{body:bytes}:{})});
   if(data.status!=='VERIFIED'||!isId(data.id)||data.sha256!==digest)fail();
   return {status:'VERIFIED',id:data.id,sha256:digest,bytes:length};
- }});
- return Object.freeze({drive,capacity:async()=>{
+ };
+ const drive=Object.freeze({
+  put:asset=>sendAsset('put',asset),
+  reconcile:asset=>sendAsset('reconcile',asset)
+ });
+ return Object.freeze({drive,notifyMilestone:async(state,percent)=>{
+  if(!isHash(state?.jobId)||![30,50,70,100].includes(percent))fail();
+  const body=JSON.stringify({state,percent});
+  if(Buffer.byteLength(body)>64000)fail();
+  const result=await call('/internal/gmail/milestone',{method:'POST',headers:{'Content-Type':'application/json'},body});
+  if(!['SENT','UNCERTAIN','CLAIMED'].includes(result.status))fail();
+  return result;
+ },capacity:async()=>{
   const cap=await call('/internal/drive/capacity');
   if(typeof cap.unlimited!=='boolean'||(cap.unlimited!==true&&(!/^[0-9]+$/.test(cap.remaining||''))))fail();
   return {unlimited:cap.unlimited,remaining:cap.unlimited?null:cap.remaining};

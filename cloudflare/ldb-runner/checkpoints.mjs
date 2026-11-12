@@ -4,9 +4,12 @@ import {approvedSourceChunks} from '../../lib/ldb/approved-text-assets.mjs';
 export const SCENES = ['HOOK',...Array.from({length:14},(_,i)=>`P${i+1}`),'ENDING','THUMBNAIL'];
 const err = code => { throw new Error(code); };
 export class Checkpoints {
-  constructor(storage, {render, now=Date.now, maxScenes=17, initialDelay=1000}={}) {
+  constructor(storage, {render, now=Date.now, maxScenes=17, initialDelay=1000, watchdogMs=180000}={}) {
     if(![1,17].includes(maxScenes))err("INVALID_SCENE_LIMIT");
-    this.s=storage; this.render=render; this.now=now; this.maxScenes=maxScenes; this.initialDelay=initialDelay;
+    // Provider request timeout is 90 s. The watchdog is a conservative
+    // 180 s by default; never treat an ambiguous request as free to retry.
+    if(!Number.isSafeInteger(watchdogMs)||watchdogMs<120000||watchdogMs>900000)err('INVALID_INFERENCE_WATCHDOG');
+    this.s=storage; this.render=render; this.now=now; this.maxScenes=maxScenes; this.initialDelay=initialDelay;this.watchdogMs=watchdogMs;
   }
   async submit(id, scenes, {approvedBundle}={}) {
     if(!/^[a-f0-9]{64}$/.test(id) || !Array.isArray(scenes) || scenes.length!==17) err('INVALID_JOB');
@@ -39,28 +42,73 @@ export class Checkpoints {
       j.stop=false;j.status='QUEUED';await tx.put('job',j);await tx.setAlarm(this.now()+1000);return j;
     });
   }
+  // Watchdog-only recovery is safe while the Free inference gate is OFF:
+  // it may rearm an unresolved claim or hold for human review, but it can
+  // NEVER initiate a provider request or advance the next image.
+  async watchdogOnly() {
+    return this.s.transaction(async tx=>{
+      const j=await tx.get('job');
+      if(!j||j.status!=='RENDERING')return {status:'NO_ACTIVE_RENDER'};
+      if(j.stop===true)return {status:'PRODUCTION_PAUSED'};
+      const deadline=j.claim?.watchdogAt;
+      if(Number.isSafeInteger(deadline)&&this.now()<deadline){
+        await tx.setAlarm(deadline);
+        return {status:'RENDER_CLAIM_WAITING'};
+      }
+      j.status='NEEDS_REVIEW';j.error='AMBIGUOUS_INFERENCE';
+      await tx.put('job',j);await tx.deleteAlarm();
+      return {status:'RENDER_NEEDS_REVIEW'};
+    });
+  }
   async tick() {
     const claim=await this.s.transaction(async tx=>{
       const j=await tx.get('job');if(!j || ['IMAGES_READY','TEST_PAUSED','NEEDS_REVIEW'].includes(j.status))return null;
-      // Alarm replay after an interrupted external call must not render twice.
-      if(j.status==='RENDERING') {j.status='NEEDS_REVIEW';j.error='AMBIGUOUS_INFERENCE';await tx.put('job',j);return null;}
+      // The persisted watchdog runs even if a Worker process disappears.
+      // Never make a second provider request for an unresolved claim.
+      if(j.status==='RENDERING') {
+        const deadline=j.claim?.watchdogAt;
+        if(Number.isSafeInteger(deadline)&&this.now()<deadline){
+          await tx.setAlarm(deadline);
+          return null; // early/replayed alarm: leave the current claim alone
+        }
+        j.status='NEEDS_REVIEW';j.error='AMBIGUOUS_INFERENCE';
+        await tx.put('job',j);await tx.deleteAlarm();
+        return null;
+      }
       if(j.stop){j.status='STOPPED';await tx.put('job',j);return null;}
       if(j.index>=17){j.status='IMAGES_READY';await tx.put('job',j);return null;}
       const day=new Date(this.now()).toISOString().slice(0,10);
       let budget=await tx.get('budget');if(budget?.day!==day)budget={day,attempts:0};
       // Conservative 40 requests/day cap; account Free plan remains the final ceiling.
       if(budget.attempts>=40){j.status='WAITING_QUOTA';await tx.put('job',j);await tx.setAlarm(Date.parse(day)+86400000+1000);return null;}
-      budget.attempts++;j.status='RENDERING';j.claim={index:j.index,day,attempt:budget.attempts};
-      await tx.put('budget',budget);await tx.put('job',j);return structuredClone(j);
+      budget.attempts++;j.status='RENDERING';
+      j.claim={index:j.index,day,attempt:budget.attempts,watchdogAt:this.now()+this.watchdogMs};
+      // Atomic alarm + claim: a worker crash cannot leave an indefinite
+      // RENDERING record without a future recovery opportunity.
+      await tx.put('budget',budget);await tx.put('job',j);
+      await tx.setAlarm(j.claim.watchdogAt);
+      return structuredClone(j);
     });
     if(!claim)return;
     let image;
     try {image=await this.render(claim.scenes[claim.index].image_prompt);}
     catch(e) {
-      await this.s.transaction(async tx=>{const j=await tx.get('job');j.status='NEEDS_REVIEW';j.error=e?.code==='QUOTA_OR_RATE_LIMIT'?'PROVIDER_QUOTA_REVIEW':'INFERENCE_FAILED_OR_AMBIGUOUS';j.providerCode=['CONFIGURATION_REQUIRED','AUTHORIZATION_FAILED','PROVIDER_FAILED','INVALID_IMAGE_RESPONSE','INVALID_IMAGE','INVALID_PORTRAIT_DIMENSIONS','PROVIDER_UNAVAILABLE_OR_INVALID_RESPONSE','RESPONSE_TOO_LARGE','QUOTA_OR_RATE_LIMIT'].includes(e?.code)?e.code:'UNKNOWN_RENDER_FAILURE';await tx.put('job',j);});return;
+      await this.s.transaction(async tx=>{
+        const j=await tx.get('job');
+        if(j?.id!==claim.id||j.index!==claim.index||j.status!=='RENDERING')return;
+        j.status='NEEDS_REVIEW';
+        j.error=e?.code==='QUOTA_OR_RATE_LIMIT'?'PROVIDER_QUOTA_REVIEW':'INFERENCE_FAILED_OR_AMBIGUOUS';
+        j.providerCode=['CONFIGURATION_REQUIRED','AUTHORIZATION_FAILED','PROVIDER_FAILED','INVALID_IMAGE_RESPONSE','INVALID_IMAGE','INVALID_PORTRAIT_DIMENSIONS','PROVIDER_UNAVAILABLE_OR_INVALID_RESPONSE','RESPONSE_TOO_LARGE','QUOTA_OR_RATE_LIMIT'].includes(e?.code)?e.code:'UNKNOWN_RENDER_FAILURE';
+        await tx.put('job',j);await tx.deleteAlarm();
+      });return;
     }
     if(!image?.bytes || image.bytes.length>8000000 || image.width!==576 || image.height!==1024) {
-      await this.s.transaction(async tx=>{const j=await tx.get('job');j.status='NEEDS_REVIEW';j.error='INVALID_RENDER_OUTPUT';await tx.put('job',j);});return;
+      await this.s.transaction(async tx=>{
+        const j=await tx.get('job');
+        if(j?.id!==claim.id||j.index!==claim.index||j.status!=='RENDERING')return;
+        j.status='NEEDS_REVIEW';j.error='INVALID_RENDER_OUTPUT';
+        await tx.put('job',j);await tx.deleteAlarm();
+      });return;
     }
     // Atomic chunks + checkpoint. STOP during inference preserves the finished scene.
     await this.s.transaction(async tx=>{
@@ -70,7 +118,9 @@ export class Checkpoints {
       for(let start=0;start<image.bytes.length;start+=64000)await tx.put(`image:${j.index}:${chunks++}`,image.bytes.slice(start,start+64000));
       j.outputs.push({scene:SCENES[j.index],chunks,bytes:image.bytes.length,sha256:image.sha256,mimeType:image.mimeType,width:576,height:1024,visualAudit:'PENDING'});
       j.index++;j.status=j.index===17?'IMAGES_READY':j.index>=this.maxScenes?'TEST_PAUSED':j.stop?'STOPPED':'QUEUED';delete j.claim;
-      await tx.put('job',j);if(j.status==='QUEUED')await tx.setAlarm(this.now()+1000);
+      await tx.put('job',j);
+      if(j.status==='QUEUED')await tx.setAlarm(this.now()+1000);
+      else await tx.deleteAlarm(); // finished, one-HOOK pause or STOP
     });
   }
 }

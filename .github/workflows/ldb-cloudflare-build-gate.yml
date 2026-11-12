@@ -7,8 +7,19 @@ on:
       - 'lib/ldb/**'
       - 'scripts/ldb-cloudflare-build-gate.mjs'
       - 'scripts/ldb-cloudflare-isolated-probe-gate.mjs'
+      - 'scripts/ldb-isolated-owner-handoff.mjs'
+      - 'scripts/ldb-verify-compiled-probe.mjs'
       - 'scripts/ldb-live-binding-probe.mjs'
       - 'tests/ldb-isolated-probe-config.test.mjs'
+      - 'tests/ldb-isolated-probe-wiring.test.mjs'
+      - 'tests/ldb-owner-verified-binding-probe.test.mjs'
+      - 'tests/ldb-owner-safe-evidence.test.mjs'
+      - 'tests/ldb-isolated-owner-handoff.test.mjs'
+      - 'tests/ldb-bridge-nonce.test.mjs'
+      - 'tests/ldb-live-probe-chain-integration.test.mjs'
+      - 'tests/ldb-compiled-probe.test.mjs'
+      - 'tests/ldb-google-delivery-bridge.test.mjs'
+      - 'tests/ldb-owner-safe-access.test.mjs'
       - '.github/workflows/ldb-cloudflare-build-gate.yml'
   workflow_dispatch:
 
@@ -30,11 +41,14 @@ jobs:
       - name: Validate isolated read-only probe configs and smoke-test guards
         run: |
           node scripts/ldb-cloudflare-isolated-probe-gate.mjs
-          node --test tests/ldb-isolated-probe-config.test.mjs
+          node --test tests/ldb-isolated-probe-config.test.mjs tests/ldb-isolated-probe-wiring.test.mjs tests/ldb-owner-verified-binding-probe.test.mjs tests/ldb-owner-safe-evidence.test.mjs tests/ldb-isolated-owner-handoff.test.mjs tests/ldb-bridge-nonce.test.mjs tests/ldb-live-probe-chain-integration.test.mjs tests/ldb-compiled-probe.test.mjs tests/ldb-google-delivery-bridge.test.mjs tests/ldb-owner-safe-access.test.mjs
+          node scripts/ldb-isolated-owner-handoff.mjs --print-owner-steps > /tmp/ldb-owner-handoff-review.txt
       - name: Compile isolated Vault probe without deploying
         run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-google-vault/wrangler.probe.jsonc --outdir /tmp/ldb-vault-probe-build
       - name: Compile isolated Runner probe without deploying
         run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-runner/wrangler.probe.jsonc --outdir /tmp/ldb-runner-probe-build
+      - name: Verify nonce routes in compiled isolated Workers (offline)
+        run: node scripts/ldb-verify-compiled-probe.mjs --check-dry-run-only
       - name: Compile Google Vault Worker (dry run)
         run: npx --yes wrangler@4 deploy --dry-run --config cloudflare/ldb-google-vault/wrangler.jsonc --outdir /tmp/ldb-vault-build
       - name: Compile LDB Runner Worker (dry run)

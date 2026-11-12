@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Checkpoints,SCENES} from '../cloudflare/ldb-runner/checkpoints.mjs';
+import {dispatchCoordinatorAlarm} from '../cloudflare/ldb-runner/delivery-alarm.mjs';
 function storage(){const data=new Map();let tail=Promise.resolve();const s={get:async k=>structuredClone(data.get(k)),put:async(k,v)=>data.set(k,structuredClone(v)),setAlarm:async at=>{s.alarm=at},deleteAlarm:async()=>{s.alarm=null},transaction:fn=>{const p=tail.then(()=>fn(s));tail=p.catch(()=>{});return p;}};return s;}
 const scenes=SCENES.map(id=>({id,image_prompt:'a peaceful scene',flow_prompt:'10 second shot'}));
 const id='a'.repeat(64),image={bytes:new Uint8Array(140000),width:576,height:1024,mimeType:'image/jpeg',sha256:'b'.repeat(64)};
@@ -11,3 +12,122 @@ test('replayed alarm with unresolved claim never retries provider',async()=>{con
 test('daily budget blocks calls and schedules next UTC day',async()=>{const s=storage(),now=Date.parse('2026-10-28T10:00:00Z'),c=new Checkpoints(s,{now:()=>now,render:()=>assert.fail('quota')});await c.submit(id,scenes);await s.put('budget',{day:'2026-10-28',attempts:40});await c.tick();assert.equal((await c.status()).status,'WAITING_QUOTA');assert.equal(s.alarm,Date.parse('2026-10-29T00:00:01Z'));});
 test('provider failure and wrong dimensions hold for review without retries',async()=>{for(const render of [async()=>{throw Error('private detail')},async()=>({...image,width:1024})]){const s=storage(),c=new Checkpoints(s,{render});await c.submit(id,scenes);await c.tick();assert.equal((await c.status()).status,'NEEDS_REVIEW');assert.equal((await c.status()).index,0);assert.ok(!JSON.stringify(await c.status()).includes('private detail'));}});
 test('HOOK-only acceptance stops permanently after one real attempt',async()=>{const s=storage();let calls=0;const c=new Checkpoints(s,{maxScenes:1,initialDelay:30000,now:()=>1000,render:async()=>{calls++;return image}});await c.submit(id,scenes);assert.equal(s.alarm,31000);await c.stop();assert.equal((await c.status()).index,0);await c.resume();for(let n=0;n<4;n++)await c.tick();assert.equal(calls,1);assert.equal((await c.status()).status,'TEST_PAUSED');await assert.rejects(c.resume());});
+
+test('provider claim persists a recovery watchdog before any image request',async()=>{
+ const s=storage(),start=Date.parse('2026-11-07T10:00:00Z');
+ let release,signal;const wait=new Promise(r=>release=r),begun=new Promise(r=>signal=r);
+ const c=new Checkpoints(s,{now:()=>start,render:async()=>{signal();await wait;return image}});
+ await c.submit(id,scenes);
+ const active=c.tick();
+ await begun;
+ const held=await c.status();
+ assert.equal(held.status,'RENDERING');
+ assert.equal(held.claim.watchdogAt,start+180000);
+ assert.equal(s.alarm,start+180000);
+ release();await active;
+ assert.equal((await c.status()).index,1);
+ assert.equal((await c.status()).status,'QUEUED');
+ assert.equal(s.alarm,start+1000,'successful scene replaces the watchdog with next scene alarm');
+});
+test('in-flight claim survives early alarm but times out to human review without duplicate inference',async()=>{
+ const s=storage();let time=Date.parse('2026-11-07T10:00:00Z'),release,signal,calls=0;
+ const wait=new Promise(r=>release=r),begun=new Promise(r=>signal=r);
+ const c=new Checkpoints(s,{now:()=>time,render:async()=>{calls++;signal();await wait;return image}});
+ await c.submit(id,scenes);const active=c.tick();await begun;
+ const deadline=s.alarm;
+ time+=30000;
+ await new Checkpoints(s,{now:()=>time,render:async()=>assert.fail('early duplicate inference')}).tick();
+ assert.equal((await c.status()).status,'RENDERING');
+ assert.equal(s.alarm,deadline);
+ time=deadline;
+ await new Checkpoints(s,{now:()=>time,render:async()=>assert.fail('watchdog duplicate inference')}).tick();
+ assert.equal((await c.status()).status,'NEEDS_REVIEW');
+ assert.equal((await c.status()).error,'AMBIGUOUS_INFERENCE');
+ assert.equal(s.alarm,null,'resolved watchdog must not retry automatically');
+ assert.equal(calls,1,'only the original provider attempt was made');
+ release();
+ await assert.rejects(active,/CLAIM_CHANGED/);
+ assert.equal((await c.status()).index,0);
+});
+test('failed provider and one-HOOK test clean up their watchdog alarm',async()=>{
+ const s=storage(),now=Date.parse('2026-11-07T11:00:00Z');
+ const fail=new Checkpoints(s,{now:()=>now,render:async()=>{throw Error('provider timeout')}});
+ await fail.submit(id,scenes);await fail.tick();
+ assert.equal((await fail.status()).status,'NEEDS_REVIEW');
+ assert.equal(s.alarm,null);
+ const p=storage(),one=new Checkpoints(p,{now:()=>now,maxScenes:1,render:async()=>image});
+ await one.submit(id,scenes);await one.tick();
+ assert.equal((await one.status()).status,'TEST_PAUSED');
+ assert.equal(p.alarm,null);
+});
+test('STOP during held provider call cancels watchdog and preserves finished image without next alarm',async()=>{
+ const s=storage(),now=Date.parse('2026-11-07T12:00:00Z');
+ let release,signal;const wait=new Promise(r=>release=r),begun=new Promise(r=>signal=r);
+ const c=new Checkpoints(s,{now:()=>now,render:async()=>{signal();await wait;return image}});
+ await c.submit(id,scenes);const active=c.tick();await begun;
+ assert.equal(s.alarm,now+180000);
+ await c.stop();assert.equal(s.alarm,null);
+ release();await active;
+ assert.equal((await c.status()).status,'STOPPED');
+ assert.equal((await c.status()).index,1);
+ assert.equal(s.alarm,null);
+});
+test('watchdog rejects out-of-range limits before any storage or provider work',()=>{
+ const s=storage();
+ for(const watchdogMs of [-1,0,1000,119999,900001,1.2,Infinity]){
+  assert.throws(()=>new Checkpoints(s,{watchdogMs}),/INVALID_INFERENCE_WATCHDOG/);
+ }
+});
+
+test('free inference OFF preserves in-flight claim watchdog without another image call',async()=>{
+ const s=storage();let time=Date.parse('2026-11-07T09:00:00Z');
+ let release,signal,calls=0;
+ const wait=new Promise(r=>release=r),begun=new Promise(r=>signal=r);
+ const c=new Checkpoints(s,{now:()=>time,render:async()=>{calls++;signal();await wait;return image}});
+ await c.submit(id,scenes);const active=c.tick();await begun;
+ const deadline=(await c.status()).claim.watchdogAt;
+ const disabled=new Checkpoints(s,{now:()=>time,render:async()=>assert.fail('NO_SECOND_PROVIDER_CALL')});
+ time+=35000;
+ const early=await dispatchCoordinatorAlarm({storage:s,imageCore:disabled,imageEnabled:false,deliveryEnabled:true,
+  createDelivery:()=>assert.fail('NO_GOOGLE_DELIVERY_DURING_RENDER')});
+ assert.equal(early.status,'IMAGE_GENERATION_DISABLED');
+ assert.equal(early.watchdog,'RENDER_CLAIM_WAITING');
+ assert.equal((await c.status()).status,'RENDERING');
+ assert.equal(s.alarm,deadline);
+ time=deadline;
+ const expired=await dispatchCoordinatorAlarm({storage:s,imageCore:disabled,imageEnabled:false});
+ assert.equal(expired.watchdog,'RENDER_NEEDS_REVIEW');
+ assert.equal((await c.status()).status,'NEEDS_REVIEW');
+ assert.equal((await c.status()).error,'AMBIGUOUS_INFERENCE');
+ assert.equal(s.alarm,null);
+ assert.equal(calls,1,'watchdog never issues another provider request');
+ release();await assert.rejects(active,/CLAIM_CHANGED/);
+ assert.equal((await c.status()).index,0);
+});
+test('free inference OFF does not reopen STOPped in-flight requests',async()=>{
+ const s=storage(),time=Date.parse('2026-11-07T09:00:00Z');
+ let release,signal;
+ const wait=new Promise(r=>release=r),begun=new Promise(r=>signal=r);
+ const c=new Checkpoints(s,{now:()=>time,render:async()=>{signal();await wait;return image}});
+ await c.submit(id,scenes);const active=c.tick();await begun;
+ await c.stop();
+ const disabled=new Checkpoints(s,{now:()=>time+200000,
+  render:async()=>assert.fail('PROVIDER_MUST_REMAIN_DISABLED')});
+ const result=await dispatchCoordinatorAlarm({storage:s,imageCore:disabled,imageEnabled:false});
+ assert.equal(result.status,'PRODUCTION_PAUSED');
+ assert.equal(s.alarm,null);
+ release();await active;
+ assert.equal((await c.status()).index,1);
+ assert.equal((await c.status()).status,'STOPPED');
+});
+test('watchdogOnly never causes provider inference on queued, paused or completed jobs',async()=>{
+ for(const status of ['QUEUED','STOPPED','WAITING_QUOTA','IMAGES_READY','NEEDS_REVIEW']){
+  const s=storage(),c=new Checkpoints(s,{render:async()=>assert.fail('provider called')});
+  await c.submit(id,scenes);
+  const job=await c.status();job.status=status;
+  await s.put('job',job);
+  const r=await c.watchdogOnly();
+  assert.equal(r.status,'NO_ACTIVE_RENDER');
+  assert.equal((await c.status()).status,status);
+ }
+});

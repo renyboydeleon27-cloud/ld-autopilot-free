@@ -14,6 +14,11 @@ function setup(){
   if(previous){assert.equal(sha(a.bytes),previous.sha);return {id:previous.id,status:'VERIFIED',sha256:previous.sha};}
   const saved={id:'googlefile'+calls,sha:a.bytes?sha(a.bytes):null};uploaded.set(a.key,saved);
   return {id:saved.id,status:'VERIFIED',sha256:saved.sha};
+ },reconcile:async a=>{
+  const previous=uploaded.get(a.key);
+  if(!previous)throw Error('DRIVE_RECOVERY_NOT_FOUND');
+  if((a.bytes?sha(a.bytes):null)!==previous.sha)throw Error('DRIVE_CONTENT_MISMATCH');
+  return {id:previous.id,status:'VERIFIED',sha256:previous.sha};
  }}});
  const service={fetch:async(url,options)=>handleVaultDeliveryBridge(new Request(url,options),{enabled:true,secret:SECRET,createBackend})};
  const env={DELIVERY_BRIDGE_ENABLED:'true',GOOGLE_DELIVERY_BRIDGE_SECRET:SECRET,GOOGLE_VAULT:service};
@@ -24,6 +29,7 @@ test('client is fail closed until dedicated service binding, enable flag and sec
  for(const env of [{...f.env,DELIVERY_BRIDGE_ENABLED:'false'},{...f.env,GOOGLE_VAULT:null},{...f.env,GOOGLE_DELIVERY_BRIDGE_SECRET:'short'}])
   assert.throws(()=>createGoogleDeliveryBridge(env),/DELIVERY_BRIDGE_UNAVAILABLE/);
  assert.equal(isDeliveryBridgePath('/internal/drive/put'),true);
+ assert.equal(isDeliveryBridgePath('/internal/drive/reconcile'),true);
  assert.equal(isDeliveryBridgePath('/internal/credentials'),false);
 });
 test('authenticated service-bound request delivers hashed bytes and capacity without tokens',async()=>{
@@ -39,6 +45,34 @@ test('authenticated service-bound request delivers hashed bytes and capacity wit
  assert.equal(f.uploaded.size,2);
  assert.ok(!JSON.stringify(result).includes(SECRET));
 });
+test('service-bound read-only recovery rechecks existing hashes without allocating or uploading',async()=>{
+ const f=setup(),bridge=createGoogleDeliveryBridge(f.env);
+ const value=await bridge.drive.put(base);
+ const before=f.calls;
+ assert.deepEqual(await bridge.drive.reconcile(base),value);
+ assert.equal(f.calls,before,'no additional drive.put on recovery');
+ assert.equal(f.uploaded.size,1);
+ await assert.rejects(bridge.drive.reconcile({...base,key:'b'.repeat(64)}),
+  /DELIVERY_BRIDGE_UNAVAILABLE/);
+ assert.equal(f.uploaded.size,1,'missing reservation must not be created');
+});
+
+test('recovery route refuses unauthenticated requests and forged metadata before backend',async()=>{
+ const f=setup();
+ const url='https://ldb-vault.internal/internal/drive/reconcile';
+ assert.equal((await f.service.fetch(url,{method:'POST'})).status,401);
+ const digest=sha(base.bytes);
+ const meta=Buffer.from(JSON.stringify({key:base.key,name:base.name,parentId:base.parentId,
+  mimeType:base.mimeType,bytes:base.bytes.length,sha256:digest})).toString('base64url');
+ const response=await f.service.fetch(url,{method:'POST',
+  headers:{Authorization:'Bearer '+SECRET,'X-LDB-Asset-Info':meta,
+   'Content-Type':'application/octet-stream'},
+  body:Buffer.from('tampered')});
+ assert.equal(response.status,422);
+ assert.equal(f.calls,0);
+ assert.equal(f.uploaded.size,0);
+});
+
 test('bridge never accepts unauthenticated or mismatched service secret',async()=>{
  const f=setup();
  const r=await f.service.fetch('https://ldb-vault.internal/internal/drive/capacity',{method:'GET'});
@@ -73,6 +107,7 @@ test('never provides extra endpoints, browser flags or overlarge asset bytes',as
 import {probeGoogleVaultBinding} from '../cloudflare/ldb-runner/bridge-probe.mjs';
 import {handleVaultBridgeHealth,isBridgeHealthPath,routeVaultHealthProbe} from '../cloudflare/ldb-google-vault/bridge-probe.mjs';
 const PSECRET='independent-test-probe-secret-very-long-2026';
+const PNONCE='abcdef0123456789abcdef0123456789';
 function diagnosticFixture(){
  let requests=0;
  const backend={fetch:async(url,options)=>{requests++;return handleVaultBridgeHealth(new Request(url,options),{enabled:true,secret:PSECRET});}};
@@ -81,7 +116,7 @@ function diagnosticFixture(){
 }
 test('read-only binding probe succeeds while real delivery remains OFF',async()=>{
  const f=diagnosticFixture();
- assert.deepEqual(await probeGoogleVaultBinding(f.env),{status:'BRIDGE_AUTHENTICATED',productionReady:false});
+ assert.deepEqual(await probeGoogleVaultBinding(f.env,PNONCE),{status:'BRIDGE_AUTHENTICATED',productionReady:false,nonce:PNONCE});
  assert.equal(f.requests,1);
  assert.equal(f.env.DELIVERY_BRIDGE_ENABLED,'false');
  assert.equal(isBridgeHealthPath('/internal/bridge/health'),true);
@@ -90,13 +125,13 @@ test('read-only binding probe succeeds while real delivery remains OFF',async()=
 test('probe requires its own flag, secret and service binding',async()=>{
  const f=diagnosticFixture();
  for(const env of [{...f.env,BRIDGE_PROBE_ENABLED:'false'},{...f.env,GOOGLE_BRIDGE_PROBE_SECRET:'too-short'},{...f.env,GOOGLE_VAULT:null}]){
-  await assert.rejects(probeGoogleVaultBinding(env),/BRIDGE_PROBE_UNAVAILABLE/);
+  await assert.rejects(probeGoogleVaultBinding(env,PNONCE),/BRIDGE_PROBE_UNAVAILABLE/);
  }
  assert.equal(f.requests,0);
 });
 test('probe rejects wrong secret, POST and unrelated routes with no Google operations',async()=>{
  const f=diagnosticFixture();
- await assert.rejects(probeGoogleVaultBinding({...f.env,GOOGLE_BRIDGE_PROBE_SECRET:'wrong-separate-probe-secret-very-long'}),/BRIDGE_PROBE_UNAVAILABLE/);
+ await assert.rejects(probeGoogleVaultBinding({...f.env,GOOGLE_BRIDGE_PROBE_SECRET:'wrong-separate-probe-secret-very-long'},PNONCE),/BRIDGE_PROBE_UNAVAILABLE/);
  const url='https://internal/internal/bridge/health',header={Authorization:'Bearer '+PSECRET};
  assert.equal((await handleVaultBridgeHealth(new Request(url,{method:'POST',headers:header}),{enabled:true,secret:PSECRET})).status,405);
  assert.equal((await handleVaultBridgeHealth(new Request(url,{method:'GET',headers:header}),{enabled:false,secret:PSECRET})).status,503);
@@ -106,9 +141,9 @@ test('probe rejects wrong secret, POST and unrelated routes with no Google opera
 test('probe refuses invalid vault response and never returns a secret',async()=>{
  const f=diagnosticFixture();
  for(const response of [new Response(JSON.stringify({status:'BRIDGE_AUTHENTICATED',refreshToken:'SHOULD_NOT_LEAK'}),{status:200}),new Response('{}',{status:200}),new Response('bad',{status:500})]){
-  await assert.rejects(probeGoogleVaultBinding({...f.env,GOOGLE_VAULT:{fetch:async()=>response}}),/BRIDGE_PROBE_UNAVAILABLE/);
+  await assert.rejects(probeGoogleVaultBinding({...f.env,GOOGLE_VAULT:{fetch:async()=>response}},PNONCE),/BRIDGE_PROBE_UNAVAILABLE/);
  }
- assert.ok(!JSON.stringify(await probeGoogleVaultBinding(f.env)).includes(PSECRET));
+ assert.ok(!JSON.stringify(await probeGoogleVaultBinding(f.env,PNONCE)).includes(PSECRET));
 });
 
 test('live-style Vault edge health route works with ALL production and OAuth credential gates OFF',async()=>{
@@ -125,8 +160,8 @@ test('live-style Vault edge health route works with ALL production and OAuth cre
  const result=await probeGoogleVaultBinding({
   BRIDGE_PROBE_ENABLED:'true',GOOGLE_BRIDGE_PROBE_SECRET:PSECRET,
   DELIVERY_BRIDGE_ENABLED:'false',GOOGLE_VAULT:{fetch:serve}
- });
- assert.deepEqual(result,{status:'BRIDGE_AUTHENTICATED',productionReady:false});
+ },PNONCE);
+ assert.deepEqual(result,{status:'BRIDGE_AUTHENTICATED',productionReady:false,nonce:PNONCE});
  assert.equal(durableObjectCalls,0);
  assert.equal(driveCalls,0);
  assert.equal((await serve(endpoint,{method:'POST',headers:{Authorization:'Bearer '+PSECRET}})).status,405);

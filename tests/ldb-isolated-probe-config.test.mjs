@@ -23,19 +23,42 @@ test('safety contract rejects unsafe config mutations',()=>{
   x=>x.vault.vars.DELIVERY_BRIDGE_ENABLED='true',
   x=>x.runner.services[0].service=x.liveVault.name,
   x=>x.vault.workers_dev=true,
+  x=>x.vault.preview_urls=true,
+  x=>{delete x.vault.preview_urls;},
   x=>x.vault.vars.GOOGLE_SECRET='leaked',
-  x=>x.vault.account_id='b'.repeat(32)
+  x=>x.vault.account_id='b'.repeat(32),
+  x=>x.runner.vars.AI='true',
+  x=>x.runner.vars.GOOGLE_CLIENT_SECRET='forbidden',
+  x=>x.vault.vars.VAULT_KEY='no-plain-credentials',
+  x=>x.runner.ai={binding:'AI'},
+  x=>x.runner.unsafe={bindings:[{type:'ai',name:'AI'}]},
+  x=>x.runner.kv_namespaces=[{binding:'PRIVATE'}],
+  x=>x.vault.r2_buckets=[{binding:'R2'}],
+  x=>x.runner.triggers={crons:['* * * * *']},
+  x=>x.runner.routes=['example.com/*'],
+  x=>x.vault.services=[{binding:'GOOGLE_VAULT',service:'ner-ldb-google-vault-quality'}],
+  x=>x.runner.vars.BRIDGE_PROBE_ENABLED='false',
+  x=>x.runner.compatibility_flags.push('unsafe_eval'),
+  x=>x.vault.durable_objects.bindings.push({name:'EXTRA',class_name:'Other'}),
+  x=>x.runner.migrations.push({tag:'v2',new_classes:['Unreviewed']}),
+  x=>x.runner.account_id='b'.repeat(32),
+  x=>x.runner.compatibility_date='2027-01-01'
  ]){const c=all();change(c);assert.throws(()=>assertProbeSafety(c));}
 });
 const url='https://ner-ldb-runner-binding-probe.account.workers.dev/delivery-bridge-probe';
 const secret='isolated-fixture-owner-secret-long-enough';
 test('authenticated read-only response never reports production ready',async()=>{
  let calls=0;
- const out=await verifyLiveBindingProbe({url,secret,fetcher:async(u,opts)=>{
+ const out=await verifyLiveBindingProbe({url,secret,verifiedHost:'ner-ldb-runner-binding-probe.account.workers.dev',fetcher:async(u,opts)=>{
   calls++;assert.equal(u,url);assert.equal(opts.redirect,'manual');
   assert.equal(opts.method,'GET');assert.equal(opts.body,undefined);
   assert.equal(opts.headers.Authorization,'Bearer '+secret);
-  return Response.json({status:'BRIDGE_AUTHENTICATED',productionReady:false});
+  assert.equal(opts.headers['Cache-Control'],'no-store');
+  assert.equal(opts.cache,'no-store');
+  assert.match(opts.headers['X-LDB-Probe-Nonce'],/^[a-f0-9]{32}$/);
+  return Response.json({status:'BRIDGE_AUTHENTICATED',productionReady:false,
+   nonce:opts.headers['X-LDB-Probe-Nonce']},
+   {headers:{'Cache-Control':'no-store'}});
  }});
  assert.deepEqual(out,{status:'BRIDGE_AUTHENTICATED',productionReady:false});
  assert.equal(calls,1);assert.ok(!JSON.stringify(out).includes(secret));
@@ -50,8 +73,17 @@ test('unsafe URLs refuse to send bearer secrets',async()=>{
   url+'?token=oops',
   'https://user:pass@owner.workers.dev/delivery-bridge-probe',
   'https://owner.workers.dev:444/delivery-bridge-probe']){
-   await assert.rejects(verifyLiveBindingProbe({url:bad,secret,fetcher}),/UNSAFE_PROBE_URL/);
+   await assert.rejects(verifyLiveBindingProbe({url:bad,secret,verifiedHost:'ner-ldb-runner-binding-probe.account.workers.dev',fetcher}),/UNSAFE_PROBE_URL/);
  }
+ assert.equal(called,0);
+});
+test('owner Bearer secret cannot go to another account with identically named Worker',async()=>{
+ let called=0;const fetcher=()=>{called++;throw Error('NETWORK_FORBIDDEN')};
+ await assert.rejects(verifyLiveBindingProbe({url,secret,
+  verifiedHost:'ner-ldb-runner-binding-probe.attacker.workers.dev',fetcher}),
+  /UNVERIFIED_PROBE_ACCOUNT_HOST/);
+ await assert.rejects(verifyLiveBindingProbe({url,secret,fetcher}),
+  /UNVERIFIED_PROBE_ACCOUNT_HOST/);
  assert.equal(called,0);
 });
 test('redirect, missing, and forged ready responses fail',async()=>{
@@ -61,6 +93,19 @@ test('redirect, missing, and forged ready responses fail',async()=>{
   Response.json({status:'BRIDGE_AUTHENTICATED',productionReady:false,token:'extra'}),
   Response.json({status:'BRIDGE_AUTHENTICATED'}),
   new Response('bad-json',{status:200})]){
-   await assert.rejects(verifyLiveBindingProbe({url,secret,fetcher:async()=>fake}),/PROBE_(NOT_AUTHENTICATED|RESPONSE_INVALID)/);
+   await assert.rejects(verifyLiveBindingProbe({url,secret,verifiedHost:'ner-ldb-runner-binding-probe.account.workers.dev',fetcher:async()=>fake}),/PROBE_(NOT_AUTHENTICATED|RESPONSE_INVALID)/);
  }
+});
+
+test('isolated probe config disallows undocumented vars, copied credentials and paid bindings',()=>{
+ const base=all();
+ for(const kind of ['runner','vault']){
+  const extra=structuredClone(base);
+  extra[kind].vars.EXTRA_VALUE='x';
+  assert.throws(()=>assertProbeSafety(extra));
+  const secret=structuredClone(base);
+  secret[kind].vars.API_TOKEN='do-not-publish';
+  assert.throws(()=>assertProbeSafety(secret));
+ }
+ assert.equal(assertProbeSafety(base),true);
 });
