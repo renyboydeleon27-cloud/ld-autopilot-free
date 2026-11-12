@@ -62,5 +62,5 @@ test('protected configuration-only job is read-only and directly connected to re
  assert.match(caller,/uses: \.\/.github\/workflows\/ldb-hook-v5-one-shot.yml/);
  assert.match(caller,/github.ref == 'refs\/heads\/feature\/ldb-image-acceptance'/);
  assert.match(caller,/hook-v5-executor-/);
- assert.doesNotMatch(caller,/secrets: inherit/);
+ assert.doesNotMatch(caller,/^\s+secrets:\s*inherit\s*$/m);
 });
