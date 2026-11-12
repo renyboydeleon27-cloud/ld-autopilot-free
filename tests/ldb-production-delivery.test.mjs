@@ -725,3 +725,16 @@ test('superseded upload failure cannot override the newer active attempt',async(
  assert.equal(after.verified.length,1);
  assert.equal(fileCalls,2);
 });
+
+test('file receipt cannot reuse any current parent folder ID',async()=>{
+ for(const aliasAt of [0,1,2]){
+  const folders=[];
+  const f=fixture({drive:{put:async a=>{
+   if(a.mimeType==='application/vnd.google-apps.folder'){folders.push(a.key);return {id:a.key,status:'VERIFIED'};}
+   return {id:folders[aliasAt],status:'VERIFIED',sha256:a.sha256};
+  }}});
+  await f.core.submit(plan());await f.core.tick();
+  const j=await f.s.get('delivery');assert.equal(j.status,'NEEDS_REVIEW');
+  assert.equal(j.error,'DELIVERY_VERIFY_FAILED');assert.equal(j.verified.length,0);assert.equal(j.index,0);
+ }
+});

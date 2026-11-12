@@ -44,6 +44,8 @@
     'Configuration exists; real Google Drive/Gmail connection NOT verified. NO-GO.';
    show([
     'Vercel settings found: '+data.configuredEntries+'/'+data.expectedConfigurationEntries+'.',
+    ...(data.diagnosticMode==='LOCAL_CONFIGURATION_ONLY'&&data.cloudflareApiCalled===false?
+     ['Local configuration only; no Cloudflare request. OWNER AUTHENTICATION / TOKEN VALIDATION REQUIRED.']:[]),
     ...(()=>{
      const c=data.cloudflareDiagnosticCoverage;
      if(!c||!['ALL_RETURNED','PARTIAL','UNAVAILABLE','NOT_CONFIGURED'].includes(c.status)||

@@ -1,45 +1,71 @@
-# November 12 — continue development while owner login is pending
+# November 12 — Execution Order 3 development verification
 
-**Cloudflare verification: OWNER AUTHENTICATION REQUIRED.**
-This is an owner-reported sign-in blocker, not a new provider verification result.
-Do not wait on this blocker to run offline development checks. Do not use cached
-credentials or stale quota reports to infer that provider access is ready.
+**Cloudflare-dependent execution: OWNER AUTHENTICATION / TOKEN VALIDATION REQUIRED.**
+The owner handles Cloudflare manually on Android. Work must not attempt Cloudflare
+login, read/rotate tokens, call inference, or create/delete Workers for this batch.
 
-The approval CI now runs the complete selected offline LDB/Drive/Gmail suite,
-including private cross-worker 69-file delivery, OAuth/Vault acceptance, durable
-image handoff, STOP/Resume and notification receipt integrity. Workflow and CJS
-regression changes now trigger the same suite. The actual approved HOOK package
-rehearsal also runs in CI without provider access. No provider secrets are supplied.
+## Independently observed GitHub metadata
 
-Local batch validation: 535 JavaScript tests and 55 Python tests passed. These
-are simulated/local checks, not actual image generation, Drive delivery or Gmail
-inbox verification. The existing development preview at `4a43f69` was READY;
-that observation does not establish the status of any later commit.
+The signed-in GitHub Environment settings page was inspected read-only:
+- Environment: `ldb-hook-v5-free`.
+- Required reviewer: `renyboydeleon27-cloud`; prevent-self-review is off.
+- Administrator bypass is off.
+- Exactly one branch, `feature/ldb-image-acceptance`, and no tags are allowed.
+- Exactly one secret named `LDB_HOOK_V5_CLOUDFLARE_API_TOKEN` is listed.
+- No Environment variables are configured.
 
-## Exact owner login action
+The secret value was not opened, retrieved, replaced or validated. Presence and
+correct naming do not establish provider permissions, token validity, plan or quota.
+The workflow references this exact secret within the protected Environment.
+The development executor wiring is not yet on the protected acceptance branch
+(observed acceptance head: `40fc29a118858d1ff6698b391c1bb4700d35bfa4`).
 
-1. On Android, open https://dash.cloudflare.com/login in Chrome. Sign in to the
-   existing Cloudflare account used for NER AUTO STUDIO, with its original sign-in
-   method; finish any email or two-factor challenge yourself.
-2. Select the existing account for this project and confirm that its dashboard
-   opens. If Chrome signs in successfully but Work still shows a login page,
-   complete sign-in in Work's offered browser handoff as well: sessions in the
-   phone's Chrome and the Work browser are separate.
-3. Tell Work that the account dashboard is open. Do not send a password, token,
-   recovery code or one-time code in chat. Successful login only clears the login
-   blocker; fresh Workers Free plan/quota and restricted token scope still need
-   verification before any separately approved image test.
+## Engineering changes
 
-## Remaining live gates
+- Google connection-test receipts now reject malformed state before provider
+  access, retain valid legacy receipts, and store a message-ID digest for new sends.
+  Unique durable claims fence delayed responses. Deleted claims become UNCERTAIN
+  tombstones; replaced/corrupt claims are not overwritten. Ambiguous sends never
+  automatically resend. OAuth failure before sending leaves the operation retryable.
+- Drive delivery rejects file receipts that reuse any current parent-folder ID.
+- HOOK runner rejects non-string credentials locally. Added simulated rejected-token,
+  timeout and cancellation checks that verify no duplicate inference submission and
+  cleanup after handled interruption.
+- The active executor Vercel preview now serves local-only delivery configuration
+  diagnostics. It returns before any provider call or owner-probe path, even if
+  provider credentials exist. Production and unrelated branches remain blocked.
 
-- Cloudflare login, current Free plan/quota, restricted Environment credential.
-- Verify integration on the protected acceptance branch before any dispatch.
-- One explicitly approved HOOK render and human visual review; then 17 approved images.
-- Real 69-file Drive delivery and verified Gmail milestone receipts/inbox.
-- Separate production release decision. No main merge or production activation
-  is authorized by passing these offline tests.
+## Validation and scope
+
+Baseline rechecked: 535 JavaScript / 55 Python tests passed.
+After changes: **549 JavaScript / 55 Python tests passed, zero failures**.
+The approved 17-scene HOOK package rehearsal passed (1517/2048 prompt characters).
+Tests cover 69-file manifests, approval/image gates, persisted recovery, STOP/Resume,
+concurrency, OAuth, milestones and completion integrity using simulated providers.
+No actual image generation, live Drive/Gmail acceptance or production release.
+
+A hard runner kill cannot guarantee in-process cleanup. A cancelled real run must
+remain blocked until the owner checks residual isolated resources and the attempt
+history. Do not automatically rerun generation to recover an unknown outcome.
+
+## Owner-only remaining configuration
+
+In this GitHub Environment, retain the correctly named existing secret. Without
+pasting its value into chat, independently validate its account and required scope.
+Add the missing non-secret variables only when their facts have been verified:
+- `LDB_HOOK_V5_CLOUDFLARE_ACCOUNT_ID`: the existing project account ID.
+- `LDB_WORKERS_PLAN`: `free` only after current plan confirmation.
+- `LDB_FREE_PLAN_VERIFIED_DATE`: UTC date of that actual verification (`YYYY-MM-DD`).
+- `LDB_HOOK_V5_ENV_REVIEW_APPROVED`: `true` only after reviewing the protected setup.
+
+The reviewed code must first be integrated onto the protected acceptance branch;
+no instruction here authorizes rendering or a main merge. A subsequent explicit
+one-HOOK approval, human image acceptance, 17 approved images, real 69-file delivery
+and Gmail receipt/inbox verification remain required before production release.
 
 ---
+Historical implementation notes follow; the status above supersedes older login,
+secret-count and validation statements.
 
 # November 12 integration update — registered development entry
 
